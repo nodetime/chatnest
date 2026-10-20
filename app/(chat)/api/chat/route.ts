@@ -17,6 +17,7 @@ import { applyToolApprovals } from "@/lib/agent/approvals";
 import { createBrowserTools } from "@/lib/agent/browser-tools";
 import { prepareRegeneration } from "@/lib/agent/message-turn";
 import { createAgentRuntime } from "@/lib/agent/runtime";
+import { agentStreamErrorText } from "@/lib/agent/sourcebridge-error";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
 import {
   getModelConnection,
@@ -351,6 +352,7 @@ export async function POST(request: Request) {
 
           dataStream.merge(
             toUIMessageStream({
+              onError: agentStreamErrorText,
               sendReasoning: isReasoningModel,
               sendSources: true,
               stream: result.stream,

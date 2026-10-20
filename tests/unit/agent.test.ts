@@ -165,7 +165,10 @@ test("conversation source workspace bounds very large histories to 200 distinct 
 });
 
 test("skill discovery is metadata-only; loading and reference access work on demand", async () => {
-  const skills = await discoverSkills();
+  const discovered = await discoverSkills();
+  const skills = discovered.filter(
+    (skill) => skill.name === "investigate-content"
+  );
   assert.equal(skills.length, 1);
   const catalog = buildSkillsPrompt(skills);
   const body = await readSkillFile(skills[0], "SKILL.md");

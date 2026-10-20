@@ -45,6 +45,12 @@ Skills 不能凭空赋予文件、联网或脚本执行权限。当前支持指�
 
 生产构建已显式包含默认配置与 `skills/**` 文件。若用 `AGENT_CONFIG_PATH` 指向部署包外的位置，需要自行挂载该配置，不能假定服务端打包器会自动带上它。
 
+## 可选 SourceBridge / 1688
+
+默认配置增加可选同级 SourceBridge HTTP MCP；服务端设置 `SOURCEBRIDGE_MCP_URL` 与 `SOURCEBRIDGE_SERVICE_TOKEN` 后才连接，任意缺失只跳过该服务，不影响 Exa。供应商 OneBound key/secret 不放 ChatNest。默认严格 HTTPS；本机 HTTP 需要 `AGENT_MCP_ALLOW_LOOPBACK_HTTP=1` 且处于 development/test，仅允许 loopback，production 仍要求 HTTPS；MCP 不跟随重定向。
+
+仅开放6个 `onebound_1688_*` 原工具，全部默认需要确认，查询也可能收费。SourceBridge工具失败保持UI错误状态，原错误JSON以脱敏文本保留，不自动重试；其他工具错误策略不变。新增 `source-1688` 商品与主体线索调查 Skill，与现有正文调查方法独立；保持供应商原参数、原返回，不假设图搜分页/100条，也不把上传返回 `name` 自动转换成 `imgid`。配置、安全门禁、TDD与离线验证边界见 [SourceBridge 接入说明](docs/integrations/sourcebridge.md)。未进行真实模型或付费供应商验收。
+
 ## 界面取舍
 
 “创建任务”位于侧栏和输入框「＋」。填写目标、可选原文/链接、调查方式后，在独立的新对话执行，可补充消息或停止；保留对话地址、历史和正常消息保存。当前是前台任务，不是后台调度或关闭页面后自动续跑。联网选项是优先搜索偏好，自动模式仍由 Agent 根据目标选择工具。

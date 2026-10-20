@@ -1,8 +1,9 @@
 import { createMCPClient, type MCPClient } from "@ai-sdk/mcp";
 import { dynamicTool, type ToolSet } from "ai";
-import { readAgentConfig, resolveHeaders } from "./config";
+import { readAgentConfig, resolveServerConnection } from "./config";
 import { normalizeMcpOutput } from "./mcp-output";
 import { buildSkillsPrompt, createSkillTools, discoverSkills } from "./skills";
+import { createSourceBridgeToolError } from "./sourcebridge-error";
 
 export async function createAgentRuntime(
   signal: AbortSignal,
@@ -28,9 +29,14 @@ export async function createAgentRuntime(
     const results = await Promise.allSettled(
       config.servers.map(async (server) => {
         runSignal.throwIfAborted();
-        const { headers, missing } = resolveHeaders(server);
+        const { headers, missing, url, invalid } =
+          resolveServerConnection(server);
         if (missing.length > 0) {
           unavailable.push(`${server.name}: credentials are not configured`);
+          return;
+        }
+        if (invalid || !url) {
+          unavailable.push(`${server.name}: endpoint configuration is invalid`);
           return;
         }
         let client: MCPClient | undefined;
@@ -40,6 +46,8 @@ export async function createAgentRuntime(
               fetch: (input, init) =>
                 fetch(input, {
                   ...init,
+                  // Do not let redirects evade endpoint policy or move credentials.
+                  redirect: "error",
                   signal: AbortSignal.any([
                     runSignal,
                     AbortSignal.timeout(config.toolTimeoutMs),
@@ -48,7 +56,7 @@ export async function createAgentRuntime(
                 }),
               headers,
               type: "http",
-              url: server.url,
+              url,
             },
           });
           clients.add(client);
@@ -82,6 +90,9 @@ export async function createAgentRuntime(
                     "isError" in output &&
                     output.isError
                   ) {
+                    if (server.id === "sourcebridge") {
+                      throw createSourceBridgeToolError(output, headers);
+                    }
                     throw new Error(
                       `${server.name} 暂时未能返回结果；可能是限流或访问失败，请稍后重试。`
                     );

@@ -2,6 +2,35 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
 
+const environmentReference = /^\$\{([A-Z][A-Z0-9_]*)\}$/;
+
+function isMcpEndpoint(
+  value: string,
+  env: Record<string, string | undefined> = {}
+) {
+  // Reject normalization of whitespace, backslashes, credentials and fragments.
+  if (!value || /[\s\\]/u.test(value) || value.includes("${")) {
+    return false;
+  }
+  try {
+    const url = new URL(value);
+    if (url.username || url.password || url.hash) {
+      return false;
+    }
+    if (url.protocol === "https:") {
+      return true;
+    }
+    return (
+      url.protocol === "http:" &&
+      ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname) &&
+      ["development", "test"].includes(env.NODE_ENV ?? "") &&
+      env.AGENT_MCP_ALLOW_LOOPBACK_HTTP === "1"
+    );
+  } catch {
+    return false;
+  }
+}
+
 export const agentConfigSchema = z
   .object({
     maxOutputTokens: z.number().int().min(256).max(16_000).default(8000),
@@ -17,10 +46,11 @@ export const agentConfigSchema = z
           id: z.string().regex(/^[a-z][a-z0-9_]{0,30}$/),
           name: z.string().min(1).max(80),
           url: z
-            .url()
+            .string()
             .refine(
-              (value) => new URL(value).protocol === "https:",
-              "MCP endpoints must use HTTPS"
+              (value) =>
+                environmentReference.test(value) || isMcpEndpoint(value),
+              "MCP endpoints must use HTTPS or a complete environment reference"
             ),
         })
       )
@@ -79,4 +109,30 @@ export function resolveHeaders(
     ])
   );
   return { headers, missing: [...missing] };
+}
+
+// Resolve only whole endpoint references, then validate the substituted URL.
+// Keep credentials and endpoint values server-side; callers expose status only.
+export function resolveServerConnection(
+  server: ServerConfig,
+  env: Record<string, string | undefined> = process.env
+) {
+  const { headers, missing } = resolveHeaders(server, env);
+  const reference = server.url.match(environmentReference);
+  const value = reference ? env[reference[1]] : server.url;
+  if (reference && !value?.trim()) {
+    missing.push(reference[1]);
+  }
+  const invalidHeaders = Object.values(headers).some((headerValue) =>
+    /[\r\n]/u.test(headerValue)
+  );
+  const invalid =
+    invalidHeaders ||
+    (Boolean(value?.trim()) && !isMcpEndpoint(value ?? "", env));
+  return {
+    headers,
+    invalid,
+    missing: [...new Set(missing)],
+    url: missing.length || invalid ? undefined : value,
+  };
 }

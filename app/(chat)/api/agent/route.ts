@@ -1,5 +1,5 @@
 import { auth } from "@/app/(auth)/auth";
-import { readAgentConfig, resolveHeaders } from "@/lib/agent/config";
+import { readAgentConfig, resolveServerConnection } from "@/lib/agent/config";
 import { discoverSkills } from "@/lib/agent/skills";
 import { getModelConnection } from "@/lib/ai/model-connection";
 
@@ -17,16 +17,17 @@ export async function GET() {
         limits: { maxSteps: config.maxSteps, timeoutMs: config.timeoutMs },
         modelConfigured: getModelConnection().configured,
         modelProvider: getModelConnection().provider,
-        servers: config.servers.map((server) => ({
-          id: server.id,
-          keyless: !Object.keys(server.headers).length,
-          missingEnvironment: resolveHeaders(server).missing,
-          name: server.name,
-          status: resolveHeaders(server).missing.length
-            ? "not_configured"
-            : "configured",
-          tools: server.allowedTools,
-        })),
+        servers: config.servers.map((server) => {
+          const { missing, invalid } = resolveServerConnection(server);
+          return {
+            id: server.id,
+            keyless: !Object.keys(server.headers).length,
+            missingEnvironment: missing,
+            name: server.name,
+            status: missing.length || invalid ? "not_configured" : "configured",
+            tools: server.allowedTools,
+          };
+        }),
         skills: skills.map(
           ({ name, description, displayName, shortDescription }) => ({
             description,

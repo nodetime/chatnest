@@ -16,7 +16,9 @@
       "id": "tavily",
       "name": "Tavily Search",
       "url": "https://mcp.tavily.com/mcp/",
-      "headers": { "Authorization": "Bearer ${TAVILY_API_KEY}" },
+      "headers": {
+        "Authorization": "Bearer ${TAVILY_API_KEY}"
+      },
       "allowedTools": [
         "tavily_search",
         "tavily_extract",
@@ -29,6 +31,23 @@
         "tavily-search",
         "tavily-extract"
       ]
+    },
+    {
+      "id": "sourcebridge",
+      "name": "SourceBridge 1688 数据查询",
+      "url": "${SOURCEBRIDGE_MCP_URL}",
+      "headers": {
+        "Authorization": "Bearer ${SOURCEBRIDGE_SERVICE_TOKEN}"
+      },
+      "allowedTools": [
+        "onebound_1688_item_search",
+        "onebound_1688_item_get",
+        "onebound_1688_item_get_shop",
+        "onebound_1688_item_get_company",
+        "onebound_1688_upload_img",
+        "onebound_1688_item_search_img"
+      ],
+      "autoApproveTools": []
     }
   ]
 }
