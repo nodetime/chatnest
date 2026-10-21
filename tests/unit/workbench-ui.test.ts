@@ -599,3 +599,37 @@ test("source and raw-result Sheets localize close controls without changing the 
     />Close<\/span>/
   );
 });
+
+test("inline result preview sizes filtered rows up to four and preserves the 257px legacy preview", () => {
+  assert.ok(
+    existsSync("components/chat/document-preview-layout.ts"),
+    "pure preview layout helper exists"
+  );
+  clientScript(`
+    const assert = require('node:assert/strict');
+    const { documentPreviewLayout } = require('./components/chat/document-preview-layout.ts');
+    const fixture = (count) => ({ columns: [{ label: 'Title', path: '/title' }], rows: Array.from({ length: count }, (_, index) => ({ title: index < 2 ? 'keep' : 'other' })), view: { filter: '', sort: [], visibleColumns: ['/title'] } });
+    for (const [count, height, showFade] of [[0, 115, false], [2, 115, false], [3, 153, false], [4, 191, false], [20, 191, true]]) {
+      assert.deepEqual(documentPreviewLayout(fixture(count)), { height, showFade });
+    }
+    const filtered = fixture(20);
+    filtered.view.filter = 'keep';
+    const before = JSON.stringify(filtered);
+    assert.deepEqual(documentPreviewLayout(filtered), { height: 115, showFade: false });
+    assert.equal(JSON.stringify(filtered), before);
+    assert.deepEqual(documentPreviewLayout(null), { height: 257, showFade: true });
+  `);
+});
+
+test("only parsed inline tables use bounded preview geometry without a 220px grid minimum", () => {
+  const source = readFileSync("components/chat/document-preview.tsx", "utf8");
+  assert.match(source, /documentPreviewLayout\(table\)/);
+  assert.match(source, /style=\{\{ height: previewLayout\.height \}\}/);
+  assert.match(source, /previewLayout\.showFade \?/);
+  const content = source.slice(source.indexOf("const DocumentContent ="));
+  assert.doesNotMatch(content, /h-\[257px\]/);
+  assert.match(content, /const table = parseResultTable\(document.content\)/);
+  assert.match(content, /<ResultTableView\s+inline/);
+  const table = readFileSync("components/chat/result-table.tsx", "utf8");
+  assert.doesNotMatch(table, /minHeight: 220/);
+});

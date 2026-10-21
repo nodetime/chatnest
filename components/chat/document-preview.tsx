@@ -21,6 +21,7 @@ import type { Document } from "@/lib/db/schema";
 import { cn, fetcher } from "@/lib/utils";
 import type { ArtifactKind, UIArtifact } from "./artifact";
 import { CodeEditor } from "./code-editor";
+import { documentPreviewLayout } from "./document-preview-layout";
 import { InlineDocumentSkeleton } from "./document-skeleton";
 import {
   CodeIcon,
@@ -259,7 +260,7 @@ const DocumentContent = ({ document }: { document: Document }) => {
   const { artifact } = useArtifact();
 
   const containerClassName = cn(
-    "h-[257px] overflow-hidden rounded-b-2xl border border-t-0 border-border/50 dark:bg-muted",
+    "overflow-hidden rounded-b-2xl border border-t-0 border-border/50 dark:bg-muted",
     {
       "p-0": document.kind === "code",
       "p-4 sm:px-10 sm:py-10": document.kind === "text",
@@ -277,9 +278,13 @@ const DocumentContent = ({ document }: { document: Document }) => {
 
   const handleSaveContent = () => null;
   const table = parseResultTable(document.content);
+  const previewLayout = documentPreviewLayout(table);
 
   return (
-    <div className={cn(containerClassName, "relative")}>
+    <div
+      className={cn(containerClassName, "relative")}
+      style={{ height: previewLayout.height }}
+    >
       {table ? (
         <ResultTableView
           inline
@@ -313,7 +318,9 @@ const DocumentContent = ({ document }: { document: Document }) => {
           title={document.title}
         />
       ) : null}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-muted to-transparent dark:from-muted" />
+      {previewLayout.showFade ? (
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-muted to-transparent dark:from-muted" />
+      ) : null}
       {document.kind === "code" && (
         <div className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-muted to-transparent dark:from-muted" />
       )}

@@ -254,10 +254,7 @@ export function ResultTableView({
           <ResultTableSource source={table.source} />
         </div>
       )}
-      <div
-        className="min-h-0 min-w-0 flex-1 overflow-hidden"
-        style={inline ? { minHeight: 220 } : undefined}
-      >
+      <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
         <DataGrid
           className={`chatnest-result-grid ${resolvedTheme === "dark" ? "rdg-dark" : "rdg-light"}`}
           columns={columns}
