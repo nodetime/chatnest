@@ -23,6 +23,7 @@ export const textArtifact = new Artifact<"text", TextArtifactMetadata>({
     {
       description: "查看更改",
       icon: <ClockRewind size={18} />,
+      id: "view-changes",
       isDisabled: ({ currentVersionIndex }) => {
         if (currentVersionIndex === 0) {
           return true;

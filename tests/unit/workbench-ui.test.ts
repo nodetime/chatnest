@@ -633,3 +633,29 @@ test("only parsed inline tables use bounded preview geometry without a 220px gri
   const table = readFileSync("components/chat/result-table.tsx", "utf8");
   assert.doesNotMatch(table, /minHeight: 220/);
 });
+
+test("artifact diff selection uses a stable action ID independent of translated descriptions", () => {
+  const config = readFileSync("components/chat/create-artifact.tsx", "utf8");
+  assert.match(config, /id\?: string/);
+  assert.match(config, /export function isArtifactActionActive/);
+  clientScript(`
+    const assert = require('node:assert/strict');
+    const { isArtifactActionActive } = require('./components/chat/create-artifact.tsx');
+    for (const description of ['View changes', '查看更改']) {
+      const action = { id: 'view-changes', description };
+      assert.equal(isArtifactActionActive(action, 'diff'), true);
+      assert.equal(isArtifactActionActive(action, 'edit'), false);
+      assert.equal(isArtifactActionActive({ description }, 'diff'), false);
+    }
+    assert.equal(isArtifactActionActive({ id: 'copy', description: '查看更改' }, 'diff'), false);
+  `);
+  const consumer = readFileSync("components/chat/artifact-actions.tsx", "utf8");
+  assert.match(consumer, /isActive=\{isArtifactActionActive\(action, mode\)\}/);
+  assert.doesNotMatch(consumer, /action.description ===/);
+  assert.match(consumer, /toast.error\("操作执行失败，请重试。"\)/);
+  const text = readFileSync("artifacts/text/client.tsx", "utf8");
+  assert.match(
+    text,
+    /description: "查看更改",\s+icon: <ClockRewind[^\n]+\s+id: "view-changes"/
+  );
+});

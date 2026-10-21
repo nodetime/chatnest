@@ -1,9 +1,13 @@
-import { memo, type ReactNode, useCallback, useState } from "react";
+import { memo, useCallback, useState } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { artifactDefinitions, type UIArtifact } from "./artifact";
-import type { ArtifactActionContext } from "./create-artifact";
+import {
+  type ArtifactAction,
+  type ArtifactActionContext,
+  isArtifactActionActive,
+} from "./create-artifact";
 
 type ArtifactActionsProps = {
   artifact: UIArtifact;
@@ -13,12 +17,6 @@ type ArtifactActionsProps = {
   mode: "edit" | "diff";
   metadata: ArtifactActionContext["metadata"];
   setMetadata: ArtifactActionContext["setMetadata"];
-};
-
-type ArtifactAction = {
-  description: string;
-  icon: ReactNode;
-  onClick: (context: ArtifactActionContext) => Promise<void> | void;
 };
 
 function ArtifactActionButton({
@@ -40,7 +38,7 @@ function ArtifactActionButton({
     try {
       await Promise.resolve(action.onClick(actionContext));
     } catch {
-      toast.error("Failed to execute action");
+      toast.error("操作执行失败，请重试。");
     } finally {
       setIsLoading(false);
     }
@@ -117,8 +115,8 @@ function PureArtifactActions({
             action={action}
             actionContext={actionContext}
             disabled={disabled}
-            isActive={mode === "diff" && action.description === "View changes"}
-            key={action.description}
+            isActive={isArtifactActionActive(action, mode)}
+            key={action.id ?? action.description}
             setIsLoading={setIsLoading}
           />
         );
