@@ -506,12 +506,11 @@ function PureMultimodalInput({
 
       <input
         accept={ATTACHMENT_ACCEPT}
-        className="pointer-events-none fixed -top-4 -left-4 size-0.5 opacity-0"
         disabled={Boolean(editingMessage)}
+        hidden
         multiple
         onChange={handleFileChange}
         ref={fileInputRef}
-        tabIndex={-1}
         type="file"
       />
 
