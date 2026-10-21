@@ -1,6 +1,7 @@
 import { Output, streamText, tool, type UIMessageStreamWriter } from "ai";
 import type { Session } from "next-auth";
 import { z } from "zod";
+import { isProtectedResultTable } from "@/lib/artifacts/result-table";
 import { getDocumentById, saveSuggestions } from "@/lib/db/queries";
 import type { Suggestion } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
@@ -32,6 +33,13 @@ export const requestSuggestions = ({
 
       if (document.userId !== session.user?.id) {
         return { error: "Forbidden" };
+      }
+
+      if (isProtectedResultTable(document.content)) {
+        return {
+          error:
+            "Result table evidence is immutable; use separate notes instead of writing suggestions.",
+        };
       }
 
       const suggestions: Omit<

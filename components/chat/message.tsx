@@ -263,6 +263,27 @@ const PurePreviewMessage = ({
       );
     }
 
+    if (type === "tool-createResultTable") {
+      if (!part.output || "error" in part.output) {
+        return (
+          <ToolActivity
+            approve={addToolApprovalResponse}
+            isReadonly={isReadonly}
+            isRunning={isLoading}
+            key={part.toolCallId}
+            part={part}
+          />
+        );
+      }
+      return (
+        <DocumentPreview
+          isReadonly={isReadonly}
+          key={part.toolCallId}
+          result={part.output}
+        />
+      );
+    }
+
     if (type === "tool-createDocument") {
       const { toolCallId } = part;
 

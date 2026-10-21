@@ -97,18 +97,22 @@ test("Porta success, 0000 and chargeable no-results 2000 preserve the native MCP
   await withErrorRuntime(async (runtime, setOutput, count) => {
     const { execute } = runtime.tools[toolName];
     assert.ok(execute);
-    for (const body of [
+    for (const [caseIndex, body] of [
       { items: { item: [] } },
       { error: "", error_code: "0000", items: { item: [null] } },
       { error: "No result", error_code: "2000", items: { item: [] } },
-    ]) {
+    ].entries()) {
       const output = result(body, false);
       setOutput(output);
       assert.equal(
         // biome-ignore lint/performance/noAwaitInLoops: each case uses a distinct injected response
         await execute(
           { q: "fixture" },
-          { context: {}, messages: [], toolCallId: "native-success" }
+          {
+            context: {},
+            messages: [],
+            toolCallId: `native-success-${caseIndex}`,
+          }
         ),
         output
       );
@@ -136,7 +140,7 @@ test("Porta error 4008 and BridgeError retain JSON bodies without headers, leake
         },
       },
     ];
-    for (const body of bodies) {
+    for (const [caseIndex, body] of bodies.entries()) {
       setOutput({
         ...result(body, true),
         _meta: {
@@ -152,7 +156,11 @@ test("Porta error 4008 and BridgeError retain JSON bodies without headers, leake
           Promise.resolve(
             execute(
               { q: "fixture" },
-              { context: {}, messages: [], toolCallId: "native-error" }
+              {
+                context: {},
+                messages: [],
+                toolCallId: `native-error-${caseIndex}`,
+              }
             )
           ),
         (error: unknown) => {

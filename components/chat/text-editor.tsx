@@ -43,6 +43,7 @@ function PureEditor({
   onSaveContent,
   suggestions,
   status,
+  isCurrentVersion,
 }: EditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<EditorView | null>(null);
@@ -103,15 +104,22 @@ function PureEditor({
     if (editorRef.current) {
       editorRef.current.setProps({
         dispatchTransaction: (transaction) => {
+          if (
+            transaction.docChanged &&
+            (!isCurrentVersion || status === "streaming")
+          ) {
+            return;
+          }
           handleTransaction({
             editorRef,
             onSaveContent,
             transaction,
           });
         },
+        editable: () => isCurrentVersion && status !== "streaming",
       });
     }
-  }, [onSaveContent]);
+  }, [onSaveContent, isCurrentVersion, status]);
 
   useEffect(() => {
     if (editorRef.current && content) {

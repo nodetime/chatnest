@@ -19,7 +19,12 @@ type SheetEditorProps = {
 const MIN_ROWS = 50;
 const MIN_COLS = 26;
 
-const PureSpreadsheetEditor = ({ content, saveContent }: SheetEditorProps) => {
+const PureSpreadsheetEditor = ({
+  content,
+  saveContent,
+  isCurrentVersion,
+  status,
+}: SheetEditorProps) => {
   const { resolvedTheme } = useTheme();
 
   const parseData = useMemo(() => {
@@ -64,12 +69,13 @@ const PureSpreadsheetEditor = ({ content, saveContent }: SheetEditorProps) => {
       }),
       key: i.toString(),
       name: String.fromCharCode(65 + i),
-      renderEditCell: textEditor,
+      renderEditCell:
+        isCurrentVersion && status !== "streaming" ? textEditor : undefined,
       width: 120,
     }));
 
     return [rowNumberColumn, ...dataColumns];
-  }, []);
+  }, [isCurrentVersion, status]);
 
   const initialRows = useMemo(
     () =>
@@ -97,6 +103,9 @@ const PureSpreadsheetEditor = ({ content, saveContent }: SheetEditorProps) => {
   const generateCsv = (data: string[][]) => unparse(data);
 
   const handleRowsChange = (newRows: Record<string, string | number>[]) => {
+    if (!isCurrentVersion || status === "streaming") {
+      return;
+    }
     setLocalRows(newRows);
 
     const updatedData = newRows.map((row) =>
@@ -112,11 +121,15 @@ const PureSpreadsheetEditor = ({ content, saveContent }: SheetEditorProps) => {
       column: { key: string };
       selectCell: (enableEditor?: boolean) => void;
     }) => {
-      if (args.column.key !== "rowNumber") {
+      if (
+        isCurrentVersion &&
+        status !== "streaming" &&
+        args.column.key !== "rowNumber"
+      ) {
         args.selectCell(true);
       }
     },
-    []
+    [isCurrentVersion, status]
   );
 
   return (

@@ -17,7 +17,12 @@ type EditorProps = {
   suggestions: Suggestion[];
 };
 
-function PureCodeEditor({ content, onSaveContent, status }: EditorProps) {
+function PureCodeEditor({
+  content,
+  onSaveContent,
+  status,
+  isCurrentVersion,
+}: EditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<EditorView | null>(null);
   const userScrolledRef = useRef(false);
@@ -79,6 +84,8 @@ function PureCodeEditor({ content, onSaveContent, status }: EditorProps) {
         doc: editorRef.current.state.doc,
         extensions: [
           basicSetup,
+          EditorState.readOnly.of(!isCurrentVersion || status === "streaming"),
+          EditorView.editable.of(isCurrentVersion && status !== "streaming"),
           python(),
           oneDark,
           updateListener,
@@ -89,7 +96,7 @@ function PureCodeEditor({ content, onSaveContent, status }: EditorProps) {
 
       editorRef.current.setState(newState);
     }
-  }, [onSaveContent, status]);
+  }, [onSaveContent, status, isCurrentVersion]);
 
   useEffect(() => {
     if (status !== "streaming") {

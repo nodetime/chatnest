@@ -29,6 +29,7 @@ import { toast } from "@/components/chat/toast";
 import type { VisibilityType } from "@/components/chat/visibility-selector";
 import { useAutoResume } from "@/hooks/use-auto-resume";
 import { useChatDraft } from "@/hooks/use-chat-draft";
+import { compactToolApprovals } from "@/lib/agent/approval-transport";
 import { buildTaskMessage, type TaskDraft } from "@/lib/agent/task-draft";
 import { DEFAULT_CHAT_MODEL } from "@/lib/ai/models";
 import type { Vote } from "@/lib/db/schema";
@@ -249,7 +250,7 @@ export function ActiveChatProvider({
           body: {
             id: request.id,
             ...(isToolApprovalContinuation
-              ? { messages: request.messages }
+              ? { messages: compactToolApprovals(request.messages) }
               : { message: lastMessage }),
             searchMode: searchModeRef.current,
             selectedChatModel: currentModelIdRef.current,

@@ -1,17 +1,20 @@
 "use client";
 
-import { isAfter } from "date-fns";
 import { motion } from "framer-motion";
 import { ChevronLeftIcon, ChevronRightIcon, DiffIcon } from "lucide-react";
 import type { Dispatch, SetStateAction } from "react";
 import { useCallback, useState } from "react";
+import { toast } from "sonner";
 import { useSWRConfig } from "swr";
 import { useArtifact } from "@/hooks/use-artifact";
+import { isProtectedResultTable } from "@/lib/artifacts/result-table";
 import type { Document } from "@/lib/db/schema";
 import { cn, getDocumentTimestampByIndex } from "@/lib/utils";
 import { LoaderIcon } from "./icons";
 
 type VersionFooterProps = {
+  chatId?: string;
+  isReadonly?: boolean;
   handleVersionChange: (type: "next" | "prev" | "toggle" | "latest") => void;
   documents: Document[] | undefined;
   currentVersionIndex: number;
@@ -21,6 +24,8 @@ type VersionFooterProps = {
 
 export const VersionFooter = ({
   handleVersionChange,
+  chatId,
+  isReadonly,
   documents,
   currentVersionIndex,
   mode,
@@ -31,6 +36,7 @@ export const VersionFooter = ({
   const { mutate } = useSWRConfig();
   const [isMutating, setIsMutating] = useState(false);
 
+  const protectedTable = isProtectedResultTable(artifact.content);
   const isFirst = currentVersionIndex === 0;
   const isLast = documents
     ? currentVersionIndex === documents.length - 1
@@ -48,46 +54,38 @@ export const VersionFooter = ({
   }, [mode, setMode]);
 
   const handleRestore = useCallback(async () => {
-    if (!documents) {
+    if (!documents || isReadonly || isProtectedResultTable(artifact.content)) {
       return;
     }
 
     setIsMutating(true);
 
     try {
-      await mutate(
-        `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/document?id=${artifact.documentId}`,
-        await fetch(
-          `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/document?id=${artifact.documentId}&timestamp=${getDocumentTimestampByIndex(
-            documents,
-            currentVersionIndex
-          )}`,
-          {
-            method: "DELETE",
-          }
-        ),
-        {
-          optimisticData: documents
-            ? [
-                ...documents.filter((document) =>
-                  isAfter(
-                    new Date(document.createdAt),
-                    new Date(
-                      getDocumentTimestampByIndex(
-                        documents,
-                        currentVersionIndex
-                      )
-                    )
-                  )
-                ),
-              ]
-            : [],
-        }
+      const key = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/document?id=${artifact.documentId}&chatId=${chatId ?? ""}`;
+      const response = await fetch(
+        `${key}&timestamp=${getDocumentTimestampByIndex(documents, currentVersionIndex)}`,
+        { method: "DELETE" }
       );
+      if (!response.ok) {
+        throw new Error("恢复版本失败，请重试。");
+      }
+      await mutate(key);
+      handleVersionChange("latest");
+    } catch {
+      toast.error("恢复版本失败，原版本保持不变。");
     } finally {
       setIsMutating(false);
     }
-  }, [artifact.documentId, currentVersionIndex, documents, mutate]);
+  }, [
+    artifact.documentId,
+    artifact.content,
+    isReadonly,
+    chatId,
+    currentVersionIndex,
+    documents,
+    mutate,
+    handleVersionChange,
+  ]);
 
   const handleLatest = useCallback(() => {
     setMode("edit");
@@ -145,7 +143,7 @@ export const VersionFooter = ({
       <div className="flex flex-row gap-2">
         <button
           className="inline-flex items-center justify-center gap-2 rounded-lg bg-foreground px-3 py-1.5 text-sm font-medium text-background transition-all duration-150 hover:opacity-90 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50"
-          disabled={isMutating}
+          disabled={isMutating || isReadonly || protectedTable}
           onClick={handleRestore}
           type="button"
         >

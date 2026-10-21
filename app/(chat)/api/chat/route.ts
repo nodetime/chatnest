@@ -20,6 +20,12 @@ import {
   prepareRegeneration,
 } from "@/lib/agent/message-turn";
 import { agentStreamErrorText } from "@/lib/agent/porta-error";
+import {
+  boundedMcpHistory,
+  historyProjectionTools,
+  ResultEvidenceLedger,
+  restoreResultEvidence,
+} from "@/lib/agent/result-evidence";
 import { createAgentRuntime } from "@/lib/agent/runtime";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
 import {
@@ -31,6 +37,7 @@ import { getCapabilities, getModelAvailability } from "@/lib/ai/model-service";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
 import { getLanguageModel } from "@/lib/ai/providers";
 import { createDocument } from "@/lib/ai/tools/create-document";
+import { createResultTable } from "@/lib/ai/tools/create-result-table";
 import { editDocument } from "@/lib/ai/tools/edit-document";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
 import { updateDocument } from "@/lib/ai/tools/update-document";
@@ -230,15 +237,31 @@ export async function POST(request: Request) {
     const isReasoningModel = capabilities?.reasoning === true;
     const supportsTools = capabilities?.tools === true;
     const attachmentBudget = new AttachmentRoundBudget();
-    const attachmentContext = await prepareAttachmentContext(
+    const resolvedAttachmentContext = await prepareAttachmentContext(
       uiMessages,
       capabilities?.vision === true,
       (assetId) => readAssetForContext(assetId, session.user.id, id),
       supportsTools,
       attachmentBudget
     );
+    const evidenceLedger = new ResultEvidenceLedger();
+    const contextIds = new Set(uiMessages.map((item) => item.id));
+    const evidenceHistory = messagesFromDb.filter((item) =>
+      contextIds.has(item.id)
+    );
+    restoreResultEvidence(evidenceLedger, evidenceHistory);
+    const historyTools = historyProjectionTools(
+      evidenceLedger,
+      evidenceHistory
+    );
+    const attachmentContext = boundedMcpHistory(
+      resolvedAttachmentContext,
+      historyTools,
+      evidenceLedger
+    );
     const modelMessages = await convertToModelMessages(attachmentContext, {
       ignoreIncompleteToolCalls: true,
+      tools: historyTools,
     });
     if (message?.role === "user" && !isRegeneration && !isEdit) {
       await commitUserMessage({
@@ -327,7 +350,16 @@ export async function POST(request: Request) {
 
         let runtime: Awaited<ReturnType<typeof createAgentRuntime>> | undefined;
         try {
-          runtime = await createAgentRuntime(request.signal);
+          runtime = await createAgentRuntime(
+            request.signal,
+            undefined,
+            undefined,
+            {
+              ledger: evidenceLedger,
+              onSource: (source) =>
+                dataStream.write({ data: source, type: "data-mcp-source" }),
+            }
+          );
           if (supportsTools) {
             try {
               Object.assign(
@@ -339,6 +371,12 @@ export async function POST(request: Request) {
             }
           }
           const tools: ToolSet = {
+            createResultTable: createResultTable({
+              chatId: id,
+              dataStream,
+              ledger: evidenceLedger,
+              session,
+            }),
             readAttachment: readAttachmentTool(
               (assetId) => readAttachmentAsset(assetId, session.user.id, id),
               attachmentBudget

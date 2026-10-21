@@ -14,17 +14,27 @@ import {
   toolAlias,
 } from "./mcp-settings/runtime-config";
 import { createPortaToolError } from "./porta-error";
+import {
+  type McpSourceMetadata,
+  ResultEvidenceLedger,
+  sourceModelOutput,
+} from "./result-evidence";
 import { buildSkillsPrompt, createSkillTools, discoverSkills } from "./skills";
 
 export async function createAgentRuntime(
   signal: AbortSignal,
   connect: typeof createMCPClient = createMCPClient,
-  loadConfig: () => Promise<RuntimeConfig> = readRuntimeConfig
+  loadConfig: () => Promise<RuntimeConfig> = readRuntimeConfig,
+  evidence: {
+    ledger?: ResultEvidenceLedger;
+    onSource?: (source: McpSourceMetadata) => void;
+  } = {}
 ) {
   const [config, skills] = await Promise.all([
     loadConfig().then((snapshot) => structuredClone(snapshot)),
     discoverSkills(),
   ]);
+  const ledger = evidence.ledger ?? new ResultEvidenceLedger();
   const clients = new Set<MCPClient>();
   const runSignal = AbortSignal.any([
     signal,
@@ -110,6 +120,7 @@ export async function createAgentRuntime(
               description: `${server.name}: ${remote.description ?? name}`,
               execute: (input, options) => {
                 runSignal.throwIfAborted();
+                ledger.reserveCurrentCall(options.toolCallId, alias);
                 return (async () => {
                   let output: unknown;
                   try {
@@ -147,12 +158,26 @@ export async function createAgentRuntime(
                       `${server.name} 暂时未能返回结果；可能是限流或访问失败，请稍后重试。`
                     );
                   }
+                  const source = ledger.record(
+                    {
+                      completedAt: new Date().toISOString(),
+                      serverId: server.id,
+                      serverName: server.name,
+                      timeBasis: "tool-completed",
+                      toolCallId: options.toolCallId,
+                      toolName: alias,
+                    },
+                    output
+                  );
+                  evidence.onSource?.(source);
                   return normalizeMcpOutput(server.id, name, output);
                 })();
               },
               inputSchema: remote.inputSchema,
               needsApproval:
                 server.managed || !server.autoApproveTools.includes(name),
+              toModelOutput: ({ toolCallId, output }) =>
+                sourceModelOutput(ledger, toolCallId, output),
             });
           }
           Object.assign(tools, serverTools);

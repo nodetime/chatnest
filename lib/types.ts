@@ -1,7 +1,9 @@
 import type { InferUITool, UIMessage } from "ai";
 import { z } from "zod";
 import type { ArtifactKind } from "@/components/chat/artifact";
+import type { McpSourceMetadata } from "./agent/result-evidence";
 import type { createDocument } from "./ai/tools/create-document";
+import type { createResultTable } from "./ai/tools/create-result-table";
 import type { getWeather } from "./ai/tools/get-weather";
 import type { requestSuggestions } from "./ai/tools/request-suggestions";
 import type { updateDocument } from "./ai/tools/update-document";
@@ -21,6 +23,7 @@ type requestSuggestionsTool = InferUITool<
 >;
 
 export type ChatTools = {
+  createResultTable: InferUITool<ReturnType<typeof createResultTable>>;
   getWeather: weatherTool;
   createDocument: createDocumentTool;
   updateDocument: updateDocumentTool;
@@ -35,6 +38,15 @@ export type WaitingStatusData = {
 };
 
 export type CustomUIDataTypes = {
+  "mcp-source": McpSourceMetadata;
+  resultTable: {
+    id: string;
+    title: string;
+    kind: "sheet";
+    content: string;
+    version: string;
+    chatId: string;
+  };
   textDelta: string;
   imageDelta: string;
   sheetDelta: string;

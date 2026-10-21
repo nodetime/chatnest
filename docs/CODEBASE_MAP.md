@@ -30,3 +30,10 @@ Private document ingestion (Task 3):
 - `next.config.ts`: 65mb bounded Next proxy envelope; build-only pinned NFT worker dependency closure plus PDF assets/native canvas. Literal native `require.resolve` host seeds + external parser packages preserve pnpm resolution symlinks in real route traces.
 - `components/chat/preview-attachment.tsx`, `tool-activity.tsx`: text-only document states, failure retry/removal and cited attachment-read cards, without changing Agent-selected tool/skill flow.
 - `tests/unit/document-ingestion.test.ts`: offline synthetic parser/budget/ZIP/worker/context/UI regression coverage. Independent root verification owns ignored mock HTTP/DB/browser/production/hermetic trace fixtures; these are not paid-provider acceptance evidence.
+
+Optional deterministic result artifacts:
+- `lib/agent/result-evidence.ts`: bounded successful-MCP ledger, DB-only history restoration and pure SDK model projections; `approval-transport.ts` sends only approval decisions.
+- `lib/artifacts/result-table.ts`: immutable JSON envelope, strict pointers, limits, deterministic view/sort/filter and formula-safe CSV; `stream-state.ts` handles atomic table events.
+- `lib/ai/tools/create-result-table.ts`: optional Agent-selected creation from actual MCP evidence; no secondary model or automatic workflow.
+- `/api/document/result-table` and dedicated DB transaction helpers: bound-chat ownership and expectedVersion view/notes CAS; generic document mutation paths protect evidence.
+- `components/chat/result-table.tsx`: existing Workspace sheet surface with read-only original values, compact controls, provenance, raw details, exports and separate notes.

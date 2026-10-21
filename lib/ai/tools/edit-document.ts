@@ -1,6 +1,7 @@
 import { tool, type UIMessageStreamWriter } from "ai";
 import type { Session } from "next-auth";
 import { z } from "zod";
+import { isProtectedResultTable } from "@/lib/artifacts/result-table";
 import { getDocumentById, saveDocument } from "@/lib/db/queries";
 import type { ChatMessage } from "@/lib/types";
 
@@ -22,6 +23,13 @@ export const editDocument = ({ session, dataStream }: EditDocumentProps) =>
 
       if (document.userId !== session.user?.id) {
         return { error: "Forbidden" };
+      }
+
+      if (isProtectedResultTable(document.content)) {
+        return {
+          error:
+            "Result table source values are immutable. Only the explicit view/notes API may save a new view.",
+        };
       }
 
       if (!document.content) {

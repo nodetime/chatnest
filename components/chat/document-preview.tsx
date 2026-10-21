@@ -10,7 +10,13 @@ import {
   useRef,
 } from "react";
 import useSWR from "swr";
+import { useActiveChat } from "@/hooks/use-active-chat";
 import { useArtifact } from "@/hooks/use-artifact";
+import {
+  isProtectedResultTable,
+  parseResultTable,
+} from "@/lib/artifacts/result-table";
+import { openArtifactPreview } from "@/lib/artifacts/stream-state";
 import type { Document } from "@/lib/db/schema";
 import { cn, fetcher } from "@/lib/utils";
 import type { ArtifactKind, UIArtifact } from "./artifact";
@@ -24,6 +30,7 @@ import {
   LoaderIcon,
 } from "./icons";
 import { ImageEditor } from "./image-editor";
+import { ResultTableView } from "./result-table";
 import { SpreadsheetEditor } from "./sheet-editor";
 import { Editor } from "./text-editor";
 
@@ -46,17 +53,18 @@ export function DocumentPreview({
   args,
 }: DocumentPreviewProps) {
   const { artifact, setArtifact } = useArtifact();
+  const { chatId } = useActiveChat();
 
   const { data: documents, isLoading: isDocumentsFetching } = useSWR<
     Document[]
   >(
     result
-      ? `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/document?id=${result.id}`
+      ? `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/document?id=${result.id}&chatId=${chatId}`
       : null,
     fetcher
   );
 
-  const previewDocument = useMemo(() => documents?.[0], [documents]);
+  const previewDocument = useMemo(() => documents?.at(-1), [documents]);
   const hitboxRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -169,19 +177,14 @@ const PureHitboxLayer = ({
     (event: MouseEvent<HTMLElement>) => {
       const boundingBox = event.currentTarget.getBoundingClientRect();
 
-      setArtifact((artifact) => ({
-        ...artifact,
-        ...(result?.id && { documentId: result.id }),
-        ...(result?.title && { title: result.title }),
-        ...(result?.kind && { kind: result.kind }),
-        boundingBox: {
+      setArtifact((artifact) =>
+        openArtifactPreview(artifact, result ?? {}, {
           height: boundingBox.height,
           left: boundingBox.x,
           top: boundingBox.y,
           width: boundingBox.width,
-        },
-        isVisible: true,
-      }));
+        })
+      );
     },
     [setArtifact, result]
   );
@@ -266,17 +269,27 @@ const DocumentContent = ({ document }: { document: Document }) => {
   const commonProps = {
     content: document.content ?? "",
     currentVersionIndex: 0,
-    isCurrentVersion: true,
+    isCurrentVersion: false,
     saveContent: () => null,
     status: artifact.status,
     suggestions: [],
   };
 
   const handleSaveContent = () => null;
+  const table = parseResultTable(document.content);
 
   return (
     <div className={cn(containerClassName, "relative")}>
-      {document.kind === "text" ? (
+      {table ? (
+        <ResultTableView
+          inline
+          key={`${document.id}:${new Date(document.createdAt).toISOString()}`}
+          readOnly
+          table={table}
+        />
+      ) : isProtectedResultTable(document.content) ? (
+        <p className="p-4 text-xs">结果表格格式暂不支持，原始值保持只读。</p>
+      ) : document.kind === "text" ? (
         <Editor {...commonProps} onSaveContent={handleSaveContent} />
       ) : document.kind === "code" ? (
         <div className="relative flex w-full flex-1">

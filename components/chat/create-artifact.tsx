@@ -34,6 +34,10 @@ export type ArtifactToolbarItem = {
 };
 
 type ArtifactContent<M = any> = {
+  isReadonly?: boolean;
+  documentId?: string;
+  expectedVersion?: string;
+  onResultTableSaved?: (content: string) => Promise<void> | void;
   title: string;
   content: string;
   mode: "edit" | "diff";

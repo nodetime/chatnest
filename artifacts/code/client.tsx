@@ -79,7 +79,10 @@ const codeArtifactContent: Artifact<"code", Metadata>["content"] =
     return (
       <>
         <div className="relative min-h-[200px]">
-          <CodeEditor {...props} />
+          <CodeEditor
+            {...props}
+            isCurrentVersion={props.isCurrentVersion && !props.isReadonly}
+          />
         </div>
 
         {metadata?.outputs ? (
