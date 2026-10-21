@@ -45,7 +45,7 @@ export function AppSidebar({
         <SidebarHeader className="px-3 pt-5 pb-3">
           <div className="mb-5 flex items-center justify-between px-1">
             <button
-              aria-label="Research 首页"
+              aria-label="ChatNest 首页"
               className="flex items-center gap-2 text-sm font-semibold"
               onClick={handleNew}
               type="button"
@@ -53,7 +53,7 @@ export function AppSidebar({
               <span className="flex size-8 items-center justify-center rounded-full bg-foreground text-background">
                 <MessageSquare className="size-4" />
               </span>
-              Research
+              ChatNest
             </button>
             <button
               aria-label="收起侧栏"

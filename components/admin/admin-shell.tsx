@@ -116,11 +116,11 @@ function AdminSidebar({ identity }: { identity: AdminIdentity }) {
       <SidebarHeader className="h-14 justify-center border-b px-3">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild tooltip="Research 平台管理">
+            <SidebarMenuButton asChild tooltip="ChatNest 平台管理">
               <Link href="/admin">
                 <Command aria-hidden="true" />
                 <span className="font-semibold">
-                  Research{" "}
+                  ChatNest{" "}
                   <span className="font-normal text-muted-foreground">
                     / Admin
                   </span>

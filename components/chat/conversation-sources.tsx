@@ -84,7 +84,7 @@ export function ConversationSources({
     );
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `research-${chatId.slice(0, 8)}.md`;
+    anchor.download = `chatnest-${chatId.slice(0, 8)}.md`;
     anchor.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
     toast.success("已导出对话文字与来源清单");

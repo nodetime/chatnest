@@ -1,8 +1,13 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { auth } from "@/app/(auth)/auth";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { requirePlatformAdmin } from "@/lib/admin/access";
+
+export const metadata: Metadata = {
+  title: "ChatNest Admin",
+};
 
 export default function AdminLayout({
   children,
