@@ -15,6 +15,13 @@
       "when": 1792537200000,
       "tag": "0001_mcp_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792623600000,
+      "tag": "0002_private_uploads",
+      "breakpoints": true
     }
   ]
 }

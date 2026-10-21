@@ -17,9 +17,10 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import type { ArtifactKind } from "@/components/chat/artifact";
 import type { VisibilityType } from "@/components/chat/visibility-selector";
-import { prepareRegeneration } from "../agent/message-turn";
+import { prepareMessageEdit, prepareRegeneration } from "../agent/message-turn";
 import { ChatbotError } from "../errors";
 import type { ChatMessage } from "../types";
+import { cleanupDeletedChatAssets } from "../uploads/service";
 import { generateUUID } from "../utils";
 import {
   type Chat,
@@ -109,6 +110,7 @@ export async function deleteChatById({ id }: { id: string }) {
       .delete(chat)
       .where(eq(chat.id, id))
       .returning();
+    await cleanupDeletedChatAssets(id).catch(() => undefined);
     return chatsDeleted;
   } catch (error) {
     throw new ChatbotError("bad_request:database", { cause: error });
@@ -137,6 +139,9 @@ export async function deleteAllChatsByUserId({ userId }: { userId: string }) {
       .where(eq(chat.userId, userId))
       .returning();
 
+    await Promise.all(
+      chatIds.map((id) => cleanupDeletedChatAssets(id).catch(() => undefined))
+    );
     return { deletedCount: deletedChats.length };
   } catch (error) {
     throw new ChatbotError("bad_request:database", { cause: error });
@@ -313,6 +318,79 @@ export async function replaceRegeneratedAnswer({
       .update(message)
       .set({ attachments: answer.attachments, parts: answer.parts })
       .where(and(eq(message.chatId, chatId), eq(message.id, answer.id)));
+  });
+}
+
+export async function replaceEditedTurn({
+  chatId,
+  userId,
+  snapshot,
+  edited,
+  answer,
+}: {
+  chatId: string;
+  userId: string;
+  snapshot: DBMessage[];
+  edited: ChatMessage;
+  answer: DBMessage;
+}) {
+  await db.transaction(async (tx) => {
+    const [owner] = await tx
+      .select()
+      .from(chat)
+      .where(eq(chat.id, chatId))
+      .for("update");
+    if (!owner || owner.userId !== userId) {
+      throw new ChatbotError("forbidden:chat");
+    }
+    const current = await tx
+      .select()
+      .from(message)
+      .where(eq(message.chatId, chatId))
+      .orderBy(asc(message.createdAt));
+    const unchanged =
+      current.length === snapshot.length &&
+      current.every(
+        (item, index) =>
+          item.id === snapshot[index].id &&
+          item.role === snapshot[index].role &&
+          JSON.stringify(item.parts) === JSON.stringify(snapshot[index].parts)
+      );
+    const text = edited.parts
+      .filter((part) => part.type === "text")
+      .map((part) => part.text)
+      .join("");
+    const prepared = prepareMessageEdit(
+      current as ChatMessage[],
+      edited.id,
+      text
+    );
+    if (
+      !unchanged ||
+      !prepared ||
+      JSON.stringify(prepared.edited.parts) !== JSON.stringify(edited.parts) ||
+      answer.chatId !== chatId ||
+      answer.role !== "assistant" ||
+      !Array.isArray(answer.parts) ||
+      !answer.parts.length
+    ) {
+      throw new ChatbotError("bad_request:api");
+    }
+    const trailing = current.slice(prepared.index + 1).map((item) => item.id);
+    if (trailing.length) {
+      await tx
+        .delete(vote)
+        .where(and(eq(vote.chatId, chatId), inArray(vote.messageId, trailing)));
+      await tx
+        .delete(message)
+        .where(and(eq(message.chatId, chatId), inArray(message.id, trailing)));
+    }
+    // Preserve the edited user row and its committed attachment associations.
+    await tx
+      .update(message)
+      .set({ parts: prepared.edited.parts })
+      .where(and(eq(message.chatId, chatId), eq(message.id, edited.id)));
+    await tx.insert(message).values(answer);
   });
 }
 

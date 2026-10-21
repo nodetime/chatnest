@@ -15,7 +15,10 @@ import { createResumableStreamContext } from "resumable-stream";
 import { auth, type UserType } from "@/app/(auth)/auth";
 import { applyToolApprovals } from "@/lib/agent/approvals";
 import { createBrowserTools } from "@/lib/agent/browser-tools";
-import { prepareRegeneration } from "@/lib/agent/message-turn";
+import {
+  prepareMessageEdit,
+  prepareRegeneration,
+} from "@/lib/agent/message-turn";
 import { agentStreamErrorText } from "@/lib/agent/porta-error";
 import { createAgentRuntime } from "@/lib/agent/runtime";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
@@ -38,8 +41,8 @@ import {
   getChatById,
   getMessageCountByUserId,
   getMessagesByChatId,
+  replaceEditedTurn,
   replaceRegeneratedAnswer,
-  saveChat,
   saveMessages,
   updateChatTitleById,
   updateMessage,
@@ -48,6 +51,10 @@ import type { DBMessage } from "@/lib/db/schema";
 import { ChatbotError } from "@/lib/errors";
 import { checkIpRateLimit } from "@/lib/ratelimit";
 import type { ChatMessage, WaitingStatusData } from "@/lib/types";
+import { prepareAttachmentContext } from "@/lib/uploads/context";
+import { uploadErrorResponse } from "@/lib/uploads/security";
+import { commitUserMessage, readAsset } from "@/lib/uploads/service";
+import { readBoundedBody, UploadError } from "@/lib/uploads/validation";
 import { convertToUIMessages, generateUUID } from "@/lib/utils";
 import { generateTitleFromUserMessage } from "../../actions";
 import { type PostRequestBody, postRequestBodySchema } from "./schema";
@@ -55,6 +62,8 @@ import { type PostRequestBody, postRequestBodySchema } from "./schema";
 export const maxDuration = 300;
 
 const HEALTH_CHECK_DELAY_MS = 9000;
+// Includes approval continuation tool payloads; original image bytes are never client JSON.
+const MAX_CHAT_REQUEST_BYTES = 1024 * 1024;
 
 function isModelStreamActivity(chunk: { type: string }) {
   return !["start", "start-step", "finish-step", "finish", "raw"].includes(
@@ -72,11 +81,32 @@ function getStreamContext() {
 
 export async function POST(request: Request) {
   let requestBody: PostRequestBody;
+  const session = await auth();
+  if (!session?.user) {
+    return new ChatbotError("unauthorized:chat").toResponse();
+  }
 
   try {
-    const json = await request.json();
-    requestBody = postRequestBodySchema.parse(json);
-  } catch {
+    const json = JSON.parse(
+      (await readBoundedBody(request, MAX_CHAT_REQUEST_BYTES)).toString("utf8")
+    );
+    const parsed = postRequestBodySchema.safeParse(json);
+    if (!parsed.success) {
+      if (parsed.error.issues.some((issue) => issue.path.includes("url"))) {
+        return uploadErrorResponse(
+          new UploadError(
+            400,
+            "仅支持本平台上传的图片；旧版外部附件请重新上传。"
+          )
+        );
+      }
+      return new ChatbotError("bad_request:api").toResponse();
+    }
+    requestBody = parsed.data;
+  } catch (error) {
+    if (error instanceof UploadError) {
+      return uploadErrorResponse(error);
+    }
     return new ChatbotError("bad_request:api").toResponse();
   }
 
@@ -91,10 +121,7 @@ export async function POST(request: Request) {
       searchMode,
     } = requestBody;
 
-    const [botIdResult, session] = await Promise.all([
-      checkBotId().catch(() => null),
-      auth(),
-    ]);
+    const botIdResult = await checkBotId().catch(() => null);
 
     if (botIdResult?.isBot) {
       return new ChatbotError("forbidden:api").toResponse();
@@ -125,7 +152,8 @@ export async function POST(request: Request) {
 
     const isToolApprovalFlow = Boolean(messages);
     const isRegeneration = trigger === "regenerate-message";
-    if (isRegeneration && (!message || isToolApprovalFlow)) {
+    const isEdit = trigger === "edit-message";
+    if ((isRegeneration || isEdit) && (!message || isToolApprovalFlow)) {
       return new ChatbotError("bad_request:api").toResponse();
     }
 
@@ -138,16 +166,8 @@ export async function POST(request: Request) {
         return new ChatbotError("forbidden:chat").toResponse();
       }
       messagesFromDb = await getMessagesByChatId({ id });
-    } else if (isRegeneration) {
+    } else if (isRegeneration || isEdit) {
       return new ChatbotError("bad_request:api").toResponse();
-    } else if (message?.role === "user") {
-      await saveChat({
-        id,
-        title: "New chat",
-        userId: session.user.id,
-        visibility: selectedVisibilityType,
-      });
-      titlePromise = generateTitleFromUserMessage({ message });
     }
 
     let uiMessages: ChatMessage[];
@@ -161,7 +181,23 @@ export async function POST(request: Request) {
       return new ChatbotError("bad_request:api").toResponse();
     }
 
-    if (regeneration) {
+    const edit =
+      isEdit && message
+        ? prepareMessageEdit(
+            convertToUIMessages(messagesFromDb),
+            message.id,
+            message.parts
+              .filter((part) => part.type === "text")
+              .map((part) => part.text)
+              .join("")
+          )
+        : null;
+    if (isEdit && !edit) {
+      return new ChatbotError("bad_request:api").toResponse();
+    }
+    if (edit) {
+      uiMessages = edit.context;
+    } else if (regeneration) {
       uiMessages = regeneration.context;
     } else if (isToolApprovalFlow && messages) {
       const dbMessages = convertToUIMessages(messagesFromDb);
@@ -182,30 +218,39 @@ export async function POST(request: Request) {
       longitude,
     };
 
-    if (message?.role === "user" && !isRegeneration) {
-      await saveMessages({
-        messages: [
-          {
-            attachments: [],
-            chatId: id,
-            createdAt: new Date(),
-            id: message.id,
-            parts: message.parts,
-            role: "user",
-          },
-        ],
-      });
-    }
-
     const modelConfig = getRuntimeModels().find((m) => m.id === chatModel);
     const modelCapabilities = await getCapabilities();
     const capabilities = modelCapabilities[chatModel];
     const isReasoningModel = capabilities?.reasoning === true;
     const supportsTools = capabilities?.tools === true;
-
-    const modelMessages = await convertToModelMessages(uiMessages, {
+    const attachmentContext = await prepareAttachmentContext(
+      uiMessages,
+      capabilities?.vision === true,
+      (assetId) => readAsset(assetId, session.user.id, id)
+    );
+    const modelMessages = await convertToModelMessages(attachmentContext, {
       ignoreIncompleteToolCalls: true,
     });
+    if (message?.role === "user" && !isRegeneration && !isEdit) {
+      await commitUserMessage({
+        chatId: id,
+        message: {
+          attachments: [],
+          chatId: id,
+          createdAt: new Date(),
+          id: message.id,
+          parts: message.parts,
+          role: "user",
+        },
+        ownerId: session.user.id,
+        visibility: selectedVisibilityType,
+      });
+      if (!chat) {
+        titlePromise = generateTitleFromUserMessage({ message }).catch(
+          () => "New chat"
+        );
+      }
+    }
 
     const stream = createUIMessageStream({
       execute: async ({ writer: dataStream }) => {
@@ -379,7 +424,31 @@ export async function POST(request: Request) {
         isAborted,
         finishReason,
       }) => {
-        if (regeneration) {
+        if (edit) {
+          if (
+            isAborted ||
+            request.signal.aborted ||
+            !finishReason ||
+            finishReason === "error" ||
+            !responseMessage.parts.length
+          ) {
+            return;
+          }
+          await replaceEditedTurn({
+            answer: {
+              attachments: [],
+              chatId: id,
+              createdAt: new Date(),
+              id: responseMessage.id,
+              parts: responseMessage.parts,
+              role: "assistant",
+            },
+            chatId: id,
+            edited: edit.edited,
+            snapshot: messagesFromDb,
+            userId: session.user.id,
+          });
+        } else if (regeneration) {
           if (
             isAborted ||
             request.signal.aborted ||
@@ -480,6 +549,10 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     const vercelId = request.headers.get("x-vercel-id");
+
+    if (error instanceof UploadError) {
+      return uploadErrorResponse(error);
+    }
 
     if (error instanceof ChatbotError) {
       return error.toResponse();

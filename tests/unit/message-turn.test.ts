@@ -45,3 +45,22 @@ test("regeneration cannot discard a pending tool approval", () => {
   } as ChatMessage;
   assert.equal(prepareRegeneration([question, pending], question.id), null);
 });
+test("editing uses stored file refs, replaces only text, and retains original history until commit", async () => {
+  const { prepareMessageEdit } = await import("../../lib/agent/message-turn");
+  const file = {
+    mediaType: "image/png",
+    type: "file" as const,
+    url: "/api/files/11111111-1111-4111-8111-111111111111",
+  };
+  const original = { ...question, parts: [file, ...question.parts] };
+  const stored = [original, answer, { ...question, id: "later" }];
+  const edit = prepareMessageEdit(stored, question.id, "Changed text");
+  assert.ok(edit);
+  assert.deepEqual(edit.context, [
+    { ...original, parts: [file, { text: "Changed text", type: "text" }] },
+  ]);
+  assert.deepEqual(stored[0], original);
+  assert.equal(prepareMessageEdit(stored, answer.id, "x"), null);
+  assert.equal(prepareMessageEdit(stored, "missing", "x"), null);
+  assert.equal(prepareMessageEdit(stored, question.id, "  "), null);
+});

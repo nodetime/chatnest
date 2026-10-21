@@ -8,6 +8,7 @@ export type ErrorType =
 
 export type Surface =
   | "chat"
+  | "attachment"
   | "configuration"
   | "auth"
   | "api"
@@ -26,6 +27,7 @@ export type ErrorVisibility = "response" | "log" | "none";
 export const visibilityBySurface: Record<Surface, ErrorVisibility> = {
   activate_gateway: "response",
   api: "response",
+  attachment: "response",
   auth: "response",
   chat: "response",
   configuration: "response",
@@ -43,7 +45,10 @@ export class ChatbotError extends Error {
   statusCode: number;
 
   constructor(errorCode: ErrorCode, cause?: string | ErrorOptions) {
-    const message = getMessageByErrorCode(errorCode);
+    const message =
+      errorCode.endsWith(":attachment") && typeof cause === "string"
+        ? cause
+        : getMessageByErrorCode(errorCode);
     const options = typeof cause === "string" ? undefined : cause;
 
     super(message, options);

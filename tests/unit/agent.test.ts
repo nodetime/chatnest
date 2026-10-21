@@ -544,12 +544,32 @@ test("chat accepts original excerpts and image-only messages, but rejects empty 
             filename: "test.png",
             mediaType: "image/png",
             type: "file",
-            url: "https://test.public.blob.vercel-storage.com/test.png",
+            url: "/api/files/11111111-1111-4111-8111-111111111111",
           },
         ],
       },
     }).success
   );
+});
+
+test("chat rejects old external and unregistered inline file URLs explicitly", () => {
+  for (const url of [
+    "https://test.public.blob.vercel-storage.com/test.png",
+    "data:image/png;base64,abcd",
+    "file:///tmp/x.png",
+  ]) {
+    const parsed = postRequestBodySchema.safeParse({
+      id: "cba2d017-5b1f-4f57-a2d3-398ff30f676a",
+      message: {
+        id: "51b9b2cf-b8c4-4a14-b24e-c7acb4884d32",
+        parts: [{ mediaType: "image/png", type: "file", url }],
+        role: "user",
+      },
+      selectedChatModel: "test",
+      selectedVisibilityType: "private",
+    });
+    assert.equal(parsed.success, false);
+  }
 });
 
 test("auth cookie selection follows actual protocol, not production mode", () => {

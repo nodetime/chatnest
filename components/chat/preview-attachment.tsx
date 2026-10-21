@@ -1,4 +1,3 @@
-import Image from "next/image";
 import type { Attachment } from "@/lib/types";
 import { Spinner } from "../ui/spinner";
 import { CrossSmallIcon } from "./icons";
@@ -20,7 +19,8 @@ export const PreviewAttachment = ({
       data-testid="input-attachment-preview"
     >
       {contentType?.startsWith("image") ? (
-        <Image
+        // biome-ignore lint/performance/noImgElement: authenticated private previews must bypass the image optimizer
+        <img
           alt={name ?? "图片附件"}
           className="size-full object-cover"
           height={96}

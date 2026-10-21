@@ -4,6 +4,7 @@ import { readRuntimeConfig } from "@/lib/agent/mcp-settings/runtime-config";
 import { isAdmin, managementReady } from "@/lib/agent/mcp-settings/security";
 import { discoverSkills } from "@/lib/agent/skills";
 import { getModelConnection } from "@/lib/ai/model-connection";
+import { uploadsAvailable } from "@/lib/uploads/service";
 
 export async function GET() {
   const user = (await auth())?.user;
@@ -30,7 +31,7 @@ export async function GET() {
             shortDescription,
           })
         ),
-        uploadsConfigured: Boolean(process.env.BLOB_READ_WRITE_TOKEN),
+        uploadsConfigured: await uploadsAvailable(),
       },
       { headers: { "Cache-Control": "private, no-store" } }
     );

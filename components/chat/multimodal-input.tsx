@@ -46,6 +46,10 @@ import {
   type ModelCapabilities,
 } from "@/lib/ai/models";
 import type { Attachment, ChatMessage } from "@/lib/types";
+import {
+  completeDraftSubmission,
+  UploadAdmission,
+} from "@/lib/uploads/client-admission";
 import { cn, fetcher } from "@/lib/utils";
 import {
   PromptInput,
@@ -107,7 +111,15 @@ function PureMultimodalInput({
   isLoading?: boolean;
 }) {
   const { data: agentInfo } = useAgentInfo();
-  const { searchMode, setSearchMode } = useActiveChat();
+  const { searchMode, setSearchMode, getSendError } = useActiveChat();
+  const { data: modelsData } = useSWR(
+    `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/models`,
+    fetcher,
+    { dedupingInterval: 3_600_000, revalidateOnFocus: false }
+  );
+  const vision =
+    (modelsData?.capabilities ?? modelsData)?.[selectedModelId]?.vision ===
+    true;
   const cancelSearch = useCallback(
     () => setSearchMode("auto"),
     [setSearchMode]
@@ -126,24 +138,50 @@ function PureMultimodalInput({
   }, [width]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const admissionRef = useRef(new UploadAdmission(chatId));
+  const admission = admissionRef.current;
+  admission.switchChat(chatId);
   const liveChatId = useRef(chatId);
-  const previousUploadChatId = useRef(chatId);
   liveChatId.current = chatId;
+  const selectedRef = useRef(attachments);
+  const submitting = useRef(false);
+  const generationRef = useRef(0);
+  const previousChatRef = useRef(chatId);
+  if (previousChatRef.current !== chatId) {
+    previousChatRef.current = chatId;
+    generationRef.current += 1;
+    submitting.current = false;
+  }
+  selectedRef.current = attachments;
   const [uploadQueue, setUploadQueue] = useState<string[]>([]);
   useEffect(() => {
-    if (previousUploadChatId.current !== chatId) {
-      previousUploadChatId.current = chatId;
+    if (liveChatId.current === chatId) {
       setUploadQueue([]);
     }
   }, [chatId]);
+  useEffect(
+    () => () => {
+      admission.cancel();
+      generationRef.current += 1;
+    },
+    [admission]
+  );
   const handleInput = useCallback(
     (event: ChangeEvent<HTMLTextAreaElement>) => setInput(event.target.value),
     [setInput]
   );
 
-  const submitForm = useCallback(() => {
+  const submitForm = useCallback(async () => {
+    if (admission.pending || submitting.current) {
+      toast.error("图片仍在上传或发送，请稍候。");
+      return;
+    }
     if (attachments.length > 15) {
-      toast.error("一条消息最多添加 15 张图片，请移除多余图片。");
+      toast.error("一条消息最多添加 15 张图片。");
+      return;
+    }
+    if (attachments.length && !vision) {
+      toast.error("所选模型不支持图片，请选择支持视觉的模型；草稿已保留。");
       return;
     }
     if (input.length > MAX_MESSAGE_CHARACTERS) {
@@ -153,203 +191,211 @@ function PureMultimodalInput({
       return;
     }
     if (editingMessage) {
-      (sendMessage as () => Promise<void>)();
+      const editGeneration = generationRef.current;
+      submitting.current = true;
+      try {
+        await (sendMessage as () => Promise<void>)();
+      } finally {
+        if (editGeneration === generationRef.current) {
+          submitting.current = false;
+        }
+      }
       return;
     }
-    window.history.pushState(
-      {},
-      "",
-      `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/chat/${chatId}`
-    );
-
-    sendMessage({
-      parts: [
-        ...attachments.map((attachment) => ({
-          filename: attachment.name,
-          mediaType: attachment.contentType,
-          type: "file" as const,
-          url: attachment.url,
-        })),
-        ...(input.trim() ? [{ text: input, type: "text" as const }] : []),
-      ],
-      role: "user",
-    });
-
-    setAttachments([]);
-    setInput("");
-
+    const generation = generationRef.current;
+    submitting.current = true;
+    const sentUrls = new Set(attachments.map((a) => a.url));
+    try {
+      await completeDraftSubmission(
+        () =>
+          sendMessage({
+            parts: [
+              ...attachments.map((a) => ({
+                filename: a.name,
+                mediaType: a.contentType,
+                type: "file" as const,
+                url: a.url,
+              })),
+              ...(input.trim() ? [{ text: input, type: "text" as const }] : []),
+            ],
+            role: "user",
+          }),
+        getSendError,
+        () => generation === generationRef.current,
+        () => {
+          setAttachments((current) =>
+            current.filter((a) => !sentUrls.has(a.url))
+          );
+          setInput((current) => (current === input ? "" : current));
+          window.history.pushState(
+            {},
+            "",
+            `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/chat/${chatId}`
+          );
+        }
+      );
+    } catch {
+      /* The chat hook displays the actionable server error. Keep the draft. */
+    } finally {
+      if (generation === generationRef.current) {
+        submitting.current = false;
+      }
+    }
     if (width && width > 768) {
       textareaRef.current?.focus();
     }
   }, [
-    input,
-    editingMessage,
-    setInput,
+    admission,
     attachments,
+    chatId,
+    editingMessage,
+    getSendError,
+    input,
     sendMessage,
     setAttachments,
+    setInput,
+    vision,
     width,
-    chatId,
   ]);
 
-  const uploadFile = useCallback(
-    async (file: File) => {
-      if (!agentInfo?.uploadsConfigured) {
-        toast.error("图片上传尚未开启，请联系管理员配置图片存储。");
+  const uploadFiles = useCallback(
+    async (files: File[]) => {
+      if (editingMessage) {
+        toast.error("编辑消息仅修改文字；如需新图片，请取消编辑后发送新消息。");
         return;
       }
-      if (
-        !["image/jpeg", "image/png"].includes(file.type) ||
-        file.size > 5 * 1024 * 1024
-      ) {
-        toast.error("仅支持不超过 5 MB 的 JPEG 或 PNG 图片。");
-        return;
-      }
-      const formData = new FormData();
-      formData.append("file", file);
-
-      try {
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/files/upload`,
-          {
-            body: formData,
-            method: "POST",
-          }
-        );
-
-        if (response.ok) {
-          const data = await response.json();
-          const { url, pathname, contentType } = data;
-
-          return {
-            contentType,
-            name: file.name || pathname,
-            url,
-          };
-        }
-        const { error } = await response.json();
-        toast.error(error);
-      } catch {
-        toast.error("图片上传失败，请检查连接后重试。");
-      }
-    },
-    [agentInfo?.uploadsConfigured]
-  );
-
-  const handleFileChange = useCallback(
-    async (event: ChangeEvent<HTMLInputElement>) => {
-      const uploadChatId = chatId;
-      const files = Array.from(event.target.files || []);
-      event.target.value = "";
-      if (attachments.length + files.length > 15) {
-        toast.error("一条消息最多添加 15 张图片。");
-        return;
-      }
-
-      setUploadQueue(files.map((file) => file.name));
-
-      try {
-        const uploadPromises = files.map((file) => uploadFile(file));
-        const uploadedAttachments = await Promise.all(uploadPromises);
-        if (liveChatId.current !== uploadChatId) {
-          return;
-        }
-        const successfullyUploadedAttachments = uploadedAttachments.filter(
-          (attachment) => attachment !== undefined
-        );
-
-        setAttachments((currentAttachments) => [
-          ...currentAttachments,
-          ...successfullyUploadedAttachments,
-        ]);
-      } catch {
-        toast.error("图片上传失败，请稍后重试。");
-      } finally {
-        if (liveChatId.current === uploadChatId) {
-          setUploadQueue([]);
-        }
-      }
-    },
-    [chatId, attachments.length, setAttachments, uploadFile]
-  );
-
-  const handlePaste = useCallback(
-    async (event: ClipboardEvent) => {
-      const uploadChatId = chatId;
-      const items = event.clipboardData?.items;
-      if (!items) {
-        return;
-      }
-
-      const imageItems = Array.from(items).filter((item) =>
-        item.type.startsWith("image/")
-      );
-
-      if (imageItems.length === 0) {
-        return;
-      }
-
-      event.preventDefault();
-      if (uploadQueue.length) {
-        toast.error("图片仍在上传，请稍候。");
+      if (!files.length) {
         return;
       }
       if (status !== "ready" && status !== "error") {
         toast.error("请等待当前回复完成后再添加图片。");
         return;
       }
-      if (attachments.length + imageItems.length > 15) {
-        toast.error("一条消息最多添加 15 张图片。");
+      if (!agentInfo?.uploadsConfigured) {
+        toast.error("图片上传尚未开启，请联系平台管理员配置文件存储。");
         return;
       }
-
-      setUploadQueue((prev) => [...prev, "粘贴的图片"]);
-
-      try {
-        const uploadPromises = imageItems
-          .map((item) => item.getAsFile())
-          .filter((file): file is File => file !== null)
-          .map((file) => uploadFile(file));
-
-        const uploadedAttachments = await Promise.all(uploadPromises);
-        if (liveChatId.current !== uploadChatId) {
-          return;
-        }
-        const successfullyUploadedAttachments = uploadedAttachments.filter(
-          (attachment) =>
-            attachment !== undefined &&
-            attachment.url !== undefined &&
-            attachment.contentType !== undefined
+      if (!vision) {
+        toast.error("所选模型不支持图片，请选择支持视觉的模型。");
+        return;
+      }
+      if (
+        files.some(
+          (file) =>
+            !["image/jpeg", "image/png"].includes(file.type) ||
+            !file.size ||
+            file.size > 5 * 1024 * 1024
+        )
+      ) {
+        toast.error("仅支持非空且不超过 5 MiB 的 JPEG 或 PNG 图片。");
+        return;
+      }
+      const ticket = admission.admit(selectedRef.current.length, files.length);
+      if (!ticket) {
+        toast.error(
+          admission.pending
+            ? "图片仍在上传，请稍候。"
+            : "一条消息最多添加 15 张图片。"
         );
-
-        setAttachments((curr) => [
-          ...curr,
-          ...(successfullyUploadedAttachments as Attachment[]),
-        ]);
-      } catch {
-        toast.error("粘贴的图片上传失败，请稍后重试。");
+        return;
+      }
+      const uploadChat = chatId;
+      setUploadQueue(files.map((file) => file.name));
+      const uploaded: Attachment[] = [];
+      try {
+        // Sequential within each admitted batch also bounds browser/server decode pressure.
+        for (const file of files) {
+          if (!admission.isCurrent(ticket)) {
+            break;
+          }
+          const form = new FormData();
+          form.append("file", file);
+          form.append("chatId", uploadChat);
+          try {
+            // biome-ignore lint/performance/noAwaitInLoops: Bounded sequential I/O prevents concurrent memory and transaction pressure.
+            const response = await fetch(
+              `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/files/upload`,
+              { body: form, method: "POST", signal: ticket.controller.signal }
+            );
+            const data = await response.json();
+            if (!response.ok) {
+              throw new Error(data.error ?? "图片上传失败，请重试。");
+            }
+            const attachment = {
+              contentType: data.contentType,
+              name: data.name,
+              url: data.url,
+            };
+            if (!admission.isCurrent(ticket)) {
+              fetch(data.url, { method: "DELETE" }).catch(() => undefined);
+              break;
+            }
+            uploaded.push(attachment);
+          } catch (error) {
+            if (admission.isCurrent(ticket)) {
+              toast.error(
+                error instanceof Error
+                  ? error.message
+                  : "图片上传失败，请重试。"
+              );
+            }
+          }
+        }
+        if (admission.isCurrent(ticket)) {
+          selectedRef.current = [...selectedRef.current, ...uploaded];
+          setAttachments((current) => [...current, ...uploaded]);
+        } else {
+          for (const attachment of uploaded) {
+            fetch(attachment.url, { method: "DELETE" }).catch(() => undefined);
+          }
+        }
       } finally {
-        if (liveChatId.current === uploadChatId) {
+        if (admission.isCurrent(ticket)) {
           setUploadQueue([]);
         }
+        admission.finish(ticket);
       }
     },
     [
+      admission,
+      agentInfo?.uploadsConfigured,
       chatId,
-      uploadQueue.length,
-      attachments.length,
-      status,
+      editingMessage,
       setAttachments,
-      uploadFile,
+      status,
+      vision,
     ]
   );
-
+  const handleFileChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(event.target.files ?? []);
+      event.target.value = "";
+      uploadFiles(files);
+    },
+    [uploadFiles]
+  );
+  const handlePaste = useCallback(
+    (event: ClipboardEvent) => {
+      const items = Array.from(event.clipboardData?.items ?? []).filter(
+        (item) => item.type.startsWith("image/")
+      );
+      if (!items.length) {
+        return;
+      }
+      event.preventDefault();
+      uploadFiles(
+        items
+          .map((item) => item.getAsFile())
+          .filter((file): file is File => file !== null)
+      );
+    },
+    [uploadFiles]
+  );
   useEffect(() => {
     const textarea = textareaRef.current;
     if (!textarea) {
       return;
     }
-
     textarea.addEventListener("paste", handlePaste);
     return () => textarea.removeEventListener("paste", handlePaste);
   }, [handlePaste]);
@@ -387,7 +433,7 @@ function PureMultimodalInput({
     <div className={cn("relative flex w-full flex-col gap-4", className)}>
       {editingMessage && onCancelEdit ? (
         <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
-          <span>正在修改消息 · 发送后会重新生成回复</span>
+          <span>原图片保留，编辑时只修改文字 · 发送后会重新生成回复</span>
           <button
             className="rounded px-1.5 py-0.5 text-muted-foreground/50 transition-colors hover:bg-muted hover:text-foreground"
             onMouseDown={handleCancelEditMouseDown}
@@ -401,6 +447,7 @@ function PureMultimodalInput({
       <input
         accept="image/jpeg,image/png"
         className="pointer-events-none fixed -top-4 -left-4 size-0.5 opacity-0"
+        disabled={Boolean(editingMessage)}
         multiple
         onChange={handleFileChange}
         ref={fileInputRef}
@@ -420,6 +467,7 @@ function PureMultimodalInput({
             {attachments.map((attachment) => (
               <AttachmentPreviewItem
                 attachment={attachment}
+                disabled={status === "streaming" || status === "submitted"}
                 fileInputRef={fileInputRef}
                 key={attachment.url}
                 setAttachments={setAttachments}
@@ -453,6 +501,7 @@ function PureMultimodalInput({
           <PromptInputTools>
             <ComposerMenu
               busy={
+                Boolean(editingMessage) ||
                 status === "submitted" ||
                 status === "streaming" ||
                 uploadQueue.length > 0
@@ -528,8 +577,10 @@ function PureAttachmentPreviewItem({
   attachment,
   fileInputRef,
   setAttachments,
+  disabled,
 }: {
   attachment: Attachment;
+  disabled?: boolean;
   fileInputRef: React.MutableRefObject<HTMLInputElement | null>;
   setAttachments: Dispatch<SetStateAction<Attachment[]>>;
 }) {
@@ -537,12 +588,18 @@ function PureAttachmentPreviewItem({
     setAttachments((currentAttachments) =>
       currentAttachments.filter((a) => a.url !== attachment.url)
     );
+    fetch(attachment.url, { method: "DELETE" }).catch(() => undefined);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
   }, [attachment.url, fileInputRef, setAttachments]);
 
-  return <PreviewAttachment attachment={attachment} onRemove={handleRemove} />;
+  return (
+    <PreviewAttachment
+      attachment={attachment}
+      onRemove={disabled ? undefined : handleRemove}
+    />
+  );
 }
 
 const AttachmentPreviewItem = memo(PureAttachmentPreviewItem);

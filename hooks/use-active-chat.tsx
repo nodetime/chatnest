@@ -41,6 +41,7 @@ type ActiveChatContextValue = {
   messages: ChatMessage[];
   setMessages: UseChatHelpers<ChatMessage>["setMessages"];
   sendMessage: UseChatHelpers<ChatMessage>["sendMessage"];
+  getSendError: () => Error | undefined;
   status: UseChatHelpers<ChatMessage>["status"];
   stop: UseChatHelpers<ChatMessage>["stop"];
   regenerate: UseChatHelpers<ChatMessage>["regenerate"];
@@ -105,6 +106,7 @@ export function ActiveChatProvider({
   const [searchMode, setSearchMode] = useState<"auto" | "web">("auto");
   const searchModeRef = useRef(searchMode);
   searchModeRef.current = searchMode;
+  const lastSendFailure = useRef<Error | undefined>(undefined);
   const regenerationSnapshot = useRef<{
     chatId: string;
     messages: ChatMessage[];
@@ -186,6 +188,14 @@ export function ActiveChatProvider({
       finishReason,
       messages: finishedMessages,
     }) => {
+      lastSendFailure.current =
+        isAbort ||
+        isError ||
+        isDisconnect ||
+        !finishReason ||
+        finishReason === "error"
+          ? new Error("本轮未完成，草稿已保留。")
+          : undefined;
       const snapshot = regenerationSnapshot.current;
       // useChat forwards old-instance callbacks through its latest callback refs.
       // The stored question UUID identifies the originating turn, not just the current URL.
@@ -300,6 +310,11 @@ export function ActiveChatProvider({
     error,
     clearError,
   } = useChat<ChatMessage>({ chat: chatInstanceRef.current });
+
+  const getSendError = useCallback(
+    () => chatInstanceRef.current?.error ?? lastSendFailure.current,
+    []
+  );
 
   const regenerateAnswer = useCallback(async () => {
     if (
@@ -473,6 +488,7 @@ export function ActiveChatProvider({
       clearError,
       currentModelId,
       error,
+      getSendError,
       input,
       isLoading: !isNewChat && isLoading,
       isReadonly,
@@ -509,6 +525,7 @@ export function ActiveChatProvider({
       messages,
       setMessages,
       sendMessage,
+      getSendError,
       status,
       stop,
       regenerate,

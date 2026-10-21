@@ -52,6 +52,7 @@ export function ChatShell() {
     showCreditCardAlert,
     setShowCreditCardAlert,
     clearError,
+    getSendError,
     loadError,
   } = useActiveChat();
 
@@ -59,6 +60,28 @@ export function ChatShell() {
     null
   );
   const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const editGenerationRef = useRef({ chatId, generation: 0 });
+  if (editGenerationRef.current.chatId !== chatId) {
+    editGenerationRef.current = {
+      chatId,
+      generation: editGenerationRef.current.generation + 1,
+    };
+  }
+  const draftAssetsRef = useRef(attachments);
+  draftAssetsRef.current = attachments;
+  useEffect(
+    () => () => {
+      if (!chatId) {
+        return;
+      }
+      // This component owns the shared draft. Removing a composer surface alone
+      // must never delete it; used assets are independently protected by the API.
+      for (const attachment of draftAssetsRef.current) {
+        fetch(attachment.url, { method: "DELETE" }).catch(() => undefined);
+      }
+    },
+    [chatId]
+  );
   const isEmpty = messages.length === 0 && !isLoading && !loadError;
   const isArtifactVisible = useArtifactSelector((state) => state.isVisible);
   const { setArtifact } = useArtifact();
@@ -127,19 +150,37 @@ export function ChatShell() {
     }
 
     const msg = editingMessage;
+    const { generation } = editGenerationRef.current;
     try {
-      await submitEditedMessage({
+      const committed = await submitEditedMessage({
+        getSendError,
+        isCurrent: () => generation === editGenerationRef.current.generation,
         message: msg,
         regenerate,
+        setInput,
         setMessages,
+        snapshot: messages,
         text: input,
       });
+      if (!committed) {
+        return;
+      }
       setEditingMessage(null);
-      setInput("");
     } catch {
+      if (generation !== editGenerationRef.current.generation) {
+        return;
+      }
       toast.error("修改没有提交，草稿已保留。请稍后重试，或取消修改。");
     }
-  }, [editingMessage, input, regenerate, setInput, setMessages]);
+  }, [
+    editingMessage,
+    getSendError,
+    input,
+    messages,
+    regenerate,
+    setInput,
+    setMessages,
+  ]);
 
   const handleActivateGateway = useCallback(() => {
     window.open(

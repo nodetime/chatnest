@@ -1,6 +1,7 @@
-import { ArrowLeft, Plug } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { AdminNavigation } from "./admin-navigation";
 
 export function AdminShell({ children }: { children: ReactNode }) {
   return (
@@ -23,19 +24,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
         </div>
       </header>
       <div className="mx-auto grid max-w-6xl gap-6 px-5 py-6 sm:px-8 md:grid-cols-[180px_minmax(0,1fr)] md:gap-10 md:py-10">
-        <nav aria-label="平台管理" className="space-y-1">
-          <Link
-            aria-current="page"
-            className="flex items-center gap-2 rounded-lg bg-secondary px-3 py-2.5 text-sm font-medium focus-visible:outline-2"
-            href="/admin/connections"
-          >
-            <Plug aria-hidden="true" className="size-4" />
-            工具连接
-          </Link>
-          <p className="px-3 pt-3 text-xs leading-5 text-muted-foreground">
-            平台级设置对所有用户生效。
-          </p>
-        </nav>
+        <AdminNavigation />
         <main className="min-w-0">{children}</main>
       </div>
     </div>

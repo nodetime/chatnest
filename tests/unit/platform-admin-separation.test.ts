@@ -90,8 +90,9 @@ test("standalone admin shell has only real navigation and return-to-workspace li
   );
   assert.match(html, /平台管理/);
   assert.match(html, /href="\/admin\/connections"/);
+  assert.match(html, /href="\/admin\/storage"/);
   assert.match(html, /href="\/"[^>]*>[\s\S]*?返回工作台<\/a>/);
-  assert.doesNotMatch(html, /\/admin\/(?:models|billing|logs|storage)/);
+  assert.doesNotMatch(html, /\/admin\/(?:models|billing|logs)/);
   const layout = readFileSync("app/admin/layout.tsx", "utf8");
   assert.match(layout, /Suspense/);
   assert.match(layout, /await auth\(/);
@@ -172,7 +173,7 @@ test("missing upload storage points users to administrators instead of a nonexis
     );
   assert.match(html(false), /联系管理员/);
   assert.doesNotMatch(html(false), /href=/);
-  assert.match(html(true), /href="\/admin"/);
+  assert.match(html(true), /href="\/admin\/storage"/);
 });
 
 test("admin connection management reads its guarded API independently of model and skills summaries", () => {
