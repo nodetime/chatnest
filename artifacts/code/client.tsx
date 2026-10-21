@@ -98,9 +98,9 @@ const codeArtifactContent: Artifact<"code", Metadata>["content"] =
 export const codeArtifact = new Artifact<"code", Metadata>({
   actions: [
     {
-      description: "Execute code",
+      description: "运行代码",
       icon: <PlayIcon size={18} />,
-      label: "Run",
+      label: "运行",
       onClick: async ({ content, setMetadata }) => {
         const runId = generateUUID();
         const outputContent: ConsoleOutputContent[] = [];
@@ -207,7 +207,7 @@ export const codeArtifact = new Artifact<"code", Metadata>({
       },
     },
     {
-      description: "View Previous version",
+      description: "上一版本",
       icon: <UndoIcon size={18} />,
       isDisabled: ({ currentVersionIndex }) => {
         if (currentVersionIndex === 0) {
@@ -221,7 +221,7 @@ export const codeArtifact = new Artifact<"code", Metadata>({
       },
     },
     {
-      description: "View Next version",
+      description: "下一版本",
       icon: <RedoIcon size={18} />,
       isDisabled: ({ isCurrentVersion }) => {
         if (isCurrentVersion) {
@@ -235,17 +235,16 @@ export const codeArtifact = new Artifact<"code", Metadata>({
       },
     },
     {
-      description: "Copy code to clipboard",
+      description: "复制代码",
       icon: <CopyIcon size={18} />,
       onClick: ({ content }) => {
         navigator.clipboard.writeText(content);
-        toast.success("Copied to clipboard!");
+        toast.success("已复制到剪贴板");
       },
     },
   ],
   content: codeArtifactContent,
-  description:
-    "Useful for code generation; Code execution is only available for python code.",
+  description: "生成代码；代码执行仅支持 Python。",
   initialize: ({ setMetadata }) => {
     setMetadata({
       outputs: [],
@@ -269,7 +268,7 @@ export const codeArtifact = new Artifact<"code", Metadata>({
   },
   toolbar: [
     {
-      description: "Add comments",
+      description: "添加注释",
       icon: <MessageIcon />,
       onClick: ({ sendMessage }) => {
         sendMessage({
@@ -284,7 +283,7 @@ export const codeArtifact = new Artifact<"code", Metadata>({
       },
     },
     {
-      description: "Add logs",
+      description: "添加日志",
       icon: <LogsIcon />,
       onClick: ({ sendMessage }) => {
         sendMessage({

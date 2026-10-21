@@ -52,11 +52,11 @@ git diff --check
 
 **Modify：** `app/globals.css`、`components/chat/{result-table,artifact,version-footer}.tsx`、`artifacts/{text,code,sheet,image}/client.tsx`、`tests/unit/workbench-ui.test.ts`。
 
-- [ ] **RED测试。** 断言自有保存/更新/生成/版本/footer/动作tooltip中文，formatDistance带zhCN，供应商字段/ChatNest/CSV/JSON不变；网格scoped class、13px、38px行/表头。运行`pnpm exec tsx --conditions=react-server --test tests/unit/workbench-ui.test.ts tests/unit/result-table.test.ts tests/unit/branding.test.ts`，观察当前英文和缺少局部tokens导致失败。
-- [ ] **RDG实现。** DataGrid追加`.chatnest-result-grid`且保留rdg-dark/light；`rowHeight={38}`/`headerRowHeight={38}`，去掉旧inline fontSize12。仅该class映射`--rdg-color→--foreground`、`--rdg-background-color→--card`、`--rdg-header-background-color→--secondary`、hover/selected→--accent、border→--border（可65%透明混合）、selection→--ring、font-size13px；局部gridcell弱化纵边，表头分界/焦点outline保留。不碰其他RDG/全局admin/排序虚拟化。
-- [ ] **中文实现。** `import { zhCN } from "date-fns/locale"`；更新时间`formatDistance(date, now, {addSuffix:true,locale:zhCN})`配「更新于」。使用「正在保存…/正在生成…/第N/M版/上一版本/下一版本/查看更改/恢复此版本/最新版本」。只改自有可见标签/description，不改版本索引、restore保护、toolbar发给Agent的message、原始字段或下载内容。
-- [ ] **GREEN。** 统一安全清单/tsc/diff、对本片明确文件定向Biome；确认无新依赖/后端/API/配置/遥测变动，所有既有业务测试保留。
-- [ ] **提交与交付。** commit `feat(ui): align result grid tokens and Chinese lifecycle labels`；向主会话提供三SHA/验证输出/待截图合同，不启动浏览器。
+- [x] **RED测试。** 断言自有保存/更新/生成/版本/footer/动作tooltip中文，formatDistance带zhCN，供应商字段/ChatNest/CSV/JSON不变；网格scoped class、13px、38px行/表头。运行`pnpm exec tsx --conditions=react-server --test tests/unit/workbench-ui.test.ts tests/unit/result-table.test.ts tests/unit/branding.test.ts`，观察当前英文和缺少局部tokens导致失败。
+- [x] **RDG实现。** DataGrid追加`.chatnest-result-grid`且保留rdg-dark/light；`rowHeight={38}`/`headerRowHeight={38}`，去掉旧inline fontSize12。仅该class映射`--rdg-color→--foreground`、`--rdg-background-color→--card`、`--rdg-header-background-color→--secondary`、hover/selected→--accent、border→--border（可65%透明混合）、selection→--ring、font-size13px；局部gridcell弱化纵边，表头分界/焦点outline保留。不碰其他RDG/全局admin/排序虚拟化。
+- [x] **中文实现。** `import { zhCN } from "date-fns/locale"`；更新时间`formatDistance(date, now, {addSuffix:true,locale:zhCN})`配「更新于」。使用「正在保存…/正在生成…/第N/M版/上一版本/下一版本/查看更改/恢复此版本/最新版本」。只改自有可见标签/description，不改版本索引、restore保护、toolbar发给Agent的message、原始字段或下载内容。
+- [x] **GREEN。** 统一安全清单/tsc/diff、对本片明确文件定向Biome；确认无新依赖/后端/API/配置/遥测变动，所有既有业务测试保留。
+- [x] **提交与交付。** commit `feat(ui): align result grid tokens and Chinese lifecycle labels`；向主会话提供三SHA/验证输出/待截图合同，不启动浏览器。
 
 ## 主会话最终验收合同（另行安排，非实现者浏览器操作步骤）
 

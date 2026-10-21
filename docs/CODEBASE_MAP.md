@@ -38,3 +38,8 @@ Optional deterministic result artifacts:
 - `lib/ai/tools/create-result-table.ts`: optional Agent-selected creation from actual MCP evidence; no secondary model or automatic workflow.
 - `/api/document/result-table` and dedicated DB transaction helpers: bound-chat ownership and expectedVersion view/notes CAS; generic document mutation paths protect evidence.
 - `components/chat/result-table.tsx`: existing Workspace sheet surface with read-only original values, compact controls, provenance, raw details, exports and separate notes.
+
+Chat-only workbench presentation:
+- `app/(chat)/layout.tsx` supplies `.chat-workbench`; `app/globals.css` scopes shell surfaces and `.chatnest-result-grid` token/13px density overrides to chat, leaving admin/global themes unchanged.
+- `components/chat/tool-activity-state.ts` reconciles disclosure on tool-state transitions while preserving same-state manual choices; tool inputs, approvals and raw evidence stay unchanged.
+- `components/chat/result-table-source.tsx` progressively reveals all original source fields in a localized Sheet; `result-table.tsx` keeps raw-row details, exports and independent view/notes save controls. Artifact lifecycle/version labels use Chinese display text and date-fns `zhCN`, without translating Agent messages or provider fields.

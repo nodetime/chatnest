@@ -421,3 +421,181 @@ test("embedded artifact keeps the real single title and a shrinkable result-cont
   assert.match(result, /setDetail\(row\.sourceIndex\)/);
   assert.match(result, /JSON\.stringify\(table\.rows\[detail\], null, 2\)/);
 });
+
+test("result grid keeps theme classes and renders the scoped 13px / 38px density contract", () => {
+  const html = renderResultTable();
+  assert.match(html, /chatnest-result-grid/);
+  assert.match(html, /rdg-light/);
+  const source = readFileSync("components/chat/result-table.tsx", "utf8");
+  assert.match(source, /resolvedTheme === "dark" \? "rdg-dark" : "rdg-light"/);
+  assert.match(source, /rowHeight=\{38\}/);
+  assert.match(source, /headerRowHeight=\{38\}/);
+  assert.doesNotMatch(source, /fontSize: 12/);
+  assert.match(source, /rowKeyGetter=\{\(row\) => row\.sourceIndex\}/);
+});
+
+test("result grid tokens are scoped with enough specificity and semantic cells retain focus and header borders", () => {
+  const css = readFileSync("app/globals.css", "utf8");
+  const scoped = css.match(
+    /\.chat-workbench \.chatnest-result-grid\s*\{([^}]+)\}/
+  )?.[1];
+  assert.ok(scoped, "chat-local grid token rule exists");
+  for (const [variable, token] of [
+    ["color", "foreground"],
+    ["background-color", "card"],
+    ["header-background-color", "secondary"],
+    ["row-hover-background-color", "accent"],
+    ["row-selected-background-color", "accent"],
+    ["row-selected-hover-background-color", "accent"],
+    ["selection-color", "ring"],
+    ["border-color", "border"],
+  ]) {
+    assert.match(
+      scoped,
+      new RegExp(`--rdg-${variable}:[^;]*var\\(--${token}\\)`)
+    );
+  }
+  assert.match(scoped, /--rdg-font-size: 13px/);
+  assert.match(
+    css,
+    /\.chat-workbench \.chatnest-result-grid \[role="gridcell"\]\s*\{[^}]*border-inline-end-color: transparent/
+  );
+  assert.match(
+    css,
+    /\.chat-workbench \.chatnest-result-grid \[role="columnheader"\]\s*\{[^}]*border-block-end:[^;]*var\(--rdg-border-color\)/
+  );
+  assert.doesNotMatch(css, /(?:^|\n)\.rdg(?:[\s.{:#]|$)/);
+  const rules = css.slice(css.indexOf(".chat-workbench .chatnest-result-grid"));
+  assert.doesNotMatch(
+    rules,
+    /outline:\s*(?:none|0)|#[\da-f]{3,8}|--rdg-[\w-]+:\s*(?:white|black)/i
+  );
+});
+
+test("artifact lifecycle is Chinese and relative dates use the installed Chinese locale", () => {
+  const source = readFileSync("components/chat/artifact.tsx", "utf8");
+  for (const label of ["正在保存…", "更新于", "正在生成…"]) {
+    assert.ok(source.includes(label), `${label} lifecycle label exists`);
+  }
+  assert.match(source, /import \{ zhCN \} from "date-fns\/locale"/);
+  assert.match(
+    source,
+    /formatDistance\([\s\S]*?addSuffix: true,[\s\S]*?locale: zhCN/
+  );
+  assert.match(
+    source,
+    /第\{currentVersionIndex \+ 1\}\/\{documents.length\}版/
+  );
+  assert.doesNotMatch(source, /Saving\.\.\.|Updated \$|Generating\.\.\./);
+});
+
+test("version footer exposes Chinese version labels and keeps restore protections", () => {
+  const source = readFileSync("components/chat/version-footer.tsx", "utf8");
+  for (const label of [
+    "上一版本",
+    "下一版本",
+    "查看更改",
+    "恢复此版本",
+    "最新版本",
+  ]) {
+    assert.ok(source.includes(label), `${label} footer label exists`);
+  }
+  assert.match(
+    source,
+    /第\{currentVersionIndex \+ 1\}\/\{documents.length\}版/
+  );
+  assert.match(source, /aria-label="上一版本"/);
+  assert.match(source, /aria-label="下一版本"/);
+  assert.match(source, /title="查看更改"/);
+  assert.match(
+    source,
+    /disabled=\{isMutating \|\| isReadonly \|\| protectedTable\}/
+  );
+  assert.match(
+    source,
+    /if \(!documents \|\| isReadonly \|\| isProtectedResultTable\(artifact.content\)\)/
+  );
+  assert.doesNotMatch(source, /Show changes|\bRestore\b|\bLatest\b|\} of \{/);
+});
+
+test("all artifact action and toolbar descriptions and copy toasts are Chinese without translating agent messages", () => {
+  const expected: Record<string, string[]> = {
+    code: [
+      "运行代码",
+      "运行",
+      "上一版本",
+      "下一版本",
+      "复制代码",
+      "添加注释",
+      "添加日志",
+    ],
+    image: ["上一版本", "下一版本", "复制图片"],
+    sheet: [
+      "上一版本",
+      "下一版本",
+      "复制 CSV",
+      "整理数据格式",
+      "分析与可视化数据",
+    ],
+    text: [
+      "查看更改",
+      "上一版本",
+      "下一版本",
+      "复制文本",
+      "润色文本",
+      "请求修改建议",
+    ],
+  };
+  for (const [kind, labels] of Object.entries(expected)) {
+    const source = readFileSync(`artifacts/${kind}/client.tsx`, "utf8");
+    for (const label of labels) {
+      assert.ok(source.includes(`"${label}"`), `${kind}: ${label}`);
+    }
+    for (const match of source.matchAll(
+      /(?:description|label):\s*"([^"]+)"|toast\.(?:success|error)\("([^"]+)"\)/g
+    )) {
+      assert.match(
+        match[1] ?? match[2],
+        /[\u4e00-\u9fff]/,
+        `${kind} owns Chinese visible copy`
+      );
+    }
+    assert.doesNotMatch(source, /Copied (?:csv|image|to)/);
+  }
+  for (const [kind, message] of [
+    ["code", "Add comments to the code snippet for understanding"],
+    ["code", "Add logs to the code snippet for debugging"],
+    ["sheet", "Can you please format and clean the data?"],
+    [
+      "sheet",
+      "Can you please analyze and visualize the data by creating a new code artifact in python?",
+    ],
+    [
+      "text",
+      "Please add final polish and check for grammar, add section titles for better structure, and ensure everything reads smoothly.",
+    ],
+    ["text", "Please add suggestions you have that could improve the writing."],
+  ]) {
+    assert.ok(
+      readFileSync(`artifacts/${kind}/client.tsx`, "utf8").includes(
+        `text: "${message}"`
+      )
+    );
+  }
+});
+
+test("source and raw-result Sheets localize close controls without changing the shared Sheet", () => {
+  for (const [file, label] of [
+    ["components/chat/result-table-source.tsx", "关闭来源详情"],
+    ["components/chat/result-table.tsx", "关闭原始结果"],
+  ]) {
+    const source = readFileSync(file, "utf8");
+    assert.match(source, /showCloseButton=\{false\}/);
+    assert.match(source, /<SheetClose asChild>/);
+    assert.ok(source.includes(`aria-label="${label}"`));
+  }
+  assert.match(
+    readFileSync("components/ui/sheet.tsx", "utf8"),
+    />Close<\/span>/
+  );
+});

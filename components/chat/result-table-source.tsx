@@ -1,8 +1,10 @@
 "use client";
 
+import { XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
+  SheetClose,
   SheetContent,
   SheetDescription,
   SheetHeader,
@@ -51,7 +53,20 @@ export function ResultTableSource({ source }: { source: ResultSource }) {
           </Button>
         </SheetTrigger>
       </div>
-      <SheetContent className="min-w-0 overflow-y-auto sm:max-w-lg">
+      <SheetContent
+        className="min-w-0 overflow-y-auto sm:max-w-lg"
+        showCloseButton={false}
+      >
+        <SheetClose asChild>
+          <Button
+            aria-label="关闭来源详情"
+            className="absolute top-4 right-4"
+            size="icon-sm"
+            variant="ghost"
+          >
+            <XIcon />
+          </Button>
+        </SheetClose>
         <SheetHeader>
           <SheetTitle>来源详情</SheetTitle>
           <SheetDescription>

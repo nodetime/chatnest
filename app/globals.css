@@ -541,3 +541,31 @@ textarea:focus-visible {
   --background: var(--workbench-surface);
   background: var(--workbench-surface);
 }
+
+/* Keep result-table density and palette local, including inline chat previews.
+ * The chat + grid selector outranks the library's later theme-class defaults. */
+.chat-workbench .chatnest-result-grid {
+  --rdg-color: var(--foreground);
+  --rdg-background-color: var(--card);
+  --rdg-header-background-color: var(--secondary);
+  --rdg-header-draggable-background-color: var(--muted);
+  --rdg-row-hover-background-color: var(--accent);
+  --rdg-row-selected-background-color: var(--accent);
+  --rdg-row-selected-hover-background-color: var(--accent);
+  --rdg-border-color: color-mix(in oklab, var(--border) 65%, transparent);
+  --rdg-summary-border-color: var(--border);
+  --rdg-selection-color: var(--ring);
+  --rdg-checkbox-focus-color: var(--ring);
+  --rdg-font-size: 13px;
+  --rdg-cell-frozen-box-shadow: 2px 0 4px -2px var(--border);
+}
+
+.chat-workbench .chatnest-result-grid [role="gridcell"] {
+  border-inline-end-color: transparent;
+}
+
+.chat-workbench .chatnest-result-grid [role="columnheader"] {
+  font-weight: 500;
+  border-block-end: 1px solid var(--rdg-border-color);
+  border-inline-end-color: transparent;
+}

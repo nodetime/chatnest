@@ -107,6 +107,7 @@ export const VersionFooter = ({
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-1">
           <button
+            aria-label="上一版本"
             className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
             disabled={isFirst}
             onClick={handlePrevious}
@@ -115,9 +116,10 @@ export const VersionFooter = ({
             <ChevronLeftIcon className="size-4" />
           </button>
           <span className="min-w-[4rem] text-center text-xs tabular-nums text-muted-foreground">
-            {currentVersionIndex + 1} of {documents.length}
+            第{currentVersionIndex + 1}/{documents.length}版
           </span>
           <button
+            aria-label="下一版本"
             className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-30"
             disabled={isLast}
             onClick={handleNext}
@@ -128,12 +130,13 @@ export const VersionFooter = ({
         </div>
 
         <button
+          aria-label="查看更改"
           className={cn(
             "flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
             mode === "diff" && "bg-muted text-foreground"
           )}
           onClick={handleToggleMode}
-          title="Show changes"
+          title="查看更改"
           type="button"
         >
           <DiffIcon className="size-4" />
@@ -147,7 +150,7 @@ export const VersionFooter = ({
           onClick={handleRestore}
           type="button"
         >
-          Restore
+          恢复此版本
           {isMutating ? (
             <div className="animate-spin">
               <LoaderIcon size={14} />
@@ -159,7 +162,7 @@ export const VersionFooter = ({
           onClick={handleLatest}
           type="button"
         >
-          Latest
+          最新版本
         </button>
       </div>
     </motion.div>

@@ -7,6 +7,7 @@ import {
   ExternalLink,
   ListFilter,
   Save,
+  XIcon,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useMemo, useState } from "react";
@@ -20,6 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import {
   Sheet,
+  SheetClose,
   SheetContent,
   SheetDescription,
   SheetHeader,
@@ -257,8 +259,9 @@ export function ResultTableView({
         style={inline ? { minHeight: 220 } : undefined}
       >
         <DataGrid
-          className={resolvedTheme === "dark" ? "rdg-dark" : "rdg-light"}
+          className={`chatnest-result-grid ${resolvedTheme === "dark" ? "rdg-dark" : "rdg-light"}`}
           columns={columns}
+          headerRowHeight={38}
           onCellClick={({ row }, event) => {
             if (!(event.target as HTMLElement).closest("a")) {
               setDetail(row.sourceIndex);
@@ -282,10 +285,11 @@ export function ResultTableView({
               </div>
             ),
           }}
+          rowHeight={38}
           rowKeyGetter={(row) => row.sourceIndex}
           rows={rows}
           sortColumns={sortColumns}
-          style={{ border: 0, fontSize: 12, height: "100%" }}
+          style={{ border: 0, height: "100%" }}
         />
       </div>
       {!inline && (
@@ -361,7 +365,20 @@ export function ResultTableView({
         }}
         open={detail !== null}
       >
-        <SheetContent className="overflow-y-auto sm:max-w-lg">
+        <SheetContent
+          className="overflow-y-auto sm:max-w-lg"
+          showCloseButton={false}
+        >
+          <SheetClose asChild>
+            <Button
+              aria-label="关闭原始结果"
+              className="absolute top-4 right-4"
+              size="icon-sm"
+              variant="ghost"
+            >
+              <XIcon />
+            </Button>
+          </SheetClose>
           <SheetHeader>
             <SheetTitle>原始结果 · 第 {(detail ?? 0) + 1} 行</SheetTitle>
             <SheetDescription>
