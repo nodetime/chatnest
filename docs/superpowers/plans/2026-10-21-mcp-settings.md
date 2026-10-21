@@ -29,10 +29,10 @@
 
 **Files:** create focused modules in `lib/agent/mcp-settings/` for types/schema, admin/security, crypto, repository, service, discovery/network. Add `app/(chat)/api/agent/mcp/route.ts` and a test route if desired; modify `lib/db/schema.ts`, add `0001_mcp_settings.sql` and journal entry. Add `tests/unit/mcp-settings*.test.ts`.
 
-- [ ] Write failing node:test cases for admin/CSRF, strict key parsing/randomized encrypted roundtrip/tamper, input bounds, trusted origins/per-fetch policy, secret-preserving edit and different-target replacement, CAS/conflict, enable/delete, server-side allowlist validation and cleanup on discovery failure. Use injected in-memory repository and fake MCP client for focused tests; add actual isolated PostgreSQL/HTTP MCP proof separately.
-- [ ] Run `corepack pnpm exec tsx --test tests/unit/mcp-settings*.test.ts` and confirm meaningful failure.
-- [ ] Implement small typed modules, lazy DB connection (no dotenv / actual .env reads), migration and sanitized API responses/errors. Public projections expose only nonsensitive metadata. Inject dependencies at service/API boundary so authorization and errors are actually exercised.
-- [ ] Rerun focused suite and `corepack pnpm exec tsc --noEmit`. Self-review auth, secret flow, network boundary and race handling before commit.
+- [x] Write failing node:test cases for admin/CSRF, strict key parsing/randomized encrypted roundtrip/tamper, input bounds, trusted origins/per-fetch policy, secret-preserving edit and different-target replacement, CAS/conflict, enable/delete, server-side allowlist validation and cleanup on discovery failure. Use injected in-memory repository and fake MCP client for focused tests; add actual isolated PostgreSQL/HTTP MCP proof separately.
+- [x] Run `corepack pnpm exec tsx --conditions=react-server --test tests/unit/mcp-settings*.test.ts` and confirm meaningful failure.
+- [x] Implement small typed modules, lazy DB connection (no dotenv / actual .env reads), migration and sanitized API responses/errors. Public projections expose only nonsensitive metadata. Inject dependencies at service/API boundary so authorization and errors are actually exercised.
+- [x] Rerun focused suite and `corepack pnpm exec tsc --noEmit`. Self-review auth, secret flow, network boundary and race handling before commit.
 
 ## Chunk 2: runtime and user-facing management
 
@@ -40,11 +40,11 @@
 
 **Files:** modify `lib/agent/config.ts`, `lib/agent/runtime.ts`, `app/(chat)/api/agent/route.ts`, `hooks/use-agent-info.ts`, `components/chat/agent-library.tsx`; create small components under `components/chat/mcp-*` and client-safe types/helpers where useful. Add tests for runtime snapshot/approval plus UI checks.
 
-- [ ] Write failing tests showing saved enabled config is read only by subsequent runtime; existing runtime retains old tools; disabled entries absent; all managed tools approval-gated; legacy file/env behavior unchanged; no credential projection. Include test proving discovery does NOT execute tools.
-- [ ] Implement config merge without circular imports or server-only leaking into client. If native test imports of server-only modules are needed use documented react-server conditions or dependency-injected pure code; do not remove server-only safeguards to satisfy tests.
-- [ ] Build accessible responsive management list and editor using existing controls. Fields: id/name/HTTPS endpoint, optional secret headers (JSON or labeled rows), enabled, discovered tool checklist. Existing connection editor keeps secret fields blank with explicit keep/replace behavior. Show no false connected state on simple saved settings. Test states: not tested/discovering/discovered/failure; saving disabled until current inputs verified. Explain service-side activation/billing separate from connection success.
-- [ ] Add/edit/delete/toggle recover errors in place; request pending guards; optimistic revision conflict asks refresh and does not wipe typed secrets unexpectedly. Confirm delete. Ordinary users see readonly capabilities.
-- [ ] Test responsive layout/keyboard/labels/empty/error/loading with synthetic local-only fixtures. No real provider/model calls, no real credentials.
+- [x] Write failing tests showing saved enabled config is read only by subsequent runtime; existing runtime retains old tools; disabled entries absent; all managed tools approval-gated; legacy file/env behavior unchanged; no credential projection. Include test proving discovery does NOT execute tools.
+- [x] Implement config merge without circular imports or server-only leaking into client. If native test imports of server-only modules are needed use documented react-server conditions or dependency-injected pure code; do not remove server-only safeguards to satisfy tests.
+- [x] Build accessible responsive management list and editor using existing controls. Fields: id/name/HTTPS endpoint, optional secret headers (JSON or labeled rows), enabled, discovered tool checklist. Existing connection editor keeps secret fields blank with explicit keep/replace behavior. Show no false connected state on simple saved settings. Test states: not tested/discovering/discovered/failure; saving disabled until current inputs verified. Explain service-side activation/billing separate from connection success.
+- [x] Add/edit/delete/toggle recover errors in place; request pending guards; optimistic revision conflict asks refresh and does not wipe typed secrets unexpectedly. Confirm delete. Ordinary users see readonly capabilities.
+- [x] Test responsive layout/keyboard/labels/empty/error/loading with synthetic local-only fixtures. No real provider/model calls, no real credentials.
 
 ## Chunk 3: independent validation and documentation
 
@@ -52,7 +52,28 @@
 
 **Files:** `.env.example`, `docs/integrations/mcp-settings.md`, optional README small pointer. Keep this plan status accurate.
 
-- [ ] Document exact administrator setup (UUID lookup via trusted DB/admin procedure), key generation (`openssl rand -base64 32`), secure key backup/rotation by decrypt-and-reencrypt migration (not simply changing key), trusted-origin configuration, migration/deploy steps, legacy readonly config, single-workspace scope and next-task application. No real values.
-- [ ] Independent spec review then security/quality review; sole implementation writer fixes findings and re-review.
-- [ ] In primary verification checkout rerun new suites + baseline suites (porta, porta-errors, agent, message-turn, model-connection, browser, task-experience), typecheck and targeted lint; run direct Next build ONLY with isolated clean fixture environment (skip `pnpm build` migration wrapper). Isolated actual Postgres migration/CAS/encryption roundtrip and synthetic HTTP MCP discovery/runtime evidence if Docker available. No paid provider calls.
-- [ ] Record exact evidence and any remaining deployment setup/manual browser gaps. Never conflate mocks with live vendor proof. Commit feature on `feat/mcp/visual-settings`, no unrequested production migration or remote merge.
+- [x] Document exact administrator setup (UUID lookup via trusted DB/admin procedure), key generation (`openssl rand -base64 32`), secure key backup/rotation by decrypt-and-reencrypt migration (not simply changing key), trusted-origin configuration, migration/deploy steps, legacy readonly config, single-workspace scope and next-task application. No real values.
+- [x] Independent spec review then security/quality review; sole implementation writer fixes findings and re-review.
+- [x] In primary verification checkout rerun new suites + baseline suites (porta, porta-errors, agent, message-turn, model-connection, browser, task-experience), typecheck and targeted lint; run direct Next build ONLY with isolated clean fixture environment (skip `pnpm build` migration wrapper). Isolated actual Postgres migration/CAS/encryption roundtrip and synthetic HTTP MCP discovery/runtime evidence if Docker available. No paid provider calls.
+- [x] Record exact evidence and any remaining deployment setup/manual browser gaps. Never conflate mocks with live vendor proof. Commit feature on `feat/mcp/visual-settings`, no unrequested production migration or remote merge.
+
+## Execution evidence (2026-10-21, independently verified)
+
+- Implementer offline verification: 41 baseline + 26 MCP tests = 67/67; `tsx --conditions=react-server --test` preserves server-only guards. `tsc --noEmit`, targeted Biome on 35 changed/new TS/JSON files and `git diff --check` pass.
+- Explicit regression RED → GREEN: external JSON name normalization, request-body limit, keep-connection revision fingerprint, conflict refresh failure, native additionalProperties preservation, pending discovery cancellation/late init cleanup and received-Host CSRF regression.
+- Independent root: isolated real Postgres migrations/CAS/auth/encrypted storage, HTTP MCP initialize/list (no tools/call during test), runtime approval/native parameters/snapshot, desktop IAB CRUD and real SDK stalled initialize/list cancellation validated. Focused raw schema/received-Host probes and 390px AlertDialog cancellation/deletion also validated; the final customer-facing desktop/390×844 UI, friendly Bearer discovery/save, skills language and AlertDialog cancel/delete are independently validated; independent spec and quality reviewers approved, including the duplicate-ID correction.
+- Ordinary `pnpm build`, production migrations, vendor/model calls, push and merge were not run. A broad test discovery attempt found old integration dependencies absent (Chromium and explicit fixture DB); final offline verification explicitly enumerates the baseline suites.
+
+### Additional customer-facing UI acceptance (user screenshot feedback)
+
+- [x] General tab now contains appearance and three concise service statuses only; remove env templates, deployment tutorials, step/time limits and SDK footer from the customer UI. Actual rendered HTML has an offline regression test.
+- [x] Tools and skills use customer-facing language. Keep protocol/billing/key explanations in collapsed admin details and deployment instructions in docs.
+- [x] Default admin editor uses name/address/authentication; single Bearer uses password input, custom headers are preserved in full, auto-generated internal ID and JSON import live in advanced details.
+- [x] Independent final desktop/narrow-screen re-verification of this revised UI.
+
+- Final review regression: new-mode imported IDs now check the latest file + managed IDs, block save and show an advanced-ID correction warning instead of silently upserting an existing connection. Edit mode remains compatible; a refreshed-ID unit case covers 409 retry safety.
+
+- Production-only route validation found the pre-existing unsupported `getStreamContext` named export in the chat route. Keep the internal helper/calls unchanged, remove only the export, and add an explicit static regression; no type checking is disabled. Exact-origin configuration also now explicitly rejects literal `*` hosts (assertion RED → GREEN).
+
+- Final root verification: 67/67 focused + baseline tests, typecheck, 35-file targeted Biome and diff check all pass. Actual clean isolated-source-copy `next build --webpack` completed compilation (59s), TypeScript (16.8s), 21 static pages and trace generation. Actual `next start` verified admin management GET 200, secret-free capability summary 200, cross-origin POST 403, existing anonymous guest redirect behavior and `/ping` 200; route trace includes `config/agent.json`. The migration wrapper was deliberately not run against production.
+- Final deliverables are committed as the backend/runtime chunk and customer-facing UI/documentation chunk on `feat/mcp/visual-settings`; no push or merge. Ignored `.local-review` evidence and fixture secrets are not included. Remaining deployment prerequisites are real admin UUIDs, a securely backed-up random key, trusted HTTPS origins/egress policy and the provider's own activation/quotas.

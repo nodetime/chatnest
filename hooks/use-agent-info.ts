@@ -3,6 +3,7 @@
 import useSWR from "swr";
 
 export type AgentInfo = {
+  mcpManagement?: { admin: boolean; configured: boolean };
   skills: {
     name: string;
     description: string;
@@ -16,6 +17,7 @@ export type AgentInfo = {
     tools: string[];
     missingEnvironment: string[];
     keyless?: boolean;
+    source?: "managed" | "file";
   }[];
   modelConfigured: boolean;
   modelProvider?: "openai" | "gateway";
