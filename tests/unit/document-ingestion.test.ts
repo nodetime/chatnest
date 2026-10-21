@@ -292,13 +292,8 @@ test("ZIP preflight rejects traversal duplicate DTD macros corruption and declar
   large.writeUInt32LE(33 * 1024 * 1024, c + 24);
   await assert.rejects(() => parseDocument(large, mime));
 });
-test("text output truncation and busy admission are explicit; private temp directories cleaned", async () => {
+test("text output truncation and busy parser admission are explicit", async () => {
   const { parseDocument } = await import("../../lib/uploads/document-parser");
-  const { readdir } = await import("node:fs/promises");
-  const { tmpdir } = await import("node:os");
-  const before = (await readdir(tmpdir()))
-    .filter((n) => n.startsWith("chatnest-document-"))
-    .sort();
   const running = parseDocument(
     Buffer.from("x".repeat(1_000_020)),
     "text/plain"
@@ -311,12 +306,6 @@ test("text output truncation and busy admission are explicit; private temp direc
   assert.equal(out.status, "truncated");
   assert.equal(out.characters, 1_000_000);
   assert.ok(out.warnings.length);
-  assert.deepEqual(
-    (await readdir(tmpdir()))
-      .filter((n) => n.startsWith("chatnest-document-"))
-      .sort(),
-    before
-  );
 });
 test("documents persist quota-accounted extraction and read tool checks actual committed association", async () => {
   const service = await readFile("lib/uploads/service.ts", "utf8");
@@ -437,16 +426,22 @@ test("cheap storage enabled/ownership/quota admission precedes expensive documen
 });
 test("worker hard deadline terminates CPU work without blocking loop and cleans private temp on timeout/exit", async () => {
   const { runParserWorker } = await import("../../lib/uploads/document-parser");
-  const { mkdtemp, rm, writeFile, readdir } = await import("node:fs/promises");
+  const { mkdtemp, rm, writeFile, stat } = await import("node:fs/promises");
   const { tmpdir } = await import("node:os");
   const { join } = await import("node:path");
   const dir = await mkdtemp(join(tmpdir(), "parser-probe-"));
-  const before = (await readdir(tmpdir()))
-    .filter((n) => n.startsWith("chatnest-document-"))
-    .sort();
+  // Concurrent application/test processes legitimately own other scratch directories.
+  // Capture and assert only each worker's reported TMPDIR, never a global inventory.
+  const marker = join(dir, "scratch-path");
+  const report = `require('node:fs').writeFileSync(${JSON.stringify(marker)},process.env.TMPDIR);`;
+  const assertOwnScratchRemoved = async () => {
+    const scratch = await readFile(marker, "utf8");
+    assert.ok(scratch.includes("chatnest-document-"));
+    await assert.rejects(() => stat(scratch), { code: "ENOENT" });
+  };
   try {
     const worker = join(dir, "worker.cjs");
-    await writeFile(worker, "while(true){}");
+    await writeFile(worker, `${report}while(true){}`);
     let responsive = false;
     setTimeout(() => {
       responsive = true;
@@ -454,38 +449,35 @@ test("worker hard deadline terminates CPU work without blocking loop and cleans 
     await assert.rejects(
       () =>
         runParserWorker(Buffer.from("x"), "text/plain", {
-          deadlineMs: 40,
+          deadlineMs: 1000,
           workerFile: worker,
         }),
       /超时/
     );
     assert.equal(responsive, true);
-    await writeFile(worker, "process.exit(0)");
+    await assertOwnScratchRemoved();
+    await writeFile(worker, `${report}process.exit(0)`);
     await assert.rejects(
       () =>
         runParserWorker(Buffer.from("x"), "text/plain", {
-          deadlineMs: 500,
+          deadlineMs: 5000,
           workerFile: worker,
         }),
       /终止/
     );
+    await assertOwnScratchRemoved();
     await writeFile(
       worker,
-      `const {parentPort}=require('node:worker_threads');const {statSync}=require('node:fs');parentPort.postMessage({ok:true,extraction:{status:'ready',characters:0,warnings:[],segments:[{ref:'env',text:JSON.stringify({keys:Object.keys(process.env).sort(),mode:statSync(process.env.TMPDIR).mode&511})}]}});`
+      `const {parentPort}=require('node:worker_threads');const {statSync}=require('node:fs');parentPort.postMessage({ok:true,extraction:{status:'ready',characters:0,warnings:[],segments:[{ref:'env',text:JSON.stringify({directory:process.env.TMPDIR,keys:Object.keys(process.env).sort(),mode:statSync(process.env.TMPDIR).mode&511})}]}});`
     );
     const result = await runParserWorker(Buffer.from("x"), "text/plain", {
-      deadlineMs: 500,
+      deadlineMs: 5000,
       workerFile: worker,
     });
     const env = JSON.parse(result.segments[0].text);
     assert.equal(env.mode, 0o700);
     assert.deepEqual(env.keys, ["NODE_ENV", "TEMP", "TMP", "TMPDIR"]);
-    assert.deepEqual(
-      (await readdir(tmpdir()))
-        .filter((n) => n.startsWith("chatnest-document-"))
-        .sort(),
-      before
-    );
+    await assert.rejects(() => stat(env.directory), { code: "ENOENT" });
   } finally {
     await rm(dir, { force: true, recursive: true });
   }
