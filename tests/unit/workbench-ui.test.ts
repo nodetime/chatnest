@@ -280,3 +280,144 @@ test("message stack reduces inter-message space without changing paragraph typog
   const message = readFileSync("components/chat/message.tsx", "utf8");
   assert.match(message, /text-\[15px\] leading-\[1\.8\]/);
 });
+
+const resultSource = {
+  completedAt: "2026-10-21T12:00:00.000Z",
+  serverId: "fixture-server-id",
+  serverName: "Fixture server",
+  timeBasis: "tool-completed",
+  toolCallId: "fixture-call-id-only-in-details",
+  toolName: "fixture__raw_alias_only_in_details",
+};
+
+function renderResultTable(notes = "", readOnly = false) {
+  return clientScript(`
+    require.extensions['.css'] = () => {};
+    const React = require('react');
+    const { renderToStaticMarkup } = require('react-dom/server');
+    const { ResultTableView } = require('./components/chat/result-table.tsx');
+    global.fetch = () => { throw new Error('Unexpected network access'); };
+    const table = { chatId: 'fixture-chat', columns: [{ label: 'Title', path: '/title' }], notes: ${JSON.stringify(notes)}, rows: [{ title: 'fixture row', secret: 'complete raw field' }], source: ${JSON.stringify(resultSource)}, view: { filter: '', sort: [], visibleColumns: ['/title'] } };
+    process.stdout.write(renderToStaticMarkup(React.createElement(ResultTableView, { documentId: 'fixture-document', expectedVersion: '2026-10-21T12:00:00.000Z', readOnly: ${readOnly}, table })));
+  `);
+}
+
+test("result workspace shows only compact source identity and a details entry, without a second title", () => {
+  const html = renderResultTable();
+  assert.match(html, /Fixture server/);
+  assert.match(html, /未核验/);
+  assert.match(html, /来源详情/);
+  assert.match(html, /1 \/ 1 行/);
+  assert.match(html, /源数据只读/);
+  assert.doesNotMatch(
+    html,
+    /fixture__raw_alias_only_in_details|fixture-call-id-only-in-details|fixture-server-id|2026-10-21T12:00:00.000Z|结果表格/
+  );
+  assert.match(html, /aria-label="筛选结果"/);
+  assert.match(html, />CSV</);
+  assert.match(html, />JSON</);
+});
+
+test("source Sheet details retain every original source field and explain both time bases", () => {
+  assert.ok(existsSync("components/chat/result-table-source.tsx"));
+  for (const [timeBasis, explanation] of [
+    ["tool-completed", "工具完成时间"],
+    ["message-recorded", "消息记录时间"],
+  ]) {
+    const source = { ...resultSource, timeBasis };
+    const html = clientScript(`
+      const React = require('react');
+      const { renderToStaticMarkup } = require('react-dom/server');
+      const { ResultTableSourceDetails } = require('./components/chat/result-table-source.tsx');
+      process.stdout.write(renderToStaticMarkup(React.createElement(ResultTableSourceDetails, { source: ${JSON.stringify(source)} })));
+    `);
+    for (const [field, value] of Object.entries(source)) {
+      assert.ok(html.includes(field), `original field name ${field} retained`);
+      assert.ok(html.includes(value), `original ${field} value retained`);
+    }
+    assert.ok(html.includes(explanation));
+    assert.match(html, /break-all/);
+  }
+  const source = readFileSync(
+    "components/chat/result-table-source.tsx",
+    "utf8"
+  );
+  assert.match(source, /<SheetTrigger asChild>/);
+  assert.match(source, /<SheetContent/);
+  assert.match(source, /<SheetTitle>来源详情<\/SheetTitle>/);
+});
+
+test("empty notes start closed while independent save and status remain reachable", () => {
+  const html = renderResultTable();
+  assert.match(html, /aria-expanded="false"/);
+  assert.match(html, /个人备注/);
+  assert.doesNotMatch(html, /<textarea/);
+  assert.match(html, /保存视图与备注/);
+  assert.match(html, /CSV 为当前视图/);
+  const source = readFileSync("components/chat/result-table.tsx", "utf8");
+  assert.match(source, /defaultOpen=\{Boolean\(table\.notes\)\}/);
+  const contentEnd = source.indexOf("</CollapsibleContent>");
+  const saveButton = source.indexOf("<Save className");
+  assert.ok(contentEnd > 0 && saveButton > contentEnd);
+  assert.match(
+    source,
+    /disabled=\{!dirty \|\| saving \|\| !documentId \|\| !expectedVersion\}/
+  );
+  assert.match(
+    source,
+    /if \(!documentId \|\| !expectedVersion \|\| readOnly \|\| saving\)/
+  );
+  assert.match(source, /response\.status === 409/);
+  assert.match(source, /await onSaved\?\.\(body\[0\]\.content\)/);
+});
+
+test("saved notes start open and readonly history retains notes without save mutation controls", () => {
+  const html = renderResultTable("fixture saved notes");
+  assert.match(html, /aria-expanded="true"/);
+  assert.match(html, /<textarea/);
+  assert.match(html, /fixture saved notes/);
+  const historical = renderResultTable("fixture historical notes", true);
+  assert.match(historical, /<textarea[^>]*disabled=""/);
+  assert.match(historical, /fixture historical notes/);
+  assert.doesNotMatch(historical, /保存视图与备注/);
+  const sheet = readFileSync("artifacts/sheet/client.tsx", "utf8");
+  assert.match(sheet, /readOnly=\{isReadonly \|\| !isCurrentVersion\}/);
+});
+
+test("workspace keeps tabs, keyboard and resize semantics within a restrained desktop surface", () => {
+  const workspace = readFileSync("components/chat/workspace.tsx", "utf8");
+  for (const title of ["浏览器", "文档", "来源"]) {
+    assert.ok(workspace.includes(`title: "${title}"`));
+  }
+  assert.match(workspace, /md:rounded-\[12px\]/);
+  assert.match(workspace, /md:m-2/);
+  assert.match(workspace, /border-border\/50/);
+  assert.match(workspace, /role="tablist"/);
+  assert.match(workspace, /"ArrowRight", "ArrowLeft", "Home", "End"/);
+  assert.match(workspace, /aria-label="调整工作区宽度"/);
+  assert.match(workspace, /aria-label="关闭工作区"/);
+  assert.match(workspace, /"收起工作区" : "展开工作区"/);
+  assert.match(workspace, /fixed inset-0[^"]*h-dvh w-full/);
+});
+
+test("embedded artifact keeps the real single title and a shrinkable result-content flex chain", () => {
+  const artifact = readFileSync("components/chat/artifact.tsx", "utf8");
+  assert.match(artifact, /!embedded && <ArtifactCloseButton \/>/);
+  assert.equal(artifact.match(/\{artifact\.title\}/g)?.length, 2);
+  assert.match(artifact, /embedded \? "h-11" : "h-\[calc\(3\.5rem\+1px\)\]"/);
+  assert.match(
+    artifact,
+    /isProtectedResultTable\(artifact\.content\)[\s\S]*?"flex overflow-hidden"\s*:\s*"overflow-y-auto"/
+  );
+  assert.match(artifact, /relative min-h-0 min-w-0 flex-1/);
+  assert.equal(artifact.match(/className="h-5 px-1.5"/g)?.length, 2);
+  const result = readFileSync("components/chat/result-table.tsx", "utf8");
+  assert.match(result, /flex h-full w-full min-h-0 min-w-0 flex-col/);
+  assert.match(result, /min-h-0 min-w-0 flex-1/);
+  assert.match(result, /flex flex-wrap items-center gap-2/);
+  // Existing exports and row-index raw detail are deliberately unchanged.
+  assert.match(result, /resultCsv\(table, view\)/);
+  assert.match(result, /JSON\.stringify\(table, null, 2\)/);
+  assert.match(result, /setDetail\(row\.sourceIndex\)/);
+  assert.match(result, /JSON\.stringify\(table\.rows\[detail\], null, 2\)/);
+});

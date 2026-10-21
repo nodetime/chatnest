@@ -1,17 +1,22 @@
 // biome-ignore-all lint/performance/noJsxPropsBind: Small local view controls have explicit, scoped event handlers.
 "use client";
 import {
+  ChevronDown,
   Columns3,
   Download,
   ExternalLink,
   ListFilter,
   Save,
-  Table2,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useMemo, useState } from "react";
 import DataGrid, { type Column, type SortColumn } from "react-data-grid";
 import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import {
   Sheet,
@@ -30,6 +35,7 @@ import {
   resultRows,
   safeSourceUrl,
 } from "@/lib/artifacts/result-table";
+import { ResultTableSource } from "./result-table-source";
 import "react-data-grid/lib/styles.css";
 
 type Props = {
@@ -162,16 +168,14 @@ export function ResultTableView({
     }));
   return (
     <div
-      className="flex h-full min-h-0 flex-col bg-background"
+      className="flex h-full w-full min-h-0 min-w-0 flex-col bg-background"
       data-testid="result-table"
     >
       {!inline && (
-        <div className="space-y-3 border-b px-4 py-3">
+        <div className="shrink-0 space-y-1.5 border-b border-border/50 px-3 py-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <Table2 className="size-4 text-muted-foreground" />
-              结果表格{" "}
-              <span className="rounded-md bg-muted px-1.5 py-0.5 text-xs tabular-nums text-muted-foreground">
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="text-xs tabular-nums text-muted-foreground">
                 {rows.length} / {table.rows.length} 行
               </span>
             </div>
@@ -180,7 +184,7 @@ export function ResultTableView({
             </span>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <div className="relative min-w-36 flex-1">
+            <div className="relative min-w-0 basis-36 flex-1">
               <ListFilter className="absolute top-2.5 left-2.5 size-3.5 text-muted-foreground" />
               <Input
                 aria-label="筛选结果"
@@ -245,26 +249,12 @@ export function ResultTableView({
               JSON
             </Button>
           </div>
-          <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] leading-5 text-muted-foreground">
-            <span className="font-medium">工具返回 · 未核验</span>
-            <span>
-              {table.source.serverName} / {table.source.toolName}
-            </span>
-            <time dateTime={table.source.completedAt}>
-              {new Date(table.source.completedAt).toLocaleString()}{" "}
-              {table.source.timeBasis === "message-recorded"
-                ? "（消息记录时间）"
-                : ""}
-            </time>
-            <span className="break-all" title={table.source.toolCallId}>
-              调用 {table.source.toolCallId}
-            </span>
-          </div>
+          <ResultTableSource source={table.source} />
         </div>
       )}
       <div
-        className="min-h-40 flex-1"
-        style={{ minHeight: inline ? 220 : 240 }}
+        className="min-h-0 min-w-0 flex-1 overflow-hidden"
+        style={inline ? { minHeight: 220 } : undefined}
       >
         <DataGrid
           className={resolvedTheme === "dark" ? "rdg-dark" : "rdg-light"}
@@ -287,7 +277,7 @@ export function ResultTableView({
             noRowsFallback: (
               <div className="p-6 text-sm text-muted-foreground">
                 {table.rows.length
-                  ? "没有匹配的结果。"
+                  ? "没有匹配的结果，请调整筛选条件。"
                   : "工具返回了空结果数组。"}
               </div>
             ),
@@ -299,21 +289,59 @@ export function ResultTableView({
         />
       </div>
       {!inline && (
-        <div className="space-y-2 border-t px-4 py-3">
-          <div className="flex items-center justify-between gap-2">
-            <label
-              className="text-xs font-medium"
-              htmlFor={`result-notes-${documentId}`}
-            >
-              个人备注{" "}
-              <span className="font-normal text-muted-foreground">
-                · 与工具原始数据分开保存
-              </span>
-            </label>
+        <div className="shrink-0 space-y-1 border-t border-border/50 px-3 py-2">
+          <Collapsible defaultOpen={Boolean(table.notes)}>
+            <CollapsibleTrigger asChild>
+              <Button
+                className="group h-7 max-w-full gap-1.5 px-0 text-xs hover:bg-transparent"
+                variant="ghost"
+              >
+                <ChevronDown className="size-3.5 shrink-0 transition-transform group-data-[state=closed]:-rotate-90" />
+                个人备注
+                <span className="truncate font-normal text-muted-foreground">
+                  · 与原始数据分开保存
+                </span>
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-1 pb-2">
+              <Textarea
+                aria-label="个人备注"
+                className="max-h-40 min-h-14 resize-y text-xs"
+                disabled={readOnly}
+                id={`result-notes-${documentId}`}
+                maxLength={10_000}
+                onChange={(event) => setNotes(event.target.value)}
+                placeholder="记录你的判断，不会改变原始来源字段。"
+                value={notes}
+              />
+            </CollapsibleContent>
+          </Collapsible>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            {error ? (
+              <p
+                className="min-w-0 flex-1 text-xs text-destructive"
+                role="alert"
+              >
+                {error}
+              </p>
+            ) : dirty ? (
+              <p
+                className="min-w-0 flex-1 text-[11px] text-muted-foreground"
+                role="status"
+              >
+                {readOnly
+                  ? "只读预览：筛选与排序不保存。"
+                  : "视图或备注尚未保存。"}
+              </p>
+            ) : (
+              <p className="min-w-0 flex-1 text-[11px] text-muted-foreground">
+                点击行查看原始字段。CSV 为当前视图，JSON 保留完整快照。
+              </p>
+            )}
             {!readOnly && (
               <Button
-                className="h-7 gap-1.5 text-xs"
-                disabled={!dirty || saving || !expectedVersion}
+                className="h-7 shrink-0 gap-1.5 text-xs"
+                disabled={!dirty || saving || !documentId || !expectedVersion}
                 onClick={save}
                 size="sm"
                 variant="secondary"
@@ -323,31 +351,6 @@ export function ResultTableView({
               </Button>
             )}
           </div>
-          <Textarea
-            className="min-h-14 resize-y text-xs"
-            disabled={readOnly}
-            id={`result-notes-${documentId}`}
-            maxLength={10_000}
-            onChange={(event) => setNotes(event.target.value)}
-            placeholder="记录你的判断，不会改变原始来源字段。"
-            value={notes}
-          />
-          {error ? (
-            <p className="text-xs text-destructive" role="alert">
-              {error}
-            </p>
-          ) : dirty ? (
-            <p className="text-[11px] text-muted-foreground">
-              {readOnly
-                ? "只读预览：筛选与排序不保存。"
-                : "视图或备注尚未保存。"}
-            </p>
-          ) : (
-            <p className="text-[11px] text-muted-foreground">
-              点击任意行查看完整原始字段。CSV 为当前视图，JSON
-              保留完整来源快照。
-            </p>
-          )}
         </div>
       )}
       <Sheet

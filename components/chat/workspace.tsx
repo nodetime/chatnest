@@ -147,11 +147,11 @@ export function Workspace({ children }: { children: ReactNode }) {
       <aside
         aria-label="工作区"
         className={cn(
-          "flex min-h-0 min-w-0 shrink-0 flex-col overflow-hidden bg-background",
+          "chat-workbench-surface flex min-h-0 min-w-0 shrink-0 flex-col overflow-hidden bg-background md:rounded-[12px] md:border md:border-border/50",
           !workspace.open && "hidden",
           workspace.expanded
-            ? "fixed inset-0 z-50 h-dvh w-full"
-            : "fixed inset-0 z-40 h-dvh w-full md:relative md:inset-auto md:z-auto md:w-[var(--workspace-width)]"
+            ? "fixed inset-0 z-50 h-dvh w-full md:inset-2 md:h-auto md:w-auto"
+            : "fixed inset-0 z-40 h-dvh w-full md:relative md:inset-auto md:z-auto md:m-2 md:h-auto md:w-[var(--workspace-width)]"
         )}
         data-testid="workspace"
         ref={pane}
@@ -159,7 +159,7 @@ export function Workspace({ children }: { children: ReactNode }) {
           { "--workspace-width": `${workspace.width}%` } as React.CSSProperties
         }
       >
-        <div className="flex h-14 shrink-0 items-center gap-1 border-b px-3">
+        <div className="flex h-11 shrink-0 items-center gap-1 border-b border-border/50 px-2">
           <div
             aria-label="工作区内容"
             className="flex min-w-0 flex-1 items-center gap-1"
@@ -234,7 +234,7 @@ export function Workspace({ children }: { children: ReactNode }) {
         <div
           aria-labelledby="workspace-tab-browser"
           className={cn(
-            "min-h-0 flex-1",
+            "min-h-0 min-w-0 flex-1",
             workspace.tab !== "browser" && "hidden"
           )}
           id="workspace-browser"
@@ -248,7 +248,7 @@ export function Workspace({ children }: { children: ReactNode }) {
         <div
           aria-labelledby="workspace-tab-document"
           className={cn(
-            "min-h-0 flex-1",
+            "min-h-0 min-w-0 flex-1",
             workspace.tab !== "document" && "hidden"
           )}
           id="workspace-document"
@@ -269,7 +269,7 @@ export function Workspace({ children }: { children: ReactNode }) {
         <div
           aria-labelledby="workspace-tab-sources"
           className={cn(
-            "min-h-0 flex-1",
+            "min-h-0 min-w-0 flex-1",
             workspace.tab !== "sources" && "hidden"
           )}
           id="workspace-sources"

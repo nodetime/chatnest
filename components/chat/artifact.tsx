@@ -22,7 +22,7 @@ import { useArtifact } from "@/hooks/use-artifact";
 import { isProtectedResultTable } from "@/lib/artifacts/result-table";
 import type { Document, Vote } from "@/lib/db/schema";
 import type { Attachment, ChatMessage } from "@/lib/types";
-import { fetcher } from "@/lib/utils";
+import { cn, fetcher } from "@/lib/utils";
 import { ArtifactActions } from "./artifact-actions";
 import { ArtifactCloseButton } from "./artifact-close-button";
 import { LoaderIcon } from "./icons";
@@ -406,11 +406,16 @@ function PureArtifact({
 
   const artifactPanel = (
     <>
-      <div className="flex h-[calc(3.5rem+1px)] shrink-0 items-center justify-between border-b border-border/50 px-4">
-        <div className="flex items-center gap-3">
-          <ArtifactCloseButton />
-          <div className="flex flex-col gap-0.5">
-            <div className="text-sm font-semibold leading-tight tracking-tight">
+      <div
+        className={cn(
+          "flex min-w-0 shrink-0 items-center justify-between border-b border-border/50 px-3",
+          embedded ? "h-11" : "h-[calc(3.5rem+1px)]"
+        )}
+      >
+        <div className="flex min-w-0 items-center gap-3">
+          {!embedded && <ArtifactCloseButton />}
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <div className="truncate text-sm font-semibold leading-tight tracking-tight">
               {artifact.title}
             </div>
             <div className="flex items-center gap-2">
@@ -443,6 +448,7 @@ function PureArtifact({
                   <div className="flex gap-1">
                     <Button
                       aria-label="上一版本"
+                      className="h-5 px-1.5"
                       disabled={currentVersionIndex <= 0}
                       onClick={handlePreviousVersion}
                       size="sm"
@@ -452,6 +458,7 @@ function PureArtifact({
                     </Button>
                     <Button
                       aria-label="下一版本"
+                      className="h-5 px-1.5"
                       disabled={isCurrentVersion}
                       onClick={handleNextVersion}
                       size="sm"
@@ -471,7 +478,12 @@ function PureArtifact({
         </div>
       </div>
       <div
-        className="relative flex-1 overflow-y-auto bg-background"
+        className={cn(
+          "relative min-h-0 min-w-0 flex-1 bg-background",
+          isProtectedResultTable(artifact.content)
+            ? "flex overflow-hidden"
+            : "overflow-y-auto"
+        )}
         data-slot="artifact-content"
         onScroll={handleArtifactScroll}
         ref={artifactContentRef}
@@ -582,7 +594,7 @@ function PureArtifact({
     <div
       className={
         embedded
-          ? "flex h-full w-full min-h-0 flex-col overflow-hidden bg-sidebar"
+          ? "flex h-full w-full min-h-0 min-w-0 flex-col overflow-hidden bg-background"
           : "flex h-dvh w-[60%] shrink-0 flex-col overflow-hidden border-l border-border/50 bg-sidebar transition-[width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]"
       }
       data-testid="artifact"
