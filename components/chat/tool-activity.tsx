@@ -8,11 +8,12 @@ import {
   Monitor,
   Search,
 } from "lucide-react";
-import { useCallback, useEffect, useId, useState } from "react";
+import { useCallback, useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useAgentInfo } from "@/hooks/use-agent-info";
 import { collectSourceLinks } from "@/lib/agent/sources";
 import type { ChatMessage } from "@/lib/types";
+import { cn } from "@/lib/utils";
 import {
   Tool,
   ToolContent,
@@ -21,6 +22,11 @@ import {
   ToolOutput,
   type ToolPart,
 } from "../ai-elements/tool";
+import {
+  initialToolDisclosure,
+  reconcileToolDisclosure,
+  toolNeedsAttention,
+} from "./tool-activity-state";
 
 export function ToolActivity({
   part,
@@ -69,17 +75,29 @@ export function ToolActivity({
             ? "搜索网页"
             : name.includes("extract") || name.includes("fetch")
               ? "读取网页正文"
-              : (browserTitles[shortName] ?? name);
+              : (browserTitles[shortName] ?? "执行工具");
   const sources = name.includes("__") ? collectSourceLinks(part.output) : [];
-  const [open, setOpen] = useState(
-    part.state === "approval-requested" || part.state === "output-error"
+  const incomplete =
+    !isRunning &&
+    (part.state === "input-streaming" || part.state === "input-available");
+  const approval = "approval" in part ? part.approval : undefined;
+  const displayState = incomplete
+    ? "output-error"
+    : part.state === "approval-responded" && approval?.approved === false
+      ? "output-denied"
+      : part.state;
+  const [disclosure, setDisclosure] = useState(() =>
+    initialToolDisclosure(displayState)
   );
+  const currentDisclosure = reconcileToolDisclosure(disclosure, displayState);
+  if (currentDisclosure !== disclosure) {
+    setDisclosure(currentDisclosure);
+  }
+  const { open } = currentDisclosure;
+  const setOpen = useCallback((value: boolean) => {
+    setDisclosure((current) => ({ ...current, open: value }));
+  }, []);
   const [allSources, setAllSources] = useState(false);
-  useEffect(() => {
-    if (part.state === "approval-requested" || part.state === "output-error") {
-      setOpen(true);
-    }
-  }, [part.state]);
   const sourceListId = useId();
   const toggleSources = useCallback(() => setAllSources((value) => !value), []);
   const visibleSources = allSources ? sources : sources.slice(0, 3);
@@ -102,7 +120,6 @@ export function ToolActivity({
     skill?.shortDescription ??
     skill?.description ??
     "读取方法指引，再根据目标选择后续操作。";
-  const approval = "approval" in part ? part.approval : undefined;
   const handleDeny = useCallback(() => {
     if (approval) {
       approve({ approved: false, id: approval.id, reason: "用户拒绝执行" });
@@ -113,23 +130,24 @@ export function ToolActivity({
       approve({ approved: true, id: approval.id });
     }
   }, [approve, approval]);
-  const incomplete =
-    !isRunning &&
-    (part.state === "input-streaming" || part.state === "input-available");
   return (
     <div className="my-1 max-w-full" data-testid="tool-activity">
       <Tool
-        className="mb-2 overflow-hidden rounded-xl border-border/60 bg-card/40"
+        className={cn(
+          "mb-0 overflow-hidden rounded-[12px] border-transparent bg-transparent",
+          toolNeedsAttention(displayState) && "border-border/60 bg-muted/30"
+        )}
         onOpenChange={setOpen}
         open={open}
       >
         <ToolHeader
+          appearance="compact"
           icon={
             MethodIcon ? (
               <MethodIcon className="size-4 shrink-0 text-muted-foreground" />
             ) : undefined
           }
-          state={incomplete ? "output-error" : part.state}
+          state={displayState}
           statusLabel={
             incomplete
               ? "未完成"
@@ -142,7 +160,7 @@ export function ToolActivity({
             ? { toolName: name, type: "dynamic-tool" }
             : { type: part.type })}
         />
-        <ToolContent>
+        <ToolContent className="space-y-3 px-3 pb-3 pt-1">
           {name === "loadSkill" && (
             <p className="text-sm leading-6 text-muted-foreground">
               {methodDescription}
@@ -157,15 +175,56 @@ export function ToolActivity({
             <p className="text-sm text-destructive" role="alert">
               {incomplete
                 ? "本轮没有收到执行结果，该步骤尚未完成。"
-                : part.errorText}
+                : part.errorText === "An error occurred."
+                  ? "工具暂时未能返回结果，请稍后重试。"
+                  : part.errorText}
             </p>
           )}
           {name === "readAttachment" && part.state === "output-available" && (
             <AttachmentReadSummary output={part.output} />
           )}
+          {sources.length > 0 && (
+            <div
+              className="mb-3 flex flex-wrap items-center gap-1.5"
+              id={sourceListId}
+            >
+              {visibleSources.map((source) => (
+                <a
+                  className="inline-flex max-w-full items-center gap-1.5 rounded-lg border border-border/60 bg-card px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                  href={source.url}
+                  key={source.url}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                  title={`${source.title} · ${new URL(source.url).hostname}`}
+                >
+                  <span className="min-w-0 max-w-[200px] truncate">
+                    {source.title}
+                  </span>
+                  <ExternalLink className="size-3 shrink-0" />
+                </a>
+              ))}
+              {sources.length > 3 && (
+                <Button
+                  aria-controls={sourceListId}
+                  aria-expanded={allSources}
+                  aria-label={allSources ? "收起来源" : "展开全部来源"}
+                  className="text-muted-foreground"
+                  onClick={toggleSources}
+                  size="xs"
+                  variant="ghost"
+                >
+                  {allSources ? "收起" : `+${sources.length - 3} 条来源`}
+                </Button>
+              )}
+            </div>
+          )}
+          {part.state === "approval-requested" && (
+            <ToolInput input={part.input} />
+          )}
           <details className="text-xs text-muted-foreground">
             <summary className="cursor-pointer py-1">技术详情</summary>
-            <div className="mt-3 space-y-3">
+            <div className="mt-3 min-w-0 space-y-3">
+              <p className="break-all font-mono">{name}</p>
               <ToolInput input={part.input} />
               <ToolOutput errorText={part.errorText} output={part.output} />
             </div>
@@ -193,46 +252,6 @@ export function ToolActivity({
           )}
         </ToolContent>
       </Tool>
-      {name === "loadSkill" && part.state === "output-available" && !open && (
-        <p className="mb-2 text-xs text-muted-foreground">
-          {methodDescription}
-        </p>
-      )}
-      {sources.length > 0 && (
-        <div
-          className="mb-3 flex flex-wrap items-center gap-1.5"
-          id={sourceListId}
-        >
-          {visibleSources.map((source) => (
-            <a
-              className="inline-flex max-w-full items-center gap-1.5 rounded-lg border border-border/60 bg-card px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-              href={source.url}
-              key={source.url}
-              rel="noopener noreferrer"
-              target="_blank"
-              title={`${source.title} · ${new URL(source.url).hostname}`}
-            >
-              <span className="min-w-0 max-w-[200px] truncate">
-                {source.title}
-              </span>
-              <ExternalLink className="size-3 shrink-0" />
-            </a>
-          ))}
-          {sources.length > 3 && (
-            <Button
-              aria-controls={sourceListId}
-              aria-expanded={allSources}
-              aria-label={allSources ? "收起来源" : "展开全部来源"}
-              className="text-muted-foreground"
-              onClick={toggleSources}
-              size="xs"
-              variant="ghost"
-            >
-              {allSources ? "收起" : `+${sources.length - 3} 条来源`}
-            </Button>
-          )}
-        </div>
-      )}
     </div>
   );
 }

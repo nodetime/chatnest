@@ -1,15 +1,6 @@
 "use client";
 
 import type { DynamicToolUIPart, ToolUIPart } from "ai";
-import type { ComponentProps, ReactNode } from "react";
-
-import { Badge } from "@/components/ui/badge";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { cn } from "@/lib/utils";
 import {
   CheckCircleIcon,
   ChevronDownIcon,
@@ -18,7 +9,15 @@ import {
   WrenchIcon,
   XCircleIcon,
 } from "lucide-react";
+import type { ComponentProps, ReactNode } from "react";
 import { isValidElement } from "react";
+import { Badge } from "@/components/ui/badge";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { cn } from "@/lib/utils";
 
 import { CodeBlock } from "./code-block";
 
@@ -38,6 +37,7 @@ export type ToolHeaderProps = {
   statusLabel?: string;
   className?: string;
   icon?: ReactNode;
+  appearance?: "default" | "compact";
 } & (
   | { type: ToolUIPart["type"]; state: ToolUIPart["state"]; toolName?: never }
   | {
@@ -82,24 +82,59 @@ export const ToolHeader = ({
   state,
   toolName,
   icon,
+  appearance = "default",
   ...props
 }: ToolHeaderProps) => {
   const derivedName =
     type === "dynamic-tool" ? toolName : type.split("-").slice(1).join("-");
 
+  const compact = appearance === "compact";
+  const attention =
+    state === "approval-requested" ||
+    state === "output-error" ||
+    state === "output-denied";
+
   return (
     <CollapsibleTrigger
       className={cn(
-        "flex w-full min-w-0 items-center justify-between gap-3 px-3 py-2.5 text-left",
+        "flex w-full min-w-0 items-center justify-between gap-3 px-3 text-left",
+        compact
+          ? "h-9 gap-2 rounded-xl text-[13px] hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-ring"
+          : "py-2.5",
         className
       )}
       {...props}
     >
       <div className="flex min-w-0 flex-1 items-center gap-2">
-        {icon ?? <WrenchIcon className="size-4 shrink-0 text-muted-foreground" />}
-        <span className="min-w-0 break-words font-medium text-sm [overflow-wrap:anywhere]">{title ?? derivedName}</span>
+        {icon ?? (
+          <WrenchIcon className="size-4 shrink-0 text-muted-foreground" />
+        )}
+        <span
+          className={cn(
+            "min-w-0 font-medium",
+            compact
+              ? "truncate text-[13px]"
+              : "break-words text-sm [overflow-wrap:anywhere]"
+          )}
+        >
+          {title ?? derivedName}
+        </span>
       </div>
-      <span className="shrink-0">{getStatusBadge(state, statusLabel)}</span>
+      {compact ? (
+        <span
+          className={cn(
+            "shrink-0 text-xs text-muted-foreground",
+            attention && "font-medium text-destructive",
+            state === "approval-requested" &&
+              "text-amber-700 dark:text-amber-400"
+          )}
+          role="status"
+        >
+          {statusLabel ?? statusLabels[state]}
+        </span>
+      ) : (
+        <span className="shrink-0">{getStatusBadge(state, statusLabel)}</span>
+      )}
       <ChevronDownIcon className="size-3.5 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
     </CollapsibleTrigger>
   );
@@ -168,7 +203,7 @@ export const ToolOutput = ({
           errorText && "bg-destructive/10 text-destructive"
         )}
       >
-        {errorText && <div>{errorText}</div>}
+        {!!errorText && <div>{errorText}</div>}
         {Output}
       </div>
     </div>

@@ -42,8 +42,8 @@ export function AppSidebar({
   return (
     <>
       <Sidebar className="border-r-0" collapsible="offcanvas">
-        <SidebarHeader className="px-3 pt-5 pb-3">
-          <div className="mb-5 flex items-center justify-between px-1">
+        <SidebarHeader className="px-3 pt-3 pb-2">
+          <div className="mb-3 flex items-center justify-between px-1">
             <button
               aria-label="ChatNest 首页"
               className="flex items-center gap-2 text-sm font-semibold"
@@ -67,7 +67,7 @@ export function AppSidebar({
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
-                className="h-10 gap-3 rounded-lg px-2.5 text-sm"
+                className="h-9 gap-2 rounded-xl px-2.5 text-sm"
                 onClick={handleNew}
               >
                 <PenSquare className="size-[18px]" />
@@ -79,7 +79,7 @@ export function AppSidebar({
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton
-                className="h-10 gap-3 rounded-lg px-2.5 text-sm"
+                className="h-9 gap-2 rounded-xl px-2.5 text-sm"
                 onClick={handleTask}
               >
                 <ListPlus className="size-[18px]" />
@@ -91,10 +91,10 @@ export function AppSidebar({
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarHeader>
-        <SidebarContent className="gap-4">
+        <SidebarContent className="gap-2">
           <SidebarHistory user={user} />
         </SidebarContent>
-        <SidebarFooter className="gap-2 px-3 pb-4">
+        <SidebarFooter className="gap-2 px-3 pb-3">
           {user ? (
             <SidebarUserNav isPlatformAdmin={isPlatformAdmin} user={user} />
           ) : (

@@ -518,3 +518,26 @@ textarea:focus-visible {
 [data-testid="artifact"] {
   isolation: isolate;
 }
+
+/* The workbench palette is local to chat; admin and global fonts stay unchanged. */
+.chat-workbench {
+  --workbench-shell: oklch(0.96 0.004 80);
+  --workbench-surface: var(--card);
+  background: var(--workbench-shell);
+}
+
+.dark .chat-workbench {
+  --workbench-shell: var(--sidebar);
+  --workbench-surface: var(--background);
+}
+
+.chat-workbench [data-slot="sidebar-inner"],
+.chat-workbench [data-slot="sidebar-inset"],
+.chat-workbench .chat-workbench-shell {
+  background: var(--workbench-shell);
+}
+
+.chat-workbench .chat-workbench-surface {
+  --background: var(--workbench-surface);
+  background: var(--workbench-surface);
+}

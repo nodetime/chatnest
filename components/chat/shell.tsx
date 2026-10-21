@@ -192,8 +192,12 @@ export function ChatShell() {
 
   return (
     <>
-      <div className="flex h-dvh w-full flex-row overflow-hidden">
-        <div className={cn("flex min-w-0 flex-1 flex-col bg-background")}>
+      <div className="chat-workbench-shell flex h-dvh w-full min-w-0 flex-row gap-2 overflow-hidden md:p-2 md:pl-0">
+        <div
+          className={cn(
+            "chat-workbench-surface flex min-w-0 flex-1 flex-col overflow-hidden bg-background md:rounded-[12px] md:border md:border-border/60"
+          )}
+        >
           <ChatHeader
             chatId={chatId}
             isReadonly={isReadonly}
@@ -228,7 +232,7 @@ export function ChatShell() {
             <div
               className={cn(
                 "z-1 mx-auto flex w-full max-w-[800px] flex-col gap-2 bg-background px-4 sm:px-6",
-                !isEmpty && "sticky bottom-0 pb-10 pt-3"
+                !isEmpty && "sticky bottom-0 pb-10 pt-2"
               )}
             >
               <ConversationNotice onRestore={handleRestore} />

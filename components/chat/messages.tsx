@@ -81,7 +81,7 @@ function PureMessages({
         ref={messagesContainerRef}
         style={isArtifactVisible ? { scrollbarWidth: "none" } : undefined}
       >
-        <div className="mx-auto flex min-h-full min-w-0 max-w-[800px] flex-col gap-7 px-4 py-6 sm:px-6 md:gap-9">
+        <div className="mx-auto flex min-h-full min-w-0 max-w-[800px] flex-col gap-5 px-4 py-6 sm:px-6 md:gap-6">
           {messages.map((message, index) => (
             <PreviewMessage
               addToolApprovalResponse={addToolApprovalResponse}

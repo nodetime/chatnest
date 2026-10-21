@@ -1,6 +1,7 @@
 import { FileText, RotateCcw } from "lucide-react";
 import type { Attachment } from "@/lib/types";
 import { extractionLabels } from "@/lib/uploads/document-types";
+import { cn } from "@/lib/utils";
 import { Spinner } from "../ui/spinner";
 import { CrossSmallIcon } from "./icons";
 
@@ -16,13 +17,35 @@ export const PreviewAttachment = ({
   onRetry?: () => void;
 }) => {
   const { name, url, contentType } = attachment;
+  const isImage = contentType?.startsWith("image");
+  const status = isUploading
+    ? "上传 / 读取中…"
+    : attachment.error
+      ? "读取失败"
+      : attachment.extraction
+        ? extractionLabels[attachment.extraction.status]
+        : "文档附件";
+  const size =
+    attachment.size === undefined
+      ? undefined
+      : attachment.size < 1_048_576
+        ? `${(attachment.size / 1024).toFixed(2)} KiB`
+        : `${(attachment.size / 1_048_576).toFixed(2)} MiB`;
+  const hasError =
+    !!attachment.error ||
+    ["locked", "no_extractable_text"].includes(
+      attachment.extraction?.status ?? ""
+    );
 
   return (
     <div
-      className="group relative h-24 min-w-24 max-w-64 shrink-0 overflow-hidden rounded-xl border border-border/40 bg-muted"
+      className={cn(
+        "relative min-w-0 max-w-full shrink-0 overflow-hidden rounded-[12px] border border-border/60 bg-muted/40",
+        isImage ? "h-24 w-24" : "flex h-16 w-72 items-center gap-2 px-3"
+      )}
       data-testid="input-attachment-preview"
     >
-      {contentType?.startsWith("image") ? (
+      {isImage ? (
         // biome-ignore lint/performance/noImgElement: authenticated private previews must bypass the image optimizer
         <img
           alt={name ?? "图片附件"}
@@ -32,71 +55,76 @@ export const PreviewAttachment = ({
           width={96}
         />
       ) : (
-        <div className="flex size-full items-center justify-center text-muted-foreground text-xs">
-          <div className="flex min-w-44 flex-col gap-1 px-3 py-2">
-            <span className="flex items-center gap-1 font-medium text-foreground">
-              <FileText className="size-4 shrink-0" />
-              <span className="truncate">{name}</span>
-            </span>
-            <span>
-              {attachment.size
-                ? `${(attachment.size / 1_048_576).toFixed(2)} MiB · `
-                : ""}
-              {name?.split(".").pop()?.toUpperCase()}
-            </span>
-            <span
-              className={
-                attachment.error ||
-                ["locked", "no_extractable_text"].includes(
-                  attachment.extraction?.status ?? ""
-                )
-                  ? "text-destructive"
-                  : ""
-              }
+        <>
+          <FileText className="size-5 shrink-0 text-muted-foreground" />
+          <div className="min-w-0 flex-1 text-xs">
+            <p className="truncate font-medium text-foreground" title={name}>
+              {name}
+            </p>
+            <div
+              className="mt-1 flex min-w-0 items-center gap-1 text-muted-foreground"
               title={
                 attachment.error ?? attachment.extraction?.warnings.join("\n")
               }
             >
-              {attachment.error
-                ? "读取失败"
-                : attachment.extraction
-                  ? extractionLabels[attachment.extraction.status]
-                  : isUploading
-                    ? "上传 / 读取中…"
-                    : "文档附件"}
-            </span>
+              <span className="max-w-[55%] shrink-0 truncate">
+                {name?.split(".").pop()?.toUpperCase()}
+                {size === undefined ? "" : ` · ${size}`} ·
+              </span>
+              {!!isUploading && (
+                <Spinner
+                  className="size-3 shrink-0"
+                  data-testid="input-attachment-loader"
+                />
+              )}
+              <span
+                className={cn("truncate", hasError && "text-destructive")}
+                title={status}
+              >
+                {status}
+              </span>
+            </div>
           </div>
-        </div>
+        </>
       )}
 
-      {isUploading ? (
+      {!!(isUploading && isImage) && (
         <div
-          className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/40 backdrop-blur-sm"
+          className="absolute inset-0 flex items-center justify-center rounded-[12px] bg-black/40 backdrop-blur-sm"
           data-testid="input-attachment-loader"
         >
           <Spinner className="size-5" />
         </div>
-      ) : null}
-
-      {onRetry && attachment.error && !isUploading && (
-        <button
-          aria-label={`重试 ${name}`}
-          className="absolute right-8 top-1.5 rounded-full bg-background p-1"
-          onClick={onRetry}
-          type="button"
-        >
-          <RotateCcw className="size-4" />
-        </button>
       )}
-      {onRemove && !isUploading && (
-        <button
-          aria-label={`移除附件 ${name ?? ""}`}
-          className="absolute top-1.5 right-1.5 flex size-6 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-sm transition-opacity hover:bg-black/80 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100"
-          onClick={onRemove}
-          type="button"
+
+      {!isUploading && (onRemove || (onRetry && attachment.error)) && (
+        <div
+          className={cn(
+            "flex shrink-0 items-center gap-0.5",
+            isImage && "absolute right-1 top-1"
+          )}
         >
-          <CrossSmallIcon size={10} />
-        </button>
+          {!!(onRetry && attachment.error) && (
+            <button
+              aria-label={`重试 ${name}`}
+              className="flex size-9 items-center justify-center rounded-lg bg-background text-muted-foreground hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring"
+              onClick={onRetry}
+              type="button"
+            >
+              <RotateCcw className="size-4" />
+            </button>
+          )}
+          {!!onRemove && (
+            <button
+              aria-label={`移除附件 ${name ?? ""}`}
+              className="flex size-9 items-center justify-center rounded-lg bg-background text-muted-foreground hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring"
+              onClick={onRemove}
+              type="button"
+            >
+              <CrossSmallIcon size={12} />
+            </button>
+          )}
+        </div>
       )}
     </div>
   );

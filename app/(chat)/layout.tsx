@@ -32,7 +32,7 @@ async function SidebarShell({ children }: { children: React.ReactNode }) {
 
   return (
     <ActiveChatProvider ownerId={session?.user.id}>
-      <SidebarProvider defaultOpen={!isCollapsed}>
+      <SidebarProvider className="chat-workbench" defaultOpen={!isCollapsed}>
         <AppSidebar
           isPlatformAdmin={isPlatformAdmin(session?.user)}
           user={session?.user}
