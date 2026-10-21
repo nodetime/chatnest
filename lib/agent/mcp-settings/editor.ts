@@ -73,3 +73,40 @@ export function newConnectionIdConflict(
 ) {
   return !editing && existingIds.includes(id);
 }
+
+// Each mounted editor owns an independent lifetime. Admission is synchronous;
+// AbortSignal is best-effort transport cancellation, while identity checks also
+// fence callbacks from transports that settle after abort/unmount.
+export function createEditorLifetime() {
+  let active = true;
+  let pending: AbortController | undefined;
+  return {
+    activate() {
+      active = true;
+    },
+    dispose() {
+      active = false;
+      pending?.abort();
+      pending = undefined;
+    },
+    start() {
+      if (!active || pending) {
+        return;
+      }
+      const controller = new AbortController();
+      pending = controller;
+      const isCurrent = () => active && pending === controller;
+      return {
+        finish() {
+          if (!isCurrent()) {
+            return false;
+          }
+          pending = undefined;
+          return true;
+        },
+        isCurrent,
+        signal: controller.signal,
+      };
+    },
+  };
+}

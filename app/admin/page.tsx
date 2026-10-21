@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
-
+import { AdminOverview } from "@/components/admin/admin-overview";
 export default function AdminPage() {
-  redirect("/admin/connections");
+  // The client island reads an independently authenticated, no-store admin API.
+  return <AdminOverview />;
 }

@@ -1,6 +1,6 @@
 // biome-ignore-all lint/performance/noJsxPropsBind: Small React Compiler-managed form handlers capture current local draft state.
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,6 +8,7 @@ import {
   authenticationKind,
   bearerValue,
   connectionFingerprint,
+  createEditorLifetime,
   newConnectionIdConflict,
   parseHeaderInput,
   refreshConflictMessage,
@@ -21,13 +22,14 @@ import type {
   SettingsAction,
   ToolMetadata,
 } from "@/lib/agent/mcp-settings/types";
-export async function requestMcp(action: SettingsAction) {
+export async function requestMcp(action: SettingsAction, signal?: AbortSignal) {
   const response = await fetch(
     `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/agent/mcp`,
     {
       body: JSON.stringify(action),
       headers: { "Content-Type": "application/json" },
       method: "POST",
+      signal,
     }
   );
   const data = await response.json();
@@ -45,6 +47,7 @@ export function McpEditor({
   onCancel,
   onConflict,
   existingIds,
+  onBusyChange,
 }: {
   server?: ServerProjection;
   existingIds: string[];
@@ -52,7 +55,13 @@ export function McpEditor({
   onSaved: () => Promise<void>;
   onCancel: () => void;
   onConflict: () => Promise<void>;
+  onBusyChange?: (busy: boolean) => void;
 }) {
+  const [lifetime] = useState(createEditorLifetime);
+  useEffect(() => {
+    lifetime.activate();
+    return () => lifetime.dispose();
+  }, [lifetime]);
   const [id, setId] = useState(server?.id ?? ""),
     [name, setName] = useState(server?.name ?? "");
   const [replace, setReplace] = useState(!server),
@@ -95,7 +104,12 @@ export function McpEditor({
     if (busy) {
       return;
     }
+    const operation = lifetime.start();
+    if (!operation) {
+      return;
+    }
     const testedRevision = revision;
+    onBusyChange?.(true);
     setBusy("test");
     setError("");
     setTested(null);
@@ -106,7 +120,10 @@ export function McpEditor({
         connection: edit,
         id: id || undefined,
       });
-      const data = await requestMcp(action);
+      const data = await requestMcp(action, operation.signal);
+      if (!operation.isCurrent()) {
+        return;
+      }
       setTools(data.tools);
       setSelected((previous) =>
         previous.filter((toolName) =>
@@ -115,17 +132,28 @@ export function McpEditor({
       );
       setTested(connectionFingerprint(id, edit, testedRevision));
     } catch {
+      if (!operation.isCurrent()) {
+        return;
+      }
       setError(
         "测试失败，请检查地址、请求头和服务端允许的来源；未执行任何工具调用。"
       );
     } finally {
-      setBusy(null);
+      if (operation.finish()) {
+        setBusy(null);
+        onBusyChange?.(false);
+      }
     }
   }
   async function save() {
     if (!verified || busy || duplicateId) {
       return;
     }
+    const operation = lifetime.start();
+    if (!operation) {
+      return;
+    }
+    onBusyChange?.(true);
     setBusy("save");
     setError("");
     try {
@@ -140,12 +168,18 @@ export function McpEditor({
           name,
         },
       });
-      await requestMcp(action);
+      await requestMcp(action, operation.signal);
+      if (!operation.isCurrent()) {
+        return;
+      }
       setHeaders("");
       setUrl("");
       setImportText("");
       await onSaved();
     } catch (failure) {
+      if (!operation.isCurrent()) {
+        return;
+      }
       const message =
         failure instanceof Error && "status" in failure
           ? failure.message
@@ -158,10 +192,20 @@ export function McpEditor({
       ) {
         // Invalidate before refreshing; failed refresh must not leave old verification reusable.
         setTested(null);
-        setError(await refreshConflictMessage(onConflict, message));
+        const conflict = await refreshConflictMessage(async () => {
+          if (operation.isCurrent()) {
+            await onConflict();
+          }
+        }, message);
+        if (operation.isCurrent()) {
+          setError(conflict);
+        }
       }
     } finally {
-      setBusy(null);
+      if (operation.finish()) {
+        setBusy(null);
+        onBusyChange?.(false);
+      }
     }
   }
   function importJson() {

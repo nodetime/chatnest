@@ -13,3 +13,10 @@
 - `.local-review/` is ignored; private probes/fixtures must stay out of tracked files.
 
 MCP management additions are isolated under `lib/agent/mcp-settings/`, `/api/agent/mcp`, and focused tools-tab components. Porta is a separate repository/service and does not depend on this UI.
+
+Platform administration:
+- `app/admin/layout.tsx`: Suspense-wrapped server gate before the client shell; passes only signed-in display identity.
+- `components/admin/admin-shell.tsx`, `admin-navigation.tsx`: template-derived full-height admin sidebar/header, desktop collapse and mobile Sheet. Source/commit/full MIT notice in `THIRD_PARTY_NOTICES.md`.
+- `/admin` uses `components/admin/admin-overview.tsx` and independently guarded `/api/admin/overview`; `lib/admin/overview.ts` isolates real readiness reads, never performs model calls or live connection probes.
+- `/admin/connections` reuses the existing MCP service/editor, presented as a searchable table with action menus and a side Sheet. File-managed connections remain read-only.
+- `/admin/storage` reads guarded `/api/admin/storage`; local-only image configuration, actual write/read/delete probe and bounded cleanup. `docs/integrations/private-uploads.md` documents deployment and lifecycle.

@@ -401,7 +401,7 @@ test("admin navigation marks only the actual storage route active and exposes re
       "--import",
       "tsx",
       "-e",
-      `const React=require('react');const {renderToStaticMarkup}=require('react-dom/server');const {AdminNavigationItems}=require('./components/admin/admin-navigation');console.log(renderToStaticMarkup(React.createElement(AdminNavigationItems,{pathname:'/demo/admin/storage'})));`,
+      `const React=require('react');const {renderToStaticMarkup}=require('react-dom/server');const {AdminNavigationItems}=require('./components/admin/admin-navigation');const {SidebarProvider}=require('./components/ui/sidebar');const {TooltipProvider}=require('./components/ui/tooltip');console.log(renderToStaticMarkup(React.createElement(TooltipProvider,null,React.createElement(SidebarProvider,null,React.createElement(AdminNavigationItems,{pathname:'/demo/admin/storage'})))));`,
     ],
     { encoding: "utf8", env: { ...process.env, NODE_OPTIONS: "" } }
   );

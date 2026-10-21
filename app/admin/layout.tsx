@@ -19,5 +19,14 @@ export default function AdminLayout({
 async function AuthorizedAdmin({ children }: { children: React.ReactNode }) {
   const session = await auth();
   requirePlatformAdmin(session?.user, notFound);
-  return <AdminShell>{children}</AdminShell>;
+  return (
+    <AdminShell
+      identity={{
+        email: session?.user?.email || "",
+        name: session?.user?.name || session?.user?.email || "平台管理员",
+      }}
+    >
+      {children}
+    </AdminShell>
+  );
 }

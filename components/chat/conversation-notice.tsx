@@ -44,7 +44,7 @@ export function ConversationNotice({ onRestore }: { onRestore: () => void }) {
               恢复刚才的输入
             </button>
           )}
-          <AgentLibrary compact label="检查连接" tab="settings" />
+          <AgentLibrary compact label="检查连接" tab="tools" />
         </div>
       </div>
       {!loadError && (

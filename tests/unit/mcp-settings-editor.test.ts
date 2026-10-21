@@ -92,3 +92,76 @@ test("new JSON-import IDs cannot replace existing managed or file connections, i
   assert.equal(newConnectionIdConflict("new", ["fixture"], false), false);
   assert.equal(newConnectionIdConflict("new", ["fixture", "new"], false), true);
 });
+
+test("editor lifetime rejects duplicate work and suppresses late probe/save/conflict callbacks after disposal", async () => {
+  const editor = await import("../../lib/agent/mcp-settings/editor");
+  assert.equal(
+    typeof editor.createEditorLifetime,
+    "function",
+    "editor async lifetime exists"
+  );
+  const lifetime = editor.createEditorLifetime();
+  const effects: string[] = [];
+  let complete: () => void = () => undefined;
+  const pending = new Promise<void>((resolve) => {
+    complete = resolve;
+  });
+  const operation = lifetime.start();
+  assert.ok(operation);
+  assert.equal(
+    lifetime.start(),
+    undefined,
+    "admission is synchronous before React rerenders"
+  );
+  const completion = pending.then(() => {
+    if (operation.isCurrent()) {
+      effects.push("probe", "save", "conflict");
+    }
+    if (operation.finish()) {
+      effects.push("clear busy");
+    }
+  });
+  lifetime.dispose();
+  assert.equal(operation.signal.aborted, true);
+  assert.equal(lifetime.start(), undefined);
+  lifetime.activate();
+  const replacement = lifetime.start();
+  assert.ok(
+    replacement,
+    "Strict Mode setup or a later activation gets a fresh generation"
+  );
+  complete();
+  await completion;
+  assert.deepEqual(
+    effects,
+    [],
+    "old callbacks cannot mutate or close a later drawer"
+  );
+  assert.equal(operation.isCurrent(), false);
+  assert.equal(replacement.isCurrent(), true);
+  assert.equal(replacement.finish(), true);
+  assert.equal(replacement.finish(), false);
+  assert.ok(lifetime.start(), "settled active work releases admission");
+});
+
+test("MCP Sheet guards every busy dismissal and editor passes abort/current checks to async work", async () => {
+  const { readFileSync } = await import("node:fs");
+  const manager = readFileSync("components/chat/mcp-connections.tsx", "utf8");
+  for (const guard of [
+    "editorBusyRef.current",
+    "showCloseButton={!editorBusy}",
+    "onEscapeKeyDown={protectEditor}",
+    "onInteractOutside={protectEditor}",
+    "onBusyChange={changeEditorBusy}",
+    "onCancel={closeEditor}",
+  ]) {
+    assert.ok(manager.includes(guard), guard);
+  }
+  const source = readFileSync("components/chat/mcp-editor.tsx", "utf8");
+  assert.match(source, /createEditorLifetime/);
+  assert.match(source, /lifetime\.dispose\(/);
+  assert.ok((source.match(/operation\.isCurrent\(\)/g) ?? []).length >= 5);
+  assert.ok(
+    (source.match(/requestMcp\(action, operation\.signal\)/g) ?? []).length >= 2
+  );
+});

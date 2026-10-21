@@ -86,7 +86,7 @@ test("standalone admin shell has only real navigation and return-to-workspace li
     "standalone shell exists"
   );
   const html = render(
-    "const {AdminShell}=require('./components/admin/admin-shell.tsx');process.stdout.write(renderToStaticMarkup(React.createElement(AdminShell,null,React.createElement('h1',null,'工具连接'))));"
+    "const {AdminShell}=require('./components/admin/admin-shell.tsx');process.stdout.write(renderToStaticMarkup(React.createElement(AdminShell,{identity:{name:'Fixture Admin',email:'admin@example.test'}},React.createElement('h1',null,'工具连接'))));"
   );
   assert.match(html, /平台管理/);
   assert.match(html, /href="\/admin\/connections"/);
@@ -99,7 +99,7 @@ test("standalone admin shell has only real navigation and return-to-workspace li
   assert.match(layout, /requirePlatformAdmin\(session\?\.user, notFound\)/);
   assert.ok(
     layout.indexOf("requirePlatformAdmin(session?.user, notFound)") <
-      layout.lastIndexOf("<AdminShell>")
+      layout.lastIndexOf("<AdminShell")
   );
   assert.doesNotMatch(layout, /ChatShell|AppSidebar|export const runtime/);
   const connections = readFileSync(
@@ -195,8 +195,16 @@ test("admin management HTML exposes existing CRUD while both personal capability
   const management = render(
     "const {SWRConfig}=require('swr');const {McpConnections}=require('./components/chat/mcp-connections.tsx');const data={configured:true,revision:1,servers:[{id:'fixture',name:'资料工具',enabled:true,allowedTools:['search'],origin:'https://fixture.example',headerNames:['Authorization'],source:'managed'}]};process.stdout.write(renderToStaticMarkup(React.createElement(SWRConfig,{value:{fallback:{'/api/agent/mcp':data}}},React.createElement(McpConnections))));"
   );
-  for (const label of ["资料工具", "新增连接", "编辑", "停用", "删除"]) {
+  for (const label of ["资料工具", "新增连接", "资料工具的操作", "开放工具"]) {
     assert.ok(management.includes(label));
+  }
+  const manager = readFileSync("components/chat/mcp-connections.tsx", "utf8");
+  for (const action of [
+    "setEditing(server)",
+    'change(server, "toggle")',
+    "setDeleting(server)",
+  ]) {
+    assert.ok(manager.includes(action), "real dropdown action remains wired");
   }
   for (const admin of [false, true]) {
     const personal = render(
