@@ -59,15 +59,17 @@ export function ToolActivity({
   };
   const shortName = name.split("__").at(-1) ?? name;
   const title =
-    name === "loadSkill"
-      ? (output?.displayName ?? skill?.displayName ?? "读取调查方法")
-      : name === "readSkillResource"
-        ? "读取方法参考"
-        : name.includes("search")
-          ? "搜索网页"
-          : name.includes("extract") || name.includes("fetch")
-            ? "读取网页正文"
-            : (browserTitles[shortName] ?? name);
+    name === "readAttachment"
+      ? "读取附件文字"
+      : name === "loadSkill"
+        ? (output?.displayName ?? skill?.displayName ?? "读取调查方法")
+        : name === "readSkillResource"
+          ? "读取方法参考"
+          : name.includes("search")
+            ? "搜索网页"
+            : name.includes("extract") || name.includes("fetch")
+              ? "读取网页正文"
+              : (browserTitles[shortName] ?? name);
   const sources = name.includes("__") ? collectSourceLinks(part.output) : [];
   const [open, setOpen] = useState(
     part.state === "approval-requested" || part.state === "output-error"
@@ -82,17 +84,19 @@ export function ToolActivity({
   const toggleSources = useCallback(() => setAllSources((value) => !value), []);
   const visibleSources = allSources ? sources : sources.slice(0, 3);
   const MethodIcon =
-    name === "loadSkill"
-      ? BookOpen
-      : name === "readSkillResource"
-        ? FileText
-        : name.includes("search")
-          ? Search
-          : name.includes("fetch") || name.includes("extract")
-            ? Globe
-            : name.startsWith("browser__")
-              ? Monitor
-              : undefined;
+    name === "readAttachment"
+      ? FileText
+      : name === "loadSkill"
+        ? BookOpen
+        : name === "readSkillResource"
+          ? FileText
+          : name.includes("search")
+            ? Search
+            : name.includes("fetch") || name.includes("extract")
+              ? Globe
+              : name.startsWith("browser__")
+                ? Monitor
+                : undefined;
   const methodDescription =
     output?.description ??
     skill?.shortDescription ??
@@ -155,6 +159,9 @@ export function ToolActivity({
                 ? "本轮没有收到执行结果，该步骤尚未完成。"
                 : part.errorText}
             </p>
+          )}
+          {name === "readAttachment" && part.state === "output-available" && (
+            <AttachmentReadSummary output={part.output} />
           )}
           <details className="text-xs text-muted-foreground">
             <summary className="cursor-pointer py-1">技术详情</summary>
@@ -226,6 +233,52 @@ export function ToolActivity({
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+function AttachmentReadSummary({ output }: { output: unknown }) {
+  if (!output || typeof output !== "object") {
+    return null;
+  }
+  const data = output as {
+    name?: string;
+    characters?: number;
+    startSegment?: number;
+    nextSegment?: number | null;
+    totalSegments?: number;
+    segments?: { ref: string; text: string }[];
+    warnings?: string[];
+  };
+  return (
+    <div className="space-y-2 text-sm" data-testid="attachment-read-result">
+      <p className="font-medium">
+        {data.name} · 本次读取 {data.characters ?? 0} 字符
+      </p>
+      <p className="text-xs text-muted-foreground">
+        附件原文（非指令） · 共 {data.totalSegments} 段
+        {data.nextSegment === null ? " · 已到结尾" : " · 仍有后续内容"}
+      </p>
+      {data.warnings?.map((warning) => (
+        <p className="text-xs text-amber-600" key={warning}>
+          {warning}
+        </p>
+      ))}
+      <details>
+        <summary className="cursor-pointer text-xs">
+          查看本次原文与位置引用
+        </summary>
+        <div className="max-h-80 overflow-auto space-y-3 pt-2">
+          {data.segments?.map((segment) => (
+            <div key={segment.ref}>
+              <p className="text-xs font-mono text-muted-foreground">
+                {segment.ref}
+              </p>
+              <p className="whitespace-pre-wrap break-words">{segment.text}</p>
+            </div>
+          ))}
+        </div>
+      </details>
     </div>
   );
 }

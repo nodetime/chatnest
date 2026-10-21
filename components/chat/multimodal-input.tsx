@@ -50,6 +50,11 @@ import {
   completeDraftSubmission,
   UploadAdmission,
 } from "@/lib/uploads/client-admission";
+import {
+  ATTACHMENT_ACCEPT,
+  isImageMime,
+  MAX_DOCUMENT_BYTES,
+} from "@/lib/uploads/document-types";
 import { cn, fetcher } from "@/lib/utils";
 import {
   PromptInput,
@@ -173,15 +178,26 @@ function PureMultimodalInput({
 
   const submitForm = useCallback(async () => {
     if (admission.pending || submitting.current) {
-      toast.error("图片仍在上传或发送，请稍候。");
+      toast.error("附件仍在上传、读取或发送，请稍候。");
       return;
     }
     if (attachments.length > 15) {
-      toast.error("一条消息最多添加 15 张图片。");
+      toast.error("一条消息最多添加 15 个附件。");
       return;
     }
-    if (attachments.length && !vision) {
+    if (attachments.some((a) => isImageMime(a.contentType)) && !vision) {
       toast.error("所选模型不支持图片，请选择支持视觉的模型；草稿已保留。");
+      return;
+    }
+    if (
+      attachments.some(
+        (a) =>
+          a.error ||
+          (a.extraction &&
+            !["ready", "truncated"].includes(a.extraction.status))
+      )
+    ) {
+      toast.error("请先移除或重试未读取成功的附件；加密文件需上传解密副本。");
       return;
     }
     if (input.length > MAX_MESSAGE_CHARACTERS) {
@@ -261,41 +277,46 @@ function PureMultimodalInput({
   const uploadFiles = useCallback(
     async (files: File[]) => {
       if (editingMessage) {
-        toast.error("编辑消息仅修改文字；如需新图片，请取消编辑后发送新消息。");
+        toast.error("编辑消息仅修改文字；如需新附件，请取消编辑后发送新消息。");
         return;
       }
       if (!files.length) {
         return;
       }
       if (status !== "ready" && status !== "error") {
-        toast.error("请等待当前回复完成后再添加图片。");
+        toast.error("请等待当前回复完成后再添加附件。");
         return;
       }
       if (!agentInfo?.uploadsConfigured) {
-        toast.error("图片上传尚未开启，请联系平台管理员配置文件存储。");
+        toast.error("附件上传尚未开启，请联系平台管理员配置文件存储。");
         return;
       }
-      if (!vision) {
+      if (files.some((file) => file.type.startsWith("image/")) && !vision) {
         toast.error("所选模型不支持图片，请选择支持视觉的模型。");
         return;
       }
       if (
         files.some(
           (file) =>
-            !["image/jpeg", "image/png"].includes(file.type) ||
             !file.size ||
-            file.size > 5 * 1024 * 1024
+            file.size >
+              (file.type.startsWith("image/")
+                ? 5 * 1024 * 1024
+                : MAX_DOCUMENT_BYTES) ||
+            !/\.(jpe?g|png|pdf|docx|xlsx|csv|txt)$/i.test(file.name)
         )
       ) {
-        toast.error("仅支持非空且不超过 5 MiB 的 JPEG 或 PNG 图片。");
+        toast.error(
+          "支持 JPEG/PNG（5 MiB）、PDF/DOCX/XLSX/CSV/TXT（64 MiB）。旧版 Office/宏文件请另存为普通格式。"
+        );
         return;
       }
       const ticket = admission.admit(selectedRef.current.length, files.length);
       if (!ticket) {
         toast.error(
           admission.pending
-            ? "图片仍在上传，请稍候。"
-            : "一条消息最多添加 15 张图片。"
+            ? "附件仍在上传和读取，请稍候。"
+            : "一条消息最多添加 15 个附件。"
         );
         return;
       }
@@ -319,11 +340,14 @@ function PureMultimodalInput({
             );
             const data = await response.json();
             if (!response.ok) {
-              throw new Error(data.error ?? "图片上传失败，请重试。");
+              throw new Error(data.error ?? "附件上传或读取失败，请重试。");
             }
             const attachment = {
               contentType: data.contentType,
+              extraction: data.extraction,
               name: data.name,
+              retryFile: file,
+              size: data.size,
               url: data.url,
             };
             if (!admission.isCurrent(ticket)) {
@@ -333,10 +357,21 @@ function PureMultimodalInput({
             uploaded.push(attachment);
           } catch (error) {
             if (admission.isCurrent(ticket)) {
+              uploaded.push({
+                contentType: file.type,
+                error:
+                  error instanceof Error
+                    ? error.message
+                    : "附件上传失败，请重试。",
+                name: file.name,
+                retryFile: file,
+                size: file.size,
+                url: `failed:${crypto.randomUUID()}`,
+              });
               toast.error(
                 error instanceof Error
                   ? error.message
-                  : "图片上传失败，请重试。"
+                  : "附件上传或读取失败，请重试。"
               );
             }
           }
@@ -346,7 +381,11 @@ function PureMultimodalInput({
           setAttachments((current) => [...current, ...uploaded]);
         } else {
           for (const attachment of uploaded) {
-            fetch(attachment.url, { method: "DELETE" }).catch(() => undefined);
+            if (!attachment.error) {
+              fetch(attachment.url, { method: "DELETE" }).catch(
+                () => undefined
+              );
+            }
           }
         }
       } finally {
@@ -366,6 +405,24 @@ function PureMultimodalInput({
       vision,
     ]
   );
+  const retryAttachment = useCallback(
+    (attachment: Attachment) => {
+      if (!attachment.retryFile || admission.pending) {
+        return;
+      }
+      selectedRef.current = selectedRef.current.filter(
+        (a) => a.url !== attachment.url
+      );
+      setAttachments((current) =>
+        current.filter((a) => a.url !== attachment.url)
+      );
+      if (!attachment.error) {
+        fetch(attachment.url, { method: "DELETE" }).catch(() => undefined);
+      }
+      uploadFiles([attachment.retryFile]);
+    },
+    [admission, setAttachments, uploadFiles]
+  );
   const handleFileChange = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => {
       const files = Array.from(event.target.files ?? []);
@@ -377,7 +434,7 @@ function PureMultimodalInput({
   const handlePaste = useCallback(
     (event: ClipboardEvent) => {
       const items = Array.from(event.clipboardData?.items ?? []).filter(
-        (item) => item.type.startsWith("image/")
+        (item) => item.kind === "file"
       );
       if (!items.length) {
         return;
@@ -433,7 +490,10 @@ function PureMultimodalInput({
     <div className={cn("relative flex w-full flex-col gap-4", className)}>
       {editingMessage && onCancelEdit ? (
         <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
-          <span>原图片保留，编辑时只修改文字 · 发送后会重新生成回复</span>
+          <span>
+            原图片保留，编辑时只修改文字；原文档附件同样保留 ·
+            发送后会重新生成回复
+          </span>
           <button
             className="rounded px-1.5 py-0.5 text-muted-foreground/50 transition-colors hover:bg-muted hover:text-foreground"
             onMouseDown={handleCancelEditMouseDown}
@@ -445,7 +505,7 @@ function PureMultimodalInput({
       ) : null}
 
       <input
-        accept="image/jpeg,image/png"
+        accept={ATTACHMENT_ACCEPT}
         className="pointer-events-none fixed -top-4 -left-4 size-0.5 opacity-0"
         disabled={Boolean(editingMessage)}
         multiple
@@ -470,6 +530,7 @@ function PureMultimodalInput({
                 disabled={status === "streaming" || status === "submitted"}
                 fileInputRef={fileInputRef}
                 key={attachment.url}
+                onRetry={retryAttachment}
                 setAttachments={setAttachments}
               />
             ))}
@@ -504,7 +565,13 @@ function PureMultimodalInput({
                 Boolean(editingMessage) ||
                 status === "submitted" ||
                 status === "streaming" ||
-                uploadQueue.length > 0
+                uploadQueue.length > 0 ||
+                attachments.some(
+                  (a) =>
+                    a.error ||
+                    (a.extraction &&
+                      !["ready", "truncated"].includes(a.extraction.status))
+                )
               }
               fileInputRef={fileInputRef}
               selectedModelId={selectedModelId}
@@ -542,7 +609,13 @@ function PureMultimodalInput({
               data-testid="send-button"
               disabled={
                 (!input.trim() && attachments.length === 0) ||
-                uploadQueue.length > 0
+                uploadQueue.length > 0 ||
+                attachments.some(
+                  (a) =>
+                    a.error ||
+                    (a.extraction &&
+                      !["ready", "truncated"].includes(a.extraction.status))
+                )
               }
               status={status}
               variant="secondary"
@@ -578,26 +651,35 @@ function PureAttachmentPreviewItem({
   fileInputRef,
   setAttachments,
   disabled,
+  onRetry,
 }: {
   attachment: Attachment;
+  onRetry?: (attachment: Attachment) => void;
   disabled?: boolean;
   fileInputRef: React.MutableRefObject<HTMLInputElement | null>;
   setAttachments: Dispatch<SetStateAction<Attachment[]>>;
 }) {
+  const handleRetry = useCallback(
+    () => onRetry?.(attachment),
+    [onRetry, attachment]
+  );
   const handleRemove = useCallback(() => {
     setAttachments((currentAttachments) =>
       currentAttachments.filter((a) => a.url !== attachment.url)
     );
-    fetch(attachment.url, { method: "DELETE" }).catch(() => undefined);
+    if (!attachment.error) {
+      fetch(attachment.url, { method: "DELETE" }).catch(() => undefined);
+    }
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
-  }, [attachment.url, fileInputRef, setAttachments]);
+  }, [attachment.url, attachment.error, fileInputRef, setAttachments]);
 
   return (
     <PreviewAttachment
       attachment={attachment}
       onRemove={disabled ? undefined : handleRemove}
+      onRetry={disabled ? undefined : handleRetry}
     />
   );
 }

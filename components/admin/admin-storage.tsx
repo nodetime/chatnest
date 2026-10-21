@@ -18,6 +18,7 @@ type Status = {
   driver: string;
   formats: string[];
   maxFileBytes: number;
+  maxDocumentBytes: number;
   maxImages: number;
   maxContextBytes: number;
 };
@@ -63,7 +64,7 @@ export function AdminStorage() {
             : kind === "cleanup"
               ? "已尝试清理过期草稿和待删除文件。"
               : body.enabled
-                ? "图片上传已开启。"
+                ? "附件上传已开启。"
                 : "新上传已关闭；已发送附件仍按会话权限读取。"
         );
         await refresh();
@@ -89,7 +90,7 @@ export function AdminStorage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-card p-4">
         <div>
-          <p className="text-sm font-medium">图片上传</p>
+          <p className="text-sm font-medium">附件上传</p>
           <p className="mt-1 text-xs text-muted-foreground">
             关闭新上传不会撤销已发送的附件。
           </p>
@@ -108,7 +109,7 @@ export function AdminStorage() {
             onClick={configure}
             size="sm"
           >
-            {data?.enabled ? "关闭新上传" : "开启图片上传"}
+            {data?.enabled ? "关闭新上传" : "开启附件上传"}
           </Button>
         </div>
       </div>
@@ -182,26 +183,32 @@ export function AdminStorage() {
               />
               支持格式与限制
             </CardTitle>
-            <CardDescription>保留原图及 SHA-256，不公开发布</CardDescription>
+            <CardDescription>保留原文件及 SHA-256，不公开发布</CardDescription>
           </CardHeader>
           <CardContent>
             <dl className="divide-y text-sm">
               <div className="flex items-center justify-between gap-4 pb-4">
-                <dt className="text-muted-foreground">图片格式</dt>
-                <dd>JPEG / PNG</dd>
+                <dt className="text-muted-foreground">支持格式</dt>
+                <dd>JPEG / PNG · PDF / DOCX / XLSX / CSV / TXT</dd>
               </div>
               <div className="flex items-center justify-between gap-4 py-4">
-                <dt className="text-muted-foreground">单张图片</dt>
-                <dd>{data ? `${data.maxFileBytes / 1_048_576} MiB` : "—"}</dd>
+                <dt className="text-muted-foreground">单个附件</dt>
+                <dd>
+                  {data
+                    ? `图片 ${data.maxFileBytes / 1_048_576} MiB / 文档 ${data.maxDocumentBytes / 1_048_576} MiB`
+                    : "—"}
+                </dd>
               </div>
               <div className="flex items-center justify-between gap-4 py-4">
                 <dt className="text-muted-foreground">单条消息</dt>
-                <dd>{data ? `${data.maxImages} 张图片` : "—"}</dd>
+                <dd>{data ? `${data.maxImages} 个附件` : "—"}</dd>
               </div>
               <div className="flex items-center justify-between gap-4 pt-4">
                 <dt className="text-muted-foreground">会话上下文</dt>
                 <dd>
-                  {data ? `${data.maxContextBytes / 1_048_576} MiB` : "—"}
+                  {data
+                    ? `图片 ${data.maxContextBytes / 1_048_576} MiB；文档预览总计 100k 字符`
+                    : "—"}
                 </dd>
               </div>
             </dl>
@@ -241,8 +248,11 @@ export function AdminStorage() {
             GiB，可通过服务端环境变量调整。存储路径由服务器运维环境管理，不在浏览器保存凭据。
           </p>
           <p>
-            未发送图片仅上传者可见。发送后跟随会话当前权限；公开转私有立即停止其他用户读取。关闭上传不撤销已发送附件。当前不支持
-            PDF、Word 或 Excel。
+            未发送附件仅上传者可见。发送后跟随会话当前权限；公开转私有立即停止其他用户读取。关闭上传不撤销已发送附件。支持
+            PDF、DOCX、XLSX、CSV 和 UTF-8 TXT（64 MiB）；图片 JPEG/PNG（5
+            MiB）。宏、旧版
+            Office、加密文件和扫描件需先转换。文档提取结果计入配额；解析需要容器
+            CPU/内存/磁盘预算。
           </p>
         </div>
       </details>

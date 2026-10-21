@@ -37,9 +37,7 @@ export function ComposerMenu({
   );
   const capabilities: Record<string, ModelCapabilities> | undefined =
     models?.capabilities ?? models;
-  const canUpload = Boolean(
-    info?.uploadsConfigured && capabilities?.[selectedModelId]?.vision
-  );
+  const canUpload = Boolean(info?.uploadsConfigured);
   const canSearch = Boolean(
     info?.modelConfigured &&
       capabilities?.[selectedModelId]?.tools &&
@@ -82,14 +80,14 @@ export function ComposerMenu({
         >
           <DropdownMenuItem disabled={busy || !canUpload} onSelect={addImage}>
             <ImagePlus className="size-4" />
-            添加图片
+            添加附件
           </DropdownMenuItem>
           <p className="px-2 pb-2 text-[11px] leading-5 text-muted-foreground">
             {info?.uploadsConfigured ? (
               capabilities?.[selectedModelId]?.vision ? (
-                "JPEG / PNG，每张不超过 5 MB。"
+                "图片 JPEG/PNG ≤5 MiB；PDF/DOCX/XLSX/CSV/TXT ≤64 MiB。"
               ) : (
-                "当前模型不支持图片，请切换模型。"
+                "支持 PDF/DOCX/XLSX/CSV/TXT（64 MiB）；当前模型不支持图片。"
               )
             ) : (
               <UploadUnavailableHint

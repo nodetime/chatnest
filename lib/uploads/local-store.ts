@@ -1,6 +1,8 @@
+import { createHash } from "node:crypto";
 import { constants } from "node:fs";
 import { lstat, mkdir, open, realpath, unlink } from "node:fs/promises";
 import { isAbsolute, join, parse, resolve } from "node:path";
+import { MAX_DOCUMENT_BYTES } from "./document-types";
 import { UUID_PATTERN } from "./refs";
 import { MAX_FILE_BYTES, UploadError } from "./validation";
 
@@ -82,7 +84,7 @@ export class LocalUploadStore {
     if (
       !Number.isSafeInteger(expected) ||
       expected < 1 ||
-      expected > MAX_FILE_BYTES
+      expected > MAX_DOCUMENT_BYTES
     ) {
       throw new Error("invalid size");
     }
@@ -101,6 +103,37 @@ export class LocalUploadStore {
         throw new Error("short read");
       }
       return bytes;
+    } finally {
+      await file.close();
+    }
+  }
+  async verify(id: string, expected: number, sha256: string) {
+    if (
+      !Number.isSafeInteger(expected) ||
+      expected < 1 ||
+      expected > MAX_DOCUMENT_BYTES
+    ) {
+      throw new Error("invalid size");
+    }
+    const file = await open(
+      await this.path(id),
+      constants.O_RDONLY | constants.O_NOFOLLOW
+    );
+    try {
+      const info = await file.stat();
+      if (!info.isFile() || info.size !== expected) {
+        throw new Error("size mismatch");
+      }
+      const hash = createHash("sha256");
+      for await (const chunk of file.createReadStream({
+        autoClose: false,
+        highWaterMark: 64 * 1024,
+      })) {
+        hash.update(chunk);
+      }
+      if (hash.digest("hex") !== sha256) {
+        throw new Error("hash mismatch");
+      }
     } finally {
       await file.close();
     }

@@ -176,6 +176,11 @@ export const uploadAsset = pgTable(
   {
     chatId: uuid("chatId").notNull(),
     createdAt: timestamp("createdAt").notNull().defaultNow(),
+    derivedBytes: integer("derivedBytes").notNull().default(0),
+    extraction:
+      json("extraction").$type<
+        import("../uploads/document-types").DocumentExtraction
+      >(),
     id: uuid("id").primaryKey().notNull(),
     mime: text("mime").notNull(),
     name: text("name").notNull(),
@@ -189,7 +194,11 @@ export const uploadAsset = pgTable(
   (table) => [
     check(
       "upload_asset_size",
-      sql`${table.size} > 0 AND ${table.size} <= 5242880`
+      sql`${table.size} > 0 AND ${table.size} <= CASE WHEN ${table.mime} IN ('image/png','image/jpeg') THEN 5242880 ELSE 67108864 END`
+    ),
+    check(
+      "upload_asset_derived",
+      sql`${table.derivedBytes} >= 0 AND ${table.derivedBytes} <= 8388608`
     ),
     check(
       "upload_asset_state",

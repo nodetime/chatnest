@@ -3,6 +3,7 @@ import {
   MAX_MESSAGE_CHARACTERS,
   MAX_MESSAGE_PARTS,
 } from "@/lib/agent/input-limits";
+import { ATTACHMENT_MIMES } from "@/lib/uploads/document-types";
 import { assetIdFromRef } from "@/lib/uploads/refs";
 
 const textPartSchema = z.object({
@@ -16,7 +17,7 @@ const textPartSchema = z.object({
 
 const filePartSchema = z.object({
   filename: z.string().min(1).max(250).optional(),
-  mediaType: z.enum(["image/jpeg", "image/png"]),
+  mediaType: z.enum(ATTACHMENT_MIMES),
   name: z.string().min(1).max(250).optional(),
   type: z.enum(["file"]),
   url: z

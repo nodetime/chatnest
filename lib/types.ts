@@ -60,4 +60,13 @@ export type Attachment = {
   name: string;
   url: string;
   contentType: string;
+  size?: number;
+  extraction?: {
+    status: import("./uploads/document-types").DocumentExtraction["status"];
+    characters: number;
+    segments: number;
+    warnings: string[];
+  };
+  error?: string;
+  retryFile?: File;
 };

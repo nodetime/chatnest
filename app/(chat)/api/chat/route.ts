@@ -52,8 +52,14 @@ import { ChatbotError } from "@/lib/errors";
 import { checkIpRateLimit } from "@/lib/ratelimit";
 import type { ChatMessage, WaitingStatusData } from "@/lib/types";
 import { prepareAttachmentContext } from "@/lib/uploads/context";
+import { AttachmentRoundBudget } from "@/lib/uploads/document-budget";
+import { readAttachmentTool } from "@/lib/uploads/read-attachment";
 import { uploadErrorResponse } from "@/lib/uploads/security";
-import { commitUserMessage, readAsset } from "@/lib/uploads/service";
+import {
+  commitUserMessage,
+  readAssetForContext,
+  readAttachmentAsset,
+} from "@/lib/uploads/service";
 import { readBoundedBody, UploadError } from "@/lib/uploads/validation";
 import { convertToUIMessages, generateUUID } from "@/lib/utils";
 import { generateTitleFromUserMessage } from "../../actions";
@@ -223,10 +229,13 @@ export async function POST(request: Request) {
     const capabilities = modelCapabilities[chatModel];
     const isReasoningModel = capabilities?.reasoning === true;
     const supportsTools = capabilities?.tools === true;
+    const attachmentBudget = new AttachmentRoundBudget();
     const attachmentContext = await prepareAttachmentContext(
       uiMessages,
       capabilities?.vision === true,
-      (assetId) => readAsset(assetId, session.user.id, id)
+      (assetId) => readAssetForContext(assetId, session.user.id, id),
+      supportsTools,
+      attachmentBudget
     );
     const modelMessages = await convertToModelMessages(attachmentContext, {
       ignoreIncompleteToolCalls: true,
@@ -330,6 +339,10 @@ export async function POST(request: Request) {
             }
           }
           const tools: ToolSet = {
+            readAttachment: readAttachmentTool(
+              (assetId) => readAttachmentAsset(assetId, session.user.id, id),
+              attachmentBudget
+            ),
             ...runtime.tools,
             createDocument: createDocument({
               dataStream,

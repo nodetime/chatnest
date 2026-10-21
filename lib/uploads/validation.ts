@@ -1,10 +1,16 @@
 import sharp from "sharp";
 import { decodeCapacity, UploadCapacityError } from "./capacity";
+import {
+  ATTACHMENT_MIMES,
+  DOCUMENT_MIMES,
+  isImageMime,
+  MAX_DOCUMENT_BYTES,
+} from "./document-types";
 import { UUID_PATTERN } from "./refs";
 
 export { MAX_CONTEXT_BYTES, MAX_IMAGES } from "./limits";
 export const MAX_FILE_BYTES = 5 * 1024 * 1024;
-export const MAX_REQUEST_BYTES = MAX_FILE_BYTES + 64 * 1024;
+export const MAX_REQUEST_BYTES = MAX_DOCUMENT_BYTES + 64 * 1024;
 export class UploadError extends Error {
   readonly status: number;
   constructor(status: number, message: string) {
@@ -141,7 +147,7 @@ export async function readUploadForm(request: Request) {
     form.getAll("chatId").length !== 1 ||
     [...form.keys()].some((k) => k !== "file" && k !== "chatId")
   ) {
-    throw new UploadError(400, "一次只上传一张图片，并指定会话。");
+    throw new UploadError(400, "一次只上传一个附件，并指定会话。");
   }
   const file = form.get("file"),
     chatId = form.get("chatId");
@@ -150,7 +156,50 @@ export async function readUploadForm(request: Request) {
     typeof chatId !== "string" ||
     !UUID_PATTERN.test(chatId)
   ) {
-    throw new UploadError(400, "图片或会话标识无效。");
+    throw new UploadError(400, "附件或会话标识无效。");
   }
   return { chatId, file };
+}
+
+export async function validateAttachment(
+  bytes: Buffer,
+  declared: string,
+  name: string
+) {
+  const ext = name.split(".").pop()?.toLowerCase();
+  const byExtension: Record<string, string> = {
+    csv: "text/csv",
+    docx: DOCUMENT_MIMES[1],
+    jpeg: "image/jpeg",
+    jpg: "image/jpeg",
+    pdf: DOCUMENT_MIMES[0],
+    png: "image/png",
+    txt: "text/plain",
+    xlsx: DOCUMENT_MIMES[2],
+  };
+  const mime = byExtension[ext ?? ""];
+  if (
+    !mime ||
+    !ATTACHMENT_MIMES.includes(mime as (typeof ATTACHMENT_MIMES)[number])
+  ) {
+    throw new UploadError(
+      400,
+      "仅支持 JPEG/PNG、PDF、DOCX、XLSX、CSV 和 UTF-8 TXT；旧版 Office 和宏文件请另存为普通格式。"
+    );
+  }
+  if (
+    declared &&
+    declared !== mime &&
+    declared !== "application/octet-stream" &&
+    !(mime === "text/csv" && declared === "application/vnd.ms-excel")
+  ) {
+    throw new UploadError(400, "文件扩展名与声明类型不一致。");
+  }
+  if (isImageMime(mime)) {
+    return await validateImage(bytes, mime);
+  }
+  if (!bytes.length || bytes.length > MAX_DOCUMENT_BYTES) {
+    throw new UploadError(400, "文档必须非空，且不超过 64 MiB。");
+  }
+  return mime;
 }
