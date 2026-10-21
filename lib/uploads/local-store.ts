@@ -8,6 +8,12 @@ import { MAX_FILE_BYTES, UploadError } from "./validation";
 
 type Env = Record<string, string | undefined>;
 export function storageDirectory(env: Env = process.env) {
+  if (env.VERCEL === "1") {
+    throw new UploadError(
+      503,
+      "Vercel Functions 不支持本地持久化附件，请使用自托管持久卷；私有对象存储适配尚未实现。"
+    );
+  }
   const value = env.UPLOAD_STORAGE_DIR?.trim();
   if (value && !isAbsolute(value)) {
     throw new UploadError(503, "UPLOAD_STORAGE_DIR 必须是绝对路径。");

@@ -9,6 +9,7 @@
 - `components/ui/`: existing shadcn/radix components/tokens; reuse instead of redesigning.
 - `tests/unit/`: tsx/node:test offline suites; existing tests inject fake MCP clients and temporary configs.
 - `config/agent.json`: default file-managed Exa/Tavily/Porta services. Preserve compatibility and environment secrets.
+- `lib/ai/telemetry.ts`: shared metadata-only AI tracing policy, explicitly applied to all nine model calls; input/output content recording stays off even with global OTel registration.
 - `lib/agent/browser-policy.ts`: existing browser policy, not a sufficient MCP egress policy by itself.
 - `.local-review/` is ignored; private probes/fixtures must stay out of tracked files.
 
@@ -25,7 +26,7 @@ Private document ingestion (Task 3):
 - `lib/uploads/document-types.ts`: browser-safe supported formats, 64 MiB document limit, text extraction states and segment contract; original image limits remain 5 MiB / 15 images / 20 MiB context.
 - `lib/uploads/document-parser.ts`, `document-worker.cjs`: one admitted native Node worker, restricted environment, 20s deadline/cleanup; PDF.js text pages, Mammoth paragraph/table text, streaming ExcelJS worksheets, CSV/TXT; bounded ZIP actual-inflate/CRC/XML preflight. No OCR, password handling, external fetch, macros or formula execution.
 - `lib/uploads/document-budget.ts`, `context.ts`, `read-attachment.ts`: one shared 100k source-character model-round budget including actual deduplicated 2k previews; optional <=16k `readAttachment` calls reauthorize through `service.readAttachmentAsset` every time. Historical raw read bodies are model-projected to explicit reread metadata, preserving canonical DB/UI results.
-- `lib/uploads/service.ts`, `local-store.ts`: original hash/integrity, existing private ownership/association/lifecycle plus quota-counted persisted extraction; large-document context integrity uses streaming verification, not retained binaries.
+- `lib/uploads/service.ts`, `local-store.ts`: original hash/integrity, local-driver rejection on Vercel Functions (`VERCEL=1`), existing private ownership/association/lifecycle plus quota-counted persisted extraction; large-document context integrity uses streaming verification, not retained binaries.
 - `lib/db/migrations/0003_document_ingestion.sql`: extraction JSON + actual UTF-8 `derivedBytes`; raw+derived quota accounting; image/document-specific size constraint.
 - `next.config.ts`: 65mb bounded Next proxy envelope; build-only pinned NFT worker dependency closure plus PDF assets/native canvas. Literal native `require.resolve` host seeds + external parser packages preserve pnpm resolution symlinks in real route traces.
 - `components/chat/preview-attachment.tsx`, `tool-activity.tsx`: text-only document states, failure retry/removal and cited attachment-read cards, without changing Agent-selected tool/skill flow.

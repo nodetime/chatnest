@@ -9,6 +9,7 @@ import { getModelConnection } from "@/lib/ai/model-connection";
 import { titleModel } from "@/lib/ai/models";
 import { titlePrompt } from "@/lib/ai/prompts";
 import { getTitleModel } from "@/lib/ai/providers";
+import { metadataOnlyTelemetry } from "@/lib/ai/telemetry";
 import {
   deleteMessagesByChatIdAfterTimestamp,
   getChatById,
@@ -37,6 +38,7 @@ export async function generateTitleFromUserMessage({
         gateway: { order: titleModel.gatewayOrder },
       }),
     },
+    telemetry: metadataOnlyTelemetry,
   });
   return text
     .replace(/^[#*"\s]+/, "")

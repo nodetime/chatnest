@@ -84,6 +84,32 @@ test("production requires explicit absolute persistent directory and quota bound
   assert.throws(() => quotaLimits({ UPLOAD_USER_QUOTA_BYTES: "NaN" }));
   assert.equal(quotaLimits({}).user, 100 * 1024 * 1024);
 });
+test("Vercel Functions cannot claim local upload durability even with a writable scratch directory", async () => {
+  const { storageDirectory } = await import("../../lib/uploads/local-store");
+  for (const directory of ["/tmp/private-uploads", "/srv/private"]) {
+    assert.throws(
+      () =>
+        storageDirectory({
+          NODE_ENV: "production",
+          UPLOAD_STORAGE_DIR: directory,
+          VERCEL: "1",
+        }),
+      (error: unknown) =>
+        error instanceof Error &&
+        "status" in error &&
+        error.status === 503 &&
+        /Vercel Functions/.test(error.message)
+    );
+  }
+  assert.equal(
+    storageDirectory({
+      NODE_ENV: "production",
+      UPLOAD_STORAGE_DIR: "/srv/private",
+      VERCEL: "0",
+    }),
+    "/srv/private"
+  );
+});
 test("multipart input is stream bounded before parsing and rejects duplicate file/chat fields", async () => {
   const { readUploadForm, MAX_REQUEST_BYTES } = await import(
     "../../lib/uploads/validation"

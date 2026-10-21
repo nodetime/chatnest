@@ -1,6 +1,7 @@
 import { smoothStream, streamText } from "ai";
 import { updateDocumentPrompt } from "@/lib/ai/prompts";
 import { getLanguageModel } from "@/lib/ai/providers";
+import { metadataOnlyTelemetry } from "@/lib/ai/telemetry";
 import { createDocumentHandler } from "@/lib/artifacts/server";
 
 export const textDocumentHandler = createDocumentHandler<"text">({
@@ -14,6 +15,7 @@ export const textDocumentHandler = createDocumentHandler<"text">({
         "Write about the given topic. Markdown is supported. Use headings wherever appropriate.",
       model: getLanguageModel(modelId),
       prompt: title,
+      telemetry: metadataOnlyTelemetry,
     });
 
     for await (const delta of stream) {
@@ -37,6 +39,7 @@ export const textDocumentHandler = createDocumentHandler<"text">({
       instructions: updateDocumentPrompt(document.content, "text"),
       model: getLanguageModel(modelId),
       prompt: description,
+      telemetry: metadataOnlyTelemetry,
     });
 
     for await (const delta of stream) {

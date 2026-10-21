@@ -1,6 +1,7 @@
 import { Output, streamText, tool, type UIMessageStreamWriter } from "ai";
 import type { Session } from "next-auth";
 import { z } from "zod";
+import { metadataOnlyTelemetry } from "@/lib/ai/telemetry";
 import { isProtectedResultTable } from "@/lib/artifacts/result-table";
 import { getDocumentById, saveSuggestions } from "@/lib/db/queries";
 import type { Suggestion } from "@/lib/db/schema";
@@ -61,6 +62,7 @@ export const requestSuggestions = ({
           }),
         }),
         prompt: document.content,
+        telemetry: metadataOnlyTelemetry,
       });
 
       let processedCount = 0;
