@@ -39,7 +39,7 @@ Client submission checks pending upload admission synchronously, invalidates old
 
 ## Verification boundaries
 
-Offline tests use synthetic images, temporary private directories, injected resolvers and an injected mock provider fetch; they make no supplier/model requests. Independent local PostgreSQL/HTTP/browser/mock-model evidence is maintained by the verification owner outside tracked fixtures. This does not prove acceptance by a paid production model or compatibility with ephemeral cloud deployments. Document unit coverage uses generated synthetic PDF, DOCX, XLSX, CSV and TXT fixtures; no user documents are accessed. Reopening completed persisted messages/artifacts is distinct from reconnecting to an in-progress generation: this patch does not establish or claim in-flight generation resume/replay acceptance.
+Offline tests use synthetic images, temporary private directories, injected resolvers and an injected mock provider fetch; they make no supplier/model requests. Independent local PostgreSQL/HTTP/browser/mock-model evidence is maintained by the verification owner outside tracked fixtures. This does not prove acceptance by a paid production model or compatibility with ephemeral cloud deployments. Document unit coverage uses generated synthetic PDF, DOCX, XLSX, CSV and TXT fixtures; no user documents are accessed. Reopening completed persisted messages/artifacts is distinct from reconnecting to an in-progress generation. The current `GET /api/chat/[id]/stream` handler always returns **204 No Content**; in-progress generation resume/replay is **not implemented**. Setting `REDIS_URL` alone does not enable it. Completed-history reopening is not evidence of in-flight stream reconnection.
 
 ## Known concurrency boundary
 
