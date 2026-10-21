@@ -45,11 +45,11 @@ Skills 不能凭空赋予文件、联网或脚本执行权限。当前支持指�
 
 生产构建已显式包含默认配置与 `skills/**` 文件。若用 `AGENT_CONFIG_PATH` 指向部署包外的位置，需要自行挂载该配置，不能假定服务端打包器会自动带上它。
 
-## 可选 SourceBridge / 1688
+## 可选 Porta / 1688
 
-默认配置增加可选同级 SourceBridge HTTP MCP；服务端设置 `SOURCEBRIDGE_MCP_URL` 与 `SOURCEBRIDGE_SERVICE_TOKEN` 后才连接，任意缺失只跳过该服务，不影响 Exa。供应商 OneBound key/secret 不放 ChatNest。默认严格 HTTPS；本机 HTTP 需要 `AGENT_MCP_ALLOW_LOOPBACK_HTTP=1` 且处于 development/test，仅允许 loopback，production 仍要求 HTTPS；MCP 不跟随重定向。
+默认配置增加可选同级 Porta HTTP MCP；服务端设置 `PORTA_MCP_URL` 与 `PORTA_SERVICE_TOKEN` 后才连接，任意缺失只跳过该服务，不影响 Exa。供应商 OneBound key/secret 不放 ChatNest。默认严格 HTTPS；本机 HTTP 需要 `AGENT_MCP_ALLOW_LOOPBACK_HTTP=1` 且处于 development/test，仅允许 loopback，production 仍要求 HTTPS；MCP 不跟随重定向。
 
-仅开放6个 `onebound_1688_*` 原工具，全部默认需要确认，查询也可能收费。SourceBridge工具失败保持UI错误状态，原错误JSON以脱敏文本保留，不自动重试；其他工具错误策略不变。新增 `source-1688` 商品与主体线索调查 Skill，与现有正文调查方法独立；保持供应商原参数、原返回，不假设图搜分页/100条，也不把上传返回 `name` 自动转换成 `imgid`。配置、安全门禁、TDD与离线验证边界见 [SourceBridge 接入说明](docs/integrations/sourcebridge.md)。未进行真实模型或付费供应商验收。
+仅开放6个 `onebound_1688_*` 原工具，全部默认需要确认，查询也可能收费。Porta工具失败保持UI错误状态，原错误JSON以脱敏文本保留，不自动重试；其他工具错误策略不变。新增 `source-1688` 商品与主体线索调查 Skill，与现有正文调查方法独立；保持供应商原参数、原返回，不假设图搜分页/100条，也不把上传返回 `name` 自动转换成 `imgid`。配置、安全门禁、TDD与离线验证边界见 [Porta 接入说明](docs/integrations/porta.md)。未进行真实模型或付费供应商验收。
 
 ## 界面取舍
 

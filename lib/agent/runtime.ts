@@ -2,8 +2,8 @@ import { createMCPClient, type MCPClient } from "@ai-sdk/mcp";
 import { dynamicTool, type ToolSet } from "ai";
 import { readAgentConfig, resolveServerConnection } from "./config";
 import { normalizeMcpOutput } from "./mcp-output";
+import { createPortaToolError } from "./porta-error";
 import { buildSkillsPrompt, createSkillTools, discoverSkills } from "./skills";
-import { createSourceBridgeToolError } from "./sourcebridge-error";
 
 export async function createAgentRuntime(
   signal: AbortSignal,
@@ -90,8 +90,8 @@ export async function createAgentRuntime(
                     "isError" in output &&
                     output.isError
                   ) {
-                    if (server.id === "sourcebridge") {
-                      throw createSourceBridgeToolError(output, headers);
+                    if (server.id === "porta") {
+                      throw createPortaToolError(output, headers);
                     }
                     throw new Error(
                       `${server.name} 暂时未能返回结果；可能是限流或访问失败，请稍后重试。`

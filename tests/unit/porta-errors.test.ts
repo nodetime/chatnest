@@ -16,8 +16,8 @@ import {
 import { MockLanguageModelV4 } from "ai/test";
 import { createAgentRuntime } from "../../lib/agent/runtime";
 
-const serviceToken = "fixture-sourcebridge-service-token-32";
-const toolName = "sourcebridge__onebound_1688_item_search";
+const serviceToken = "fixture-porta-service-token-32";
+const toolName = "porta__onebound_1688_item_search";
 
 async function withErrorRuntime(
   run: (
@@ -26,7 +26,7 @@ async function withErrorRuntime(
     count: () => number
   ) => Promise<void>
 ) {
-  const root = await mkdtemp(path.join(os.tmpdir(), "sourcebridge-errors-"));
+  const root = await mkdtemp(path.join(os.tmpdir(), "porta-errors-"));
   const previous = process.env.AGENT_CONFIG_PATH;
   let output: unknown;
   let calls = 0;
@@ -40,8 +40,8 @@ async function withErrorRuntime(
           {
             allowedTools: ["onebound_1688_item_search"],
             headers: { Authorization: `Bearer ${serviceToken}` },
-            id: "sourcebridge",
-            name: "SourceBridge",
+            id: "porta",
+            name: "Porta",
             url: "https://fixture.example/mcp",
           },
         ],
@@ -86,14 +86,14 @@ async function withErrorRuntime(
 
 function result(body: unknown, isError: boolean) {
   return {
-    _meta: { sourcebridge: { httpStatus: 200, requestId: "fixture" } },
+    _meta: { porta: { httpStatus: 200, requestId: "fixture" } },
     content: [{ text: JSON.stringify(body), type: "text" }],
     isError,
     structuredContent: body,
   };
 }
 
-test("SourceBridge success, 0000 and chargeable no-results 2000 preserve the native MCP result", async () => {
+test("Porta success, 0000 and chargeable no-results 2000 preserve the native MCP result", async () => {
   await withErrorRuntime(async (runtime, setOutput, count) => {
     const { execute } = runtime.tools[toolName];
     assert.ok(execute);
@@ -117,7 +117,7 @@ test("SourceBridge success, 0000 and chargeable no-results 2000 preserve the nat
   });
 });
 
-test("SourceBridge error 4008 and BridgeError retain JSON bodies without headers, leaked service tokens or retry advice", async () => {
+test("Porta error 4008 and BridgeError retain JSON bodies without headers, leaked service tokens or retry advice", async () => {
   await withErrorRuntime(async (runtime, setOutput, count) => {
     const { execute } = runtime.tools[toolName];
     assert.ok(execute);
@@ -130,7 +130,7 @@ test("SourceBridge error 4008 and BridgeError retain JSON bodies without headers
         item: null,
       },
       {
-        sourcebridge_error: {
+        porta_error: {
           code: "provider_not_configured",
           message: "Service unavailable",
         },
@@ -199,13 +199,13 @@ test("SourceBridge error 4008 and BridgeError retain JSON bodies without headers
   });
 });
 
-test("real AI SDK stream exposes only branded SourceBridge error text as tool-output-error, never tool success", async () => {
-  const implementation = await import(
-    "../../lib/agent/sourcebridge-error"
-  ).catch(() => null);
+test("real AI SDK stream exposes only branded Porta error text as tool-output-error, never tool success", async () => {
+  const implementation = await import("../../lib/agent/porta-error").catch(
+    () => null
+  );
   assert.ok(
     implementation,
-    "SourceBridge-specific safe stream error formatter is required"
+    "Porta-specific safe stream error formatter is required"
   );
   assert.equal(
     implementation.agentStreamErrorText(
@@ -301,7 +301,7 @@ test("real AI SDK stream exposes only branded SourceBridge error text as tool-ou
   });
 });
 
-test("SourceBridge header fallback redacts dynamic JSON keys and fails explicitly on redaction collisions", async () => {
+test("Porta header fallback redacts dynamic JSON keys and fails explicitly on redaction collisions", async () => {
   await withErrorRuntime(async (runtime, setOutput) => {
     const { execute } = runtime.tools[toolName];
     assert.ok(execute);
@@ -344,7 +344,7 @@ test("SourceBridge header fallback redacts dynamic JSON keys and fails explicitl
         assert.ok(error instanceof Error);
         assert.ok(!error.message.includes(serviceToken));
         assert.deepEqual(JSON.parse(error.message.split("\n").at(-1) ?? ""), {
-          sourcebridge_error: { code: "error_redaction_collision" },
+          porta_error: { code: "error_redaction_collision" },
         });
         return true;
       }

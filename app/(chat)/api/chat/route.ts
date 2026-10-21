@@ -16,8 +16,8 @@ import { auth, type UserType } from "@/app/(auth)/auth";
 import { applyToolApprovals } from "@/lib/agent/approvals";
 import { createBrowserTools } from "@/lib/agent/browser-tools";
 import { prepareRegeneration } from "@/lib/agent/message-turn";
+import { agentStreamErrorText } from "@/lib/agent/porta-error";
 import { createAgentRuntime } from "@/lib/agent/runtime";
-import { agentStreamErrorText } from "@/lib/agent/sourcebridge-error";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
 import {
   getModelConnection,

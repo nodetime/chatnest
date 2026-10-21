@@ -33,11 +33,11 @@
       ]
     },
     {
-      "id": "sourcebridge",
-      "name": "SourceBridge 1688 数据查询",
-      "url": "${SOURCEBRIDGE_MCP_URL}",
+      "id": "porta",
+      "name": "Porta 1688 数据查询",
+      "url": "${PORTA_MCP_URL}",
       "headers": {
-        "Authorization": "Bearer ${SOURCEBRIDGE_SERVICE_TOKEN}"
+        "Authorization": "Bearer ${PORTA_SERVICE_TOKEN}"
       },
       "allowedTools": [
         "onebound_1688_item_search",

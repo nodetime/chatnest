@@ -21,19 +21,19 @@ const toolNames = [
   "item_search_img",
 ].map((name) => `onebound_1688_${name}`);
 const defaultConfig = JSON.parse(readFileSync("config/agent.json", "utf8"));
-const sourcebridge = () => {
+const porta = () => {
   const server = agentConfigSchema
     .parse(defaultConfig)
-    .servers.find((item) => item.id === "sourcebridge");
-  assert.ok(server, "default config must register optional SourceBridge");
+    .servers.find((item) => item.id === "porta");
+  assert.ok(server, "default config must register optional Porta");
   return server;
 };
 
-test("default SourceBridge registers exactly six native tools without auto approval; Exa remains unchanged", () => {
-  const server = sourcebridge();
+test("default Porta registers exactly six native tools without auto approval; Exa remains unchanged", () => {
+  const server = porta();
   assert.deepEqual(server.allowedTools, toolNames);
   assert.deepEqual(server.autoApproveTools, []);
-  assert.equal(server.url, "${SOURCEBRIDGE_MCP_URL}");
+  assert.equal(server.url, "${PORTA_MCP_URL}");
   assert.deepEqual(
     defaultConfig.servers.find((item: { id: string }) => item.id === "exa"),
     {
@@ -48,7 +48,7 @@ test("default SourceBridge registers exactly six native tools without auto appro
 });
 
 test("URL environment references must be a complete endpoint, never partial interpolation", () => {
-  for (const url of ["${SOURCEBRIDGE_MCP_URL}", "https://bridge.example/mcp"]) {
+  for (const url of ["${PORTA_MCP_URL}", "https://bridge.example/mcp"]) {
     assert.ok(
       agentConfigSchema.safeParse({
         servers: [{ id: "s", name: "s", url }],
@@ -76,13 +76,13 @@ test("URL environment references must be a complete endpoint, never partial inte
 test("server-side URL and bearer substitution reports missing environment without exposing credentials", () => {
   const resolve = resolveServerConnection;
   assert.equal(typeof resolve, "function");
-  assert.deepEqual(resolve(sourcebridge(), {}).missing, [
-    "SOURCEBRIDGE_SERVICE_TOKEN",
-    "SOURCEBRIDGE_MCP_URL",
+  assert.deepEqual(resolve(porta(), {}).missing, [
+    "PORTA_SERVICE_TOKEN",
+    "PORTA_MCP_URL",
   ]);
-  const resolved = resolve(sourcebridge(), {
-    SOURCEBRIDGE_MCP_URL: "https://bridge.example/mcp",
-    SOURCEBRIDGE_SERVICE_TOKEN: "fixture-service-token",
+  const resolved = resolve(porta(), {
+    PORTA_MCP_URL: "https://bridge.example/mcp",
+    PORTA_SERVICE_TOKEN: "fixture-service-token",
   });
   assert.equal(resolved.url, "https://bridge.example/mcp");
   assert.equal(resolved.headers.Authorization, "Bearer fixture-service-token");
@@ -91,8 +91,8 @@ test("server-side URL and bearer substitution reports missing environment withou
 });
 
 test("loopback HTTP needs explicit development opt-in, never opens arbitrary HTTP or production", () => {
-  const server = sourcebridge();
-  const base = { SOURCEBRIDGE_SERVICE_TOKEN: "fixture-service-token" };
+  const server = porta();
+  const base = { PORTA_SERVICE_TOKEN: "fixture-service-token" };
   const dev = {
     ...base,
     AGENT_MCP_ALLOW_LOOPBACK_HTTP: "1",
@@ -106,14 +106,14 @@ test("loopback HTTP needs explicit development opt-in, never opens arbitrary HTT
     assert.equal(
       resolveServerConnection(server, {
         ...base,
-        SOURCEBRIDGE_MCP_URL: url,
+        PORTA_MCP_URL: url,
       }).invalid,
       true
     );
     assert.equal(
       resolveServerConnection(server, {
         ...dev,
-        SOURCEBRIDGE_MCP_URL: url,
+        PORTA_MCP_URL: url,
       }).invalid,
       false
     );
@@ -121,7 +121,7 @@ test("loopback HTTP needs explicit development opt-in, never opens arbitrary HTT
       resolveServerConnection(server, {
         ...dev,
         NODE_ENV: "production",
-        SOURCEBRIDGE_MCP_URL: url,
+        PORTA_MCP_URL: url,
       }).invalid,
       true
     );
@@ -129,7 +129,7 @@ test("loopback HTTP needs explicit development opt-in, never opens arbitrary HTT
       resolveServerConnection(server, {
         ...dev,
         NODE_ENV: undefined,
-        SOURCEBRIDGE_MCP_URL: url,
+        PORTA_MCP_URL: url,
       }).invalid,
       true
     );
@@ -150,7 +150,7 @@ test("loopback HTTP needs explicit development opt-in, never opens arbitrary HTT
     assert.equal(
       resolveServerConnection(server, {
         ...dev,
-        SOURCEBRIDGE_MCP_URL: url,
+        PORTA_MCP_URL: url,
       }).invalid,
       true,
       url
@@ -158,11 +158,11 @@ test("loopback HTTP needs explicit development opt-in, never opens arbitrary HTT
   }
 });
 
-test("missing, malformed and unapproved local SourceBridge settings skip only SourceBridge", async () => {
+test("missing, malformed and unapproved local Porta settings skip only Porta", async () => {
   const keys = [
     "AGENT_CONFIG_PATH",
-    "SOURCEBRIDGE_MCP_URL",
-    "SOURCEBRIDGE_SERVICE_TOKEN",
+    "PORTA_MCP_URL",
+    "PORTA_SERVICE_TOKEN",
     "AGENT_MCP_ALLOW_LOOPBACK_HTTP",
     "TAVILY_API_KEY",
   ];
@@ -173,19 +173,19 @@ test("missing, malformed and unapproved local SourceBridge settings skip only So
     }
     for (const settings of [
       {},
-      { SOURCEBRIDGE_MCP_URL: "https://bridge.example/mcp" },
-      { SOURCEBRIDGE_SERVICE_TOKEN: "fixture-service-token" },
+      { PORTA_MCP_URL: "https://bridge.example/mcp" },
+      { PORTA_SERVICE_TOKEN: "fixture-service-token" },
       {
-        SOURCEBRIDGE_MCP_URL: "http://bridge.example/mcp",
-        SOURCEBRIDGE_SERVICE_TOKEN: "fixture-service-token",
+        PORTA_MCP_URL: "http://bridge.example/mcp",
+        PORTA_SERVICE_TOKEN: "fixture-service-token",
       },
       {
-        SOURCEBRIDGE_MCP_URL: "not-a-url",
-        SOURCEBRIDGE_SERVICE_TOKEN: "fixture-service-token",
+        PORTA_MCP_URL: "not-a-url",
+        PORTA_SERVICE_TOKEN: "fixture-service-token",
       },
     ]) {
-      delete process.env.SOURCEBRIDGE_MCP_URL;
-      delete process.env.SOURCEBRIDGE_SERVICE_TOKEN;
+      delete process.env.PORTA_MCP_URL;
+      delete process.env.PORTA_SERVICE_TOKEN;
       Object.assign(process.env, settings);
       const connections: string[] = [];
       // biome-ignore lint/performance/noAwaitInLoops: cases intentionally isolate process.env sequentially
@@ -202,7 +202,7 @@ test("missing, malformed and unapproved local SourceBridge settings skip only So
       assert.deepEqual(connections, ["https://mcp.exa.ai/mcp"]);
       assert.match(
         runtime.instructions,
-        /SourceBridge.*(?:not configured|configuration is invalid)/
+        /Porta.*(?:not configured|configuration is invalid)/
       );
       await runtime.close();
     }
@@ -217,11 +217,11 @@ test("missing, malformed and unapproved local SourceBridge settings skip only So
   }
 });
 
-test("configured SourceBridge passes native input/output unchanged and gates every paid tool", async () => {
+test("configured Porta passes native input/output unchanged and gates every paid tool", async () => {
   const keys = [
     "AGENT_CONFIG_PATH",
-    "SOURCEBRIDGE_MCP_URL",
-    "SOURCEBRIDGE_SERVICE_TOKEN",
+    "PORTA_MCP_URL",
+    "PORTA_SERVICE_TOKEN",
     "TAVILY_API_KEY",
   ];
   const previous = keys.map((key) => process.env[key]);
@@ -235,8 +235,8 @@ test("configured SourceBridge passes native input/output unchanged and gates eve
     for (const key of keys) {
       delete process.env[key];
     }
-    process.env.SOURCEBRIDGE_MCP_URL = "https://bridge.example/mcp";
-    process.env.SOURCEBRIDGE_SERVICE_TOKEN = "fixture-service-token";
+    process.env.PORTA_MCP_URL = "https://bridge.example/mcp";
+    process.env.PORTA_SERVICE_TOKEN = "fixture-service-token";
     const remote = {
       description: "Native tool",
       execute: (value: unknown) => {
@@ -269,10 +269,10 @@ test("configured SourceBridge passes native input/output unchanged and gates eve
     }) as typeof createMCPClient);
     assert.equal(runtime.tools.exa__web_search_exa.needsApproval, false);
     for (const name of toolNames) {
-      assert.equal(runtime.tools[`sourcebridge__${name}`].needsApproval, true);
+      assert.equal(runtime.tools[`porta__${name}`].needsApproval, true);
     }
-    assert.equal(runtime.tools.sourcebridge__unlisted_delete, undefined);
-    const { execute } = runtime.tools.sourcebridge__onebound_1688_item_search;
+    assert.equal(runtime.tools.porta__unlisted_delete, undefined);
+    const { execute } = runtime.tools.porta__onebound_1688_item_search;
     assert.ok(execute);
     assert.equal(
       await execute(input, {
@@ -335,8 +335,8 @@ test("MCP transport rejects redirects instead of forwarding a loopback connectio
   const url = `http://127.0.0.1:${address.port}/mcp`;
   const keys = [
     "AGENT_CONFIG_PATH",
-    "SOURCEBRIDGE_MCP_URL",
-    "SOURCEBRIDGE_SERVICE_TOKEN",
+    "PORTA_MCP_URL",
+    "PORTA_SERVICE_TOKEN",
     "TAVILY_API_KEY",
     "NODE_ENV",
     "AGENT_MCP_ALLOW_LOOPBACK_HTTP",
@@ -346,8 +346,8 @@ test("MCP transport rejects redirects instead of forwarding a loopback connectio
     for (const key of keys) {
       delete process.env[key];
     }
-    process.env.SOURCEBRIDGE_MCP_URL = url;
-    process.env.SOURCEBRIDGE_SERVICE_TOKEN = "fixture-service-token";
+    process.env.PORTA_MCP_URL = url;
+    process.env.PORTA_SERVICE_TOKEN = "fixture-service-token";
     Object.assign(process.env, { NODE_ENV: "test" });
     process.env.AGENT_MCP_ALLOW_LOOPBACK_HTTP = "1";
     const runtime = await createAgentRuntime(
@@ -371,7 +371,7 @@ test("MCP transport rejects redirects instead of forwarding a loopback connectio
     );
     assert.match(
       runtime.instructions,
-      /SourceBridge.*connection or tool discovery failed/
+      /Porta.*connection or tool discovery failed/
     );
     await runtime.close();
   } finally {
