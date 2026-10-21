@@ -195,7 +195,7 @@ function PureMultimodalInput({
   const uploadFile = useCallback(
     async (file: File) => {
       if (!agentInfo?.uploadsConfigured) {
-        toast.error("图片上传尚未配置，请在设置中查看存储连接说明。");
+        toast.error("图片上传尚未开启，请联系管理员配置图片存储。");
         return;
       }
       if (

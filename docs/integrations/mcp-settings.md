@@ -1,6 +1,6 @@
 # 可视化 HTTP MCP 管理
 
-ChatNest 的“设置 → 工具连接”支持新增 HTTP MCP、JSON 导入、initialize / tools/list 测试、选择开放工具、编辑、启停与删除。**一个部署就是一个共享工作区**；此版本没有组织、成员角色或分租户隔离。Porta 仍是独立服务，其部署、套餐与凭据不由本页面开通。
+ChatNest 的“平台管理 → 工具连接”（`/admin/connections`）支持新增 HTTP MCP、JSON 导入、initialize / tools/list 测试、选择开放工具、编辑、启停与删除。**一个部署就是一个共享工作区**；此版本没有组织、成员角色或分租户隔离。Porta 仍是独立服务，其部署、套餐与凭据不由本页面开通。
 
 ## 部署配置
 
@@ -9,18 +9,24 @@ ChatNest 的“设置 → 工具连接”支持新增 HTTP MCP、JSON 导入、i
 3. 在部署 secret manager / 私密环境文件中设置以下变量，然后重启部署。不要在聊天、代码库、日志或截图里粘贴真实值。
 
 ```dotenv
-MCP_ADMIN_USER_IDS=ADMIN_UUID
+PLATFORM_ADMIN_USER_IDS=ADMIN_UUID
 MCP_SETTINGS_ENCRYPTION_KEY=BASE64_32_RANDOM_BYTES
 MCP_ALLOWED_ORIGINS=https://mcp.example.org,https://porta.example.org
 ```
 
-- `MCP_ADMIN_USER_IDS`：逗号分隔的精确小写 UUID；必须同时拥有 `regular` 会话。不存在首个用户自动提权、邮箱匹配或游客例外。
+- 推荐 `PLATFORM_ADMIN_USER_IDS`：逗号分隔的精确小写 UUID；必须同时拥有 `regular` 会话。只有该变量**未设置**时，才兼容读取旧变量 `MCP_ADMIN_USER_IDS`；显式设置为空值会禁用所有平台管理员权限，不再回退旧名单。两个变量不合并，不存在首个用户自动提权、邮箱匹配或游客例外。
 - 加密密钥在可信终端用 `openssl rand -base64 32` 生成。严格标准 Base64、解码后恰好 32 字节；不附带空格/换行。没有默认密钥。
 - 允许来源必须是**精确 origin**（协议、主机、非默认端口），不含路径、query、fragment 或末尾 `/`，不接受通配符；只能由部署操作者修改。
 - 管理 GET 只对管理员开放；所有测试和写入 POST 还需要与浏览器目标一致的 `Origin`。反向代理需正确保留目标协议/主机，不要禁用来源检查。
 - 两个管理环境变量（密钥、允许来源）都为空时，不读取 managed 数据，保留原有文件行为并展示设置提示。只配置一项、密钥格式错误、数据库不可读或解密失败时操作失败，不静默回退旧缓存。
 
 本地 fixture HTTP 仅在 `NODE_ENV=development` 或 `test` 且显式 `AGENT_MCP_ALLOW_LOOPBACK_HTTP=1` 时开放给 `localhost`、`127.0.0.1`、`[::1]`；该精确 origin 仍须列入允许来源。生产始终要求 HTTPS。
+
+## 平台管理与个人设置
+
+管理员头像菜单中的“平台管理”进入独立全页后台，`/admin` 重定向至 `/admin/connections`，可通过“返回工作台”回到对话。入口权限由服务端会话和同一管理员名单计算；后台布局在渲染管理内容前再次鉴权，管理 API 仍对每次读取、测试和写入独立鉴权，写入/测试保持同源检查。连接管理直接读取受保护的 MCP API，不依赖模型或技能摘要加载成功。
+
+普通用户与管理员的个人设置均仅包含外观偏好、只读工具和技能；工具页中的服务状态不是实时连接检测，也不含凭据、环境变量或部署步骤。未配置图片存储时，普通用户应联系管理员；后台附件存储配置与实际上传修复属于后续实现，本次后台分离尚未新增存储表单。
 
 ## 连接与导入
 
@@ -85,3 +91,9 @@ corepack pnpm exec tsc --noEmit
 宽泛单测中的旧 browser-runtime 需要额外 Chromium，旧 regeneration-db 需要显式隔离数据库；它们不是上述纯离线专属命令的一部分。实际生产部署配置、网络信任与服务商额度仍需部署操作者核对。
 
 最终独立验证共 67/67（41 个既有离线测试 + 26 个 MCP/部署回归），类型检查与 35 个变更文件的定向 lint 全部通过。干净隔离源码副本上的实际 `next build --webpack` 和 `next start` 均通过；管理 GET、能力摘要、跨站写入拒绝、匿名既有重定向及 config 资源追踪均做了实际 HTTP 验证。构建发现并最小移除了旧聊天 route 的非 Next 合法 helper export，内部聊天逻辑不变；没有关闭类型检查，也未使用 `pnpm build` 的迁移包装命令。
+
+### 2026-10-21 平台后台分离验证
+
+新增 7 条平台权限/实际 React HTML 回归，连同原 67 条离线测试共 74/74 通过；类型检查、19 个变更源码/测试文件的定向 Biome 与 `git diff --check` 通过。新增测试覆盖精确 regular UUID、显式空名单撤权与 legacy fallback、独立后台结构、服务端权限 props、实际管理 CRUD 控件，以及管理员/普通用户个人工具和技能均只读。
+
+主会话另用隔离本地 fixture 验证匿名、普通账号、管理员三身份的 `/admin` 与 `/admin/connections` 响应和工作台 shell 隔离；MCP 管理 GET 返回管理员 200、普通用户 403，非同源写入返回 403。实际站内浏览器确认独立后台页面与工具管理 CRUD 控件可见。此次没有调用真实模型或 vendor；附件上传端到端修复和本轮生产构建证据仍属后续阶段，不包含在后台分离完成声明内。

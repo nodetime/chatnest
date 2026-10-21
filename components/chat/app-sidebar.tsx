@@ -20,7 +20,13 @@ import { SidebarHistory } from "./sidebar-history";
 import { SidebarUserNav } from "./sidebar-user-nav";
 import { TaskDialog } from "./task-dialog";
 
-export function AppSidebar({ user }: { user: User | undefined }) {
+export function AppSidebar({
+  user,
+  isPlatformAdmin = false,
+}: {
+  user: User | undefined;
+  isPlatformAdmin?: boolean;
+}) {
   const { toggleSidebar, setOpenMobile } = useSidebar();
   const { startNewChat } = useActiveChat();
   const [taskOpen, setTaskOpen] = useState(false);
@@ -90,7 +96,7 @@ export function AppSidebar({ user }: { user: User | undefined }) {
         </SidebarContent>
         <SidebarFooter className="gap-2 px-3 pb-4">
           {user ? (
-            <SidebarUserNav user={user} />
+            <SidebarUserNav isPlatformAdmin={isPlatformAdmin} user={user} />
           ) : (
             <p className="px-2 py-2 text-xs text-muted-foreground">
               <AgentLibrary tab="settings" />

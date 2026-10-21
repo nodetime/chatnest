@@ -14,7 +14,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import type { AgentInfo } from "@/hooks/use-agent-info";
 import { refreshConflictMessage } from "@/lib/agent/mcp-settings/editor";
 import type {
   ServerProjection,
@@ -29,16 +28,9 @@ async function readSettings(url: string): Promise<SettingsProjection> {
   }
   return response.json();
 }
-export function McpConnections({
-  info,
-  onChanged,
-}: {
-  info: AgentInfo;
-  onChanged: () => void;
-}) {
-  const admin = !!info.mcpManagement?.admin;
+export function McpConnections() {
   const { data, error, isLoading, mutate } = useSWR(
-    admin ? `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/agent/mcp` : null,
+    `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/agent/mcp`,
     readSettings,
     { shouldRetryOnError: false }
   );
@@ -48,7 +40,6 @@ export function McpConnections({
     [message, setMessage] = useState("");
   async function refresh() {
     await mutate();
-    onChanged();
   }
   async function change(server: ServerProjection, action: "delete" | "toggle") {
     if (!data || busy) {
@@ -83,26 +74,14 @@ export function McpConnections({
       setBusy(null);
     }
   }
-  const list =
-    data?.servers ??
-    info.servers.map((server) => ({
-      allowedTools: server.tools,
-      enabled: true,
-      headerNames: [],
-      id: server.id,
-      name: server.name,
-      origin: "",
-      source: server.source ?? "file",
-    }));
+  const list = data?.servers ?? [];
   return (
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-3">
         <p className="text-sm leading-6 text-muted-foreground">
-          {admin
-            ? "管理可供助手使用的外部工具。更改将在下一任务生效。"
-            : "查看助手可使用的检索和资料工具。连接由管理员管理。"}
+          管理可供助手使用的外部工具。更改将在下一任务生效。
         </p>
-        {admin && data?.configured && !editing && (
+        {data?.configured && !editing && (
           <Button
             className="shrink-0"
             disabled={!!busy}
@@ -116,7 +95,7 @@ export function McpConnections({
           </Button>
         )}
       </div>
-      {!info.mcpManagement?.configured && (
+      {data && !data.configured && (
         <p className="rounded-lg bg-secondary p-3 text-xs leading-5 text-muted-foreground">
           工具管理尚未开启，请联系管理员完成设置。现有工具仍可使用。
         </p>
@@ -165,7 +144,7 @@ export function McpConnections({
               </span>
             ))}
           </div>
-          {admin && data?.configured && server.source === "managed" && (
+          {data?.configured && server.source === "managed" && (
             <div className="mt-3 flex flex-wrap gap-2">
               <Button
                 disabled={!!busy || !!editing}
@@ -199,7 +178,7 @@ export function McpConnections({
           )}
         </div>
       ))}
-      {!list.length && (
+      {data && !list.length && (
         <p className="text-sm text-muted-foreground">暂无可用工具连接。</p>
       )}
       {!!editing && !!data && (

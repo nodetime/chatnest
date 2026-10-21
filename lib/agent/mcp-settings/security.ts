@@ -1,4 +1,5 @@
 import "server-only";
+import { isPlatformAdmin as isAdmin } from "@/lib/admin/access";
 import { sameOriginBrowserControl } from "../browser-policy";
 import { parseEncryptionKey } from "./crypto";
 import { allowedOrigins } from "./network";
@@ -10,21 +11,7 @@ export class SettingsError extends Error {
     this.status = status;
   }
 }
-const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-export function isAdmin(
-  user: { id?: string; type?: string } | null | undefined,
-  env: Environment = process.env
-) {
-  return Boolean(
-    user?.type === "regular" &&
-      user.id &&
-      uuid.test(user.id) &&
-      env.MCP_ADMIN_USER_IDS?.split(",")
-        .map((v) => v.trim())
-        .filter((v) => uuid.test(v))
-        .includes(user.id)
-  );
-}
+export { isPlatformAdmin as isAdmin } from "@/lib/admin/access";
 export function authorizeManagement(
   user: { id?: string; type?: string } | null | undefined,
   request: Request,

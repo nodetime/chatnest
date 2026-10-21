@@ -6,6 +6,7 @@ import type { User } from "next-auth";
 import { signOut, useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
 import { useCallback, useState } from "react";
+import { PlatformAdminLink } from "@/components/admin/platform-admin-link";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,7 +32,13 @@ function emailToHue(email: string): number {
   return Math.abs(hash) % 360;
 }
 
-export function SidebarUserNav({ user }: { user: User }) {
+export function SidebarUserNav({
+  user,
+  isPlatformAdmin = false,
+}: {
+  user: User;
+  isPlatformAdmin?: boolean;
+}) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const openSettings = useCallback(() => setSettingsOpen(true), []);
   const router = useRouter();
@@ -110,6 +117,11 @@ export function SidebarUserNav({ user }: { user: User }) {
                 <Settings2 className="size-4" />
                 设置
               </DropdownMenuItem>
+              {!!isPlatformAdmin && (
+                <DropdownMenuItem asChild>
+                  <PlatformAdminLink isPlatformAdmin={isPlatformAdmin} />
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem
                 className="cursor-pointer text-[13px]"
                 data-testid="user-nav-item-theme"

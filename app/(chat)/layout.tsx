@@ -7,6 +7,7 @@ import { DataStreamProvider } from "@/components/chat/data-stream-provider";
 import { ChatShell } from "@/components/chat/shell";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { ActiveChatProvider } from "@/hooks/use-active-chat";
+import { isPlatformAdmin } from "@/lib/admin/access";
 import { auth } from "../(auth)/auth";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -32,7 +33,10 @@ async function SidebarShell({ children }: { children: React.ReactNode }) {
   return (
     <ActiveChatProvider ownerId={session?.user.id}>
       <SidebarProvider defaultOpen={!isCollapsed}>
-        <AppSidebar user={session?.user} />
+        <AppSidebar
+          isPlatformAdmin={isPlatformAdmin(session?.user)}
+          user={session?.user}
+        />
         <SidebarInset>
           <Toaster
             position="top-center"

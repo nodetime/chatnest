@@ -1,13 +1,5 @@
 "use client";
-import {
-  BookOpen,
-  Check,
-  Monitor,
-  Moon,
-  Plug,
-  Settings2,
-  Sun,
-} from "lucide-react";
+import { BookOpen, Plug, Settings2 } from "lucide-react";
 import { useTheme } from "next-themes";
 import {
   type KeyboardEvent,
@@ -25,10 +17,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useAgentInfo } from "@/hooks/use-agent-info";
-import { AgentGeneralStatus } from "./agent-general-status";
-import { McpConnections } from "./mcp-connections";
-
-type Tab = "skills" | "tools" | "settings";
+import {
+  AgentLibraryPanel,
+  type AgentLibraryTab as Tab,
+} from "./agent-library-panel";
 
 export function AgentLibrary({
   tab = "skills",
@@ -55,7 +47,7 @@ export function AgentLibrary({
   const { theme, setTheme } = useTheme();
   const tabs = [
     { icon: Settings2, id: "settings" as const, label: "常规" },
-    { icon: Plug, id: "tools" as const, label: "工具连接" },
+    { icon: Plug, id: "tools" as const, label: "工具" },
     { icon: BookOpen, id: "skills" as const, label: "技能" },
   ];
   const current = tabs.find((item) => item.id === tab) ?? tabs[0];
@@ -151,10 +143,10 @@ export function AgentLibrary({
           id={`agent-panel-${activeTab}`}
           role="tabpanel"
         >
-          {!!isLoading && (
+          {activeTab !== "settings" && !!isLoading && (
             <p className="text-sm text-muted-foreground">正在加载…</p>
           )}
-          {!!error && (
+          {activeTab !== "settings" && !!error && (
             <p className="text-sm text-destructive" role="alert">
               暂时未能加载，请稍后重试。
               <button
@@ -166,71 +158,12 @@ export function AgentLibrary({
               </button>
             </p>
           )}
-          {data && activeTab === "skills" && (
-            <div className="space-y-4">
-              <p className="text-sm leading-6 text-muted-foreground">
-                按任务需要使用相关技能。
-              </p>
-              {data.skills.map((skill) => (
-                <div className="rounded-xl border p-4" key={skill.name}>
-                  <div className="mb-2 flex items-center gap-2 text-sm font-medium">
-                    <BookOpen className="size-4 shrink-0" />
-                    <span className="break-all">
-                      {skill.displayName ?? skill.name}
-                    </span>
-                    <span className="ml-auto flex shrink-0 items-center gap-1 text-xs font-normal text-muted-foreground">
-                      <Check className="size-3" />
-                      可用
-                    </span>
-                  </div>
-                  <p className="text-sm leading-6 text-muted-foreground">
-                    {skill.shortDescription ?? skill.description}
-                  </p>
-                  {!!skill.displayName && (
-                    <details className="mt-3 text-xs text-muted-foreground">
-                      <summary className="cursor-pointer">详细信息</summary>
-                      <p className="mt-2 break-all font-mono">{skill.name}</p>
-                    </details>
-                  )}
-                </div>
-              ))}
-              {!data.skills.length && <p className="text-sm">暂无可用技能。</p>}
-            </div>
-          )}
-          {data && activeTab === "tools" && (
-            <McpConnections info={data} onChanged={handleRefresh} />
-          )}
-          {data && activeTab === "settings" && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="mb-3 text-sm font-medium">外观</h3>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { icon: Sun, id: "light", label: "浅色" },
-                    { icon: Moon, id: "dark", label: "深色" },
-                    { icon: Monitor, id: "system", label: "跟随系统" },
-                  ].map(({ id, label, icon: ThemeIcon }) => (
-                    <button
-                      aria-pressed={theme === id}
-                      className={`flex items-center justify-center gap-2 rounded-xl border py-3 text-sm ${theme === id ? "border-foreground bg-secondary" : "text-muted-foreground hover:bg-secondary/50"}`}
-                      data-theme={id}
-                      key={id}
-                      onClick={handleTheme}
-                      type="button"
-                    >
-                      <ThemeIcon className="size-4" />
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <AgentGeneralStatus
-                connectionCount={data.servers.length}
-                modelConfigured={data.modelConfigured}
-                uploadsConfigured={data.uploadsConfigured}
-              />
-            </div>
-          )}
+          <AgentLibraryPanel
+            info={data}
+            onThemeChange={handleTheme}
+            tab={activeTab}
+            theme={theme}
+          />
         </div>
       </DialogContent>
     </Dialog>

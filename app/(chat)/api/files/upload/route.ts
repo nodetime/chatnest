@@ -23,7 +23,7 @@ export async function POST(request: Request) {
   }
   if (!process.env.BLOB_READ_WRITE_TOKEN) {
     return NextResponse.json(
-      { error: "图片上传尚未配置，请在设置中查看存储连接说明" },
+      { error: "图片上传尚未开启，请联系管理员配置图片存储" },
       { status: 503 }
     );
   }
