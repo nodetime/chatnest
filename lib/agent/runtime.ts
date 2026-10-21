@@ -1,16 +1,28 @@
 import { createMCPClient, type MCPClient } from "@ai-sdk/mcp";
 import { dynamicTool, type ToolSet } from "ai";
-import { readAgentConfig, resolveServerConnection } from "./config";
+import { resolveServerConnection } from "./config";
 import { normalizeMcpOutput } from "./mcp-output";
+import { abortable, closeManagedClient } from "./mcp-settings/lifecycle";
+import {
+  listNativeTools,
+  nativeRuntimeTools,
+} from "./mcp-settings/native-tools";
+import { DISCOVERY_TIMEOUT_MS, guardedFetch } from "./mcp-settings/network";
+import {
+  type RuntimeConfig,
+  readRuntimeConfig,
+  toolAlias,
+} from "./mcp-settings/runtime-config";
 import { createPortaToolError } from "./porta-error";
 import { buildSkillsPrompt, createSkillTools, discoverSkills } from "./skills";
 
 export async function createAgentRuntime(
   signal: AbortSignal,
-  connect: typeof createMCPClient = createMCPClient
+  connect: typeof createMCPClient = createMCPClient,
+  loadConfig: () => Promise<RuntimeConfig> = readRuntimeConfig
 ) {
   const [config, skills] = await Promise.all([
-    readAgentConfig(),
+    loadConfig().then((snapshot) => structuredClone(snapshot)),
     discoverSkills(),
   ]);
   const clients = new Set<MCPClient>();
@@ -21,7 +33,9 @@ export async function createAgentRuntime(
   const tools: ToolSet = { ...createSkillTools(skills) };
   const unavailable: string[] = [];
   const close = async () => {
-    await Promise.allSettled([...clients].map((client) => client.close()));
+    await Promise.allSettled(
+      [...clients].map((client) => closeManagedClient(client))
+    );
     clients.clear();
   };
 
@@ -41,33 +55,54 @@ export async function createAgentRuntime(
         }
         let client: MCPClient | undefined;
         try {
-          client = await connect({
-            transport: {
-              fetch: (input, init) =>
-                fetch(input, {
-                  ...init,
-                  // Do not let redirects evade endpoint policy or move credentials.
-                  redirect: "error",
-                  signal: AbortSignal.any([
-                    runSignal,
-                    AbortSignal.timeout(config.toolTimeoutMs),
-                    ...(init?.signal ? [init.signal] : []),
-                  ]),
-                }),
-              headers,
-              type: "http",
-              url,
-            },
-          });
+          const setupSignal = server.managed
+            ? AbortSignal.any([
+                runSignal,
+                AbortSignal.timeout(DISCOVERY_TIMEOUT_MS),
+              ])
+            : runSignal;
+          client = await abortable(
+            () =>
+              connect({
+                ...(server.managed ? { maxRetries: 0 } : {}),
+                transport: {
+                  fetch: server.managed
+                    ? guardedFetch({ headers, url }, process.env, runSignal)
+                    : (input, init) =>
+                        fetch(input, {
+                          ...init,
+                          // Do not let redirects evade endpoint policy or move credentials.
+                          redirect: "error",
+                          signal: AbortSignal.any([
+                            runSignal,
+                            AbortSignal.timeout(config.toolTimeoutMs),
+                            ...(init?.signal ? [init.signal] : []),
+                          ]),
+                        }),
+                  headers,
+                  type: "http",
+                  url,
+                },
+              }),
+            setupSignal,
+            (late) => {
+              closeManagedClient(late).catch(() => undefined);
+            }
+          );
           clients.add(client);
-          const discovered = await client.tools();
+          const discovered = server.managed
+            ? nativeRuntimeTools(
+                client,
+                await listNativeTools(client, setupSignal)
+              )
+            : await client.tools();
           runSignal.throwIfAborted();
           const serverTools: ToolSet = {};
           for (const [name, remote] of Object.entries(discovered)) {
             if (!server.allowedTools.includes(name)) {
               continue;
             }
-            const alias = `${server.id}__${name}`;
+            const alias = toolAlias(server.id, name);
             if (tools[alias]) {
               throw new Error("MCP tool alias collision");
             }
@@ -75,46 +110,63 @@ export async function createAgentRuntime(
               description: `${server.name}: ${remote.description ?? name}`,
               execute: (input, options) => {
                 runSignal.throwIfAborted();
-                return Promise.resolve(
-                  remote.execute(input, {
-                    ...options,
-                    abortSignal: AbortSignal.any([
+                return (async () => {
+                  let output: unknown;
+                  try {
+                    const callSignal = AbortSignal.any([
                       runSignal,
+                      AbortSignal.timeout(config.toolTimeoutMs),
                       ...(options.abortSignal ? [options.abortSignal] : []),
-                    ]),
-                  })
-                ).then((output) => {
+                    ]);
+                    output = await abortable(
+                      () =>
+                        remote.execute(input, {
+                          ...options,
+                          abortSignal: callSignal,
+                        }),
+                      callSignal
+                    );
+                  } catch {
+                    // SDK exceptions can contain the full URL and authorization headers.
+                    // biome-ignore lint/style/useErrorCause: Raw SDK/crypto causes may contain credentials; intentionally discard.
+                    throw new Error(`${server.name}: tool execution failed`);
+                  }
                   if (
                     output &&
                     typeof output === "object" &&
                     "isError" in output &&
                     output.isError
                   ) {
-                    if (server.id === "porta") {
-                      throw createPortaToolError(output, headers);
+                    if (server.id === "porta" && !server.managed) {
+                      throw createPortaToolError(output, {
+                        ...headers,
+                        endpoint: url,
+                      });
                     }
                     throw new Error(
                       `${server.name} 暂时未能返回结果；可能是限流或访问失败，请稍后重试。`
                     );
                   }
                   return normalizeMcpOutput(server.id, name, output);
-                });
+                })();
               },
               inputSchema: remote.inputSchema,
-              needsApproval: !server.autoApproveTools.includes(name),
+              needsApproval:
+                server.managed || !server.autoApproveTools.includes(name),
             });
           }
           Object.assign(tools, serverTools);
-        } catch (error) {
+        } catch {
           if (runSignal.aborted) {
-            throw new Error("MCP setup was cancelled", { cause: error });
+            // biome-ignore lint/style/useErrorCause: Do not retain sensitive SDK errors as a loggable cause.
+            throw new Error("MCP setup was cancelled");
           }
           unavailable.push(
             `${server.name}: connection or tool discovery failed`
           );
           if (client) {
             clients.delete(client);
-            await client.close().catch(() => undefined);
+            await closeManagedClient(client);
           }
         }
       })

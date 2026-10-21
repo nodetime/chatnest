@@ -39,7 +39,13 @@ export const agentConfigSchema = z
       .array(
         z.object({
           allowedTools: z
-            .array(z.string().regex(/^[a-zA-Z0-9_-]+$/))
+            .array(
+              z
+                .string()
+                .min(1)
+                .max(128)
+                .regex(/^[a-zA-Z0-9_.-]+$/)
+            )
             .default([]),
           autoApproveTools: z.array(z.string()).default([]),
           headers: z.record(z.string(), z.string()).default({}),

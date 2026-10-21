@@ -1,7 +1,10 @@
 import type { InferSelectModel } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   foreignKey,
+  integer,
   json,
   pgTable,
   primaryKey,
@@ -134,3 +137,21 @@ export const stream = pgTable(
 );
 
 export type Stream = InferSelectModel<typeof stream>;
+
+// One deployment is one shared workspace. All connection data lives in the encrypted list.
+export const mcpSettings = pgTable(
+  "McpSettings",
+  {
+    encrypted: text("encrypted").notNull(),
+    id: text("id").primaryKey().notNull(),
+    revision: integer("revision").notNull(),
+    updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+    updatedBy: uuid("updatedBy")
+      .notNull()
+      .references(() => user.id),
+  },
+  (table) => [
+    check("mcp_settings_singleton", sql`${table.id} = 'workspace'`),
+    check("mcp_settings_revision", sql`${table.revision} > 0`),
+  ]
+);

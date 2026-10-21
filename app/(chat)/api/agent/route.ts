@@ -1,33 +1,27 @@
 import { auth } from "@/app/(auth)/auth";
-import { readAgentConfig, resolveServerConnection } from "@/lib/agent/config";
+import { capabilityServers } from "@/lib/agent/mcp-settings/projection";
+import { readRuntimeConfig } from "@/lib/agent/mcp-settings/runtime-config";
+import { isAdmin, managementReady } from "@/lib/agent/mcp-settings/security";
 import { discoverSkills } from "@/lib/agent/skills";
 import { getModelConnection } from "@/lib/ai/model-connection";
 
 export async function GET() {
-  if (!(await auth())?.user) {
+  const user = (await auth())?.user;
+  if (!user) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
   try {
     const [config, skills] = await Promise.all([
-      readAgentConfig(),
+      readRuntimeConfig(),
       discoverSkills(),
     ]);
     return Response.json(
       {
         limits: { maxSteps: config.maxSteps, timeoutMs: config.timeoutMs },
+        mcpManagement: { admin: isAdmin(user), configured: managementReady() },
         modelConfigured: getModelConnection().configured,
         modelProvider: getModelConnection().provider,
-        servers: config.servers.map((server) => {
-          const { missing, invalid } = resolveServerConnection(server);
-          return {
-            id: server.id,
-            keyless: !Object.keys(server.headers).length,
-            missingEnvironment: missing,
-            name: server.name,
-            status: missing.length || invalid ? "not_configured" : "configured",
-            tools: server.allowedTools,
-          };
-        }),
+        servers: capabilityServers(config.servers),
         skills: skills.map(
           ({ name, description, displayName, shortDescription }) => ({
             description,

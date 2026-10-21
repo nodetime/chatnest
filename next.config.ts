@@ -49,6 +49,7 @@ const nextConfig: NextConfig = {
   },
   outputFileTracingIncludes: {
     "/api/agent": ["./config/agent.json", "./skills/**/*"],
+    "/api/agent/mcp": ["./config/agent.json"],
     "/api/chat": ["./config/agent.json", "./skills/**/*"],
   },
   poweredByHeader: false,
