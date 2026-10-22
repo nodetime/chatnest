@@ -43,3 +43,14 @@ Final honest-error review: the known native `tool-createResultTable` contract re
 Undo-history isolation review: the stable editor revealed that external/streamed replacement transactions previously entered ProseMirror history. The parent reproduced A→B artifact switching followed by Cmd-Z mutating B. Two new RED assertions reproduced missing `addToHistory: false` and missing document/version editor identity. Text editor mounts are now keyed by document/version (inline previews by document/timestamp), not content or typing; external, readonly, empty and streamed replacements are `no-save` and nonhistorical, while ordinary local edits keep their in-document undo behavior. The focused harness now covers six lifecycle/history cases. Final six-file suite: **80 passed, 0 failed**; type checking, targeted Biome and diff checks clean.
 
 Empty-editor acceptance follow-up: the actual empty ProseMirror host collapsed to zero width inside its flex renderer. A focused width-contract regression failed RED before adding only `min-w-0 w-full` to the existing editor host. Final explicit suite: **81 passed, 0 failed**; type checking, targeted Biome and diff checks clean.
+
+## 主会话最终验证（实现提交 42c64b4）
+
+- 主仓 main 重新运行显式安全套件：223/223，通过；类型检查无诊断；21 个改动 TS/TSX 文件定向格式检查通过。
+- 隔离源码副本直接 Next webpack production build 成功；未执行迁移或读取真实环境。300 个运行时代码/配置文件与主仓、预览工作树哈希一致。
+- 实际浏览器 mock 模型 + HTTP MCP：审批成功、拒绝零 MCP 调用、数据源失败、原生表格生成错误；原会话真实 SDK 空文本/元数据下两个工具归为一组。
+- 表格实测筛选、数值排序、隐藏列、折叠备注保存、版本只读、来源完整字段/焦点返回、原始行、刷新重开、CSV 当前两行及公式转义、JSON 三行原始快照。
+- 普通文档实测复制、连续中文输入/焦点保持、只读预览、自动保存/刷新重开；合成双文档切换后的撤销不再改变加载内容，正常编辑撤销仍有效；空编辑器宽度从 0 修正为可操作宽度。
+- 表格 390/1280/1440 宽度 × 明暗六种布局，文本 390/1440 两种布局无页面横向溢出；键盘过程展开及工作区切换有效。
+- 生产构建实际浏览器复验：两工具一组、表格保存状态和备注折叠、普通文档切换/撤销隔离通过，无浏览器 error 日志；临时生产 QA 服务已关闭。
+- 未验：付费供应商/真实大模型、云部署；当前本地验证使用隔离 mock 服务。视觉实现不等同于用户已认可效果。
