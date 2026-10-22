@@ -228,7 +228,7 @@ function PureEditor({
   return (
     <>
       <div
-        className="prose dark:prose-invert prose-neutral relative max-w-none"
+        className="prose dark:prose-invert prose-neutral relative min-w-0 w-full max-w-none"
         ref={containerRef}
       />
       {activeSuggestion &&

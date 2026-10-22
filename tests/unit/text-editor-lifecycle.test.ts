@@ -423,3 +423,18 @@ test("text renderer identity keys change for documents and versions, never conte
     /<Editor[\s\S]*?key=\{`\$\{document\.id\}:\$\{new Date\(document\.createdAt\)\.toISOString\(\)\}`\}/
   );
 });
+
+test("the empty text editor host retains usable width inside its flex renderer", () => {
+  const source = readFileSync("components/chat/text-editor.tsx", "utf8");
+  const hostClasses = source
+    .match(/className="([^"]*)"\s+ref=\{containerRef\}/)?.[1]
+    .split(/\s+/);
+  assert.ok(
+    hostClasses?.includes("w-full"),
+    "an empty editor must retain a full-width focus target"
+  );
+  assert.ok(
+    hostClasses?.includes("min-w-0"),
+    "editor width must remain shrinkable without page overflow"
+  );
+});
