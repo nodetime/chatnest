@@ -139,6 +139,7 @@ function PureEditor({
         );
 
         transaction.setMeta("no-save", true);
+        transaction.setMeta("addToHistory", false);
         editorRef.current.dispatch(transaction);
         return;
       }
@@ -153,6 +154,7 @@ function PureEditor({
         );
 
         transaction.setMeta("no-save", true);
+        transaction.setMeta("addToHistory", false);
         editorRef.current.dispatch(transaction);
       }
     }

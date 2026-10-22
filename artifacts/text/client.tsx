@@ -75,6 +75,7 @@ export const textArtifact = new Artifact<"text", TextArtifactMetadata>({
     },
   ],
   content: ({
+    documentId,
     mode,
     status,
     content,
@@ -110,6 +111,7 @@ export const textArtifact = new Artifact<"text", TextArtifactMetadata>({
           content={content}
           currentVersionIndex={currentVersionIndex}
           isCurrentVersion={isCurrentVersion && !isReadonly}
+          key={`${documentId ?? "init"}:${currentVersionIndex}`}
           onSaveContent={onSaveContent}
           status={status}
           suggestions={isCurrentVersion && metadata ? metadata.suggestions : []}

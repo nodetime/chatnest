@@ -300,7 +300,11 @@ const DocumentContent = ({ document }: { document: Document }) => {
       ) : isProtectedResultTable(document.content) ? (
         <p className="p-4 text-xs">结果表格格式暂不支持，原始值保持只读。</p>
       ) : document.kind === "text" ? (
-        <Editor {...commonProps} onSaveContent={handleSaveContent} />
+        <Editor
+          {...commonProps}
+          key={`${document.id}:${new Date(document.createdAt).toISOString()}`}
+          onSaveContent={handleSaveContent}
+        />
       ) : document.kind === "code" ? (
         <div className="relative flex w-full flex-1">
           <div className="absolute inset-0">

@@ -47,6 +47,8 @@ function editorFixture() {
     };
   };
   type Transaction = ReturnType<typeof transaction>;
+  const transactions: Transaction[] = [];
+  const history: string[] = [];
   const state = (doc: ReturnType<typeof document>) => ({
     doc,
     get tr() {
@@ -140,6 +142,10 @@ function editorFixture() {
         transaction: Transaction;
         onSaveContent: Props["onSaveContent"];
       }) => {
+        transactions.push(tr);
+        if (tr.docChanged && tr.getMeta("addToHistory") !== false) {
+          history.push(editorRef.current.state.doc.text);
+        }
         editorRef.current.state = state(tr.doc);
         if (tr.docChanged && !tr.getMeta("no-save")) {
           onSaveContent(tr.doc.text, true);
@@ -204,8 +210,17 @@ function editorFixture() {
       }
       previous = props;
     },
+    transactions,
     type(text: string) {
       views.at(-1)?.dispatch(transaction(text, true));
+    },
+    undo() {
+      const text = history.pop();
+      if (text !== undefined) {
+        views
+          .at(-1)
+          ?.dispatch(transaction(text, true).setMeta("addToHistory", false));
+      }
     },
     unmount() {
       for (const slot of slots) {
@@ -286,4 +301,125 @@ test("streaming status changes update readonly guards even when content stays eq
   fixture.render({ ...initial, content: "streamed text" });
   assert.equal(mounted.props.editable?.(), true);
   assert.equal(fixture.views.length, 1);
+});
+
+test("external, readonly, empty and streamed content replacements never enter undo history", () => {
+  for (const isCurrentVersion of [true, false]) {
+    const fixture = editorFixture();
+    const saved: string[] = [];
+    const initial = fixtureProps({
+      isCurrentVersion,
+      onSaveContent: (content) => saved.push(content),
+    });
+    fixture.render(initial);
+    for (const [content, status] of [
+      ["external text", "idle"],
+      ["", "idle"],
+      ["streamed text", "streaming"],
+    ] as const) {
+      fixture.render({ ...initial, content, status });
+      const replacement = fixture.transactions.findLast((tr) => tr.docChanged);
+      assert.equal(replacement?.getMeta("no-save"), true);
+      assert.equal(
+        replacement?.getMeta("addToHistory"),
+        false,
+        "external replacements must not become undoable user edits"
+      );
+      fixture.undo();
+      assert.equal(fixture.views.at(-1)?.state.doc.text, content);
+    }
+    assert.deepEqual(saved, []);
+  }
+});
+
+test("ordinary edits retain in-document undo while reconciliations remain nonhistorical", () => {
+  const fixture = editorFixture();
+  const saved: string[] = [];
+  const initial = fixtureProps({
+    onSaveContent: (content) => saved.push(content),
+  });
+  fixture.render(initial);
+  fixture.type("first edit");
+  fixture.render({ ...initial, content: "first edit" });
+  fixture.type("second edit");
+  fixture.render({ ...initial, content: "second edit" });
+  fixture.undo();
+  assert.equal(fixture.views.at(-1)?.state.doc.text, "first edit");
+  assert.deepEqual(saved, ["first edit", "second edit", "first edit"]);
+});
+
+test("text renderer identity keys change for documents and versions, never content or readonly state", () => {
+  type Element = {
+    type: unknown;
+    key?: string;
+    props: { children?: Element[] };
+  };
+  const jsx = (
+    type: unknown,
+    props: Element["props"],
+    key?: string
+  ): Element => ({ key, props, type });
+  const modules: Record<string, unknown> = {
+    "../actions": {},
+    "@/components/chat/create-artifact": {
+      Artifact: class {
+        constructor(config: unknown) {
+          Object.assign(this, config);
+        }
+      },
+    },
+    "@/components/chat/diffview": {},
+    "@/components/chat/document-skeleton": {},
+    "@/components/chat/icons": {},
+    "@/components/chat/text-editor": { Editor: "editor" },
+    "react/jsx-runtime": { jsx, jsxs: jsx },
+    sonner: { toast: {} },
+  };
+  const output = {
+    exports: {} as {
+      textArtifact: { content: (props: Record<string, unknown>) => Element };
+    },
+  };
+  const compiled = ts.transpileModule(
+    readFileSync("artifacts/text/client.tsx", "utf8"),
+    {
+      compilerOptions: {
+        jsx: ts.JsxEmit.ReactJSX,
+        module: ts.ModuleKind.CommonJS,
+      },
+    }
+  );
+  runInNewContext(compiled.outputText, {
+    exports: output.exports,
+    module: output,
+    require: (name: string) => {
+      assert.ok(name in modules);
+      return modules[name];
+    },
+  });
+  const initial = {
+    content: "initial",
+    currentVersionIndex: 0,
+    documentId: "document-a",
+    isCurrentVersion: true,
+    isReadonly: false,
+    mode: "edit",
+    status: "idle",
+  };
+  const editorKey = (overrides = {}) =>
+    output.exports.textArtifact
+      .content({ ...initial, ...overrides })
+      .props.children?.find((node) => node?.type === "editor")?.key;
+  const original = editorKey();
+  assert.ok(original, "text Editor must have a document/version identity key");
+  assert.equal(editorKey({ content: "edited text" }), original);
+  assert.equal(editorKey({ content: "" }), original);
+  assert.equal(editorKey({ isReadonly: true }), original);
+  assert.notEqual(editorKey({ documentId: "document-b" }), original);
+  assert.notEqual(editorKey({ currentVersionIndex: 1 }), original);
+  const preview = readFileSync("components/chat/document-preview.tsx", "utf8");
+  assert.match(
+    preview,
+    /<Editor[\s\S]*?key=\{`\$\{document\.id\}:\$\{new Date\(document\.createdAt\)\.toISOString\(\)\}`\}/
+  );
 });
