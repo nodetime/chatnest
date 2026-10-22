@@ -14,7 +14,7 @@
 
 Files: new focused presentation helper/group component under `components/chat/`; modify `messages.tsx`, `message.tsx`, `tool-activity.tsx`; tests `tests/unit/activity-groups.test.ts`, existing `workbench-ui.test.ts` where expectations intentionally change.
 
-- [ ] Add failing pure tests for adjacent tool-only messages, mixed parts, user/text/reasoning/source/artifact boundaries, approval-responded denial, unfinished idle calls and aggregate state. Verify failure with `env -i PATH="$PATH" HOME="$HOME" NODE_ENV=test corepack pnpm exec tsx --conditions=react-server --test tests/unit/activity-groups.test.ts`.
+- [ ] Add failing pure tests for adjacent tool-only messages, mixed parts, user/text/reasoning/source/artifact boundaries, approval-responded denial, unfinished idle calls and aggregate state. Include same-status appended approval/failure event identities, pending-approval priority, and unchanged-event manual-choice retention. Verify failure with `env -i PATH="$PATH" HOME="$HOME" NODE_ENV=test corepack pnpm exec tsx --conditions=react-server --test tests/unit/activity-groups.test.ts`.
 - [ ] Implement focused pure projections retaining message/part references and IDs. Exclude existing special renderers. Add compact disclosure group with real counts/status, timeline children and state-transition/manual-choice preservation. Keep approvals/errors visible, preserve raw details and readonly.
 - [ ] Integrate without changing canonical message state, regeneration/votes or tool dispatch. Avoid nested collapsible selectors rotating unrelated icons. Test rendering and transitions; run explicit unit files and type check.
 
