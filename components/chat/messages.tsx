@@ -6,6 +6,8 @@ import { prepareRegeneration } from "@/lib/agent/message-turn";
 import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { ActivityGroup } from "./activity-group";
+import { groupActivityMessages } from "./activity-groups";
 import { useDataStream } from "./data-stream-provider";
 import { Greeting } from "./greeting";
 import { PreviewMessage, ThinkingMessage } from "./message";
@@ -66,6 +68,37 @@ function PureMessages({
     scrollToBottom("smooth");
   }, [scrollToBottom]);
 
+  const renderMessage = (
+    message: ChatMessage,
+    index: number,
+    hideActivities = false
+  ) => (
+    <PreviewMessage
+      addToolApprovalResponse={addToolApprovalResponse}
+      chatId={chatId}
+      hideActivities={hideActivities}
+      isLoading={status === "streaming" && messages.length - 1 === index}
+      isReadonly={isReadonly}
+      key={message.id}
+      message={message}
+      onEdit={onEditMessage}
+      onRegenerate={
+        index === messages.length - 1 &&
+        status !== "submitted" &&
+        status !== "streaming" &&
+        prepareRegeneration(messages, messages.at(-2)?.id ?? "")
+          ? onRegenerateAnswer
+          : undefined
+      }
+      regenerate={regenerate}
+      requiresScrollPadding={hasSentMessage && index === messages.length - 1}
+      setMessages={setMessages}
+      vote={
+        votes ? votes.find((vote) => vote.messageId === message.id) : undefined
+      }
+    />
+  );
+
   return (
     <div className="relative flex-1 bg-background">
       {messages.length === 0 && !isLoading && (
@@ -82,37 +115,28 @@ function PureMessages({
         style={isArtifactVisible ? { scrollbarWidth: "none" } : undefined}
       >
         <div className="mx-auto flex min-h-full min-w-0 max-w-[800px] flex-col gap-5 px-4 py-6 sm:px-6 md:gap-6">
-          {messages.map((message, index) => (
-            <PreviewMessage
-              addToolApprovalResponse={addToolApprovalResponse}
-              chatId={chatId}
-              isLoading={
-                status === "streaming" && messages.length - 1 === index
-              }
-              isReadonly={isReadonly}
-              key={message.id}
-              message={message}
-              onEdit={onEditMessage}
-              onRegenerate={
-                index === messages.length - 1 &&
-                status !== "submitted" &&
-                status !== "streaming" &&
-                prepareRegeneration(messages, messages.at(-2)?.id ?? "")
-                  ? onRegenerateAnswer
-                  : undefined
-              }
-              regenerate={regenerate}
-              requiresScrollPadding={
-                hasSentMessage && index === messages.length - 1
-              }
-              setMessages={setMessages}
-              vote={
-                votes
-                  ? votes.find((vote) => vote.messageId === message.id)
-                  : undefined
-              }
-            />
-          ))}
+          {groupActivityMessages(messages).map((group) =>
+            group.kind === "message" ? (
+              renderMessage(group.message, group.index)
+            ) : (
+              <ActivityGroup
+                approve={addToolApprovalResponse}
+                isReadonly={isReadonly}
+                isRunning={
+                  status === "streaming" &&
+                  group.messages.at(-1)?.index === messages.length - 1
+                }
+                key={group.key}
+                parts={group.parts}
+              >
+                <div className="space-y-1 pl-4">
+                  {group.messages.map(({ message, index }) =>
+                    renderMessage(message, index, true)
+                  )}
+                </div>
+              </ActivityGroup>
+            )
+          )}
 
           {status === "submitted" && messages.at(-1)?.role !== "assistant" && (
             <ThinkingMessage />

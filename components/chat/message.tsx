@@ -14,6 +14,8 @@ import {
   ToolInput,
   ToolOutput,
 } from "../ai-elements/tool";
+import { ActivityGroup } from "./activity-group";
+import { groupActivityParts } from "./activity-groups";
 import { useDataStream } from "./data-stream-provider";
 import { DocumentToolResult } from "./document";
 import { DocumentPreview } from "./document-preview";
@@ -95,6 +97,7 @@ const PurePreviewMessage = ({
   requiresScrollPadding: _requiresScrollPadding,
   onEdit,
   onRegenerate,
+  hideActivities = false,
 }: {
   addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
   chatId: string;
@@ -107,6 +110,7 @@ const PurePreviewMessage = ({
   requiresScrollPadding: boolean;
   onEdit?: (message: ChatMessage) => void;
   onRegenerate?: () => void;
+  hideActivities?: boolean;
 }) => {
   const attachmentsFromMessage = message.parts.filter(
     (part) => part.type === "file"
@@ -161,7 +165,7 @@ const PurePreviewMessage = ({
     { isStreaming: false, rendered: false, text: "" }
   ) ?? { isStreaming: false, rendered: false, text: "" };
 
-  const parts = message.parts?.map((part, index) => {
+  const renderPart = (part: ChatMessage["parts"][number], index: number) => {
     const { type } = part;
     const key = `message-${message.id}-part-${index}`;
 
@@ -404,7 +408,22 @@ const PurePreviewMessage = ({
       );
     }
     return null;
-  });
+  };
+  const parts = groupActivityParts(message.parts).map((group) =>
+    group.kind === "activity" ? (
+      hideActivities ? null : (
+        <ActivityGroup
+          approve={addToolApprovalResponse}
+          isReadonly={isReadonly}
+          isRunning={isLoading}
+          key={group.key}
+          parts={group.parts}
+        />
+      )
+    ) : (
+      renderPart(group.part, group.index)
+    )
+  );
 
   const actions = !isReadonly && (
     <MessageActions

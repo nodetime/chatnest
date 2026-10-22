@@ -8,6 +8,7 @@ export const imageArtifact = new Artifact({
     {
       description: "上一版本",
       icon: <UndoIcon size={18} />,
+      id: "previous-version",
       isDisabled: ({ currentVersionIndex }) => {
         if (currentVersionIndex === 0) {
           return true;
@@ -22,6 +23,7 @@ export const imageArtifact = new Artifact({
     {
       description: "下一版本",
       icon: <RedoIcon size={18} />,
+      id: "next-version",
       isDisabled: ({ isCurrentVersion }) => {
         if (isCurrentVersion) {
           return true;

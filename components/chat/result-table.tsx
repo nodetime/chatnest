@@ -174,17 +174,10 @@ export function ResultTableView({
       data-testid="result-table"
     >
       {!inline && (
-        <div className="shrink-0 space-y-1.5 border-b border-border/50 px-3 py-2">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex min-w-0 items-center gap-2">
-              <span className="text-xs tabular-nums text-muted-foreground">
-                {rows.length} / {table.rows.length} 行
-              </span>
-            </div>
-            <span className="text-[11px] text-muted-foreground">
-              源数据只读
-            </span>
-          </div>
+        <div
+          className="shrink-0 border-b border-border/50 px-3 py-2"
+          data-testid="result-table-toolbar"
+        >
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative min-w-0 basis-36 flex-1">
               <ListFilter className="absolute top-2.5 left-2.5 size-3.5 text-muted-foreground" />
@@ -221,37 +214,44 @@ export function ResultTableView({
                 ))}
               </div>
             </details>
-            <Button
-              className="h-8 gap-1 px-2.5 text-xs"
-              onClick={() =>
-                download(
-                  "results.csv",
-                  `\uFEFF${resultCsv(table, view)}`,
-                  "text/csv;charset=utf-8"
-                )
-              }
-              size="sm"
-              variant="outline"
-            >
-              <Download className="size-3.5" />
-              CSV
-            </Button>
-            <Button
-              className="h-8 px-2.5 text-xs"
-              onClick={() =>
-                download(
-                  "results.json",
-                  JSON.stringify(table, null, 2),
-                  "application/json"
-                )
-              }
-              size="sm"
-              variant="outline"
-            >
-              JSON
-            </Button>
+            <details className="relative">
+              <summary className="flex h-8 cursor-pointer list-none items-center gap-1.5 rounded-md border px-2.5 text-xs focus-visible:outline-2 focus-visible:outline-ring">
+                <Download className="size-3.5" />
+                导出
+              </summary>
+              <div className="absolute right-0 top-10 z-20 flex w-48 flex-col gap-1 rounded-lg border bg-popover p-1.5 shadow-md">
+                <Button
+                  className="h-8 gap-1 px-2.5 text-xs"
+                  onClick={() =>
+                    download(
+                      "results.csv",
+                      `\uFEFF${resultCsv(table, view)}`,
+                      "text/csv;charset=utf-8"
+                    )
+                  }
+                  size="sm"
+                  variant="outline"
+                >
+                  <Download className="size-3.5" />
+                  CSV · 当前视图
+                </Button>
+                <Button
+                  className="h-8 px-2.5 text-xs"
+                  onClick={() =>
+                    download(
+                      "results.json",
+                      JSON.stringify(table, null, 2),
+                      "application/json"
+                    )
+                  }
+                  size="sm"
+                  variant="outline"
+                >
+                  JSON · 原始快照
+                </Button>
+              </div>
+            </details>
           </div>
-          <ResultTableSource source={table.source} />
         </div>
       )}
       <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
@@ -291,19 +291,30 @@ export function ResultTableView({
       </div>
       {!inline && (
         <div className="shrink-0 space-y-1 border-t border-border/50 px-3 py-2">
-          <Collapsible defaultOpen={Boolean(table.notes)}>
-            <CollapsibleTrigger asChild>
-              <Button
-                className="group h-7 max-w-full gap-1.5 px-0 text-xs hover:bg-transparent"
-                variant="ghost"
-              >
-                <ChevronDown className="size-3.5 shrink-0 transition-transform group-data-[state=closed]:-rotate-90" />
-                个人备注
-                <span className="truncate font-normal text-muted-foreground">
-                  · 与原始数据分开保存
+          <Collapsible defaultOpen={false}>
+            <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1">
+              <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+                <span className="shrink-0 tabular-nums">
+                  {rows.length} / {table.rows.length} 行
                 </span>
-              </Button>
-            </CollapsibleTrigger>
+                <span className="shrink-0">源数据只读</span>
+                <ResultTableSource source={table.source} />
+              </div>
+              <CollapsibleTrigger asChild>
+                <Button
+                  className="group h-7 max-w-full gap-1.5 px-0 text-xs hover:bg-transparent"
+                  variant="ghost"
+                >
+                  <ChevronDown className="size-3.5 shrink-0 transition-transform group-data-[state=closed]:-rotate-90" />
+                  个人备注
+                  {!!notes && (
+                    <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-normal text-muted-foreground">
+                      已有备注
+                    </span>
+                  )}
+                </Button>
+              </CollapsibleTrigger>
+            </div>
             <CollapsibleContent className="pt-1 pb-2">
               <Textarea
                 aria-label="个人备注"
@@ -336,7 +347,7 @@ export function ResultTableView({
               </p>
             ) : (
               <p className="min-w-0 flex-1 text-[11px] text-muted-foreground">
-                点击行查看原始字段。CSV 为当前视图，JSON 保留完整快照。
+                点击行查看原始字段 · CSV 为当前视图，JSON 保留完整快照。
               </p>
             )}
             {!readOnly && (

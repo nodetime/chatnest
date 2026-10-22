@@ -46,7 +46,7 @@ for (const [name, input, output, title] of [
     "fixture__search",
     { query: "fixture query" },
     { title: "来源只在详情中", url: "https://example.test/source" },
-    "搜索网页",
+    "搜索资料",
   ],
   ["fixture__custom_alias", {}, {}, "执行工具"],
 ] as const) {
@@ -314,8 +314,8 @@ test("result workspace shows only compact source identity and a details entry, w
     /fixture__raw_alias_only_in_details|fixture-call-id-only-in-details|fixture-server-id|2026-10-21T12:00:00.000Z|结果表格/
   );
   assert.match(html, /aria-label="筛选结果"/);
-  assert.match(html, />CSV</);
-  assert.match(html, />JSON</);
+  assert.match(html, /CSV · 当前视图/);
+  assert.match(html, /JSON · 原始快照/);
 });
 
 test("source Sheet details retain every original source field and explain both time bases", () => {
@@ -355,7 +355,7 @@ test("empty notes start closed while independent save and status remain reachabl
   assert.match(html, /保存视图与备注/);
   assert.match(html, /CSV 为当前视图/);
   const source = readFileSync("components/chat/result-table.tsx", "utf8");
-  assert.match(source, /defaultOpen=\{Boolean\(table\.notes\)\}/);
+  assert.match(source, /defaultOpen=\{false\}/);
   const contentEnd = source.indexOf("</CollapsibleContent>");
   const saveButton = source.indexOf("<Save className");
   assert.ok(contentEnd > 0 && saveButton > contentEnd);
@@ -371,14 +371,14 @@ test("empty notes start closed while independent save and status remain reachabl
   assert.match(source, /await onSaved\?\.\(body\[0\]\.content\)/);
 });
 
-test("saved notes start open and readonly history retains notes without save mutation controls", () => {
+test("saved notes start closed with discoverable indicator and readonly history has no save controls", () => {
   const html = renderResultTable("fixture saved notes");
-  assert.match(html, /aria-expanded="true"/);
-  assert.match(html, /<textarea/);
-  assert.match(html, /fixture saved notes/);
+  assert.match(html, /aria-expanded="false"/);
+  assert.doesNotMatch(html, /<textarea/);
+  assert.match(html, /已有备注/);
   const historical = renderResultTable("fixture historical notes", true);
-  assert.match(historical, /<textarea[^>]*disabled=""/);
-  assert.match(historical, /fixture historical notes/);
+  assert.match(historical, /已有备注/);
+  assert.doesNotMatch(historical, /<textarea/);
   assert.doesNotMatch(historical, /保存视图与备注/);
   const sheet = readFileSync("artifacts/sheet/client.tsx", "utf8");
   assert.match(sheet, /readOnly=\{isReadonly \|\| !isCurrentVersion\}/);
@@ -386,7 +386,7 @@ test("saved notes start open and readonly history retains notes without save mut
 
 test("workspace keeps tabs, keyboard and resize semantics within a restrained desktop surface", () => {
   const workspace = readFileSync("components/chat/workspace.tsx", "utf8");
-  for (const title of ["浏览器", "文档", "来源"]) {
+  for (const title of ["浏览器", "产物", "来源"]) {
     assert.ok(workspace.includes(`title: "${title}"`));
   }
   assert.match(workspace, /md:rounded-\[12px\]/);
@@ -410,7 +410,7 @@ test("embedded artifact keeps the real single title and a shrinkable result-cont
     /isProtectedResultTable\(artifact\.content\)[\s\S]*?"flex overflow-hidden"\s*:\s*"overflow-y-auto"/
   );
   assert.match(artifact, /relative min-h-0 min-w-0 flex-1/);
-  assert.equal(artifact.match(/className="h-5 px-1.5"/g)?.length, 2);
+  assert.doesNotMatch(artifact, /className="h-5 px-1.5"/);
   const result = readFileSync("components/chat/result-table.tsx", "utf8");
   assert.match(result, /flex h-full w-full min-h-0 min-w-0 flex-col/);
   assert.match(result, /min-h-0 min-w-0 flex-1/);
@@ -482,10 +482,11 @@ test("artifact lifecycle is Chinese and relative dates use the installed Chinese
     source,
     /formatDistance\([\s\S]*?addSuffix: true,[\s\S]*?locale: zhCN/
   );
-  assert.match(
+  assert.doesNotMatch(
     source,
     /第\{currentVersionIndex \+ 1\}\/\{documents.length\}版/
   );
+  assert.match(source, /documents && documents.length > 1 && \(/);
   assert.doesNotMatch(source, /Saving\.\.\.|Updated \$|Generating\.\.\./);
 });
 
@@ -658,4 +659,69 @@ test("artifact diff selection uses a stable action ID independent of translated 
     text,
     /description: "查看更改",\s+icon: <ClockRewind[^\n]+\s+id: "view-changes"/
   );
+});
+
+test("generic artifact header and preview expose all four type labels without changing renderers", () => {
+  const html = clientScript(`
+    const React = require('react');
+    const { renderToStaticMarkup } = require('react-dom/server');
+    const { ArtifactTypeLabel } = require('./components/chat/artifact-type-label.tsx');
+    process.stdout.write(['text','code','image','sheet'].map(kind => renderToStaticMarkup(React.createElement(ArtifactTypeLabel, {kind}))).join(''));
+  `);
+  for (const label of ["文本", "代码", "图片", "表格"]) {
+    assert.ok(html.includes(label));
+  }
+  for (const file of ["artifact.tsx", "document-preview.tsx"]) {
+    assert.match(
+      readFileSync(`components/chat/${file}`, "utf8"),
+      /<ArtifactTypeLabel kind=/
+    );
+  }
+  assert.match(
+    renderActivity({ ...success, toolName: "createResultTable" }),
+    /生成表格产物/
+  );
+});
+
+test("execution timeline has one natural-width summary and real tool count; approvals stay actionable", () => {
+  const html = clientScript(`
+    const React = require('react');
+    const { renderToStaticMarkup } = require('react-dom/server');
+    const { SWRConfig } = require('swr');
+    const { ActivityGroup } = require('./components/chat/activity-group.tsx');
+    global.fetch = () => { throw new Error('Unexpected network'); };
+    const part = ${JSON.stringify(success)};
+    const parts = [part, {...part, toolCallId:'pending', state:'approval-requested', approval:{id:'approval-original'}}];
+    process.stdout.write(renderToStaticMarkup(React.createElement(SWRConfig, {value:{provider:()=>new Map(),revalidateOnMount:false}}, React.createElement(ActivityGroup, {parts, approve:()=>{}, isReadonly:false}))));
+  `);
+  assert.match(html, /执行过程/);
+  assert.match(html, /2 次调用/);
+  assert.match(html, /等待确认/);
+  assert.match(html, /允许执行/);
+  assert.match(html, /data-testid="activity-timeline"/);
+  assert.doesNotMatch(html, /group-data-\[state=open\]:rotate-180/);
+});
+
+test("artifact header actions have accessible names and version navigation has a single home", () => {
+  const actions = readFileSync("components/chat/artifact-actions.tsx", "utf8");
+  assert.match(actions, /aria-label=\{action.description\}/);
+  assert.match(actions, /layout === "header"/);
+  assert.match(actions, /previous-version/);
+  assert.match(actions, /next-version/);
+  const artifact = readFileSync("components/chat/artifact.tsx", "utf8");
+  assert.match(artifact, /layout="header"/);
+  assert.doesNotMatch(artifact, /artifactActions=\{/);
+});
+
+test("an idle approved call without output is unfinished, not still executing", () => {
+  const html = renderActivity({
+    ...success,
+    approval: { approved: true, id: "approved-id" },
+    output: undefined,
+    state: "approval-responded",
+  });
+  assert.match(html, /未完成/);
+  assert.match(html, /本轮没有收到执行结果/);
+  assert.match(html, /aria-expanded="true"/);
+  assert.doesNotMatch(html, /允许执行/);
 });

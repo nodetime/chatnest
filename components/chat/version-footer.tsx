@@ -99,7 +99,7 @@ export const VersionFooter = ({
   return (
     <motion.div
       animate={{ opacity: 1 }}
-      className="z-50 flex w-full shrink-0 items-center justify-between gap-3 border-t border-border/50 bg-background px-4 py-3"
+      className="z-10 flex w-full shrink-0 flex-wrap items-center justify-between gap-2 border-t border-border/50 bg-background px-3 py-2"
       exit={{ opacity: 0, transition: { duration: 0 } }}
       initial={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
@@ -129,42 +129,48 @@ export const VersionFooter = ({
           </button>
         </div>
 
-        <button
-          aria-label="查看更改"
-          className={cn(
-            "flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
-            mode === "diff" && "bg-muted text-foreground"
-          )}
-          onClick={handleToggleMode}
-          title="查看更改"
-          type="button"
-        >
-          <DiffIcon className="size-4" />
-        </button>
+        {!isLast && !protectedTable && (
+          <button
+            aria-label="查看更改"
+            className={cn(
+              "flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+              mode === "diff" && "bg-muted text-foreground"
+            )}
+            onClick={handleToggleMode}
+            title="查看更改"
+            type="button"
+          >
+            <DiffIcon className="size-4" />
+          </button>
+        )}
       </div>
 
-      <div className="flex flex-row gap-2">
-        <button
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-foreground px-3 py-1.5 text-sm font-medium text-background transition-all duration-150 hover:opacity-90 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50"
-          disabled={isMutating || isReadonly || protectedTable}
-          onClick={handleRestore}
-          type="button"
-        >
-          恢复此版本
-          {isMutating ? (
-            <div className="animate-spin">
-              <LoaderIcon size={14} />
-            </div>
-          ) : null}
-        </button>
-        <button
-          className="inline-flex items-center justify-center rounded-lg border border-border px-3 py-1.5 text-sm font-medium transition-all duration-150 hover:bg-muted active:scale-[0.98]"
-          onClick={handleLatest}
-          type="button"
-        >
-          最新版本
-        </button>
-      </div>
+      {!isLast && (
+        <div className="flex flex-wrap gap-2">
+          {!protectedTable && (
+            <button
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-foreground px-3 py-1.5 text-sm font-medium text-background transition-all duration-150 hover:opacity-90 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50"
+              disabled={isMutating || isReadonly || protectedTable}
+              onClick={handleRestore}
+              type="button"
+            >
+              恢复此版本
+              {isMutating ? (
+                <div className="animate-spin">
+                  <LoaderIcon size={14} />
+                </div>
+              ) : null}
+            </button>
+          )}
+          <button
+            className="inline-flex items-center justify-center rounded-lg border border-border px-3 py-1.5 text-sm font-medium transition-all duration-150 hover:bg-muted active:scale-[0.98]"
+            onClick={handleLatest}
+            type="button"
+          >
+            最新版本
+          </button>
+        </div>
+      )}
     </motion.div>
   );
 };

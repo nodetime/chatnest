@@ -20,6 +20,7 @@ import { openArtifactPreview } from "@/lib/artifacts/stream-state";
 import type { Document } from "@/lib/db/schema";
 import { cn, fetcher } from "@/lib/utils";
 import type { ArtifactKind, UIArtifact } from "./artifact";
+import { ArtifactTypeLabel } from "./artifact-type-label";
 import { CodeEditor } from "./code-editor";
 import { documentPreviewLayout } from "./document-preview-layout";
 import { InlineDocumentSkeleton } from "./document-skeleton";
@@ -94,7 +95,7 @@ export function DocumentPreview({
           <DocumentHeader isStreaming={true} kind={kind} title={title} />
         ) : (
           <div className="flex flex-row items-center justify-between gap-2 rounded-t-2xl border border-b-0 border-border/50 px-4 py-3 dark:bg-muted">
-            <div className="flex flex-row items-center gap-2.5">
+            <div className="flex min-w-0 flex-row items-center gap-2.5">
               <div className="size-3.5 animate-pulse rounded bg-muted-foreground/15" />
               <div className="h-3.5 w-24 animate-pulse rounded bg-muted-foreground/15" />
             </div>
@@ -145,7 +146,7 @@ export function DocumentPreview({
 const LoadingSkeleton = ({ artifactKind }: { artifactKind: ArtifactKind }) => (
   <div className="w-full max-w-[450px]">
     <div className="flex flex-row items-center justify-between gap-2 rounded-t-2xl border border-b-0 border-border/50 px-4 py-3 dark:bg-muted">
-      <div className="flex flex-row items-center gap-2.5">
+      <div className="flex min-w-0 flex-row items-center gap-2.5">
         <div className="size-3.5 animate-pulse rounded bg-muted-foreground/15" />
         <div className="h-3.5 w-24 animate-pulse rounded bg-muted-foreground/15" />
       </div>
@@ -192,7 +193,7 @@ const PureHitboxLayer = ({
 
   return (
     <button
-      aria-label={`打开文档：${result?.title ?? "文档"}`}
+      aria-label={`打开产物：${result?.title ?? "产物"}`}
       className="absolute top-0 left-0 z-10 size-full rounded-xl"
       data-testid="document-preview"
       onClick={handleClick}
@@ -225,7 +226,7 @@ const PureDocumentHeader = ({
   isStreaming: boolean;
 }) => (
   <div className="flex flex-row items-center justify-between gap-2 rounded-t-2xl border border-b-0 border-border/50 px-4 py-3 dark:bg-muted">
-    <div className="flex flex-row items-center gap-2.5">
+    <div className="flex min-w-0 flex-row items-center gap-2.5">
       <div className="text-muted-foreground">
         {isStreaming ? (
           <div className="animate-spin">
@@ -239,7 +240,8 @@ const PureDocumentHeader = ({
           <FileIcon size={14} />
         )}
       </div>
-      <div className="text-sm font-medium">{title}</div>
+      <ArtifactTypeLabel kind={kind} />
+      <div className="min-w-0 truncate text-sm font-medium">{title}</div>
     </div>
     <div className="w-8" />
   </div>
@@ -247,6 +249,9 @@ const PureDocumentHeader = ({
 
 const DocumentHeader = memo(PureDocumentHeader, (prevProps, nextProps) => {
   if (prevProps.title !== nextProps.title) {
+    return false;
+  }
+  if (prevProps.kind !== nextProps.kind) {
     return false;
   }
   if (prevProps.isStreaming !== nextProps.isStreaming) {

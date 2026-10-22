@@ -11,6 +11,7 @@ import {
 
 type ArtifactActionsProps = {
   artifact: UIArtifact;
+  layout?: "toolbar" | "header";
   handleVersionChange: (type: "next" | "prev" | "toggle" | "latest") => void;
   currentVersionIndex: number;
   isCurrentVersion: boolean;
@@ -25,8 +26,10 @@ function ArtifactActionButton({
   disabled,
   isActive,
   setIsLoading,
+  layout,
 }: {
   action: ArtifactAction;
+  layout: "toolbar" | "header";
   actionContext: ArtifactActionContext;
   disabled: boolean;
   isActive: boolean;
@@ -48,8 +51,12 @@ function ArtifactActionButton({
     <Tooltip>
       <TooltipTrigger asChild>
         <button
+          aria-label={action.description}
           className={cn(
-            "flex items-center justify-center rounded-full p-3 text-muted-foreground transition-all duration-150",
+            "flex items-center justify-center text-muted-foreground transition-all duration-150 focus-visible:outline-2 focus-visible:outline-ring",
+            layout === "header"
+              ? "size-8 rounded-md hover:bg-muted [&_svg]:size-4"
+              : "rounded-full p-3",
             "hover:text-foreground",
             "active:scale-95",
             "disabled:pointer-events-none disabled:opacity-30",
@@ -79,6 +86,7 @@ function PureArtifactActions({
   mode,
   metadata,
   setMetadata,
+  layout = "toolbar",
 }: ArtifactActionsProps) {
   const [isLoading, setIsLoading] = useState(false);
 
@@ -101,26 +109,38 @@ function PureArtifactActions({
   };
 
   return (
-    <div className="flex flex-col items-center gap-0.5">
-      {artifactDefinition.actions.map((action) => {
-        const disabled =
-          isLoading || artifact.status === "streaming"
-            ? true
-            : action.isDisabled
-              ? action.isDisabled(actionContext)
-              : false;
+    <div
+      className={cn(
+        "flex items-center gap-0.5",
+        layout === "header" ? "shrink-0" : "flex-col"
+      )}
+    >
+      {artifactDefinition.actions
+        .filter(
+          (action) =>
+            layout !== "header" ||
+            !["previous-version", "next-version"].includes(action.id ?? "")
+        )
+        .map((action) => {
+          const disabled =
+            isLoading || artifact.status === "streaming"
+              ? true
+              : action.isDisabled
+                ? action.isDisabled(actionContext)
+                : false;
 
-        return (
-          <ArtifactActionButton
-            action={action}
-            actionContext={actionContext}
-            disabled={disabled}
-            isActive={isArtifactActionActive(action, mode)}
-            key={action.id ?? action.description}
-            setIsLoading={setIsLoading}
-          />
-        );
-      })}
+          return (
+            <ArtifactActionButton
+              action={action}
+              actionContext={actionContext}
+              disabled={disabled}
+              isActive={isArtifactActionActive(action, mode)}
+              key={action.id ?? action.description}
+              layout={layout}
+              setIsLoading={setIsLoading}
+            />
+          );
+        })}
     </div>
   );
 }
@@ -128,6 +148,12 @@ function PureArtifactActions({
 export const ArtifactActions = memo(
   PureArtifactActions,
   (prevProps, nextProps) => {
+    if (
+      prevProps.layout !== nextProps.layout ||
+      prevProps.artifact.kind !== nextProps.artifact.kind
+    ) {
+      return false;
+    }
     if (prevProps.artifact.status !== nextProps.artifact.status) {
       return false;
     }

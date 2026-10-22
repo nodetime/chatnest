@@ -37,7 +37,8 @@ export type ToolHeaderProps = {
   statusLabel?: string;
   className?: string;
   icon?: ReactNode;
-  appearance?: "default" | "compact";
+  appearance?: "default" | "compact" | "timeline";
+  context?: string;
 } & (
   | { type: ToolUIPart["type"]; state: ToolUIPart["state"]; toolName?: never }
   | {
@@ -83,12 +84,14 @@ export const ToolHeader = ({
   toolName,
   icon,
   appearance = "default",
+  context,
   ...props
 }: ToolHeaderProps) => {
   const derivedName =
     type === "dynamic-tool" ? toolName : type.split("-").slice(1).join("-");
 
-  const compact = appearance === "compact";
+  const timeline = appearance === "timeline";
+  const compact = appearance !== "default";
   const attention =
     state === "approval-requested" ||
     state === "output-error" ||
@@ -97,7 +100,8 @@ export const ToolHeader = ({
   return (
     <CollapsibleTrigger
       className={cn(
-        "flex w-full min-w-0 items-center justify-between gap-3 px-3 text-left",
+        "flex min-w-0 items-center gap-3 px-3 text-left [&[data-state=open]>svg:last-child]:rotate-180",
+        timeline ? "w-fit max-w-full" : "w-full justify-between",
         compact
           ? "h-9 gap-2 rounded-xl text-[13px] hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-ring"
           : "py-2.5",
@@ -105,7 +109,9 @@ export const ToolHeader = ({
       )}
       {...props}
     >
-      <div className="flex min-w-0 flex-1 items-center gap-2">
+      <div
+        className={cn("flex min-w-0 items-center gap-2", !timeline && "flex-1")}
+      >
         {icon ?? (
           <WrenchIcon className="size-4 shrink-0 text-muted-foreground" />
         )}
@@ -120,6 +126,14 @@ export const ToolHeader = ({
           {title ?? derivedName}
         </span>
       </div>
+      {timeline && context && (
+        <span
+          className="min-w-0 max-w-72 truncate text-xs font-normal text-muted-foreground"
+          title={context}
+        >
+          {context}
+        </span>
+      )}
       {compact ? (
         <span
           className={cn(
@@ -135,7 +149,7 @@ export const ToolHeader = ({
       ) : (
         <span className="shrink-0">{getStatusBadge(state, statusLabel)}</span>
       )}
-      <ChevronDownIcon className="size-3.5 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+      <ChevronDownIcon className="size-3.5 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none" />
     </CollapsibleTrigger>
   );
 };

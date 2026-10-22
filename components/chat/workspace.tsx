@@ -20,7 +20,7 @@ import { ConversationSources } from "./conversation-sources";
 
 const tabs = [
   { icon: Monitor, id: "browser", title: "浏览器" },
-  { icon: FileText, id: "document", title: "文档" },
+  { icon: FileText, id: "document", title: "产物" },
   { icon: Globe, id: "sources", title: "来源" },
 ] as const;
 
@@ -257,9 +257,10 @@ export function Workspace({ children }: { children: ReactNode }) {
           {artifact.documentId === "init" ? (
             <div className="flex h-full flex-col items-center justify-center px-8 text-center">
               <FileText className="mb-4 size-8 text-muted-foreground/50" />
-              <h2 className="text-sm font-medium">还没有打开文档</h2>
+              <h2 className="text-sm font-medium">还没有打开产物</h2>
               <p className="mt-3 max-w-xs text-sm leading-7 text-muted-foreground">
-                让 Agent 创建文档，或点击对话里的文档卡片，在这里查看和编辑。
+                让 Agent
+                创建文本、代码、图片或表格，点击对话里的产物卡片在这里查看。
               </p>
             </div>
           ) : (

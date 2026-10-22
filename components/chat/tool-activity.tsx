@@ -22,6 +22,7 @@ import {
   ToolOutput,
   type ToolPart,
 } from "../ai-elements/tool";
+import { activityDisplayState } from "./activity-groups";
 import {
   initialToolDisclosure,
   reconcileToolDisclosure,
@@ -33,17 +34,25 @@ export function ToolActivity({
   approve,
   isReadonly,
   isRunning,
+  timeline = false,
 }: {
   part: ToolPart;
   approve: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
   isReadonly: boolean;
   isRunning: boolean;
+  timeline?: boolean;
 }) {
   const name =
     part.type === "dynamic-tool" ? part.toolName : part.type.slice(5);
   const { data: info } = useAgentInfo();
   const input = part.input as
-    | { name?: string; query?: string; url?: string }
+    | {
+        name?: string;
+        query?: string;
+        q?: string;
+        url?: string;
+        filename?: string;
+      }
     | undefined;
   const output = part.output as
     | { displayName?: string; description?: string }
@@ -65,27 +74,24 @@ export function ToolActivity({
   };
   const shortName = name.split("__").at(-1) ?? name;
   const title =
-    name === "readAttachment"
-      ? "读取附件文字"
-      : name === "loadSkill"
-        ? (output?.displayName ?? skill?.displayName ?? "读取调查方法")
-        : name === "readSkillResource"
-          ? "读取方法参考"
-          : name.includes("search")
-            ? "搜索网页"
-            : name.includes("extract") || name.includes("fetch")
-              ? "读取网页正文"
-              : (browserTitles[shortName] ?? "执行工具");
+    name === "createResultTable"
+      ? "生成表格产物"
+      : name === "readAttachment"
+        ? "读取附件文字"
+        : name === "loadSkill"
+          ? (output?.displayName ?? skill?.displayName ?? "读取调查方法")
+          : name === "readSkillResource"
+            ? "读取方法参考"
+            : name.includes("search")
+              ? "搜索资料"
+              : name.includes("extract") || name.includes("fetch")
+                ? "读取网页正文"
+                : (browserTitles[shortName] ?? "执行工具");
   const sources = name.includes("__") ? collectSourceLinks(part.output) : [];
-  const incomplete =
-    !isRunning &&
-    (part.state === "input-streaming" || part.state === "input-available");
   const approval = "approval" in part ? part.approval : undefined;
-  const displayState = incomplete
-    ? "output-error"
-    : part.state === "approval-responded" && approval?.approved === false
-      ? "output-denied"
-      : part.state;
+  const displayState = activityDisplayState(part, isRunning);
+  const incomplete =
+    displayState === "output-error" && part.state !== "output-error";
   const [disclosure, setDisclosure] = useState(() =>
     initialToolDisclosure(displayState)
   );
@@ -131,7 +137,10 @@ export function ToolActivity({
     }
   }, [approve, approval]);
   return (
-    <div className="my-1 max-w-full" data-testid="tool-activity">
+    <div
+      className={timeline ? "max-w-full" : "my-1 max-w-full"}
+      data-testid="tool-activity"
+    >
       <Tool
         className={cn(
           "mb-0 overflow-hidden rounded-[12px] border-transparent bg-transparent",
@@ -141,7 +150,16 @@ export function ToolActivity({
         open={open}
       >
         <ToolHeader
-          appearance="compact"
+          appearance={timeline ? "timeline" : "compact"}
+          context={
+            timeline
+              ? (input?.query ??
+                input?.q ??
+                input?.url ??
+                input?.filename ??
+                input?.name)
+              : undefined
+          }
           icon={
             MethodIcon ? (
               <MethodIcon className="size-4 shrink-0 text-muted-foreground" />

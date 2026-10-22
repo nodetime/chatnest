@@ -18,7 +18,7 @@ import { codeArtifact } from "@/artifacts/code/client";
 import { imageArtifact } from "@/artifacts/image/client";
 import { sheetArtifact } from "@/artifacts/sheet/client";
 import { textArtifact } from "@/artifacts/text/client";
-import { Button } from "@/components/ui/button";
+
 import { useArtifact } from "@/hooks/use-artifact";
 import { isProtectedResultTable } from "@/lib/artifacts/result-table";
 import type { Document, Vote } from "@/lib/db/schema";
@@ -26,6 +26,7 @@ import type { Attachment, ChatMessage } from "@/lib/types";
 import { cn, fetcher } from "@/lib/utils";
 import { ArtifactActions } from "./artifact-actions";
 import { ArtifactCloseButton } from "./artifact-close-button";
+import { ArtifactTypeLabel } from "./artifact-type-label";
 import { LoaderIcon } from "./icons";
 import { Toolbar } from "./toolbar";
 import { VersionFooter } from "./version-footer";
@@ -336,14 +337,6 @@ function PureArtifact({
     [currentVersionIndex, documents]
   );
 
-  const handlePreviousVersion = useCallback(
-    () => handleVersionChange("prev"),
-    [handleVersionChange]
-  );
-  const handleNextVersion = useCallback(
-    () => handleVersionChange("next"),
-    [handleVersionChange]
-  );
   const handleArtifactScroll = useCallback(() => {
     const el = artifactContentRef.current;
     if (!el) {
@@ -416,8 +409,11 @@ function PureArtifact({
         <div className="flex min-w-0 items-center gap-3">
           {!embedded && <ArtifactCloseButton />}
           <div className="flex min-w-0 flex-col gap-0.5">
-            <div className="truncate text-sm font-semibold leading-tight tracking-tight">
-              {artifact.title}
+            <div className="flex min-w-0 items-center gap-2">
+              <ArtifactTypeLabel kind={artifact.kind} />
+              <div className="truncate text-sm font-semibold leading-tight tracking-tight">
+                {artifact.title}
+              </div>
             </div>
             <div className="flex items-center gap-2">
               {saveError ? (
@@ -443,40 +439,23 @@ function PureArtifact({
               ) : (
                 <div className="h-3 w-24 animate-pulse rounded bg-muted-foreground/10" />
               )}
-              {documents &&
-                documents.length > 1 &&
-                isProtectedResultTable(artifact.content) && (
-                  <div className="flex gap-1">
-                    <Button
-                      aria-label="上一版本"
-                      className="h-5 px-1.5"
-                      disabled={currentVersionIndex <= 0}
-                      onClick={handlePreviousVersion}
-                      size="sm"
-                      variant="ghost"
-                    >
-                      ←
-                    </Button>
-                    <Button
-                      aria-label="下一版本"
-                      className="h-5 px-1.5"
-                      disabled={isCurrentVersion}
-                      onClick={handleNextVersion}
-                      size="sm"
-                      variant="ghost"
-                    >
-                      →
-                    </Button>
-                  </div>
-                )}
-              {documents && documents.length > 1 && (
-                <div className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-muted-foreground">
-                  第{currentVersionIndex + 1}/{documents.length}版
-                </div>
-              )}
             </div>
           </div>
         </div>
+        {isCurrentVersion &&
+          !isReadonly &&
+          !isProtectedResultTable(artifact.content) && (
+            <ArtifactActions
+              artifact={artifact}
+              currentVersionIndex={currentVersionIndex}
+              handleVersionChange={handleVersionChange}
+              isCurrentVersion={isCurrentVersion}
+              layout="header"
+              metadata={metadata}
+              mode={mode}
+              setMetadata={setMetadata}
+            />
+          )}
       </div>
       <div
         className={cn(
@@ -521,17 +500,6 @@ function PureArtifact({
           !isReadonly &&
           !isProtectedResultTable(artifact.content) ? (
             <Toolbar
-              artifactActions={
-                <ArtifactActions
-                  artifact={artifact}
-                  currentVersionIndex={currentVersionIndex}
-                  handleVersionChange={handleVersionChange}
-                  isCurrentVersion={isCurrentVersion}
-                  metadata={metadata}
-                  mode={mode}
-                  setMetadata={setMetadata}
-                />
-              }
               artifactKind={artifact.kind}
               consoleError={consoleError}
               documentId={artifact.documentId}
@@ -547,7 +515,7 @@ function PureArtifact({
         </AnimatePresence>
       </div>
       <AnimatePresence>
-        {!isCurrentVersion && (
+        {documents && documents.length > 1 && (
           <VersionFooter
             chatId={chatId}
             currentVersionIndex={currentVersionIndex}
