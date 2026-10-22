@@ -725,3 +725,62 @@ test("an idle approved call without output is unfinished, not still executing", 
   assert.match(html, /aria-expanded="true"/);
   assert.doesNotMatch(html, /允许执行/);
 });
+
+test("a new approval on the same call reopens its child details even when state is unchanged", () => {
+  clientScript(`
+    const assert = require('node:assert/strict');
+    const { initialToolDisclosure, reconcileToolDisclosure } = require('./components/chat/tool-activity-state.ts');
+    let current = { ...initialToolDisclosure('approval-requested', 'call:approval-a'), open: false };
+    assert.equal(reconcileToolDisclosure(current, 'approval-requested', 'call:approval-a'), current);
+    current = reconcileToolDisclosure(current, 'approval-requested', 'call:approval-b');
+    assert.equal(current.open, true);
+    current = { ...current, open: false };
+    assert.equal(reconcileToolDisclosure(current, 'approval-requested', 'call:approval-b'), current);
+    assert.equal(reconcileToolDisclosure(current, 'output-available', 'call:approval-b').open, false);
+  `);
+  const source = readFileSync("components/chat/tool-activity.tsx", "utf8");
+  assert.match(source, /toolDisclosureIdentity\(part\)/);
+});
+
+test("mixed reasoning and tools render in their original SDK order rather than merging across activity boundaries", () => {
+  clientScript(`
+    const assert = require('node:assert/strict');
+    const { readFileSync } = require('node:fs');
+    const { runInNewContext } = require('node:vm');
+    const ts = require('typescript');
+    const { groupActivityParts } = require('./components/chat/activity-groups.ts');
+    const jsx = (type, props) => ({type, props});
+    const modules = {
+      'react': {useCallback: fn => fn},
+      'react/jsx-runtime': {jsx, jsxs:jsx, Fragment:'fragment'},
+      '@/lib/utils': {cn:()=>'', sanitizeText: text=>text},
+      '../ai-elements/message': {MessageContent:'text', MessageResponse:'response'},
+      '../ai-elements/shimmer': {Shimmer:'shimmer'},
+      '../ai-elements/tool': {},
+      './activity-group': {ActivityGroup:'activity'},
+      './activity-groups': {groupActivityParts},
+      './data-stream-provider': {useDataStream:()=>({})},
+      './document': {}, './document-preview': {}, './icons': {},
+      './message-actions': {MessageActions:'actions'},
+      './message-reasoning': {MessageReasoning:'reasoning'},
+      './preview-attachment': {}, './tool-activity': {}, './weather': {},
+    };
+    const output = {exports:{}};
+    const code = ts.transpileModule(readFileSync('components/chat/message.tsx','utf8'), {compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText;
+    runInNewContext(code, {exports:output.exports,module:output,require:name=>{assert.ok(name in modules, 'unexpected '+name);return modules[name];}});
+    const tool = id => ({type:'dynamic-tool',toolName:'fixture__search',toolCallId:id,state:'output-available',input:{},output:{}});
+    const message = {id:'mixed',role:'assistant',parts:[{type:'reasoning',text:'reason-a'},tool('tool-a'),{type:'reasoning',text:'reason-b'},tool('tool-b'),{type:'text',text:'final-answer'}]};
+    const tree = output.exports.PreviewMessage({message,isLoading:false,isReadonly:true,addToolApprovalResponse:()=>{}});
+    const order = [];
+    const walk = node => {
+      if (Array.isArray(node)) { for (const item of node) walk(item); return; }
+      if (!node || typeof node !== 'object') return;
+      if (node.type === 'reasoning') {order.push(node.props.reasoning);return;}
+      if (node.type === 'activity') {order.push(node.props.parts.map(part=>part.toolCallId).join(','));return;}
+      if (node.type === 'response') {order.push(node.props.children);return;}
+      walk(node.props?.children);
+    };
+    walk(tree);
+    assert.deepEqual(order,['reason-a','tool-a','reason-b','tool-b','final-answer']);
+  `);
+});

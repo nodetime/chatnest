@@ -29,3 +29,11 @@ No real environment files, provider calls, migrations, broad unit-test glob, dev
 - Parent/child chevrons use their own disclosure state; tool query context stays adjacent to the natural-width child header.
 - Text/code/image/sheet labels and renderer selection remain generic. Version navigation appears only in the footer; generic actions keep their existing handlers with accessible names.
 - Table controls remain local to the table artifact: current-view CSV, original JSON, source/raw row details, read-only originals, notes/view save and optimistic CAS behavior are retained.
+
+## Acceptance/review follow-up
+
+The parent browser pass exposed text-editor lifecycle loss on every content change. A focused isolated hook/ProseMirror-boundary harness observed **3 RED failures** before the repair: local edits recreated/destroyed the view, readonly updates lost their guard, and equal-content status changes were skipped by memoization. The repair mounts once from the initial content, reconciles later content (including empty strings) through internal `no-save` transactions, retains guards for user edits, and compares status in memoization. Suggestions/schema behavior is unchanged.
+
+Spec review also produced **2 RED failures** before fixes: replacement approval IDs on the same call did not reopen child details, and noncontiguous reasoning was globally merged ahead of intervening tools. Child disclosure now uses call/state/approval identity and individual reasoning SDK parts render at their original positions.
+
+The final explicit suite includes `tests/unit/text-editor-lifecycle.test.ts` in addition to the five files above: **75 passed, 0 failed**. Type checking and targeted Biome checks completed successfully with no diagnostics. The VM harness tests actual component scheduling/transaction logic but replaces its hook scheduler and ProseMirror DOM boundary; actual focus/continuous typing remains a separate parent browser acceptance check.

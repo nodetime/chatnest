@@ -26,6 +26,7 @@ import { activityDisplayState } from "./activity-groups";
 import {
   initialToolDisclosure,
   reconcileToolDisclosure,
+  toolDisclosureIdentity,
   toolNeedsAttention,
 } from "./tool-activity-state";
 
@@ -92,10 +93,15 @@ export function ToolActivity({
   const displayState = activityDisplayState(part, isRunning);
   const incomplete =
     displayState === "output-error" && part.state !== "output-error";
+  const identity = toolDisclosureIdentity(part);
   const [disclosure, setDisclosure] = useState(() =>
-    initialToolDisclosure(displayState)
+    initialToolDisclosure(displayState, identity)
   );
-  const currentDisclosure = reconcileToolDisclosure(disclosure, displayState);
+  const currentDisclosure = reconcileToolDisclosure(
+    disclosure,
+    displayState,
+    identity
+  );
   if (currentDisclosure !== disclosure) {
     setDisclosure(currentDisclosure);
   }
