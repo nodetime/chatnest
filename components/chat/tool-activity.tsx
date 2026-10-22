@@ -22,7 +22,7 @@ import {
   ToolOutput,
   type ToolPart,
 } from "../ai-elements/tool";
-import { activityDisplayState } from "./activity-groups";
+import { activityDisplayState, activityErrorText } from "./activity-groups";
 import {
   initialToolDisclosure,
   reconcileToolDisclosure,
@@ -91,8 +91,11 @@ export function ToolActivity({
   const sources = name.includes("__") ? collectSourceLinks(part.output) : [];
   const approval = "approval" in part ? part.approval : undefined;
   const displayState = activityDisplayState(part, isRunning);
+  const errorText = activityErrorText(part);
   const incomplete =
-    displayState === "output-error" && part.state !== "output-error";
+    displayState === "output-error" &&
+    part.state !== "output-error" &&
+    part.state !== "output-available";
   const identity = toolDisclosureIdentity(part);
   const [disclosure, setDisclosure] = useState(() =>
     initialToolDisclosure(displayState, identity)
@@ -195,13 +198,13 @@ export function ToolActivity({
               查找：{input.query}
             </p>
           )}
-          {!!(incomplete || part.errorText) && (
+          {!!(incomplete || errorText) && (
             <p className="text-sm text-destructive" role="alert">
               {incomplete
                 ? "本轮没有收到执行结果，该步骤尚未完成。"
-                : part.errorText === "An error occurred."
+                : errorText === "An error occurred."
                   ? "工具暂时未能返回结果，请稍后重试。"
-                  : part.errorText}
+                  : errorText}
             </p>
           )}
           {name === "readAttachment" && part.state === "output-available" && (
@@ -250,7 +253,7 @@ export function ToolActivity({
             <div className="mt-3 min-w-0 space-y-3">
               <p className="break-all font-mono">{name}</p>
               <ToolInput input={part.input} />
-              <ToolOutput errorText={part.errorText} output={part.output} />
+              <ToolOutput errorText={errorText} output={part.output} />
             </div>
           </details>
           {part.state === "approval-requested" && approval && !isReadonly && (

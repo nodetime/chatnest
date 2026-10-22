@@ -784,3 +784,34 @@ test("mixed reasoning and tools render in their original SDK order rather than m
     assert.deepEqual(order,['reason-a','tool-a','reason-b','tool-b','final-answer']);
   `);
 });
+
+test("native createResultTable validation errors are failed open activities with the returned error", () => {
+  const part = {
+    input: {},
+    output: { error: "Source fixture is unavailable" },
+    state: "output-available",
+    toolCallId: "native-table-error",
+    type: "tool-createResultTable",
+  };
+  const before = JSON.stringify(part);
+  const html = renderActivity(part);
+  assert.match(html, /生成表格产物/);
+  assert.match(html, /失败/);
+  assert.match(html, /aria-expanded="true"/);
+  assert.match(html, /role="alert">Source fixture is unavailable/);
+  assert.doesNotMatch(html, /未完成|本轮没有收到执行结果/);
+  assert.equal(JSON.stringify(part), before);
+});
+
+test("dynamic MCP output error fields are evidence data, not the native table failure contract", () => {
+  for (const toolName of ["fixture__search", "createResultTable"]) {
+    const html = renderActivity({
+      ...success,
+      output: { error: "MCP evidence field" },
+      toolName,
+    });
+    assert.match(html, /已完成/);
+    assert.match(html, /aria-expanded="false"/);
+    assert.doesNotMatch(html, /role="alert"|失败/);
+  }
+});

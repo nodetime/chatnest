@@ -95,10 +95,32 @@ export function groupActivityMessages(messages: ChatMessage[]): MessageGroup[] {
   return groups;
 }
 
+// Only this native tool defines an output-available { error: string } failure
+// contract. A similarly named field in dynamic/MCP output remains raw evidence.
+function nativeResultTableError(part: ToolPart) {
+  if (
+    part.type === "tool-createResultTable" &&
+    part.state === "output-available" &&
+    part.output !== null &&
+    typeof part.output === "object" &&
+    "error" in part.output &&
+    typeof part.output.error === "string"
+  ) {
+    return part.output.error;
+  }
+}
+
+export function activityErrorText(part: ToolPart) {
+  return nativeResultTableError(part) ?? part.errorText;
+}
+
 export function activityDisplayState(
   part: ToolPart,
   isRunning = false
 ): ToolPart["state"] {
+  if (nativeResultTableError(part) !== undefined) {
+    return "output-error";
+  }
   if (
     part.state === "approval-responded" &&
     part.approval?.approved === false
@@ -163,7 +185,11 @@ export function activitySummary(parts: ToolPart[], isRunning = false) {
     count: parts.length,
     label:
       state === "output-error" &&
-      !parts.some((part) => part.state === "output-error")
+      !parts.some(
+        (part) =>
+          part.state === "output-error" ||
+          nativeResultTableError(part) !== undefined
+      )
         ? "未完成"
         : state === "approval-responded" && isRunning
           ? "执行中"
