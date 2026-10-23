@@ -45,15 +45,15 @@ export function AppSidebar({
         className="border-r border-sidebar-border/50"
         collapsible="offcanvas"
       >
-        <SidebarHeader className="gap-3 px-3 pt-0 pb-3">
-          <div className="flex h-16 shrink-0 items-center justify-between px-1">
+        <SidebarHeader className="gap-1 px-2.5 pt-0 pb-2">
+          <div className="flex h-[52px] shrink-0 items-center justify-between px-1">
             <button
               aria-label="ChatNest 首页"
               className="flex items-center gap-2.5 rounded-md text-sm font-semibold tracking-tight"
               onClick={handleNew}
               type="button"
             >
-              <span className="flex size-7 items-center justify-center rounded-lg bg-foreground text-background">
+              <span className="flex size-7 items-center justify-center rounded-md bg-[var(--workbench-selection)] text-foreground">
                 <MessageSquare className="size-4" />
               </span>
               ChatNest
@@ -70,7 +70,7 @@ export function AppSidebar({
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
-                className="h-9 gap-2.5 rounded-md border border-border/60 bg-background px-2.5 text-sm shadow-xs hover:bg-accent"
+                className="h-9 gap-2.5 rounded-md bg-[var(--workbench-selection)] px-2.5 text-[13px] font-medium hover:bg-sidebar-accent"
                 onClick={handleNew}
               >
                 <PenSquare className="size-[18px]" />
@@ -82,7 +82,7 @@ export function AppSidebar({
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton
-                className="h-9 gap-2.5 rounded-md px-2.5 text-sm"
+                className="h-9 gap-2.5 rounded-md px-2.5 text-[13px]"
                 onClick={handleTask}
               >
                 <ListPlus className="size-[18px]" />

@@ -82,7 +82,7 @@ function PureMessages({
         </div>
       )}
       <Conversation className="absolute inset-0 min-h-0" key={chatId}>
-        <ConversationContent className="mx-auto min-h-full w-full min-w-0 max-w-[800px] gap-5 px-5 py-8 sm:px-8 md:gap-7">
+        <ConversationContent className="mx-auto min-h-full w-full min-w-0 max-w-[720px] gap-5 px-4 py-6 sm:px-6 md:gap-6">
           {/* A canonical message always owns its tool subtree. Appending answer
               text must not reparent an open details dialog or its focus target. */}
           {messages.map(renderMessage)}
@@ -91,7 +91,7 @@ function PureMessages({
             <ThinkingMessage />
           )}
 
-          <div className="h-6 shrink-0" />
+          <div className="h-2 shrink-0" />
         </ConversationContent>
         <ConversationScrollButton
           aria-label="滚动到底部"

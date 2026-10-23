@@ -519,7 +519,7 @@ function PureMultimodalInput({
       />
 
       <PromptInput
-        className="[&>div]:rounded-[12px] [&>div]:border [&>div]:border-border [&>div]:bg-card [&>div]:shadow-[var(--shadow-composer)] [&>div]:transition-shadow [&>div]:duration-200 [&>div]:ring-0! [&>div]:focus-within:border-ring! [&>div]:focus-within:outline-1 [&>div]:focus-within:outline-ring/30"
+        className="[&>div]:rounded-[10px] [&>div]:border [&>div]:border-border [&>div]:bg-card [&>div]:shadow-[var(--shadow-composer)] [&>div]:transition-shadow [&>div]:duration-200 [&>div]:ring-0! [&>div]:focus-within:border-ring! [&>div]:focus-within:outline-1 [&>div]:focus-within:outline-ring/30"
         onSubmit={handlePromptSubmit}
       >
         {(attachments.length > 0 || uploadQueue.length > 0) && (
@@ -554,7 +554,7 @@ function PureMultimodalInput({
         <PromptInputBody>
           <PromptInputTextarea
             aria-label="消息输入框"
-            className="min-h-[64px] text-[16px] leading-relaxed px-4 pt-4 pb-2 placeholder:text-muted-foreground"
+            className="min-h-[44px] text-[15px] leading-relaxed px-3 pt-3 pb-1 placeholder:text-muted-foreground"
             data-testid="multimodal-input"
             onChange={handleInput}
             onKeyDown={handleTextareaKeyDown}
@@ -563,7 +563,7 @@ function PureMultimodalInput({
             value={input}
           />
         </PromptInputBody>
-        <PromptInputFooter className="px-3 pb-3">
+        <PromptInputFooter className="gap-1 px-2 pb-2">
           <PromptInputTools className="min-w-0 flex-wrap">
             <ModelSelectorCompact
               onModelChange={onModelChange}

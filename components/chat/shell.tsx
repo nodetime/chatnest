@@ -231,8 +231,8 @@ export function ChatShell() {
 
             <div
               className={cn(
-                "z-1 mx-auto flex w-full max-w-[800px] flex-col gap-2 bg-background px-4 sm:px-6",
-                !isEmpty && "sticky bottom-0 pb-5 pt-3 sm:pb-6"
+                "z-1 mx-auto flex w-full max-w-[720px] flex-col gap-2 bg-background px-4 sm:px-6",
+                !isEmpty && "sticky bottom-0 pb-4 pt-2 sm:pb-4"
               )}
             >
               <ConversationNotice onRestore={handleRestore} />

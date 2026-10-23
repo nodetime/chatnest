@@ -521,53 +521,55 @@ textarea:focus-visible {
 
 /* The workbench palette is local to chat; admin and global fonts stay unchanged. */
 .chat-workbench {
-  --background: oklch(0.997 0.001 85);
-  --foreground: oklch(0.27 0.005 65);
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.29 0.009 260);
   --card: oklch(1 0 0);
   --card-foreground: var(--foreground);
   --popover: var(--card);
   --popover-foreground: var(--foreground);
   --primary: var(--foreground);
   --primary-foreground: var(--card);
-  --secondary: oklch(0.967 0.003 85);
+  --secondary: oklch(0.97 0.002 250);
   --secondary-foreground: var(--foreground);
-  --muted: oklch(0.965 0.003 85);
-  --muted-foreground: oklch(0.5 0.008 65);
-  --accent: oklch(0.951 0.004 85);
+  --muted: oklch(0.965 0.002 250);
+  --muted-foreground: oklch(0.51 0.012 260);
+  --accent: oklch(0.95 0.003 250);
   --accent-foreground: var(--foreground);
-  --border: oklch(0.916 0.004 85);
+  --border: oklch(0.922 0.004 250);
   --input: var(--border);
-  --ring: oklch(0.55 0.025 70);
-  --sidebar: oklch(0.976 0.003 85);
+  --ring: oklch(0.52 0.075 165);
+  --sidebar: oklch(0.985 0.002 250);
   --sidebar-foreground: var(--foreground);
   --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: var(--primary-foreground);
-  --sidebar-accent: var(--accent);
+  --sidebar-accent: var(--workbench-selection);
   --sidebar-accent-foreground: var(--foreground);
   --sidebar-border: var(--border);
   --sidebar-ring: var(--ring);
+  --workbench-selection: oklch(0.94 0.035 165);
   --workbench-shell: var(--sidebar);
   --workbench-surface: var(--background);
-  --shadow-composer: 0 2px 8px -3px oklch(0.3 0.01 65 / 0.1);
+  --shadow-composer: 0 2px 8px -3px oklch(0.3 0.005 250 / 0.06);
   color: var(--foreground);
   background: var(--workbench-shell);
 }
 
 .chat-workbench[data-slot="sidebar-wrapper"] {
-  --sidebar-width: 14rem !important;
+  --sidebar-width: 13rem !important;
 }
 
 .dark .chat-workbench {
-  --background: oklch(0.205 0.003 65);
-  --foreground: oklch(0.925 0.004 85);
-  --card: oklch(0.235 0.004 65);
-  --secondary: oklch(0.265 0.004 65);
-  --muted: oklch(0.25 0.004 65);
-  --muted-foreground: oklch(0.7 0.008 85);
-  --accent: oklch(0.29 0.005 65);
-  --border: oklch(0.32 0.005 65);
-  --ring: oklch(0.72 0.025 85);
-  --sidebar: oklch(0.185 0.003 65);
+  --background: oklch(0.205 0.006 260);
+  --foreground: oklch(0.925 0.004 250);
+  --card: oklch(0.235 0.007 260);
+  --secondary: oklch(0.265 0.007 260);
+  --muted: oklch(0.25 0.007 260);
+  --muted-foreground: oklch(0.72 0.01 250);
+  --accent: oklch(0.29 0.008 260);
+  --border: oklch(0.34 0.008 260);
+  --ring: oklch(0.75 0.08 165);
+  --sidebar: oklch(0.185 0.006 260);
+  --workbench-selection: oklch(0.32 0.045 165);
   --shadow-composer: 0 2px 8px -3px oklch(0 0 0 / 0.3);
 }
 
@@ -600,8 +602,8 @@ textarea:focus-visible {
   --rdg-header-background-color: var(--secondary);
   --rdg-header-draggable-background-color: var(--muted);
   --rdg-row-hover-background-color: var(--accent);
-  --rdg-row-selected-background-color: var(--accent);
-  --rdg-row-selected-hover-background-color: var(--accent);
+  --rdg-row-selected-background-color: var(--workbench-selection);
+  --rdg-row-selected-hover-background-color: var(--workbench-selection);
   --rdg-border-color: color-mix(in oklab, var(--border) 65%, transparent);
   --rdg-summary-border-color: var(--border);
   --rdg-selection-color: var(--ring);
@@ -618,4 +620,25 @@ textarea:focus-visible {
   font-weight: 500;
   border-block-end: 1px solid var(--rdg-border-color);
   border-inline-end-color: transparent;
+}
+
+.chat-workbench
+  .chatnest-result-grid
+  :is([role="gridcell"], [role="columnheader"]) {
+  padding-inline: 14px;
+}
+
+.chat-workbench [data-slot="sidebar-menu-button"][data-active="true"] {
+  color: var(--foreground);
+  background: var(--workbench-selection);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-workbench *,
+  .chat-workbench *::before,
+  .chat-workbench *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -249,7 +249,7 @@ test("history attachments wrap and chat-specific surface leaves global theme and
   assert.match(css, /\.chat-workbench\s*\{/);
   assert.match(css, /\.dark \.chat-workbench/);
   const composer = readFileSync("components/chat/multimodal-input.tsx", "utf8");
-  assert.match(composer, /\[&>div\]:rounded-\[12px\]/);
+  assert.match(composer, /\[&>div\]:rounded-\[10px\]/);
   assert.match(composer, /<input[\s\S]*?hidden[\s\S]*?ref=\{fileInputRef\}/);
 });
 
@@ -296,10 +296,10 @@ test("message stack reduces inter-message space without changing paragraph typog
   const messages = readFileSync("components/chat/messages.tsx", "utf8");
   assert.match(
     messages,
-    /<ConversationContent[^>]*gap-5 px-5 py-8 sm:px-8 md:gap-7/
+    /<ConversationContent[^>]*gap-5 px-4 py-6 sm:px-6 md:gap-6/
   );
   const message = readFileSync("components/chat/message.tsx", "utf8");
-  assert.match(message, /text-\[15px\] leading-\[1\.8\]/);
+  assert.match(message, /text-\[15px\] leading-\[1\.75\]/);
 });
 
 const resultSource = {
@@ -325,11 +325,10 @@ function renderResultTable(notes = "", readOnly = false) {
 
 test("result workspace shows only compact source identity and a details entry, without a second title", () => {
   const html = renderResultTable();
-  assert.match(html, /Fixture server/);
-  assert.match(html, /未核验/);
+  assert.doesNotMatch(html, /Fixture server|未核验/);
   assert.match(html, /来源详情/);
   assert.match(html, /1 \/ 1 行/);
-  assert.match(html, /源数据只读/);
+  assert.doesNotMatch(html, /源数据只读/);
   assert.doesNotMatch(
     html,
     /fixture__raw_alias_only_in_details|fixture-call-id-only-in-details|fixture-server-id|2026-10-21T12:00:00.000Z|结果表格/
@@ -368,33 +367,18 @@ test("source Sheet details retain every original source field and explain both t
   assert.match(source, /<SheetTitle>来源详情<\/SheetTitle>/);
 });
 
-test("empty notes start closed while independent save and status remain reachable", () => {
+test("notes live in a Sheet and clean tables have no permanent save or helper footer", () => {
   const html = renderResultTable();
-  assert.match(html, /aria-expanded="false"/);
   assert.match(html, /个人备注/);
-  assert.doesNotMatch(html, /<textarea/);
-  assert.match(html, /保存视图与备注/);
-  assert.match(html, /CSV 为当前视图/);
+  assert.doesNotMatch(html, /<textarea|保存视图与备注|点击行查看原始字段/);
   const source = readFileSync("components/chat/result-table.tsx", "utf8");
-  assert.match(source, /defaultOpen=\{false\}/);
-  const contentEnd = source.indexOf("</CollapsibleContent>");
-  const saveButton = source.indexOf("<Save className");
-  assert.ok(contentEnd > 0 && saveButton > contentEnd);
-  assert.match(
-    source,
-    /disabled=\{!dirty \|\| saving \|\| !documentId \|\| !expectedVersion\}/
-  );
-  assert.match(
-    source,
-    /if \(!documentId \|\| !expectedVersion \|\| readOnly \|\| saving\)/
-  );
+  assert.match(source, /data-testid="result-notes-sheet"/);
   assert.match(source, /response\.status === 409/);
   assert.match(source, /await onSaved\?\.\(body\[0\]\.content\)/);
 });
 
 test("saved notes start closed with discoverable indicator and readonly history has no save controls", () => {
   const html = renderResultTable("fixture saved notes");
-  assert.match(html, /aria-expanded="false"/);
   assert.doesNotMatch(html, /<textarea/);
   assert.match(html, /已有备注/);
   const historical = renderResultTable("fixture historical notes", true);
@@ -442,14 +426,14 @@ test("embedded artifact keeps the real single title and a shrinkable result-cont
   assert.match(result, /JSON\.stringify\(table\.rows\[detail\], null, 2\)/);
 });
 
-test("result grid keeps theme classes and renders the scoped 13px / 38px density contract", () => {
+test("result grid keeps theme classes and renders the scoped 13px / 46px density contract", () => {
   const html = renderResultTable();
   assert.match(html, /chatnest-result-grid/);
   assert.match(html, /rdg-light/);
   const source = readFileSync("components/chat/result-table.tsx", "utf8");
   assert.match(source, /resolvedTheme === "dark" \? "rdg-dark" : "rdg-light"/);
-  assert.match(source, /rowHeight=\{38\}/);
-  assert.match(source, /headerRowHeight=\{38\}/);
+  assert.match(source, /rowHeight=\{46\}/);
+  assert.match(source, /headerRowHeight=\{42\}/);
   assert.doesNotMatch(source, /fontSize: 12/);
   assert.match(source, /rowKeyGetter=\{\(row\) => row\.sourceIndex\}/);
 });
@@ -465,8 +449,8 @@ test("result grid tokens are scoped with enough specificity and semantic cells r
     ["background-color", "card"],
     ["header-background-color", "secondary"],
     ["row-hover-background-color", "accent"],
-    ["row-selected-background-color", "accent"],
-    ["row-selected-hover-background-color", "accent"],
+    ["row-selected-background-color", "workbench-selection"],
+    ["row-selected-hover-background-color", "workbench-selection"],
     ["selection-color", "ring"],
     ["border-color", "border"],
   ]) {
@@ -878,7 +862,7 @@ test("generic empty conversation has a readable invitation and one softly elevat
   assert.match(composer, /shadow-\[var\(--shadow-composer\)\]/);
   assert.doesNotMatch(composer, /focus-within:border-foreground\/25/);
   const sidebar = readFileSync("components/chat/app-sidebar.tsx", "utf8");
-  assert.match(sidebar, /h-16 shrink-0/);
+  assert.match(sidebar, /h-\[52px\] shrink-0/);
   for (const entry of [
     "新对话",
     "创建任务",
@@ -957,7 +941,7 @@ test("open artifacts use a compact chat file card instead of mounting a duplicat
   const css = readFileSync("app/globals.css", "utf8");
   assert.match(
     css,
-    /\.chat-workbench\[data-slot="sidebar-wrapper"\]\s*\{[^}]*--sidebar-width: 14rem !important/
+    /\.chat-workbench\[data-slot="sidebar-wrapper"\]\s*\{[^}]*--sidebar-width: 13rem !important/
   );
 });
 
@@ -1028,7 +1012,7 @@ test("artifact card lifecycle reopens the same document after close or tab switc
       return output.exports;
     };
     const {useWorkspace}=load('hooks/use-workspace.ts');
-    assert.equal(useWorkspace().width,50,'fresh chat gives conversation and artifact equal width');
+    assert.equal(useWorkspace().width,58,'fresh chat gives artifacts the broader canvas');
     useWorkspace().update({width:57});useWorkspace().close();useWorkspace().show('document');
     assert.equal(useWorkspace().width,57,'user width survives close/reopen');
     modules['@/hooks/use-workspace']={useWorkspace};
@@ -1092,4 +1076,21 @@ test("workspace resize grip stretches across the pane with an 8px hit area and a
   assert.match(source, /aria-valuemax=\{70\}/);
   assert.match(source, /aria-valuemin=\{35\}/);
   assert.match(source, /tabIndex=\{0\}/);
+});
+
+test("Lessie composition uses neutral panes, purposeful mint and narrower chat beside broad artifacts", () => {
+  const css = readFileSync("app/globals.css", "utf8");
+  const scoped = css.slice(css.indexOf(".chat-workbench {"));
+  assert.match(scoped, /--background: oklch\(1 0 0\)/);
+  assert.match(scoped, /--workbench-selection:/);
+  assert.doesNotMatch(scoped, /0\.00[1-8] (?:65|85)\)/);
+  assert.match(readFileSync("hooks/use-workspace.ts", "utf8"), /width: 58/);
+  assert.match(
+    readFileSync("components/chat/messages.tsx", "utf8"),
+    /max-w-\[720px\]/
+  );
+  assert.match(
+    readFileSync("components/chat/multimodal-input.tsx", "utf8"),
+    /min-h-\[44px\]/
+  );
 });

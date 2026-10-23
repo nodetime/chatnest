@@ -156,7 +156,7 @@ test("workspace chrome has one aligned top row and exposes existing action label
   const chat = readFileSync("components/chat/chat-header.tsx", "utf8");
   const sidebar = readFileSync("components/chat/app-sidebar.tsx", "utf8");
   for (const source of [header, chat, sidebar]) {
-    assert.match(source, /\bh-16\b/);
+    assert.match(source, /\bh-\[52px\]/);
   }
   const actions = readFileSync("components/chat/artifact-actions.tsx", "utf8");
   assert.match(actions, /action.label \?\? action.description/);
@@ -243,7 +243,7 @@ test("result-table publishes authoritative view/notes dirty and saving state; fa
       'react-data-grid':{__esModule:true,default:'grid'},'react-data-grid/lib/styles.css':{},
       '@/components/ui/button':{Button:'button'},'@/components/ui/input':{Input:'input'},'@/components/ui/textarea':{Textarea:'textarea'},
       '@/components/ui/collapsible':{Collapsible:'collapsible',CollapsibleContent:'collapse-content',CollapsibleTrigger:'collapse-trigger'},
-      '@/components/ui/sheet':{Sheet:'sheet',SheetClose:'sheet-close',SheetContent:'sheet-content',SheetDescription:'sheet-description',SheetHeader:'sheet-header',SheetTitle:'sheet-title'},
+      '@/components/ui/sheet':{Sheet:'sheet',SheetTrigger:'sheet-trigger',SheetClose:'sheet-close',SheetContent:'sheet-content',SheetDescription:'sheet-description',SheetHeader:'sheet-header',SheetTitle:'sheet-title'},
       '@/lib/artifacts/result-table':helpers,'./result-table-source':{ResultTableSource:'source'},
     };
     const output={exports:{}};
@@ -262,22 +262,35 @@ test("result-table publishes authoritative view/notes dirty and saving state; fa
     const saveButton=tree=>find(tree,node=>node.type==='button'&&Array.isArray(node.props.children)&&node.props.children.some(text=>typeof text==='string'&&/保存/.test(text)))[0];
     (async()=>{
       let tree=render();assert.equal(pending.at(-1),false,'clean table publishes unlocked');
+      assert.equal(saveButton(tree),undefined,'clean table has no permanent disabled save control');
+      const notesSheet=tree=>find(tree,node=>node.type==='sheet'&&node.props['data-testid']==='result-notes-sheet')[0];
+      assert.equal(notesSheet(tree)?.props.open,false,'notes are a controlled closed Sheet');
+      assert.ok(find(tree,node=>node.type==='sheet-trigger').length);notesSheet(tree).props.onOpenChange(true);tree=render();
+      assert.equal(notesSheet(tree).props.open,true,'notes action opens Sheet');
+      find(tree,node=>node.type==='textarea')[0].props.onChange({target:{value:'Draft survives closing'}});tree=render();
+      assert.equal(pending.at(-1),true);assert.ok(saveButton(tree));
+      notesSheet(tree).props.onOpenChange(false);tree=render();
+      assert.equal(pending.at(-1),true,'closing Sheet never discards or clears pending draft');
+      assert.ok(find(tree,node=>node.type==='sheet-trigger').length);notesSheet(tree).props.onOpenChange(true);tree=render();
+      assert.equal(find(tree,node=>node.type==='textarea')[0].props.value,'Draft survives closing','reopening restores exact parent draft');
+      find(tree,node=>node.type==='textarea')[0].props.onChange({target:{value:''}});tree=render();
+      assert.equal(saveButton(tree),undefined,'reverting notes removes save action');
       const grid=find(tree,node=>node.type==='grid')[0];const column=grid.props.columns.find(column=>column.key==='/url');
       assert.equal(column.name,'User source label');const link=column.renderCell({row:{raw:table.rows[0],sourceIndex:0}});
       assert.equal(link.props.href,originalUrl);assert.equal(link.props.title,originalUrl);assert.equal(link.props.children[0],'example.com');
       assert.ok(helpers.resultCsv(table).includes(originalUrl),'CSV preserves full URL');
       find(tree,node=>node.props?.['aria-label']==='筛选结果')[0].props.onChange({target:{value:'Original'}});
       tree=render();assert.equal(pending.at(-1),true,'actual view filter change blocks chooser');
-      let save=saveButton(tree).props.onClick();tree=render();assert.equal(pending.at(-1),true,'in-flight save stays blocked');
+      let save=saveButton(tree).props.onClick();tree=render();assert.equal(pending.at(-1),true,'in-flight save stays blocked');assert.equal(saveButton(tree).props.disabled,true,'saving remains visible but not repeatable');assert.equal(find(tree,node=>node.type==='textarea')[0].props.disabled,true,'snapshot is frozen while saving');
       assert.equal(bodySent.expectedVersion,'2026-10-23T00:00:00.000Z');assert.equal(bodySent.id,'document-a');
       resolveFetch({ok:true,json:async()=>[{content:JSON.stringify({view:bodySent.view,notes:bodySent.notes})}]});await save;
-      tree=render();assert.equal(pending.at(-1),false,'successful rebaseline releases chooser');
+      tree=render();assert.equal(pending.at(-1),false,'successful rebaseline releases chooser');assert.equal(saveButton(tree),undefined,'successful save removes action');
       for(const status of [409,500]){
         find(tree,node=>node.type==='textarea')[0].props.onChange({target:{value:'Pending note '+status}});tree=render();assert.equal(pending.at(-1),true,'actual note edit blocks chooser');
         save=saveButton(tree).props.onClick();render();resolveFetch({ok:false,status,json:async()=>({})});await save;tree=render();
         assert.equal(pending.at(-1),true,'failed/CAS-conflicted edits stay blocked');assert.ok(find(tree,node=>node.props?.role==='alert').length);
       }
-      for(const mode of [{readOnly:true},{inline:true}]){props=mode;render();assert.equal(pending.at(-1),false,'readonly/history or inline preview never invents a pending-save lock')}
+      for(const mode of [{readOnly:true},{inline:true}]){props=mode;const modeTree=render();assert.equal(saveButton(modeTree),undefined,'readonly and inline have no save action');assert.equal(pending.at(-1),false,'readonly/history or inline preview never invents a pending-save lock')}
       props={};render();assert.equal(pending.at(-1),true);for(const slot of slots)slot.cleanup?.();assert.equal(pending.at(-1),false,'unmount releases its original lock');
       assert.equal(JSON.stringify(table.rows),evidence,'pending projection never changes evidence');
     })().catch(error=>{console.error(error);process.exitCode=1});

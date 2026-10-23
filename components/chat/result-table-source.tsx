@@ -1,6 +1,6 @@
 "use client";
 
-import { XIcon } from "lucide-react";
+import { Info, XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -38,23 +38,19 @@ export function ResultTableSourceDetails({ source }: { source: ResultSource }) {
 export function ResultTableSource({ source }: { source: ResultSource }) {
   return (
     <Sheet>
-      <div className="flex min-w-0 items-center gap-2 text-[11px] text-muted-foreground">
-        <span className="min-w-0 truncate" title={source.serverName}>
-          {source.serverName}
-        </span>
-        <span className="shrink-0">未核验</span>
-        <SheetTrigger asChild>
-          <Button
-            className="h-6 shrink-0 px-1.5 text-[11px] text-muted-foreground"
-            size="sm"
-            variant="ghost"
-          >
-            来源详情
-          </Button>
-        </SheetTrigger>
-      </div>
+      <SheetTrigger asChild>
+        <Button
+          aria-label="来源详情"
+          className="h-9 shrink-0 gap-1.5 px-2.5 text-[13px]"
+          size="sm"
+          variant="ghost"
+        >
+          <Info className="size-3.5" />
+          来源
+        </Button>
+      </SheetTrigger>
       <SheetContent
-        className="min-w-0 overflow-y-auto sm:max-w-lg"
+        className="chat-workbench min-w-0 overflow-y-auto sm:max-w-lg"
         showCloseButton={false}
       >
         <SheetClose asChild>

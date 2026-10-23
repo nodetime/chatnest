@@ -1,11 +1,11 @@
 // biome-ignore-all lint/performance/noJsxPropsBind: Small local view controls have explicit, scoped event handlers.
 "use client";
 import {
-  ChevronDown,
   Columns3,
   Download,
   ExternalLink,
   ListFilter,
+  NotebookPen,
   Save,
   XIcon,
 } from "lucide-react";
@@ -13,11 +13,6 @@ import { useTheme } from "next-themes";
 import { useEffect, useMemo, useState } from "react";
 import DataGrid, { type Column, type SortColumn } from "react-data-grid";
 import { Button } from "@/components/ui/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import {
   Sheet,
@@ -26,6 +21,7 @@ import {
   SheetDescription,
   SheetHeader,
   SheetTitle,
+  SheetTrigger,
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -72,6 +68,7 @@ export function ResultTableView({
   const [detail, setDetail] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [notesOpen, setNotesOpen] = useState(false);
   const dirty =
     JSON.stringify(view) !== JSON.stringify(table.view) ||
     notes !== table.notes;
@@ -94,6 +91,7 @@ export function ResultTableView({
         .filter((column) => view.visibleColumns.includes(column.path))
         .map((column) => ({
           key: column.path,
+          minWidth: 140,
           name: column.label,
           renderCell: ({ row }: { row: (typeof rows)[number] }) => {
             const value = resolvePointer(row.raw, column.path);
@@ -115,7 +113,7 @@ export function ResultTableView({
           },
           resizable: true,
           sortable: true,
-          width: column.path.includes("title") ? 240 : 160,
+          width: column.path.includes("title") ? 280 : 190,
         })),
     ],
     [table.columns, view.visibleColumns]
@@ -175,6 +173,20 @@ export function ResultTableView({
             )
             .map((item) => item.path),
     }));
+  const saveControl =
+    !readOnly && !inline && (dirty || saving) ? (
+      <Button
+        aria-label="保存视图与备注"
+        className="h-9 shrink-0 gap-1.5 bg-[var(--workbench-selection)] text-[13px] text-foreground hover:bg-accent"
+        disabled={saving || !documentId || !expectedVersion}
+        onClick={save}
+        size="sm"
+        variant="secondary"
+      >
+        <Save className="size-3.5" />
+        {saving ? "正在保存…" : "保存"}
+      </Button>
+    ) : null;
   return (
     <div
       className="flex h-full w-full min-h-0 min-w-0 flex-col bg-background"
@@ -182,15 +194,16 @@ export function ResultTableView({
     >
       {!inline && (
         <div
-          className="shrink-0 border-b border-border/50 px-4 py-2"
+          className="shrink-0 border-b border-border/70 px-3 py-2"
           data-testid="result-table-toolbar"
         >
           <div className="flex flex-wrap items-center gap-2">
-            <div className="relative min-w-0 basis-36 flex-1">
+            <div className="relative min-w-0 basis-36 flex-1 sm:max-w-64">
               <ListFilter className="absolute top-3 left-2.5 size-3.5 text-muted-foreground" />
               <Input
                 aria-label="筛选结果"
-                className="h-9 pl-8 text-[13px]"
+                className="h-9 pl-8 text-[13px] shadow-none"
+                disabled={saving}
                 onChange={(event) =>
                   setView((current) => ({
                     ...current,
@@ -204,7 +217,7 @@ export function ResultTableView({
             <details className="relative">
               <summary
                 aria-label="选择显示列"
-                className="flex h-9 cursor-pointer list-none items-center gap-1.5 rounded-md border border-border/70 px-2.5 text-[13px] transition-colors hover:bg-accent"
+                className="flex h-9 cursor-pointer list-none items-center gap-1.5 rounded-md px-2.5 text-[13px] transition-colors hover:bg-accent"
               >
                 <Columns3 className="size-3.5" />列
               </summary>
@@ -216,6 +229,7 @@ export function ResultTableView({
                   >
                     <input
                       checked={view.visibleColumns.includes(column.path)}
+                      disabled={saving}
                       onChange={() => toggleColumn(column.path)}
                       type="checkbox"
                     />
@@ -225,7 +239,7 @@ export function ResultTableView({
               </div>
             </details>
             <details className="relative">
-              <summary className="flex h-9 cursor-pointer list-none items-center gap-1.5 rounded-md border border-border/70 px-2.5 text-[13px] transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring">
+              <summary className="flex h-9 cursor-pointer list-none items-center gap-1.5 rounded-md px-2.5 text-[13px] transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring">
                 <Download className="size-3.5" />
                 导出
               </summary>
@@ -240,7 +254,7 @@ export function ResultTableView({
                     )
                   }
                   size="sm"
-                  variant="outline"
+                  variant="ghost"
                 >
                   <Download className="size-3.5" />
                   CSV · 当前视图
@@ -255,26 +269,113 @@ export function ResultTableView({
                     )
                   }
                   size="sm"
-                  variant="outline"
+                  variant="ghost"
                 >
                   JSON · 原始快照
                 </Button>
+                <p className="px-2.5 py-2 text-xs leading-5 text-muted-foreground">
+                  CSV 仅含当前筛选和显示列；JSON 保留原始快照与已保存备注。
+                </p>
               </div>
             </details>
+            <ResultTableSource source={table.source} />
+            <Sheet
+              data-testid="result-notes-sheet"
+              onOpenChange={setNotesOpen}
+              open={notesOpen}
+            >
+              <SheetTrigger asChild>
+                <Button
+                  aria-label="个人备注"
+                  className="h-9 gap-1.5 px-2.5 text-[13px]"
+                  variant="ghost"
+                >
+                  <NotebookPen className="size-3.5" />
+                  备注
+                  {!!notes && (
+                    <span
+                      aria-label="已有备注"
+                      className="size-1.5 rounded-full bg-ring"
+                      role="img"
+                    />
+                  )}
+                </Button>
+              </SheetTrigger>
+              <SheetContent
+                className="chat-workbench overflow-y-auto sm:max-w-md"
+                showCloseButton={false}
+              >
+                <SheetClose asChild>
+                  <Button
+                    aria-label="关闭个人备注"
+                    className="absolute top-4 right-4"
+                    size="icon-sm"
+                    variant="ghost"
+                  >
+                    <XIcon />
+                  </Button>
+                </SheetClose>
+                <SheetHeader>
+                  <SheetTitle>个人备注</SheetTitle>
+                  <SheetDescription>
+                    记录你的判断，不会改变原始来源字段。
+                    {!readOnly && "关闭面板后草稿仍保留，请保存后再切换产物。"}
+                  </SheetDescription>
+                </SheetHeader>
+                <div className="flex flex-1 flex-col gap-4 px-6 pb-6">
+                  <Textarea
+                    aria-label="备注内容"
+                    className="min-h-48 resize-y text-sm leading-6"
+                    disabled={readOnly || saving}
+                    id={`result-notes-${documentId}`}
+                    maxLength={10_000}
+                    onChange={(event) => setNotes(event.target.value)}
+                    placeholder="添加备注…"
+                    value={notes}
+                  />
+                  {!!readOnly && (
+                    <p className="text-xs text-muted-foreground">只读版本</p>
+                  )}
+                  {!!error && (
+                    <p className="text-xs text-destructive" role="alert">
+                      {error}
+                    </p>
+                  )}
+                  <div className="flex items-center justify-end gap-3">
+                    {!readOnly && dirty && !saving && (
+                      <span
+                        className="text-xs text-muted-foreground"
+                        role="status"
+                      >
+                        尚未保存
+                      </span>
+                    )}
+                    {saveControl}
+                  </div>
+                </div>
+              </SheetContent>
+            </Sheet>
+            <div className="ml-auto">{saveControl}</div>
           </div>
+          {!!error && (
+            <p className="pt-2 text-xs text-destructive" role="alert">
+              {error}
+            </p>
+          )}
         </div>
       )}
       <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
         <DataGrid
           className={`chatnest-result-grid ${resolvedTheme === "dark" ? "rdg-dark" : "rdg-light"}`}
           columns={columns}
-          headerRowHeight={38}
+          headerRowHeight={42}
           onCellClick={({ row }, event) => {
             if (!(event.target as HTMLElement).closest("a")) {
               setDetail(row.sourceIndex);
             }
           }}
           onSortColumnsChange={(sort) =>
+            !saving &&
             setView((current) => ({
               ...current,
               sort: sort.slice(-3).map((item) => ({
@@ -292,7 +393,7 @@ export function ResultTableView({
               </div>
             ),
           }}
-          rowHeight={38}
+          rowHeight={46}
           rowKeyGetter={(row) => row.sourceIndex}
           rows={rows}
           sortColumns={sortColumns}
@@ -300,79 +401,8 @@ export function ResultTableView({
         />
       </div>
       {!inline && (
-        <div className="shrink-0 space-y-1 border-t border-border/50 px-4 py-2">
-          <Collapsible defaultOpen={false}>
-            <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1">
-              <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                <span className="shrink-0 tabular-nums">
-                  {rows.length} / {table.rows.length} 行
-                </span>
-                <span className="shrink-0">源数据只读</span>
-                <ResultTableSource source={table.source} />
-              </div>
-              <CollapsibleTrigger asChild>
-                <Button
-                  className="group h-7 max-w-full gap-1.5 px-0 text-xs hover:bg-transparent"
-                  variant="ghost"
-                >
-                  <ChevronDown className="size-3.5 shrink-0 transition-transform group-data-[state=closed]:-rotate-90" />
-                  个人备注
-                  {!!notes && (
-                    <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-normal text-muted-foreground">
-                      已有备注
-                    </span>
-                  )}
-                </Button>
-              </CollapsibleTrigger>
-            </div>
-            <CollapsibleContent className="pt-1 pb-2">
-              <Textarea
-                aria-label="个人备注"
-                className="max-h-40 min-h-14 resize-y text-sm"
-                disabled={readOnly}
-                id={`result-notes-${documentId}`}
-                maxLength={10_000}
-                onChange={(event) => setNotes(event.target.value)}
-                placeholder="记录你的判断，不会改变原始来源字段。"
-                value={notes}
-              />
-            </CollapsibleContent>
-          </Collapsible>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            {error ? (
-              <p
-                className="min-w-0 flex-1 text-xs text-destructive"
-                role="alert"
-              >
-                {error}
-              </p>
-            ) : dirty ? (
-              <p
-                className="min-w-0 flex-1 text-xs text-muted-foreground"
-                role="status"
-              >
-                {readOnly
-                  ? "只读预览：筛选与排序不保存。"
-                  : "视图或备注尚未保存。"}
-              </p>
-            ) : (
-              <p className="min-w-0 flex-1 text-xs text-muted-foreground">
-                点击行查看原始字段 · CSV 为当前视图，JSON 保留完整快照。
-              </p>
-            )}
-            {!readOnly && (
-              <Button
-                className="h-9 shrink-0 gap-1.5 text-xs"
-                disabled={!dirty || saving || !documentId || !expectedVersion}
-                onClick={save}
-                size="sm"
-                variant="secondary"
-              >
-                <Save className="size-3" />
-                {saving ? "正在保存…" : "保存视图与备注"}
-              </Button>
-            )}
-          </div>
+        <div className="shrink-0 border-t border-border/50 px-4 py-2 text-xs tabular-nums text-muted-foreground">
+          {rows.length} / {table.rows.length} 行
         </div>
       )}
       <Sheet
@@ -384,7 +414,7 @@ export function ResultTableView({
         open={detail !== null}
       >
         <SheetContent
-          className="overflow-y-auto sm:max-w-lg"
+          className="chat-workbench overflow-y-auto sm:max-w-lg"
           showCloseButton={false}
         >
           <SheetClose asChild>

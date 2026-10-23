@@ -31,7 +31,7 @@ function WaitingText() {
   const waitingText = waitingStatus?.message ?? "正在准备…";
 
   return (
-    <div className="flex min-h-[calc(13px*1.65)] min-w-0 items-center text-[15px] leading-[1.8]">
+    <div className="flex min-h-[calc(13px*1.65)] min-w-0 items-center text-[15px] leading-[1.75]">
       <Shimmer
         as="span"
         className="font-medium whitespace-normal break-words"
@@ -168,8 +168,8 @@ const PurePreviewMessage = ({
     if (type === "text") {
       return (
         <MessageContent
-          className={cn("text-[15px] leading-[1.8]", {
-            "w-fit max-w-[min(85%,60ch)] overflow-hidden break-words rounded-[22px] bg-secondary px-5 py-3":
+          className={cn("text-[15px] leading-[1.75]", {
+            "w-fit max-w-[min(85%,60ch)] overflow-hidden break-words rounded-2xl bg-secondary px-4 py-2.5":
               message.role === "user",
           })}
           data-testid="message-content"
