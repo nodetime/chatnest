@@ -38,3 +38,10 @@ Root fixtures, screenshots and private logs remain ignored. Temporary viewport/m
 - This pass preserves general Agent selection; it does not add a fixed legal/research pipeline, AG-UI protocol, durable background jobs, resumable execution, OCR, cloud storage or commercial-agent parity.
 - New chooser guards unsaved edits; original message-card navigation follows its pre-existing behavior. Wider navigation/unload confirmation is separate scope.
 - Source branch/worktree and running isolated dev preview retained. No remote push/deployment claimed.
+
+
+## Local integration
+
+- Fast-forward integrated into local `main` after browser/build/review gates. Root reran the full explicit safe unit list in the primary checkout: **242/242 pass**, then `tsc --noEmit --incremental false`: exit0.
+- Compared all263 runtime/config source files across primary `main`, live preview worktree and the built production copy: zero hash mismatches. No dependency, runtime prompt or Agent selection changes.
+- Primary and feature worktrees clean after docs-only verification record. Main remains local; no remote push or deployment performed. Production smoke server33382 stopped; own isolated33378 preview remains with mock model/MCP. Final actual screenshot and interactive artifact page retained.
