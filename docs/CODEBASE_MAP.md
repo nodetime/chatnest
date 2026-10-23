@@ -46,3 +46,9 @@ Chat-only workbench presentation:
 - `components/chat/result-table-source.tsx` progressively reveals all original source fields in a localized Sheet; `result-table.tsx` keeps raw-row details, exports and independent view/notes save controls. Artifact lifecycle/version labels use Chinese display text and date-fns `zhCN`, without translating Agent messages or provider fields.
 - `components/chat/artifact-type-label.tsx`, `artifact.tsx`, `artifact-actions.tsx`: standard multi-type artifact viewer with type labels, accessible header actions and one footer version navigator. Table-specific filter/columns/exports/notes are contained within the table renderer, not imposed on text/code/image artifacts.
 - `components/chat/text-editor.tsx`: ProseMirror mounts once per component lifetime; transaction-based external/streaming updates preserve editor identity, focus, dispatch guards and read-only previews. `tests/unit/text-editor-lifecycle.test.ts` is an isolated hook/ProseMirror-boundary regression harness; actual typing remains browser acceptance.
+
+Workbench visual refinement (2026-10-22/23):
+- Chat-only semantic light/dark palette and224px sidebar live under `.chat-workbench`; flat panes share48px bars. Admin and global themes are unchanged.
+- `document-preview.tsx` uses actual chat workspace visibility/documenttab + artifactidentity for active compact cards; its original activation also explicitly opens the documenttab. Inactive generic previews are bounded. Actual-hook/component lifecycle tests cover close/reopen, tab switches and chat isolation.
+- `toolbar.tsx` is a normal header dropdown delegating original per-kind artifact callbacks; console repair adds an action without replacing originals. Current/read-only/protected-evidence guards remain in artifact.tsx.
+- `workspace.tsx` uses explicit stretch height (overrides preflight hrheight0) and8px pointer target around a1px line; ARIA/keyboard/resize bounds remain.
