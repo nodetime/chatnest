@@ -432,8 +432,8 @@ test("result grid keeps theme classes and renders the scoped 13px / 46px density
   assert.match(html, /rdg-light/);
   const source = readFileSync("components/chat/result-table.tsx", "utf8");
   assert.match(source, /resolvedTheme === "dark" \? "rdg-dark" : "rdg-light"/);
-  assert.match(source, /rowHeight=\{46\}/);
-  assert.match(source, /headerRowHeight=\{42\}/);
+  assert.match(source, /rowHeight=\{inline \? 38 : 46\}/);
+  assert.match(source, /headerRowHeight=\{inline \? 38 : 42\}/);
   assert.doesNotMatch(source, /fontSize: 12/);
   assert.match(source, /rowKeyGetter=\{\(row\) => row\.sourceIndex\}/);
 });

@@ -368,7 +368,7 @@ export function ResultTableView({
         <DataGrid
           className={`chatnest-result-grid ${resolvedTheme === "dark" ? "rdg-dark" : "rdg-light"}`}
           columns={columns}
-          headerRowHeight={42}
+          headerRowHeight={inline ? 38 : 42}
           onCellClick={({ row }, event) => {
             if (!(event.target as HTMLElement).closest("a")) {
               setDetail(row.sourceIndex);
@@ -393,7 +393,7 @@ export function ResultTableView({
               </div>
             ),
           }}
-          rowHeight={46}
+          rowHeight={inline ? 38 : 46}
           rowKeyGetter={(row) => row.sourceIndex}
           rows={rows}
           sortColumns={sortColumns}

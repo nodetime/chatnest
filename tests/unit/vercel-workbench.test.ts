@@ -275,7 +275,7 @@ test("result-table publishes authoritative view/notes dirty and saving state; fa
       assert.equal(find(tree,node=>node.type==='textarea')[0].props.value,'Draft survives closing','reopening restores exact parent draft');
       find(tree,node=>node.type==='textarea')[0].props.onChange({target:{value:''}});tree=render();
       assert.equal(saveButton(tree),undefined,'reverting notes removes save action');
-      const grid=find(tree,node=>node.type==='grid')[0];const column=grid.props.columns.find(column=>column.key==='/url');
+      const grid=find(tree,node=>node.type==='grid')[0];assert.equal(grid.props.rowHeight,46);assert.equal(grid.props.headerRowHeight,42);const column=grid.props.columns.find(column=>column.key==='/url');
       assert.equal(grid.props.columns.find(column=>column.key==='/title').width,220,'primary title leaves room for adjacent evidence');assert.equal(column.width,140,'generic secondary fields stay compact');assert.equal(column.minWidth,120);assert.equal(column.resizable,true,'users can still resize columns');
       assert.equal(column.name,'User source label');const link=column.renderCell({row:{raw:table.rows[0],sourceIndex:0}});
       assert.equal(link.props.href,originalUrl);assert.equal(link.props.title,originalUrl);assert.equal(link.props.children[0],'example.com');
@@ -291,7 +291,7 @@ test("result-table publishes authoritative view/notes dirty and saving state; fa
         save=saveButton(tree).props.onClick();render();resolveFetch({ok:false,status,json:async()=>({})});await save;tree=render();
         assert.equal(pending.at(-1),true,'failed/CAS-conflicted edits stay blocked');assert.ok(find(tree,node=>node.props?.role==='alert').length);
       }
-      for(const mode of [{readOnly:true},{inline:true}]){props=mode;const modeTree=render();assert.equal(saveButton(modeTree),undefined,'readonly and inline have no save action');assert.equal(pending.at(-1),false,'readonly/history or inline preview never invents a pending-save lock')}
+      for(const mode of [{readOnly:true},{inline:true}]){props=mode;const modeTree=render();assert.equal(saveButton(modeTree),undefined,'readonly and inline have no save action');if(mode.inline){const previewGrid=find(modeTree,node=>node.type==='grid')[0];assert.equal(previewGrid.props.rowHeight,38,'compact preview matches bounded layout row height');assert.equal(previewGrid.props.headerRowHeight,38,'compact preview matches bounded layout header');}assert.equal(pending.at(-1),false,'readonly/history or inline preview never invents a pending-save lock')}
       props={};render();assert.equal(pending.at(-1),true);for(const slot of slots)slot.cleanup?.();assert.equal(pending.at(-1),false,'unmount releases its original lock');
       assert.equal(JSON.stringify(table.rows),evidence,'pending projection never changes evidence');
     })().catch(error=>{console.error(error);process.exitCode=1});
