@@ -11,7 +11,6 @@ import {
 import { useActiveChat } from "@/hooks/use-active-chat";
 import { useWorkspace } from "@/hooks/use-workspace";
 import { ChatMenu } from "./chat-menu";
-import { ModelSelectorCompact } from "./multimodal-input";
 import type { VisibilityType } from "./visibility-selector";
 
 export function ChatHeader({
@@ -25,10 +24,9 @@ export function ChatHeader({
 }) {
   const { state, toggleSidebar, isMobile } = useSidebar();
   const workspace = useWorkspace();
-  const { currentModelId, setCurrentModelId, startNewChat, messages } =
-    useActiveChat();
+  const { chatTitle, startNewChat, messages } = useActiveChat();
   return (
-    <header className="flex h-12 shrink-0 items-center gap-2 border-b border-border/40 bg-background px-3 sm:px-4">
+    <header className="flex h-16 shrink-0 items-center gap-2 border-b border-border/40 bg-background px-3 sm:px-4">
       {(state === "collapsed" || isMobile) && (
         <Button
           aria-label="打开侧栏"
@@ -39,11 +37,14 @@ export function ChatHeader({
           <PanelLeft className="size-5" />
         </Button>
       )}
-      <div className="min-w-0">
-        <ModelSelectorCompact
-          onModelChange={setCurrentModelId}
-          selectedModelId={currentModelId}
-        />
+      <div className="min-w-0 flex-1 px-1">
+        <p
+          className="truncate text-sm font-medium"
+          data-testid="chat-title"
+          title={chatTitle}
+        >
+          {chatTitle}
+        </p>
       </div>
       <div className="ml-auto flex items-center gap-1">
         <Tooltip>

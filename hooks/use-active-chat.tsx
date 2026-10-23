@@ -23,6 +23,7 @@ import {
 } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
+import { projectChatTitle } from "@/components/chat/chat-title";
 import { useDataStream } from "@/components/chat/data-stream-provider";
 import { getChatHistoryPaginationKey } from "@/components/chat/sidebar-history";
 import { toast } from "@/components/chat/toast";
@@ -39,6 +40,7 @@ import { fetcher, fetchWithErrorHandlers, generateUUID } from "@/lib/utils";
 
 type ActiveChatContextValue = {
   chatId: string;
+  chatTitle: string;
   messages: ChatMessage[];
   setMessages: UseChatHelpers<ChatMessage>["setMessages"];
   sendMessage: UseChatHelpers<ChatMessage>["sendMessage"];
@@ -113,6 +115,10 @@ export function ActiveChatProvider({
     messages: ChatMessage[];
   } | null>(null);
 
+  const [liveTitle, setLiveTitle] = useState<{
+    chatId: string;
+    title: string;
+  } | null>(null);
   const [currentModelId, setCurrentModelId] = useState(DEFAULT_CHAT_MODEL);
   const { data: modelCatalog } = useSWR(
     `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/models`,
@@ -162,6 +168,9 @@ export function ActiveChatProvider({
     id: chatId,
     messages: initialMessages,
     onData: (dataPart) => {
+      if (dataPart.type === "data-chat-title") {
+        setLiveTitle({ chatId, title: dataPart.data });
+      }
       if (dataPart.type === "data-waiting-status") {
         setWaitingStatus(dataPart.data);
         return;
@@ -482,10 +491,16 @@ export function ActiveChatProvider({
     { revalidateOnFocus: false }
   );
 
+  const chatTitle = projectChatTitle({
+    liveTitle: liveTitle?.chatId === chatId ? liveTitle.title : undefined,
+    messages,
+    persistedTitle: chatData?.title,
+  });
   const value = useMemo<ActiveChatContextValue>(
     () => ({
       addToolApprovalResponse,
       chatId,
+      chatTitle,
       clearError,
       currentModelId,
       error,
@@ -515,6 +530,7 @@ export function ActiveChatProvider({
     }),
     [
       chatId,
+      chatTitle,
       error,
       clearError,
       loadError,

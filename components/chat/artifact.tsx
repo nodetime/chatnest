@@ -19,18 +19,22 @@ import { imageArtifact } from "@/artifacts/image/client";
 import { sheetArtifact } from "@/artifacts/sheet/client";
 import { textArtifact } from "@/artifacts/text/client";
 
+import { Artifact as ArtifactFrame } from "@/components/ai-elements/artifact";
 import { useArtifact } from "@/hooks/use-artifact";
 import { isProtectedResultTable } from "@/lib/artifacts/result-table";
 import type { Document, Vote } from "@/lib/db/schema";
 import type { Attachment, ChatMessage } from "@/lib/types";
 import { cn, fetcher } from "@/lib/utils";
 import { ArtifactActions } from "./artifact-actions";
+import { artifactCatalog } from "./artifact-catalog";
 import { ArtifactCloseButton } from "./artifact-close-button";
+import { ArtifactPicker } from "./artifact-picker";
 import { ArtifactTypeLabel } from "./artifact-type-label";
 import { LoaderIcon } from "./icons";
 import { Toolbar } from "./toolbar";
 import { VersionFooter } from "./version-footer";
 import type { VisibilityType } from "./visibility-selector";
+import { WorkspaceHeader } from "./workspace-header";
 
 export const artifactDefinitions = [
   textArtifact,
@@ -65,7 +69,7 @@ function PureArtifact({
   attachments: _attachments,
   setAttachments: _setAttachments,
   sendMessage,
-  messages: _messages,
+  messages,
   setMessages,
   regenerate: _regenerate,
   votes: _votes,
@@ -394,48 +398,9 @@ function PureArtifact({
 
   const artifactPanel = (
     <>
-      <div
-        className={cn(
-          "flex h-12 min-w-0 shrink-0 items-center justify-between gap-3 border-b border-border/50 px-4"
-        )}
-      >
-        <div className="flex min-w-0 items-center gap-3">
-          {!embedded && <ArtifactCloseButton />}
-          <div className="flex min-w-0 flex-col gap-1">
-            <div className="flex min-w-0 items-center gap-2">
-              <ArtifactTypeLabel kind={artifact.kind} />
-              <div className="truncate text-[15px] font-medium leading-tight">
-                {artifact.title}
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {saveError ? (
-                <div className="text-xs text-destructive" role="alert">
-                  {saveError}
-                </div>
-              ) : isContentDirty ? (
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <div className="size-1.5 animate-pulse rounded-full bg-amber-500" />
-                  正在保存…
-                </div>
-              ) : document ? (
-                <div className="text-xs text-muted-foreground">
-                  {`更新于${formatDistance(new Date(document.createdAt), new Date(), { addSuffix: true, locale: zhCN })}`}
-                </div>
-              ) : artifact.status === "streaming" ? (
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <div className="animate-spin">
-                    <LoaderIcon size={12} />
-                  </div>
-                  正在生成…
-                </div>
-              ) : (
-                <div className="h-3 w-24 animate-pulse rounded bg-muted-foreground/10" />
-              )}
-            </div>
-          </div>
-        </div>
-        {isCurrentVersion &&
+      <WorkspaceHeader
+        actions={
+          isCurrentVersion &&
           !isReadonly &&
           !isProtectedResultTable(artifact.content) && (
             <div className="flex shrink-0 items-center gap-0.5">
@@ -459,8 +424,39 @@ function PureArtifact({
                 stop={stop}
               />
             </div>
-          )}
-      </div>
+          )
+        }
+      >
+        <div className="flex min-w-0 flex-col gap-0.5">
+          {!embedded && <ArtifactCloseButton />}
+          <ArtifactPicker
+            activeId={artifact.documentId}
+            entries={artifactCatalog(messages)}
+            isContentDirty={isContentDirty}
+            status={artifact.status}
+            title={artifact.title}
+          />
+          <div className="flex min-w-0 items-center gap-2 px-2">
+            <ArtifactTypeLabel kind={artifact.kind} />
+            {saveError ? (
+              <span className="truncate text-xs text-destructive" role="alert">
+                {saveError}
+              </span>
+            ) : isContentDirty ? (
+              <span className="text-xs text-muted-foreground">
+                正在保存… · 暂不能切换
+              </span>
+            ) : artifact.status === "streaming" ? (
+              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <LoaderIcon size={12} />
+                正在生成… · 暂不能切换
+              </span>
+            ) : document ? (
+              <span className="truncate text-[11px] text-muted-foreground">{`更新于${formatDistance(new Date(document.createdAt), new Date(), { addSuffix: true, locale: zhCN })}`}</span>
+            ) : null}
+          </div>
+        </div>
+      </WorkspaceHeader>
       <div
         className={cn(
           "relative min-h-0 min-w-0 flex-1 bg-background",
@@ -546,16 +542,16 @@ function PureArtifact({
   }
 
   return (
-    <div
+    <ArtifactFrame
       className={
         embedded
-          ? "flex h-full w-full min-h-0 min-w-0 flex-col overflow-hidden bg-background"
+          ? "flex h-full w-full min-h-0 min-w-0 flex-col overflow-hidden rounded-none border-0 bg-background shadow-none"
           : "flex h-dvh w-[60%] shrink-0 flex-col overflow-hidden border-l border-border/50 bg-sidebar transition-[width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]"
       }
       data-testid="artifact"
     >
       {artifactPanel}
-    </div>
+    </ArtifactFrame>
   );
 }
 
@@ -575,7 +571,7 @@ export const Artifact = memo(PureArtifact, (prevProps, nextProps) => {
   if (prevProps.input !== nextProps.input) {
     return false;
   }
-  if (prevProps.messages.length !== nextProps.messages.length) {
+  if (prevProps.messages !== nextProps.messages) {
     return false;
   }
   if (prevProps.selectedVisibilityType !== nextProps.selectedVisibilityType) {

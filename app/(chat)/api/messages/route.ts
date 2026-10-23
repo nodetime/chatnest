@@ -37,6 +37,7 @@ export async function GET(request: Request) {
   return Response.json({
     isReadonly,
     messages: convertToUIMessages(messages),
+    title: chat.title,
     userId: chat.userId,
     visibility: chat.visibility,
   });

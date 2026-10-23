@@ -1,11 +1,12 @@
 import type { UseChatHelpers } from "@ai-sdk/react";
-import { ArrowDownIcon } from "lucide-react";
-import { useCallback, useEffect, useRef } from "react";
-import { useMessages } from "@/hooks/use-messages";
+import {
+  Conversation,
+  ConversationContent,
+  ConversationScrollButton,
+} from "@/components/ai-elements/conversation";
 import { prepareRegeneration } from "@/lib/agent/message-turn";
 import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
-import { cn } from "@/lib/utils";
 import { ActivityGroup } from "./activity-group";
 import { groupActivityMessages } from "./activity-groups";
 import { useDataStream } from "./data-stream-provider";
@@ -37,36 +38,13 @@ function PureMessages({
   setMessages,
   regenerate,
   isReadonly,
-  isArtifactVisible,
+  isArtifactVisible: _isArtifactVisible,
   isLoading,
   selectedModelId: _selectedModelId,
   onEditMessage,
   onRegenerateAnswer,
 }: MessagesProps) {
-  const {
-    containerRef: messagesContainerRef,
-    endRef: messagesEndRef,
-    isAtBottom,
-    scrollToBottom,
-    hasSentMessage,
-    reset,
-  } = useMessages({
-    status,
-  });
-
   useDataStream();
-
-  const prevChatIdRef = useRef(chatId);
-  useEffect(() => {
-    if (prevChatIdRef.current !== chatId) {
-      prevChatIdRef.current = chatId;
-      reset();
-    }
-  }, [chatId, reset]);
-
-  const handleScrollToBottom = useCallback(() => {
-    scrollToBottom("smooth");
-  }, [scrollToBottom]);
 
   const renderMessage = (
     message: ChatMessage,
@@ -91,7 +69,7 @@ function PureMessages({
           : undefined
       }
       regenerate={regenerate}
-      requiresScrollPadding={hasSentMessage && index === messages.length - 1}
+      requiresScrollPadding={false}
       setMessages={setMessages}
       vote={
         votes ? votes.find((vote) => vote.messageId === message.id) : undefined
@@ -106,15 +84,8 @@ function PureMessages({
           <Greeting />
         </div>
       )}
-      <div
-        className={cn(
-          "absolute inset-0 touch-pan-y overflow-y-auto",
-          messages.length > 0 ? "bg-background" : "bg-transparent"
-        )}
-        ref={messagesContainerRef}
-        style={isArtifactVisible ? { scrollbarWidth: "none" } : undefined}
-      >
-        <div className="mx-auto flex min-h-full min-w-0 max-w-[800px] flex-col gap-5 px-4 py-6 sm:px-6 md:gap-6">
+      <Conversation className="absolute inset-0 min-h-0" key={chatId}>
+        <ConversationContent className="mx-auto min-h-full w-full min-w-0 max-w-[800px] gap-5 px-5 py-8 sm:px-8 md:gap-7">
           {groupActivityMessages(messages).map((group) =>
             group.kind === "message" ? (
               renderMessage(group.message, group.index)
@@ -142,25 +113,13 @@ function PureMessages({
             <ThinkingMessage />
           )}
 
-          <div
-            className="min-h-[24px] min-w-[24px] shrink-0"
-            ref={messagesEndRef}
-          />
-        </div>
-      </div>
-
-      <button
-        aria-label="滚动到底部"
-        className={`absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center rounded-full border border-border/50 bg-card/90 px-3.5 shadow-[var(--shadow-float)] backdrop-blur-lg transition-all duration-200 h-7 text-[10px] ${
-          isAtBottom
-            ? "pointer-events-none scale-90 opacity-0"
-            : "pointer-events-auto scale-100 opacity-100"
-        }`}
-        onClick={handleScrollToBottom}
-        type="button"
-      >
-        <ArrowDownIcon className="size-3 text-muted-foreground" />
-      </button>
+          <div className="h-6 shrink-0" />
+        </ConversationContent>
+        <ConversationScrollButton
+          aria-label="滚动到底部"
+          className="z-10 size-9 shadow-sm"
+        />
+      </Conversation>
     </div>
   );
 }

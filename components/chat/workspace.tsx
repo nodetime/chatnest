@@ -1,33 +1,23 @@
 // biome-ignore-all lint/performance/noJsxPropsBind: React Compiler memoizes workspace event closures.
 "use client";
-import {
-  FileText,
-  Globe,
-  Maximize2,
-  Minimize2,
-  Monitor,
-  X,
-} from "lucide-react";
+import { FileText } from "lucide-react";
 import { type ReactNode, useEffect, useRef } from "react";
-import { Button } from "@/components/ui/button";
 import { useActiveChat } from "@/hooks/use-active-chat";
 import { useArtifact } from "@/hooks/use-artifact";
-import { useWorkspace, type WorkspaceTab } from "@/hooks/use-workspace";
+import { useWorkspace } from "@/hooks/use-workspace";
 import { browserWorkspaceEvents } from "@/lib/agent/workspace-events";
 import { cn } from "@/lib/utils";
+import { artifactCatalog } from "./artifact-catalog";
+import { ArtifactPicker } from "./artifact-picker";
 import { BrowserWorkspace } from "./browser-workspace";
 import { ConversationSources } from "./conversation-sources";
-
-const tabs = [
-  { icon: Monitor, id: "browser", title: "浏览器" },
-  { icon: FileText, id: "document", title: "产物" },
-  { icon: Globe, id: "sources", title: "来源" },
-] as const;
+import { WorkspaceHeader } from "./workspace-header";
 
 export function Workspace({ children }: { children: ReactNode }) {
   const workspace = useWorkspace();
   const { artifact } = useArtifact();
   const { chatId, messages, status } = useActiveChat();
+  const entries = artifactCatalog(messages);
   const pane = useRef<HTMLElement>(null);
   const previousArtifact = useRef({ id: "init", visible: false });
   const previousChat = useRef(chatId);
@@ -95,7 +85,6 @@ export function Workspace({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("keydown", close);
   }, [workspace.open, workspace.close]);
 
-  const select = (tab: WorkspaceTab) => workspace.update({ tab });
   return (
     <>
       {workspace.open && !workspace.expanded && (
@@ -159,125 +148,57 @@ export function Workspace({ children }: { children: ReactNode }) {
           { "--workspace-width": `${workspace.width}%` } as React.CSSProperties
         }
       >
-        <div className="flex h-12 shrink-0 items-center gap-1 border-b border-border/50 px-3">
-          <div
-            aria-label="工作区内容"
-            className="flex min-w-0 flex-1 items-center gap-1"
-            role="tablist"
-          >
-            {tabs.map(({ id, title, icon: Icon }) => (
-              <button
-                aria-controls={`workspace-${id}`}
-                aria-selected={workspace.tab === id}
-                className={cn(
-                  "inline-flex items-center gap-1.5 h-9 rounded-md px-2.5 text-[13px] transition-colors",
-                  workspace.tab === id
-                    ? "bg-secondary font-medium text-foreground"
-                    : "text-muted-foreground hover:bg-secondary/60"
-                )}
-                id={`workspace-tab-${id}`}
-                key={id}
-                onClick={() => select(id)}
-                onKeyDown={(event) => {
-                  const index = tabs.findIndex((item) => item.id === id);
-                  if (
-                    ["ArrowRight", "ArrowLeft", "Home", "End"].includes(
-                      event.key
-                    )
-                  ) {
-                    event.preventDefault();
-                    const next =
-                      tabs[
-                        event.key === "Home"
-                          ? 0
-                          : event.key === "End"
-                            ? tabs.length - 1
-                            : (index + (event.key === "ArrowRight" ? 1 : 2)) %
-                              tabs.length
-                      ].id;
-                    select(next);
-                    document.getElementById(`workspace-tab-${next}`)?.focus();
-                  }
-                }}
-                role="tab"
-                tabIndex={workspace.tab === id ? 0 : -1}
-                type="button"
-              >
-                <Icon className="size-3.5" />
-                {title}
-              </button>
-            ))}
-          </div>
-          <Button
-            aria-label={workspace.expanded ? "收起工作区" : "展开工作区"}
-            className="hidden size-9 rounded-md md:inline-flex"
-            onClick={() => workspace.update({ expanded: !workspace.expanded })}
-            size="icon"
-            variant="ghost"
-          >
-            {workspace.expanded ? (
-              <Minimize2 className="size-4" />
-            ) : (
-              <Maximize2 className="size-4" />
-            )}
-          </Button>
-          <Button
-            aria-label="关闭工作区"
-            className="size-9 rounded-md"
-            onClick={workspace.close}
-            size="icon"
-            variant="ghost"
-          >
-            <X className="size-4" />
-          </Button>
-        </div>
-        <div
-          aria-labelledby="workspace-tab-browser"
+        {(workspace.tab !== "document" || artifact.documentId === "init") && (
+          <WorkspaceHeader />
+        )}
+        <section
+          aria-label="浏览器"
           className={cn(
             "min-h-0 min-w-0 flex-1",
             workspace.tab !== "browser" && "hidden"
           )}
           id="workspace-browser"
-          role="tabpanel"
         >
           <BrowserWorkspace
             active={workspace.open && workspace.tab === "browser"}
             key={chatId}
           />
-        </div>
-        <div
-          aria-labelledby="workspace-tab-document"
+        </section>
+        <section
+          aria-label="产物"
           className={cn(
             "min-h-0 min-w-0 flex-1",
             workspace.tab !== "document" && "hidden"
           )}
           id="workspace-document"
-          role="tabpanel"
         >
           {artifact.documentId === "init" ? (
-            <div className="flex h-full flex-col items-center justify-center px-8 text-center">
-              <FileText className="mb-4 size-7 text-muted-foreground/60" />
-              <h2 className="text-sm font-medium">还没有打开产物</h2>
-              <p className="mt-3 max-w-xs text-sm leading-7 text-muted-foreground">
-                让 Agent
-                创建文本、代码、图片或表格，点击对话里的产物卡片在这里查看。
+            <div className="flex h-full flex-col items-center justify-center gap-4 overflow-y-auto px-6 py-8 text-center">
+              <FileText className="size-7 text-muted-foreground/60" />
+              <h2 className="text-base font-medium">
+                {entries.length ? "本次对话的产物" : "为想法留一个工作空间"}
+              </h2>
+              <p className="max-w-xs text-sm leading-6 text-muted-foreground">
+                {entries.length
+                  ? "选择一个文件继续查看，无需返回对话查找。"
+                  : "Agent 创建的文本、代码、图片和表格会收集在这里。"}
               </p>
+              <ArtifactPicker entries={entries} list />
             </div>
           ) : (
             children
           )}
-        </div>
-        <div
-          aria-labelledby="workspace-tab-sources"
+        </section>
+        <section
+          aria-label="来源"
           className={cn(
             "min-h-0 min-w-0 flex-1",
             workspace.tab !== "sources" && "hidden"
           )}
           id="workspace-sources"
-          role="tabpanel"
         >
           <ConversationSources embedded key={chatId} />
-        </div>
+        </section>
       </aside>
     </>
   );

@@ -55,7 +55,7 @@ function ArtifactActionButton({
           className={cn(
             "flex items-center justify-center text-muted-foreground transition-all duration-150 focus-visible:outline-2 focus-visible:outline-ring",
             layout === "header"
-              ? "size-9 rounded-md hover:bg-muted [&_svg]:size-4"
+              ? "size-9 rounded-md hover:bg-muted lg:w-auto lg:gap-1.5 lg:px-2 [&_svg]:size-4"
               : "rounded-full p-3",
             "hover:text-foreground",
             "active:scale-95",
@@ -69,6 +69,11 @@ function ArtifactActionButton({
           type="button"
         >
           {action.icon}
+          {layout === "header" && (
+            <span className="hidden lg:inline text-xs">
+              {action.label ?? action.description}
+            </span>
+          )}
         </button>
       </TooltipTrigger>
       <TooltipContent side="left" sideOffset={8}>

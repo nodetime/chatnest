@@ -276,7 +276,10 @@ test("a rejected approval response is presented as denied rather than an ordinar
 
 test("message stack reduces inter-message space without changing paragraph typography", () => {
   const messages = readFileSync("components/chat/messages.tsx", "utf8");
-  assert.match(messages, /flex-col gap-5 px-4 py-6 sm:px-6 md:gap-6/);
+  assert.match(
+    messages,
+    /<ConversationContent[^>]*gap-5 px-5 py-8 sm:px-8 md:gap-7/
+  );
   const message = readFileSync("components/chat/message.tsx", "utf8");
   assert.match(message, /text-\[15px\] leading-\[1\.8\]/);
 });
@@ -384,27 +387,26 @@ test("saved notes start closed with discoverable indicator and readonly history 
   assert.match(sheet, /readOnly=\{isReadonly \|\| !isCurrentVersion\}/);
 });
 
-test("workspace keeps tabs, keyboard and resize semantics within a restrained desktop surface", () => {
+test("workspace uses a keyboard mode menu and preserves resize and overlay semantics", () => {
   const workspace = readFileSync("components/chat/workspace.tsx", "utf8");
+  const header = readFileSync("components/chat/workspace-header.tsx", "utf8");
   for (const title of ["浏览器", "产物", "来源"]) {
-    assert.ok(workspace.includes(`title: "${title}"`));
+    assert.ok(header.includes(`title: "${title}"`));
   }
-  assert.doesNotMatch(workspace, /md:rounded-|md:m-2|md:inset-2/);
-  assert.match(workspace, /h-12 shrink-0/);
-  assert.match(workspace, /border-border\/50/);
-  assert.match(workspace, /role="tablist"/);
-  assert.match(workspace, /"ArrowRight", "ArrowLeft", "Home", "End"/);
+  assert.match(header, /aria-label="切换工作区视图"/);
+  assert.match(header, /DropdownMenuRadioGroup/);
+  assert.match(header, /aria-label="关闭工作区"/);
+  assert.match(header, /"收起工作区" : "展开工作区"/);
   assert.match(workspace, /aria-label="调整工作区宽度"/);
-  assert.match(workspace, /aria-label="关闭工作区"/);
-  assert.match(workspace, /"收起工作区" : "展开工作区"/);
-  assert.match(workspace, /fixed inset-0[^"]*h-dvh w-full/);
+  assert.match(workspace, /fixed inset-0[^"\n]*h-dvh w-full/);
+  assert.doesNotMatch(workspace, /role="tablist"/);
 });
 
 test("embedded artifact keeps the real single title and a shrinkable result-content flex chain", () => {
   const artifact = readFileSync("components/chat/artifact.tsx", "utf8");
   assert.match(artifact, /!embedded && <ArtifactCloseButton \/>/);
   assert.equal(artifact.match(/\{artifact\.title\}/g)?.length, 2);
-  assert.match(artifact, /h-12 min-w-0 shrink-0/);
+  assert.match(artifact, /<WorkspaceHeader/);
   assert.match(
     artifact,
     /isProtectedResultTable\(artifact\.content\)[\s\S]*?"flex overflow-hidden"\s*:\s*"overflow-y-auto"/
@@ -857,7 +859,7 @@ test("generic empty conversation has a readable invitation and one softly elevat
   assert.match(composer, /shadow-\[var\(--shadow-composer\)\]/);
   assert.doesNotMatch(composer, /focus-within:border-foreground\/25/);
   const sidebar = readFileSync("components/chat/app-sidebar.tsx", "utf8");
-  assert.match(sidebar, /h-12 shrink-0/);
+  assert.match(sidebar, /h-16 shrink-0/);
   for (const entry of [
     "新对话",
     "创建任务",

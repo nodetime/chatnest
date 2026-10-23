@@ -58,7 +58,9 @@ import {
 import { cn, fetcher } from "@/lib/utils";
 import {
   PromptInput,
+  PromptInputBody,
   PromptInputFooter,
+  PromptInputHeader,
   PromptInputSubmit,
   PromptInputTextarea,
   PromptInputTools,
@@ -90,7 +92,7 @@ function PureMultimodalInput({
   className,
   selectedVisibilityType: _selectedVisibilityType,
   selectedModelId,
-  onModelChange: _onModelChange,
+  onModelChange,
   editingMessage,
   onCancelEdit,
   isLoading: _isLoading,
@@ -521,7 +523,7 @@ function PureMultimodalInput({
         onSubmit={handlePromptSubmit}
       >
         {(attachments.length > 0 || uploadQueue.length > 0) && (
-          <div
+          <PromptInputHeader
             className="flex w-full min-w-0 self-start flex-row flex-wrap gap-2 px-3 pt-3"
             data-testid="attachments-preview"
           >
@@ -547,20 +549,26 @@ function PureMultimodalInput({
                 key={filename}
               />
             ))}
-          </div>
+          </PromptInputHeader>
         )}
-        <PromptInputTextarea
-          aria-label="消息输入框"
-          className="min-h-[64px] text-[16px] leading-relaxed px-4 pt-4 pb-2 placeholder:text-muted-foreground"
-          data-testid="multimodal-input"
-          onChange={handleInput}
-          onKeyDown={handleTextareaKeyDown}
-          placeholder={editingMessage ? "修改消息…" : "描述你想完成的事…"}
-          ref={textareaRef}
-          value={input}
-        />
+        <PromptInputBody>
+          <PromptInputTextarea
+            aria-label="消息输入框"
+            className="min-h-[64px] text-[16px] leading-relaxed px-4 pt-4 pb-2 placeholder:text-muted-foreground"
+            data-testid="multimodal-input"
+            onChange={handleInput}
+            onKeyDown={handleTextareaKeyDown}
+            placeholder={editingMessage ? "修改消息…" : "描述你想完成的事…"}
+            ref={textareaRef}
+            value={input}
+          />
+        </PromptInputBody>
         <PromptInputFooter className="px-3 pb-3">
-          <PromptInputTools>
+          <PromptInputTools className="min-w-0 flex-wrap">
+            <ModelSelectorCompact
+              onModelChange={onModelChange}
+              selectedModelId={selectedModelId}
+            />
             <ComposerMenu
               busy={
                 Boolean(editingMessage) ||
@@ -813,7 +821,7 @@ function PureModelSelectorCompact({
       <ModelSelectorTrigger asChild>
         <Button
           aria-label="选择模型"
-          className="h-9 max-w-[240px] justify-between gap-2 rounded-md px-2 text-[15px] font-medium text-foreground transition-colors hover:bg-secondary"
+          className="h-9 max-w-[190px] justify-between gap-2 rounded-md px-2 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
           data-testid="model-selector"
           variant="ghost"
         >

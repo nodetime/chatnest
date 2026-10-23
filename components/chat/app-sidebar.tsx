@@ -46,7 +46,7 @@ export function AppSidebar({
         collapsible="offcanvas"
       >
         <SidebarHeader className="gap-3 px-3 pt-0 pb-3">
-          <div className="flex h-12 shrink-0 items-center justify-between px-1">
+          <div className="flex h-16 shrink-0 items-center justify-between px-1">
             <button
               aria-label="ChatNest 首页"
               className="flex items-center gap-2.5 rounded-md text-sm font-semibold tracking-tight"

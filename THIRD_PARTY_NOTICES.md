@@ -36,3 +36,19 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+
+## Vercel AI Elements — Artifact and Task
+
+Source: https://github.com/vercel/ai-elements/tree/ca8be600bfd01b3131f9bf6134b51602a71f4374
+
+Pinned commit: `ca8be600bfd01b3131f9bf6134b51602a71f4374`
+
+Adapted `packages/elements/src/artifact.tsx` and `task.tsx` into
+`components/ai-elements/`. Local changes replace monorepo imports with the
+existing ChatNest UI primitives, use a native button TaskTrigger, and leave Task
+content layout to the existing activity timeline. Artifact and Task are composed
+into the conversation workspace and real tool activity groups. No SDK, runtime,
+or dependency changes. The complete pinned upstream copyright/license notice is
+retained verbatim in `components/ai-elements/AI_ELEMENTS_LICENSE`. The full
+Apache License 2.0 text is included in `components/ai-elements/APACHE-2.0.txt`.
