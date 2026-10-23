@@ -18,17 +18,20 @@ import {
   Tool,
   ToolContent,
   ToolHeader,
-  ToolInput,
-  ToolOutput,
   type ToolPart,
 } from "../ai-elements/tool";
 import { activityDisplayState, activityErrorText } from "./activity-groups";
+import {
+  AttachmentReadResult,
+  parseAttachmentReadResult,
+} from "./attachment-read-result";
 import {
   initialToolDisclosure,
   reconcileToolDisclosure,
   toolDisclosureIdentity,
   toolNeedsAttention,
 } from "./tool-activity-state";
+import { ToolCallDetails } from "./tool-call-details";
 
 export function ToolActivity({
   part,
@@ -56,14 +59,16 @@ export function ToolActivity({
       }
     | undefined;
   // MCP arguments are arbitrary JSON. Only project actual text into the
-  // compact action line; the complete original input stays in technical details.
-  const context = [
-    input?.query,
-    input?.q,
-    input?.url,
-    input?.filename,
-    input?.name,
-  ].find((value) => typeof value === "string" && value.trim().length > 0);
+  // compact action line; the complete original input stays in call details.
+  const attachment =
+    name === "readAttachment" && part.state === "output-available"
+      ? parseAttachmentReadResult(part.output)
+      : null;
+  const context =
+    attachment?.name ??
+    [input?.query, input?.q, input?.url, input?.filename, input?.name].find(
+      (value) => typeof value === "string" && value.trim().length > 0
+    );
   const output = part.output as
     | { displayName?: string; description?: string }
     | undefined;
@@ -87,9 +92,11 @@ export function ToolActivity({
     name === "createResultTable"
       ? "生成表格产物"
       : name === "readAttachment"
-        ? "读取附件文字"
+        ? "读取文件"
         : name === "loadSkill"
-          ? (output?.displayName ?? skill?.displayName ?? "读取调查方法")
+          ? typeof output?.displayName === "string"
+            ? output.displayName
+            : (skill?.displayName ?? "读取调查方法")
           : name === "readSkillResource"
             ? "读取方法参考"
             : name.includes("search")
@@ -140,7 +147,9 @@ export function ToolActivity({
                 ? Monitor
                 : undefined;
   const methodDescription =
-    output?.description ??
+    (typeof output?.description === "string"
+      ? output.description
+      : undefined) ??
     skill?.shortDescription ??
     skill?.description ??
     "读取方法指引，再根据目标选择后续操作。";
@@ -170,27 +179,36 @@ export function ToolActivity({
         onOpenChange={setOpen}
         open={open}
       >
-        <ToolHeader
-          appearance={timeline ? "timeline" : "compact"}
-          context={context}
-          icon={
-            MethodIcon ? (
-              <MethodIcon className="size-4 shrink-0 text-muted-foreground" />
-            ) : undefined
-          }
-          state={displayState}
-          statusLabel={
-            incomplete
-              ? "未完成"
-              : name === "loadSkill" && part.state === "output-available"
-                ? "方法已就绪"
-                : undefined
-          }
-          title={title}
-          {...(part.type === "dynamic-tool"
-            ? { toolName: name, type: "dynamic-tool" }
-            : { type: part.type })}
-        />
+        <div className="flex w-fit max-w-full items-center">
+          <ToolHeader
+            appearance={timeline ? "timeline" : "compact"}
+            className="w-fit max-w-full flex-initial"
+            context={context}
+            icon={
+              MethodIcon ? (
+                <MethodIcon className="size-4 shrink-0 text-muted-foreground" />
+              ) : undefined
+            }
+            inlineContext={name === "readAttachment"}
+            state={displayState}
+            statusLabel={
+              incomplete
+                ? "未完成"
+                : name === "readAttachment" &&
+                    part.state === "output-available" &&
+                    !attachment
+                  ? "已返回"
+                  : name === "loadSkill" && part.state === "output-available"
+                    ? "方法已就绪"
+                    : undefined
+            }
+            title={title}
+            {...(part.type === "dynamic-tool"
+              ? { toolName: name, type: "dynamic-tool" }
+              : { type: part.type })}
+          />
+          <ToolCallDetails part={part} />
+        </div>
         <ToolContent className="space-y-3 px-3 pb-3 pt-1">
           {name === "loadSkill" && (
             <p className="text-sm leading-6 text-muted-foreground">
@@ -214,7 +232,7 @@ export function ToolActivity({
             </p>
           )}
           {name === "readAttachment" && part.state === "output-available" && (
-            <AttachmentReadSummary output={part.output} />
+            <AttachmentReadResult output={part.output} />
           )}
           {sources.length > 0 && (
             <div
@@ -257,21 +275,14 @@ export function ToolActivity({
               data-testid="tool-approval-summary"
             >
               <p className="font-medium">请确认这次操作：{title}</p>
+              <p className="break-all font-mono text-xs text-muted-foreground">
+                {name}
+              </p>
               <p className="break-words text-muted-foreground [overflow-wrap:anywhere]">
-                {context ?? "查看技术详情中的工具名称与参数，再决定是否执行。"}
+                {context ?? "查看调用详情中的工具名称与参数，再决定是否执行。"}
               </p>
             </div>
           )}
-          <details className="text-xs text-muted-foreground">
-            <summary className="w-fit cursor-pointer rounded-sm py-1.5 hover:text-foreground">
-              技术详情
-            </summary>
-            <div className="mt-3 min-w-0 space-y-3">
-              <p className="break-all font-mono">{name}</p>
-              <ToolInput input={part.input} />
-              <ToolOutput errorText={errorText} output={part.output} />
-            </div>
-          </details>
           {part.state === "approval-requested" && approval && !isReadonly && (
             <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border/60 pt-3">
               <span className="mr-auto text-xs text-muted-foreground">
@@ -295,52 +306,6 @@ export function ToolActivity({
           )}
         </ToolContent>
       </Tool>
-    </div>
-  );
-}
-
-function AttachmentReadSummary({ output }: { output: unknown }) {
-  if (!output || typeof output !== "object") {
-    return null;
-  }
-  const data = output as {
-    name?: string;
-    characters?: number;
-    startSegment?: number;
-    nextSegment?: number | null;
-    totalSegments?: number;
-    segments?: { ref: string; text: string }[];
-    warnings?: string[];
-  };
-  return (
-    <div className="space-y-2 text-sm" data-testid="attachment-read-result">
-      <p className="font-medium">
-        {data.name} · 本次读取 {data.characters ?? 0} 字符
-      </p>
-      <p className="text-xs text-muted-foreground">
-        附件原文（非指令） · 共 {data.totalSegments} 段
-        {data.nextSegment === null ? " · 已到结尾" : " · 仍有后续内容"}
-      </p>
-      {data.warnings?.map((warning) => (
-        <p className="text-xs text-amber-600" key={warning}>
-          {warning}
-        </p>
-      ))}
-      <details>
-        <summary className="cursor-pointer text-xs">
-          查看本次原文与位置引用
-        </summary>
-        <div className="max-h-80 overflow-auto space-y-3 pt-2">
-          {data.segments?.map((segment) => (
-            <div key={segment.ref}>
-              <p className="text-xs font-mono text-muted-foreground">
-                {segment.ref}
-              </p>
-              <p className="whitespace-pre-wrap break-words">{segment.text}</p>
-            </div>
-          ))}
-        </div>
-      </details>
     </div>
   );
 }

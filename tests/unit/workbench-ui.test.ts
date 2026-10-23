@@ -87,8 +87,10 @@ for (const state of [
         }[state]
       )
     );
-    assert.match(html, /技术详情/);
-    assert.match(html, /fixture__custom_alias/);
+    assert.match(html, /查看调用详情/);
+    if (state === "approval-requested") {
+      assert.match(html, /fixture__custom_alias/);
+    }
     if (state === "approval-requested") {
       assert.match(html, /允许执行/);
       assert.match(html, /拒绝/);
@@ -115,14 +117,14 @@ test("readonly approval shows its state but not mutation controls; approval IDs 
   );
 });
 
-test("generic SDK error has a Chinese visible explanation and keeps the raw error in technical details", () => {
+test("generic SDK error has a Chinese visible explanation without inlining its raw evidence", () => {
   const html = renderActivity({
     ...success,
     errorText: "An error occurred.",
     state: "output-error",
   });
   assert.match(html, /role="alert">工具暂时未能返回结果，请稍后重试。/);
-  assert.match(html, /An error occurred\./);
+  assert.doesNotMatch(html, /An error occurred\./);
   const custom = renderActivity({
     ...success,
     errorText: "Provider fixture error",
@@ -697,7 +699,7 @@ test("execution timeline has one natural-width summary and real tool count; appr
     process.stdout.write(renderToStaticMarkup(React.createElement(SWRConfig, {value:{provider:()=>new Map(),revalidateOnMount:false}}, React.createElement(ActivityGroup, {parts, approve:()=>{}, isReadonly:false}))));
   `);
   assert.match(html, /执行过程/);
-  assert.match(html, /2 次调用/);
+  assert.match(html, /2 个步骤/);
   assert.match(html, /等待确认/);
   assert.match(html, /允许执行/);
   assert.match(html, /data-testid="activity-timeline"/);
@@ -871,7 +873,7 @@ test("generic empty conversation has a readable invitation and one softly elevat
   }
 });
 
-test("approval presents a human action summary while raw arguments remain under technical details", () => {
+test("approval presents a human action summary while raw arguments are reachable in call details", () => {
   const html = renderActivity({
     ...success,
     approval: { id: "fixture-approval" },
@@ -881,10 +883,9 @@ test("approval presents a human action summary while raw arguments remain under 
   assert.match(html, /data-testid="tool-approval-summary"/);
   assert.match(html, /搜索资料/);
   assert.match(html, /precise fixture query/);
-  const technical = html.indexOf("技术详情");
-  assert.ok(technical > 0);
-  assert.doesNotMatch(html.slice(0, technical), /调用参数/);
-  assert.match(html.slice(technical), /调用参数/);
+  assert.match(html, /查看调用详情/);
+  assert.doesNotMatch(html, /技术详情|调用参数/);
+  assert.match(html, /fixture__search/);
   assert.match(html, /请确认这次操作/);
   const unknown = renderActivity({
     ...success,
@@ -910,7 +911,7 @@ test("artifact and table actions keep readable 36px targets without leaking tabl
   );
 });
 
-test("tool action context skips structured arguments but keeps their original technical representation", () => {
+test("tool action context skips structured arguments while call details stay reachable", () => {
   const html = renderActivity({
     ...success,
     approval: { id: "fixture-approval" },
@@ -921,9 +922,8 @@ test("tool action context skips structured arguments but keeps their original te
     state: "approval-requested",
   });
   assert.match(html, /https:\/\/example.test\/action/);
-  assert.match(html, /raw structured query/);
-  const htmlBeforeDetails = html.slice(0, html.indexOf("技术详情"));
-  assert.doesNotMatch(htmlBeforeDetails, /raw structured query/);
+  assert.match(html, /查看调用详情/);
+  assert.doesNotMatch(html, /raw structured query|技术详情/);
 });
 
 test("open artifacts use a compact chat file card instead of mounting a duplicate editor", () => {

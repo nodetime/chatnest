@@ -39,6 +39,7 @@ export type ToolHeaderProps = {
   icon?: ReactNode;
   appearance?: "default" | "compact" | "timeline";
   context?: string;
+  inlineContext?: boolean;
 } & (
   | { type: ToolUIPart["type"]; state: ToolUIPart["state"]; toolName?: never }
   | {
@@ -85,6 +86,7 @@ export const ToolHeader = ({
   icon,
   appearance = "default",
   context,
+  inlineContext = false,
   ...props
 }: ToolHeaderProps) => {
   const derivedName =
@@ -118,6 +120,7 @@ export const ToolHeader = ({
         <span
           className={cn(
             "min-w-0 font-medium",
+            inlineContext && "shrink-0",
             compact
               ? "truncate text-[13px]"
               : "break-words text-sm [overflow-wrap:anywhere]"
@@ -125,8 +128,16 @@ export const ToolHeader = ({
         >
           {title ?? derivedName}
         </span>
+        {compact && inlineContext && context && (
+          <span
+            className="min-w-0 truncate text-[13px] text-muted-foreground"
+            title={context}
+          >
+            {context}
+          </span>
+        )}
       </div>
-      {compact && context && (
+      {compact && !inlineContext && context && (
         <span
           className="min-w-0 flex-1 truncate text-xs font-normal text-muted-foreground"
           title={context}
