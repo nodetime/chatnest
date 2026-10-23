@@ -51,7 +51,7 @@ export function ChatHeader({
             <Button
               aria-expanded={workspace.open}
               aria-label={workspace.open ? "隐藏工作区" : "打开工作区"}
-              className="size-9 rounded-xl"
+              className="size-9 rounded-md"
               onClick={() =>
                 workspace.open ? workspace.close() : workspace.show()
               }

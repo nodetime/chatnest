@@ -346,12 +346,6 @@ function PureArtifact({
     userScrolledArtifact.current = !atBottom;
   }, []);
 
-  const handleClose = useCallback(() => {
-    setArtifact((prev) => ({ ...prev, isVisible: false }));
-  }, [setArtifact]);
-
-  const [isToolbarVisible, setIsToolbarVisible] = useState(true);
-
   const isCurrentVersion =
     documents && documents.length > 0
       ? currentVersionIndex === documents.length - 1
@@ -402,16 +396,15 @@ function PureArtifact({
     <>
       <div
         className={cn(
-          "flex min-w-0 shrink-0 items-center justify-between border-b border-border/50 px-3",
-          embedded ? "h-11" : "h-[calc(3.5rem+1px)]"
+          "flex h-12 min-w-0 shrink-0 items-center justify-between gap-3 border-b border-border/50 px-4"
         )}
       >
         <div className="flex min-w-0 items-center gap-3">
           {!embedded && <ArtifactCloseButton />}
-          <div className="flex min-w-0 flex-col gap-0.5">
+          <div className="flex min-w-0 flex-col gap-1">
             <div className="flex min-w-0 items-center gap-2">
               <ArtifactTypeLabel kind={artifact.kind} />
-              <div className="truncate text-sm font-semibold leading-tight tracking-tight">
+              <div className="truncate text-[15px] font-medium leading-tight">
                 {artifact.title}
               </div>
             </div>
@@ -445,16 +438,27 @@ function PureArtifact({
         {isCurrentVersion &&
           !isReadonly &&
           !isProtectedResultTable(artifact.content) && (
-            <ArtifactActions
-              artifact={artifact}
-              currentVersionIndex={currentVersionIndex}
-              handleVersionChange={handleVersionChange}
-              isCurrentVersion={isCurrentVersion}
-              layout="header"
-              metadata={metadata}
-              mode={mode}
-              setMetadata={setMetadata}
-            />
+            <div className="flex shrink-0 items-center gap-0.5">
+              <ArtifactActions
+                artifact={artifact}
+                currentVersionIndex={currentVersionIndex}
+                handleVersionChange={handleVersionChange}
+                isCurrentVersion={isCurrentVersion}
+                layout="header"
+                metadata={metadata}
+                mode={mode}
+                setMetadata={setMetadata}
+              />
+              <Toolbar
+                artifactKind={artifact.kind}
+                consoleError={consoleError}
+                documentId={artifact.documentId}
+                sendMessage={sendMessage}
+                setMessages={setMessages}
+                status={status}
+                stop={stop}
+              />
+            </div>
           )}
       </div>
       <div
@@ -495,24 +499,6 @@ function PureArtifact({
           suggestions={[]}
           title={artifact.title}
         />
-        <AnimatePresence>
-          {isCurrentVersion &&
-          !isReadonly &&
-          !isProtectedResultTable(artifact.content) ? (
-            <Toolbar
-              artifactKind={artifact.kind}
-              consoleError={consoleError}
-              documentId={artifact.documentId}
-              isToolbarVisible={isToolbarVisible}
-              onClose={handleClose}
-              sendMessage={sendMessage}
-              setIsToolbarVisible={setIsToolbarVisible}
-              setMessages={setMessages}
-              status={status}
-              stop={stop}
-            />
-          ) : null}
-        </AnimatePresence>
       </div>
       <AnimatePresence>
         {documents && documents.length > 1 && (

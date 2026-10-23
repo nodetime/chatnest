@@ -21,9 +21,7 @@ import type { Document } from "@/lib/db/schema";
 import { cn, fetcher } from "@/lib/utils";
 import type { ArtifactKind, UIArtifact } from "./artifact";
 import { ArtifactTypeLabel } from "./artifact-type-label";
-import { CodeEditor } from "./code-editor";
 import { documentPreviewLayout } from "./document-preview-layout";
-import { InlineDocumentSkeleton } from "./document-skeleton";
 import {
   CodeIcon,
   FileIcon,
@@ -86,25 +84,17 @@ export function DocumentPreview({
   }, [artifact.documentId, setArtifact]);
 
   if (isDocumentsFetching) {
-    const kind = result?.kind ?? args?.kind ?? artifact.kind;
-    const title = result?.title ?? args?.title ?? artifact.title;
-
     return (
-      <div className="w-full max-w-[450px]">
-        {title ? (
-          <DocumentHeader isStreaming={true} kind={kind} title={title} />
-        ) : (
-          <div className="flex flex-row items-center justify-between gap-2 rounded-t-2xl border border-b-0 border-border/50 px-4 py-3 dark:bg-muted">
-            <div className="flex min-w-0 flex-row items-center gap-2.5">
-              <div className="size-3.5 animate-pulse rounded bg-muted-foreground/15" />
-              <div className="h-3.5 w-24 animate-pulse rounded bg-muted-foreground/15" />
-            </div>
-            <div className="w-8" />
-          </div>
-        )}
-        <div className="h-[257px] overflow-hidden rounded-b-2xl border border-t-0 border-border/50 bg-muted p-6">
-          <InlineDocumentSkeleton />
-        </div>
+      <div
+        aria-busy="true"
+        className="w-full max-w-[450px] overflow-hidden rounded-lg border border-border/70 bg-card"
+      >
+        <DocumentHeader
+          isOpen={false}
+          isStreaming={true}
+          kind={result?.kind ?? args?.kind ?? artifact.kind}
+          title={result?.title ?? args?.title ?? "正在加载产物…"}
+        />
       </div>
     );
   }
@@ -126,41 +116,36 @@ export function DocumentPreview({
     return <LoadingSkeleton artifactKind={artifact.kind} />;
   }
 
+  const isOpen = artifact.isVisible && artifact.documentId === document.id;
   return (
-    <div className="relative w-full max-w-[450px] cursor-pointer">
+    <div className="relative w-full max-w-[450px] overflow-hidden rounded-lg border border-border/70 bg-card transition-colors hover:border-ring/40 hover:bg-secondary/30">
       <HitboxLayer
         hitboxRef={hitboxRef}
         result={result}
         setArtifact={setArtifact}
       />
       <DocumentHeader
+        isOpen={isOpen}
         isStreaming={artifact.status === "streaming"}
         kind={document.kind}
         title={document.title}
       />
-      <DocumentContent document={document} />
+      {!isOpen && <DocumentContent document={document} />}
     </div>
   );
 }
 
 const LoadingSkeleton = ({ artifactKind }: { artifactKind: ArtifactKind }) => (
-  <div className="w-full max-w-[450px]">
-    <div className="flex flex-row items-center justify-between gap-2 rounded-t-2xl border border-b-0 border-border/50 px-4 py-3 dark:bg-muted">
-      <div className="flex min-w-0 flex-row items-center gap-2.5">
-        <div className="size-3.5 animate-pulse rounded bg-muted-foreground/15" />
-        <div className="h-3.5 w-24 animate-pulse rounded bg-muted-foreground/15" />
-      </div>
-      <div className="w-8" />
-    </div>
-    {artifactKind === "image" ? (
-      <div className="overflow-hidden rounded-b-2xl border border-t-0 border-border/50 bg-muted">
-        <div className="h-[257px] w-full animate-pulse bg-muted-foreground/10" />
-      </div>
-    ) : (
-      <div className="h-[257px] overflow-hidden rounded-b-2xl border border-t-0 border-border/50 bg-muted p-6">
-        <InlineDocumentSkeleton />
-      </div>
-    )}
+  <div
+    aria-busy="true"
+    className="w-full max-w-[450px] overflow-hidden rounded-lg border border-border/70 bg-card"
+  >
+    <DocumentHeader
+      isOpen={false}
+      isStreaming={true}
+      kind={artifactKind}
+      title="正在准备产物…"
+    />
   </div>
 );
 
@@ -194,14 +179,14 @@ const PureHitboxLayer = ({
   return (
     <button
       aria-label={`打开产物：${result?.title ?? "产物"}`}
-      className="absolute top-0 left-0 z-10 size-full rounded-xl"
+      className="absolute top-0 left-0 z-10 size-full rounded-lg focus-visible:outline-2 focus-visible:outline-ring"
       data-testid="document-preview"
       onClick={handleClick}
       ref={hitboxRef}
       type="button"
     >
       <div className="flex w-full items-center justify-end p-4">
-        <div className="absolute top-[13px] right-[9px] rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+        <div className="absolute top-5 right-3 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
           <FullscreenIcon />
         </div>
       </div>
@@ -220,30 +205,36 @@ const PureDocumentHeader = ({
   title,
   kind,
   isStreaming,
+  isOpen,
 }: {
   title: string;
   kind: ArtifactKind;
   isStreaming: boolean;
+  isOpen: boolean;
 }) => (
-  <div className="flex flex-row items-center justify-between gap-2 rounded-t-2xl border border-b-0 border-border/50 px-4 py-3 dark:bg-muted">
-    <div className="flex min-w-0 flex-row items-center gap-2.5">
-      <div className="text-muted-foreground">
-        {isStreaming ? (
-          <div className="animate-spin">
-            <LoaderIcon size={14} />
-          </div>
-        ) : kind === "image" ? (
-          <ImageIcon size={14} />
-        ) : kind === "code" ? (
-          <CodeIcon size={14} />
-        ) : (
-          <FileIcon size={14} />
-        )}
-      </div>
-      <ArtifactTypeLabel kind={kind} />
-      <div className="min-w-0 truncate text-sm font-medium">{title}</div>
+  <div className="flex min-h-[72px] items-center gap-3 px-4 py-3 pr-12">
+    <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-secondary text-muted-foreground">
+      {isStreaming ? (
+        <div className="animate-spin">
+          <LoaderIcon size={16} />
+        </div>
+      ) : kind === "image" ? (
+        <ImageIcon size={16} />
+      ) : kind === "code" ? (
+        <CodeIcon size={16} />
+      ) : (
+        <FileIcon size={16} />
+      )}
     </div>
-    <div className="w-8" />
+    <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+      <div className="truncate text-sm font-medium">{title}</div>
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <ArtifactTypeLabel kind={kind} />
+        <span>
+          {isStreaming ? "正在生成…" : isOpen ? "正在查看" : "点击打开"}
+        </span>
+      </div>
+    </div>
   </div>
 );
 
@@ -252,6 +243,9 @@ const DocumentHeader = memo(PureDocumentHeader, (prevProps, nextProps) => {
     return false;
   }
   if (prevProps.kind !== nextProps.kind) {
+    return false;
+  }
+  if (prevProps.isOpen !== nextProps.isOpen) {
     return false;
   }
   if (prevProps.isStreaming !== nextProps.isStreaming) {
@@ -265,10 +259,10 @@ const DocumentContent = ({ document }: { document: Document }) => {
   const { artifact } = useArtifact();
 
   const containerClassName = cn(
-    "overflow-hidden rounded-b-2xl border border-t-0 border-border/50 dark:bg-muted",
+    "overflow-hidden border-t border-border/50 bg-background",
     {
       "p-0": document.kind === "code",
-      "p-4 sm:px-10 sm:py-10": document.kind === "text",
+      "p-4": document.kind === "text",
     }
   );
 
@@ -306,11 +300,9 @@ const DocumentContent = ({ document }: { document: Document }) => {
           onSaveContent={handleSaveContent}
         />
       ) : document.kind === "code" ? (
-        <div className="relative flex w-full flex-1">
-          <div className="absolute inset-0">
-            <CodeEditor {...commonProps} onSaveContent={handleSaveContent} />
-          </div>
-        </div>
+        <pre className="overflow-hidden px-4 py-3 text-xs leading-6 text-muted-foreground">
+          <code>{document.content?.split("\n").slice(0, 5).join("\n")}</code>
+        </pre>
       ) : document.kind === "sheet" ? (
         <div className="relative flex size-full flex-1 p-4">
           <div className="absolute inset-0">

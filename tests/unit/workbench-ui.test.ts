@@ -389,8 +389,8 @@ test("workspace keeps tabs, keyboard and resize semantics within a restrained de
   for (const title of ["浏览器", "产物", "来源"]) {
     assert.ok(workspace.includes(`title: "${title}"`));
   }
-  assert.match(workspace, /md:rounded-\[12px\]/);
-  assert.match(workspace, /md:m-2/);
+  assert.doesNotMatch(workspace, /md:rounded-|md:m-2|md:inset-2/);
+  assert.match(workspace, /h-12 shrink-0/);
   assert.match(workspace, /border-border\/50/);
   assert.match(workspace, /role="tablist"/);
   assert.match(workspace, /"ArrowRight", "ArrowLeft", "Home", "End"/);
@@ -404,7 +404,7 @@ test("embedded artifact keeps the real single title and a shrinkable result-cont
   const artifact = readFileSync("components/chat/artifact.tsx", "utf8");
   assert.match(artifact, /!embedded && <ArtifactCloseButton \/>/);
   assert.equal(artifact.match(/\{artifact\.title\}/g)?.length, 2);
-  assert.match(artifact, /embedded \? "h-11" : "h-\[calc\(3\.5rem\+1px\)\]"/);
+  assert.match(artifact, /h-12 min-w-0 shrink-0/);
   assert.match(
     artifact,
     /isProtectedResultTable\(artifact\.content\)[\s\S]*?"flex overflow-hidden"\s*:\s*"overflow-y-auto"/
@@ -601,7 +601,7 @@ test("source and raw-result Sheets localize close controls without changing the 
   );
 });
 
-test("inline result preview sizes filtered rows up to four and preserves the 257px legacy preview", () => {
+test("inline result preview sizes filtered rows up to four and bounds generic previews to 128px", () => {
   assert.ok(
     existsSync("components/chat/document-preview-layout.ts"),
     "pure preview layout helper exists"
@@ -618,7 +618,7 @@ test("inline result preview sizes filtered rows up to four and preserves the 257
     const before = JSON.stringify(filtered);
     assert.deepEqual(documentPreviewLayout(filtered), { height: 115, showFade: false });
     assert.equal(JSON.stringify(filtered), before);
-    assert.deepEqual(documentPreviewLayout(null), { height: 257, showFade: true });
+    assert.deepEqual(documentPreviewLayout(null), { height: 128, showFade: true });
   `);
 });
 
@@ -814,4 +814,159 @@ test("dynamic MCP output error fields are evidence data, not the native table fa
     assert.match(html, /aria-expanded="false"/);
     assert.doesNotMatch(html, /role="alert"|失败/);
   }
+});
+
+test("chat-local palette defines gentle light and dark semantic surfaces without global overrides", () => {
+  const css = readFileSync("app/globals.css", "utf8");
+  for (const selector of ["\\.chat-workbench", "\\.dark \\.chat-workbench"]) {
+    const rule = css.match(new RegExp(`${selector}\\s*\\{([^}]+)\\}`))?.[1];
+    assert.ok(rule);
+    for (const token of [
+      "background",
+      "foreground",
+      "card",
+      "secondary",
+      "muted-foreground",
+      "border",
+      "ring",
+      "sidebar",
+    ]) {
+      assert.match(rule, new RegExp(`--${token}: oklch\\(`));
+    }
+  }
+  assert.match(
+    css,
+    /\.chat-workbench :where\(button, a, summary, \[tabindex\]\):focus-visible/
+  );
+  const shell = readFileSync("components/chat/shell.tsx", "utf8");
+  assert.doesNotMatch(shell, /md:p-2|md:rounded-|md:border|flex-row gap-2/);
+  assert.match(shell, /chat-workbench-shell flex h-dvh w-full min-w-0/);
+});
+
+test("generic empty conversation has a readable invitation and one softly elevated composer", () => {
+  const html = clientScript(`
+    const React = require('react');
+    const { renderToStaticMarkup } = require('react-dom/server');
+    const { Greeting } = require('./components/chat/greeting.tsx');
+    process.stdout.write(renderToStaticMarkup(React.createElement(Greeting)));
+  `);
+  assert.match(html, /<h1/);
+  assert.match(html, /描述你的目标，或添加文件作为起点/);
+  assert.match(html, /text-sm leading-6/);
+  const composer = readFileSync("components/chat/multimodal-input.tsx", "utf8");
+  assert.match(composer, /shadow-\[var\(--shadow-composer\)\]/);
+  assert.doesNotMatch(composer, /focus-within:border-foreground\/25/);
+  const sidebar = readFileSync("components/chat/app-sidebar.tsx", "utf8");
+  assert.match(sidebar, /h-12 shrink-0/);
+  for (const entry of [
+    "新对话",
+    "创建任务",
+    "ChatSearch",
+    "AgentLibrary",
+    "SidebarUserNav",
+  ]) {
+    assert.ok(sidebar.includes(entry));
+  }
+});
+
+test("approval presents a human action summary while raw arguments remain under technical details", () => {
+  const html = renderActivity({
+    ...success,
+    approval: { id: "fixture-approval" },
+    input: { query: "precise fixture query" },
+    state: "approval-requested",
+  });
+  assert.match(html, /data-testid="tool-approval-summary"/);
+  assert.match(html, /搜索资料/);
+  assert.match(html, /precise fixture query/);
+  const technical = html.indexOf("技术详情");
+  assert.ok(technical > 0);
+  assert.doesNotMatch(html.slice(0, technical), /调用参数/);
+  assert.match(html.slice(technical), /调用参数/);
+  assert.match(html, /请确认这次操作/);
+  const unknown = renderActivity({
+    ...success,
+    approval: { id: "fixture-approval" },
+    input: {},
+    state: "approval-requested",
+    toolName: "fixture__custom_alias",
+  });
+  assert.match(unknown, /执行工具/);
+  assert.doesNotMatch(unknown, /只读操作|安全操作/);
+});
+
+test("artifact and table actions keep readable 36px targets without leaking table controls to the viewer", () => {
+  const html = renderResultTable();
+  assert.match(html, /aria-label="选择显示列"/);
+  assert.match(html, /h-9 pl-8 text-\[13px\]/);
+  const actions = readFileSync("components/chat/artifact-actions.tsx", "utf8");
+  assert.match(actions, /size-9 rounded-md/);
+  const viewer = readFileSync("components/chat/artifact.tsx", "utf8");
+  assert.doesNotMatch(
+    viewer,
+    /ListFilter|Columns3|筛选所有字段|保存视图与备注/
+  );
+});
+
+test("tool action context skips structured arguments but keeps their original technical representation", () => {
+  const html = renderActivity({
+    ...success,
+    approval: { id: "fixture-approval" },
+    input: {
+      query: { nested: "raw structured query" },
+      url: "https://example.test/action",
+    },
+    state: "approval-requested",
+  });
+  assert.match(html, /https:\/\/example.test\/action/);
+  assert.match(html, /raw structured query/);
+  const htmlBeforeDetails = html.slice(0, html.indexOf("技术详情"));
+  assert.doesNotMatch(htmlBeforeDetails, /raw structured query/);
+});
+
+test("open artifacts use a compact chat file card instead of mounting a duplicate editor", () => {
+  const source = readFileSync("components/chat/document-preview.tsx", "utf8");
+  assert.match(
+    source,
+    /artifact\.isVisible && artifact\.documentId === document\.id/
+  );
+  assert.match(source, /!isOpen && <DocumentContent document=\{document\} \/>/);
+  assert.match(source, /isOpen=\{isOpen\}/);
+  assert.match(source, /正在查看/);
+  assert.doesNotMatch(source, /h-\[257px\]/);
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.match(
+    css,
+    /\.chat-workbench\[data-slot="sidebar-wrapper"\]\s*\{[^}]*--sidebar-width: 14rem !important/
+  );
+});
+
+test("artifact assistant actions live in a named header menu, never a floating toolbar", () => {
+  const source = readFileSync("components/chat/toolbar.tsx", "utf8");
+  assert.match(source, /DropdownMenuTrigger asChild/);
+  assert.match(source, /aria-label="更多产物操作"/);
+  assert.match(
+    source,
+    /onSelect=\{\(\) => tool.onClick\(\{ sendMessage \}\)\}/
+  );
+  assert.match(source, /artifactDefinition\.toolbar/);
+  assert.match(source, /createFixErrorTool\(consoleError, documentId\)/);
+  assert.doesNotMatch(source, /fixed right-|bottom-6|motion\.div/);
+  const viewer = readFileSync("components/chat/artifact.tsx", "utf8");
+  const toolbar = viewer.indexOf("<Toolbar");
+  assert.ok(
+    toolbar > 0 && toolbar < viewer.indexOf('data-slot="artifact-content"')
+  );
+  assert.match(
+    viewer,
+    /isCurrentVersion &&[\s\S]*?!isReadonly &&[\s\S]*?!isProtectedResultTable\(artifact.content\)/
+  );
+});
+
+test("compact artifact card keeps its keyboard outline inside the clipped hit area", () => {
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.match(
+    css,
+    /\.chat-workbench \[data-testid="document-preview"\]:focus-visible\s*\{[^}]*outline-offset: -3px/
+  );
 });

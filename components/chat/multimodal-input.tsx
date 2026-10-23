@@ -517,7 +517,7 @@ function PureMultimodalInput({
       />
 
       <PromptInput
-        className="[&>div]:rounded-[12px] [&>div]:border [&>div]:border-border [&>div]:bg-card [&>div]:shadow-none [&>div]:transition-shadow [&>div]:duration-200 [&>div]:ring-0! [&>div]:focus-within:border-foreground/25!"
+        className="[&>div]:rounded-[12px] [&>div]:border [&>div]:border-border [&>div]:bg-card [&>div]:shadow-[var(--shadow-composer)] [&>div]:transition-shadow [&>div]:duration-200 [&>div]:ring-0! [&>div]:focus-within:border-ring! [&>div]:focus-within:outline-1 [&>div]:focus-within:outline-ring/30"
         onSubmit={handlePromptSubmit}
       >
         {(attachments.length > 0 || uploadQueue.length > 0) && (
@@ -551,11 +551,11 @@ function PureMultimodalInput({
         )}
         <PromptInputTextarea
           aria-label="消息输入框"
-          className="min-h-[56px] text-[16px] leading-relaxed px-4 pt-3 pb-2 placeholder:text-muted-foreground"
+          className="min-h-[64px] text-[16px] leading-relaxed px-4 pt-4 pb-2 placeholder:text-muted-foreground"
           data-testid="multimodal-input"
           onChange={handleInput}
           onKeyDown={handleTextareaKeyDown}
-          placeholder={editingMessage ? "修改消息…" : "询问任何问题"}
+          placeholder={editingMessage ? "修改消息…" : "描述你想完成的事…"}
           ref={textareaRef}
           value={input}
         />
@@ -602,7 +602,7 @@ function PureMultimodalInput({
             <PromptInputSubmit
               aria-label="发送消息"
               className={cn(
-                "h-9 w-9 rounded-full transition-all duration-200",
+                "h-9 w-9 rounded-lg transition-all duration-200",
                 input.trim() || attachments.length > 0
                   ? "bg-foreground text-background hover:opacity-85 active:scale-95"
                   : "bg-muted text-muted-foreground/25 cursor-not-allowed"
@@ -813,7 +813,7 @@ function PureModelSelectorCompact({
       <ModelSelectorTrigger asChild>
         <Button
           aria-label="选择模型"
-          className="h-9 max-w-[240px] justify-between gap-2 rounded-xl px-2 text-[15px] font-medium text-foreground transition-colors hover:bg-secondary"
+          className="h-9 max-w-[240px] justify-between gap-2 rounded-md px-2 text-[15px] font-medium text-foreground transition-colors hover:bg-secondary"
           data-testid="model-selector"
           variant="ghost"
         >

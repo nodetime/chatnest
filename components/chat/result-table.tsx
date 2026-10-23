@@ -175,15 +175,15 @@ export function ResultTableView({
     >
       {!inline && (
         <div
-          className="shrink-0 border-b border-border/50 px-3 py-2"
+          className="shrink-0 border-b border-border/50 px-4 py-2"
           data-testid="result-table-toolbar"
         >
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative min-w-0 basis-36 flex-1">
-              <ListFilter className="absolute top-2.5 left-2.5 size-3.5 text-muted-foreground" />
+              <ListFilter className="absolute top-3 left-2.5 size-3.5 text-muted-foreground" />
               <Input
                 aria-label="筛选结果"
-                className="h-8 pl-8 text-xs"
+                className="h-9 pl-8 text-[13px]"
                 onChange={(event) =>
                   setView((current) => ({
                     ...current,
@@ -195,13 +195,16 @@ export function ResultTableView({
               />
             </div>
             <details className="relative">
-              <summary className="flex h-8 cursor-pointer list-none items-center gap-1.5 rounded-md border px-2.5 text-xs">
+              <summary
+                aria-label="选择显示列"
+                className="flex h-9 cursor-pointer list-none items-center gap-1.5 rounded-md border border-border/70 px-2.5 text-[13px] transition-colors hover:bg-accent"
+              >
                 <Columns3 className="size-3.5" />列
               </summary>
               <div className="absolute top-10 right-0 z-20 max-h-72 w-56 overflow-auto rounded-lg border bg-popover p-2 shadow-md">
                 {table.columns.map((column) => (
                   <label
-                    className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-xs"
+                    className="flex cursor-pointer items-center min-h-9 gap-2 rounded px-2 py-1.5 text-[13px] hover:bg-accent"
                     key={column.path}
                   >
                     <input
@@ -215,13 +218,13 @@ export function ResultTableView({
               </div>
             </details>
             <details className="relative">
-              <summary className="flex h-8 cursor-pointer list-none items-center gap-1.5 rounded-md border px-2.5 text-xs focus-visible:outline-2 focus-visible:outline-ring">
+              <summary className="flex h-9 cursor-pointer list-none items-center gap-1.5 rounded-md border border-border/70 px-2.5 text-[13px] transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring">
                 <Download className="size-3.5" />
                 导出
               </summary>
               <div className="absolute right-0 top-10 z-20 flex w-48 flex-col gap-1 rounded-lg border bg-popover p-1.5 shadow-md">
                 <Button
-                  className="h-8 gap-1 px-2.5 text-xs"
+                  className="h-9 gap-1 px-2.5 text-[13px]"
                   onClick={() =>
                     download(
                       "results.csv",
@@ -236,7 +239,7 @@ export function ResultTableView({
                   CSV · 当前视图
                 </Button>
                 <Button
-                  className="h-8 px-2.5 text-xs"
+                  className="h-9 px-2.5 text-[13px]"
                   onClick={() =>
                     download(
                       "results.json",
@@ -290,10 +293,10 @@ export function ResultTableView({
         />
       </div>
       {!inline && (
-        <div className="shrink-0 space-y-1 border-t border-border/50 px-3 py-2">
+        <div className="shrink-0 space-y-1 border-t border-border/50 px-4 py-2">
           <Collapsible defaultOpen={false}>
             <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1">
-              <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+              <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                 <span className="shrink-0 tabular-nums">
                   {rows.length} / {table.rows.length} 行
                 </span>
@@ -318,7 +321,7 @@ export function ResultTableView({
             <CollapsibleContent className="pt-1 pb-2">
               <Textarea
                 aria-label="个人备注"
-                className="max-h-40 min-h-14 resize-y text-xs"
+                className="max-h-40 min-h-14 resize-y text-sm"
                 disabled={readOnly}
                 id={`result-notes-${documentId}`}
                 maxLength={10_000}
@@ -338,7 +341,7 @@ export function ResultTableView({
               </p>
             ) : dirty ? (
               <p
-                className="min-w-0 flex-1 text-[11px] text-muted-foreground"
+                className="min-w-0 flex-1 text-xs text-muted-foreground"
                 role="status"
               >
                 {readOnly
@@ -346,13 +349,13 @@ export function ResultTableView({
                   : "视图或备注尚未保存。"}
               </p>
             ) : (
-              <p className="min-w-0 flex-1 text-[11px] text-muted-foreground">
+              <p className="min-w-0 flex-1 text-xs text-muted-foreground">
                 点击行查看原始字段 · CSV 为当前视图，JSON 保留完整快照。
               </p>
             )}
             {!readOnly && (
               <Button
-                className="h-7 shrink-0 gap-1.5 text-xs"
+                className="h-9 shrink-0 gap-1.5 text-xs"
                 disabled={!dirty || saving || !documentId || !expectedVersion}
                 onClick={save}
                 size="sm"

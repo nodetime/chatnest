@@ -521,25 +521,75 @@ textarea:focus-visible {
 
 /* The workbench palette is local to chat; admin and global fonts stay unchanged. */
 .chat-workbench {
-  --workbench-shell: oklch(0.96 0.004 80);
-  --workbench-surface: var(--card);
+  --background: oklch(0.997 0.001 85);
+  --foreground: oklch(0.27 0.005 65);
+  --card: oklch(1 0 0);
+  --card-foreground: var(--foreground);
+  --popover: var(--card);
+  --popover-foreground: var(--foreground);
+  --primary: var(--foreground);
+  --primary-foreground: var(--card);
+  --secondary: oklch(0.967 0.003 85);
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.965 0.003 85);
+  --muted-foreground: oklch(0.5 0.008 65);
+  --accent: oklch(0.951 0.004 85);
+  --accent-foreground: var(--foreground);
+  --border: oklch(0.916 0.004 85);
+  --input: var(--border);
+  --ring: oklch(0.55 0.025 70);
+  --sidebar: oklch(0.976 0.003 85);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+  --workbench-shell: var(--sidebar);
+  --workbench-surface: var(--background);
+  --shadow-composer: 0 2px 8px -3px oklch(0.3 0.01 65 / 0.1);
+  color: var(--foreground);
   background: var(--workbench-shell);
+}
+
+.chat-workbench[data-slot="sidebar-wrapper"] {
+  --sidebar-width: 14rem !important;
 }
 
 .dark .chat-workbench {
-  --workbench-shell: var(--sidebar);
-  --workbench-surface: var(--background);
+  --background: oklch(0.205 0.003 65);
+  --foreground: oklch(0.925 0.004 85);
+  --card: oklch(0.235 0.004 65);
+  --secondary: oklch(0.265 0.004 65);
+  --muted: oklch(0.25 0.004 65);
+  --muted-foreground: oklch(0.7 0.008 85);
+  --accent: oklch(0.29 0.005 65);
+  --border: oklch(0.32 0.005 65);
+  --ring: oklch(0.72 0.025 85);
+  --sidebar: oklch(0.185 0.003 65);
+  --shadow-composer: 0 2px 8px -3px oklch(0 0 0 / 0.3);
 }
 
-.chat-workbench [data-slot="sidebar-inner"],
+.chat-workbench [data-slot="sidebar-inner"] {
+  background: var(--sidebar);
+}
+
 .chat-workbench [data-slot="sidebar-inset"],
-.chat-workbench .chat-workbench-shell {
-  background: var(--workbench-shell);
+.chat-workbench .chat-workbench-shell,
+.chat-workbench .chat-workbench-surface {
+  background: var(--workbench-surface);
 }
 
-.chat-workbench .chat-workbench-surface {
-  --background: var(--workbench-surface);
-  background: var(--workbench-surface);
+/* The subtle inset ring is consistent across native buttons and disclosures. */
+.chat-workbench :where(button, a, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Artifact file cards clip previews, so keep their focus ring inside. */
+.chat-workbench [data-testid="document-preview"]:focus-visible {
+  outline-offset: -3px;
 }
 
 /* Keep result-table density and palette local, including inline chat previews.

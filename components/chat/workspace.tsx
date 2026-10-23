@@ -105,7 +105,7 @@ export function Workspace({ children }: { children: ReactNode }) {
           aria-valuemax={70}
           aria-valuemin={35}
           aria-valuenow={workspace.width}
-          className="relative z-10 hidden w-1 shrink-0 cursor-col-resize bg-border/50 hover:bg-muted-foreground/30 md:block"
+          className="relative z-10 hidden w-px shrink-0 cursor-col-resize border-0 bg-border/70 before:absolute before:inset-y-0 before:-inset-x-1 hover:bg-ring focus-visible:bg-ring focus-visible:outline-2 focus-visible:outline-ring md:block"
           onKeyDown={(event) => {
             if (event.key === "ArrowLeft") {
               workspace.update({ width: Math.min(70, workspace.width + 5) });
@@ -147,11 +147,11 @@ export function Workspace({ children }: { children: ReactNode }) {
       <aside
         aria-label="工作区"
         className={cn(
-          "chat-workbench-surface flex min-h-0 min-w-0 shrink-0 flex-col overflow-hidden bg-background md:rounded-[12px] md:border md:border-border/50",
+          "chat-workbench-surface flex min-h-0 min-w-0 shrink-0 flex-col overflow-hidden bg-background",
           !workspace.open && "hidden",
           workspace.expanded
-            ? "fixed inset-0 z-50 h-dvh w-full md:inset-2 md:h-auto md:w-auto"
-            : "fixed inset-0 z-40 h-dvh w-full md:relative md:inset-auto md:z-auto md:m-2 md:h-auto md:w-[var(--workspace-width)]"
+            ? "fixed inset-0 z-50 h-dvh w-full md:h-dvh"
+            : "fixed inset-0 z-40 h-dvh w-full md:relative md:inset-auto md:z-auto md:h-dvh md:w-[var(--workspace-width)]"
         )}
         data-testid="workspace"
         ref={pane}
@@ -159,7 +159,7 @@ export function Workspace({ children }: { children: ReactNode }) {
           { "--workspace-width": `${workspace.width}%` } as React.CSSProperties
         }
       >
-        <div className="flex h-11 shrink-0 items-center gap-1 border-b border-border/50 px-2">
+        <div className="flex h-12 shrink-0 items-center gap-1 border-b border-border/50 px-3">
           <div
             aria-label="工作区内容"
             className="flex min-w-0 flex-1 items-center gap-1"
@@ -170,7 +170,7 @@ export function Workspace({ children }: { children: ReactNode }) {
                 aria-controls={`workspace-${id}`}
                 aria-selected={workspace.tab === id}
                 className={cn(
-                  "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs transition-colors",
+                  "inline-flex items-center gap-1.5 h-9 rounded-md px-2.5 text-[13px] transition-colors",
                   workspace.tab === id
                     ? "bg-secondary font-medium text-foreground"
                     : "text-muted-foreground hover:bg-secondary/60"
@@ -210,7 +210,7 @@ export function Workspace({ children }: { children: ReactNode }) {
           </div>
           <Button
             aria-label={workspace.expanded ? "收起工作区" : "展开工作区"}
-            className="hidden size-8 md:inline-flex"
+            className="hidden size-9 rounded-md md:inline-flex"
             onClick={() => workspace.update({ expanded: !workspace.expanded })}
             size="icon"
             variant="ghost"
@@ -223,7 +223,7 @@ export function Workspace({ children }: { children: ReactNode }) {
           </Button>
           <Button
             aria-label="关闭工作区"
-            className="size-8"
+            className="size-9 rounded-md"
             onClick={workspace.close}
             size="icon"
             variant="ghost"
@@ -256,7 +256,7 @@ export function Workspace({ children }: { children: ReactNode }) {
         >
           {artifact.documentId === "init" ? (
             <div className="flex h-full flex-col items-center justify-center px-8 text-center">
-              <FileText className="mb-4 size-8 text-muted-foreground/50" />
+              <FileText className="mb-4 size-7 text-muted-foreground/60" />
               <h2 className="text-sm font-medium">还没有打开产物</h2>
               <p className="mt-3 max-w-xs text-sm leading-7 text-muted-foreground">
                 让 Agent

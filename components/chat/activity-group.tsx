@@ -52,7 +52,7 @@ export function ActivityGroup({
       onOpenChange={setOpen}
       open={current.open}
     >
-      <CollapsibleTrigger className="flex max-w-full items-center gap-2 rounded-lg py-1.5 pr-2 text-left text-[13px] text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">
+      <CollapsibleTrigger className="flex max-w-full items-center gap-2 min-h-9 rounded-md py-2 pr-2 text-left text-[13px] text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">
         <ChevronRight
           className={cn(
             "size-3.5 shrink-0 transition-transform motion-reduce:transition-none",
@@ -88,7 +88,7 @@ export function ActivityGroup({
         className="min-w-0 pt-1"
         data-testid="activity-timeline"
       >
-        <ol className="ml-[6px] min-w-0 space-y-0.5 border-l border-border/70 pl-4">
+        <ol className="ml-[6px] min-w-0 space-y-1 border-l border-border/60 pl-4">
           {parts.map((part) => {
             const state = activityDisplayState(part, isRunning);
             return (

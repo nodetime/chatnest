@@ -55,7 +55,7 @@ function ArtifactActionButton({
           className={cn(
             "flex items-center justify-center text-muted-foreground transition-all duration-150 focus-visible:outline-2 focus-visible:outline-ring",
             layout === "header"
-              ? "size-8 rounded-md hover:bg-muted [&_svg]:size-4"
+              ? "size-9 rounded-md hover:bg-muted [&_svg]:size-4"
               : "rounded-full p-3",
             "hover:text-foreground",
             "active:scale-95",

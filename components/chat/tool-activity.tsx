@@ -55,6 +55,15 @@ export function ToolActivity({
         filename?: string;
       }
     | undefined;
+  // MCP arguments are arbitrary JSON. Only project actual text into the
+  // compact action line; the complete original input stays in technical details.
+  const context = [
+    input?.query,
+    input?.q,
+    input?.url,
+    input?.filename,
+    input?.name,
+  ].find((value) => typeof value === "string" && value.trim().length > 0);
   const output = part.output as
     | { displayName?: string; description?: string }
     | undefined;
@@ -152,23 +161,18 @@ export function ToolActivity({
     >
       <Tool
         className={cn(
-          "mb-0 overflow-hidden rounded-[12px] border-transparent bg-transparent",
-          toolNeedsAttention(displayState) && "border-border/60 bg-muted/30"
+          "mb-0 overflow-hidden rounded-lg border-transparent bg-transparent",
+          toolNeedsAttention(displayState) &&
+            "border-border/70 bg-secondary/50",
+          displayState === "approval-requested" &&
+            "border-amber-600/20 bg-amber-500/5"
         )}
         onOpenChange={setOpen}
         open={open}
       >
         <ToolHeader
           appearance={timeline ? "timeline" : "compact"}
-          context={
-            timeline
-              ? (input?.query ??
-                input?.q ??
-                input?.url ??
-                input?.filename ??
-                input?.name)
-              : undefined
-          }
+          context={context}
           icon={
             MethodIcon ? (
               <MethodIcon className="size-4 shrink-0 text-muted-foreground" />
@@ -193,11 +197,13 @@ export function ToolActivity({
               {methodDescription}
             </p>
           )}
-          {!!input?.query && (
-            <p className="break-words text-sm text-muted-foreground">
-              查找：{input.query}
-            </p>
-          )}
+          {typeof input?.query === "string" &&
+            input.query &&
+            part.state !== "approval-requested" && (
+              <p className="break-words text-sm text-muted-foreground">
+                查找：{input.query}
+              </p>
+            )}
           {!!(incomplete || errorText) && (
             <p className="text-sm text-destructive" role="alert">
               {incomplete
@@ -246,10 +252,20 @@ export function ToolActivity({
             </div>
           )}
           {part.state === "approval-requested" && (
-            <ToolInput input={part.input} />
+            <div
+              className="space-y-1.5 py-1 text-sm leading-6"
+              data-testid="tool-approval-summary"
+            >
+              <p className="font-medium">请确认这次操作：{title}</p>
+              <p className="break-words text-muted-foreground [overflow-wrap:anywhere]">
+                {context ?? "查看技术详情中的工具名称与参数，再决定是否执行。"}
+              </p>
+            </div>
           )}
           <details className="text-xs text-muted-foreground">
-            <summary className="cursor-pointer py-1">技术详情</summary>
+            <summary className="w-fit cursor-pointer rounded-sm py-1.5 hover:text-foreground">
+              技术详情
+            </summary>
             <div className="mt-3 min-w-0 space-y-3">
               <p className="break-all font-mono">{name}</p>
               <ToolInput input={part.input} />
@@ -257,19 +273,19 @@ export function ToolActivity({
             </div>
           </details>
           {part.state === "approval-requested" && approval && !isReadonly && (
-            <div className="flex items-center justify-end gap-2 border-t pt-3">
+            <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border/60 pt-3">
               <span className="mr-auto text-xs text-muted-foreground">
                 执行前需要你的确认
               </span>
               <button
-                className="rounded-lg border px-3 py-1.5 text-xs"
+                className="min-h-9 rounded-md border px-3 text-sm transition-colors hover:bg-accent"
                 onClick={handleDeny}
                 type="button"
               >
                 拒绝
               </button>
               <button
-                className="rounded-lg bg-foreground px-3 py-1.5 text-xs text-background"
+                className="min-h-9 rounded-md bg-foreground px-3 text-sm text-background transition-opacity hover:opacity-85"
                 onClick={handleAllow}
                 type="button"
               >

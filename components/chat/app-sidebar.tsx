@@ -41,23 +41,26 @@ export function AppSidebar({
   }, [setOpenMobile, startNewChat]);
   return (
     <>
-      <Sidebar className="border-r-0" collapsible="offcanvas">
-        <SidebarHeader className="px-3 pt-3 pb-2">
-          <div className="mb-3 flex items-center justify-between px-1">
+      <Sidebar
+        className="border-r border-sidebar-border/50"
+        collapsible="offcanvas"
+      >
+        <SidebarHeader className="gap-3 px-3 pt-0 pb-3">
+          <div className="flex h-12 shrink-0 items-center justify-between px-1">
             <button
               aria-label="ChatNest 首页"
-              className="flex items-center gap-2 text-sm font-semibold"
+              className="flex items-center gap-2.5 rounded-md text-sm font-semibold tracking-tight"
               onClick={handleNew}
               type="button"
             >
-              <span className="flex size-8 items-center justify-center rounded-full bg-foreground text-background">
+              <span className="flex size-7 items-center justify-center rounded-lg bg-foreground text-background">
                 <MessageSquare className="size-4" />
               </span>
               ChatNest
             </button>
             <button
               aria-label="收起侧栏"
-              className="rounded-lg p-2 text-muted-foreground hover:bg-sidebar-accent"
+              className="flex size-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
               onClick={toggleSidebar}
               type="button"
             >
@@ -67,19 +70,19 @@ export function AppSidebar({
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
-                className="h-9 gap-2 rounded-xl px-2.5 text-sm"
+                className="h-9 gap-2.5 rounded-md border border-border/60 bg-background px-2.5 text-sm shadow-xs hover:bg-accent"
                 onClick={handleNew}
               >
                 <PenSquare className="size-[18px]" />
                 <span>新对话</span>
-                <span className="ml-auto text-[10px] text-muted-foreground">
+                <span className="ml-auto text-[11px] text-muted-foreground">
                   ⌘ ⇧ O
                 </span>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton
-                className="h-9 gap-2 rounded-xl px-2.5 text-sm"
+                className="h-9 gap-2.5 rounded-md px-2.5 text-sm"
                 onClick={handleTask}
               >
                 <ListPlus className="size-[18px]" />
@@ -94,7 +97,7 @@ export function AppSidebar({
         <SidebarContent className="gap-2">
           <SidebarHistory user={user} />
         </SidebarContent>
-        <SidebarFooter className="gap-2 px-3 pb-3">
+        <SidebarFooter className="gap-2 border-t border-sidebar-border/50 px-3 pt-2 pb-3">
           {user ? (
             <SidebarUserNav isPlatformAdmin={isPlatformAdmin} user={user} />
           ) : (

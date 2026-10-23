@@ -103,7 +103,7 @@ export const ToolHeader = ({
         "flex min-w-0 items-center gap-3 px-3 text-left [&[data-state=open]>svg:last-child]:rotate-180",
         timeline ? "w-fit max-w-full" : "w-full justify-between",
         compact
-          ? "h-9 gap-2 rounded-xl text-[13px] hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-ring"
+          ? "h-9 gap-2 rounded-md text-[13px] hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-ring"
           : "py-2.5",
         className
       )}
@@ -126,9 +126,9 @@ export const ToolHeader = ({
           {title ?? derivedName}
         </span>
       </div>
-      {timeline && context && (
+      {compact && context && (
         <span
-          className="min-w-0 max-w-72 truncate text-xs font-normal text-muted-foreground"
+          className="min-w-0 flex-1 truncate text-xs font-normal text-muted-foreground"
           title={context}
         >
           {context}
