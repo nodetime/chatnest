@@ -105,7 +105,7 @@ export function Workspace({ children }: { children: ReactNode }) {
           aria-valuemax={70}
           aria-valuemin={35}
           aria-valuenow={workspace.width}
-          className="relative z-10 hidden w-px shrink-0 cursor-col-resize border-0 bg-border/70 before:absolute before:inset-y-0 before:-inset-x-1 hover:bg-ring focus-visible:bg-ring focus-visible:outline-2 focus-visible:outline-ring md:block"
+          className="relative z-10 -mx-1 hidden h-auto w-2 shrink-0 self-stretch cursor-col-resize border-0 bg-transparent before:absolute before:inset-y-0 before:left-1/2 before:w-px before:bg-border/70 hover:before:bg-ring focus-visible:outline-2 focus-visible:outline-ring focus-visible:before:bg-ring md:block"
           onKeyDown={(event) => {
             if (event.key === "ArrowLeft") {
               workspace.update({ width: Math.min(70, workspace.width + 5) });

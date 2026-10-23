@@ -1052,3 +1052,21 @@ test("artifact card lifecycle reopens the same document after close or tab switc
     assert.equal(JSON.stringify(workspaces.get('workspace:chat-a')),previousChat,'opening the new chat must not mutate the old workspace');
   `);
 });
+
+test("workspace resize grip stretches across the pane with an 8px hit area and a single-pixel divider", () => {
+  const source = readFileSync("components/chat/workspace.tsx", "utf8");
+  const grip = source.match(/<hr[\s\S]*?className="([^"]+)"/)?.[1];
+  assert.ok(grip, "native separator exists");
+  // Tailwind preflight explicitly gives hr height:0; flex stretch alone does
+  // not override it. The auto-height utility restores the full-height target.
+  assert.match(grip, /\bh-auto\b/);
+  assert.match(grip, /\bself-stretch\b/);
+  assert.match(grip, /\bw-2\b/);
+  assert.match(grip, /\bbg-transparent\b/);
+  assert.match(grip, /before:w-px/);
+  assert.match(source, /aria-label="调整工作区宽度"/);
+  assert.match(source, /aria-orientation="vertical"/);
+  assert.match(source, /aria-valuemax=\{70\}/);
+  assert.match(source, /aria-valuemin=\{35\}/);
+  assert.match(source, /tabIndex=\{0\}/);
+});
