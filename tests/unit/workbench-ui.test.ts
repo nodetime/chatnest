@@ -423,7 +423,10 @@ test("embedded artifact keeps the real single title and a shrinkable result-cont
   assert.match(result, /resultCsv\(table, view\)/);
   assert.match(result, /JSON\.stringify\(table, null, 2\)/);
   assert.match(result, /setDetail\(row\.sourceIndex\)/);
-  assert.match(result, /JSON\.stringify\(table\.rows\[detail\], null, 2\)/);
+  assert.match(
+    readFileSync("components/chat/result-table-row-details.tsx", "utf8"),
+    /JSON\.stringify\(row, null, 2\)/
+  );
 });
 
 test("result grid keeps theme classes and renders the scoped 13px / 46px density contract", () => {
@@ -447,7 +450,7 @@ test("result grid tokens are scoped with enough specificity and semantic cells r
   for (const [variable, token] of [
     ["color", "foreground"],
     ["background-color", "card"],
-    ["header-background-color", "secondary"],
+    ["header-background-color", "card"],
     ["row-hover-background-color", "accent"],
     ["row-selected-background-color", "workbench-selection"],
     ["row-selected-hover-background-color", "workbench-selection"],
@@ -462,7 +465,7 @@ test("result grid tokens are scoped with enough specificity and semantic cells r
   assert.match(scoped, /--rdg-font-size: 13px/);
   assert.match(
     css,
-    /\.chat-workbench \.chatnest-result-grid \[role="gridcell"\]\s*\{[^}]*border-inline-end-color: transparent/
+    /\.chat-workbench \.chatnest-result-grid \[role="gridcell"\]\s*\{[^}]*border-inline-end-color: var\(--rdg-border-color\)/
   );
   assert.match(
     css,
@@ -1012,7 +1015,7 @@ test("artifact card lifecycle reopens the same document after close or tab switc
       return output.exports;
     };
     const {useWorkspace}=load('hooks/use-workspace.ts');
-    assert.equal(useWorkspace().width,58,'fresh chat gives artifacts the broader canvas');
+    assert.equal(useWorkspace().width,68,'fresh chat gives artifacts the broader canvas');
     useWorkspace().update({width:57});useWorkspace().close();useWorkspace().show('document');
     assert.equal(useWorkspace().width,57,'user width survives close/reopen');
     modules['@/hooks/use-workspace']={useWorkspace};
@@ -1084,7 +1087,7 @@ test("Lessie composition uses neutral panes, purposeful mint and narrower chat b
   assert.match(scoped, /--background: oklch\(1 0 0\)/);
   assert.match(scoped, /--workbench-selection:/);
   assert.doesNotMatch(scoped, /0\.00[1-8] (?:65|85)\)/);
-  assert.match(readFileSync("hooks/use-workspace.ts", "utf8"), /width: 58/);
+  assert.match(readFileSync("hooks/use-workspace.ts", "utf8"), /width: 68/);
   assert.match(
     readFileSync("components/chat/messages.tsx", "utf8"),
     /max-w-\[720px\]/
@@ -1093,4 +1096,51 @@ test("Lessie composition uses neutral panes, purposeful mint and narrower chat b
     readFileSync("components/chat/multimodal-input.tsx", "utf8"),
     /min-h-\[44px\]/
   );
+});
+
+test("sent document tiles are compact while image previews and upload queue remain unchanged", () => {
+  const sent = renderAttachment({}, { compact: true });
+  assert.match(sent, /h-10/);
+  assert.match(sent, /max-w-\[180px\]/);
+  assert.match(sent, /PDF/);
+  assert.doesNotMatch(sent, /2\.00 KiB|已读取/);
+  assert.match(renderAttachment(), /h-16/);
+  assert.match(
+    renderAttachment({ contentType: "image/png" }, { compact: true }),
+    /h-24 w-24/
+  );
+  const message = readFileSync("components/chat/message.tsx", "utf8");
+  assert.match(message, /<PreviewAttachment[\s\S]*?compact/);
+  assert.doesNotMatch(
+    readFileSync("components/chat/multimodal-input.tsx", "utf8"),
+    /compact=|compact[\s]*\/>/
+  );
+});
+
+test("record details render actual labels and values first; original JSON and provenance are collapsed", () => {
+  assert.ok(
+    existsSync("components/chat/result-table-row-details.tsx"),
+    "content-first detail renderer exists"
+  );
+  const html = clientScript(`
+    const React = require('react');
+    const { renderToStaticMarkup } = require('react-dom/server');
+    const { ResultTableRowDetails } = require('./components/chat/result-table-row-details.tsx');
+    const { Sheet } = require('./components/ui/sheet.tsx');
+    const table = {columns:[{label:'名称',path:'/name'},{label:'价格',path:'/price'},{label:'来源',path:'/url'},{label:'危险原值',path:'/unsafe'}],rows:[{name:'Actual record',price:0,url:'https://example.test/exact?q=1',unsafe:'javascript:alert(1)',hidden:'raw retained'}],source:{toolCallId:'raw-call-id',completedAt:'original-time',timeBasis:'tool-completed'}};
+    process.stdout.write(renderToStaticMarkup(React.createElement(Sheet,{open:true},React.createElement(ResultTableRowDetails,{table,index:0}))));
+  `);
+  const normal = html.slice(0, html.indexOf("<details"));
+  assert.match(normal, /Actual record/);
+  assert.match(normal, /名称|价格|来源/);
+  assert.match(normal, /<dd[^>]*>0<\/dd>/);
+  assert.match(normal, /href="https:\/\/example.test\/exact\?q=1"/);
+  assert.doesNotMatch(
+    normal,
+    /href="javascript:|raw-call-id|raw retained|<pre/
+  );
+  assert.match(normal, /javascript:alert\(1\)/);
+  assert.match(html, /<details(?![^>]* open)[^>]*>/);
+  assert.match(html, /技术详情/);
+  assert.match(html, /raw-call-id|original-time|raw retained/);
 });

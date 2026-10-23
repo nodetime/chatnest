@@ -33,6 +33,7 @@ import {
   resultRows,
   safeSourceUrl,
 } from "@/lib/artifacts/result-table";
+import { ResultTableRowDetails } from "./result-table-row-details";
 import { ResultTableSource } from "./result-table-source";
 import "react-data-grid/lib/styles.css";
 
@@ -84,12 +85,15 @@ export function ResultTableView({
         frozen: true,
         key: "__index",
         name: "#",
-        renderCell: ({ row }) => row.sourceIndex + 1,
+        renderCell: ({ row }) => (
+          <span className="text-muted-foreground">{row.sourceIndex + 1}</span>
+        ),
         width: 46,
       },
       ...table.columns
         .filter((column) => view.visibleColumns.includes(column.path))
-        .map((column) => ({
+        .map((column, index) => ({
+          frozen: index === 0,
           key: column.path,
           minWidth: 120,
           name: column.label,
@@ -98,7 +102,7 @@ export function ResultTableView({
             const url = safeSourceUrl(value);
             return url ? (
               <a
-                className="inline-flex max-w-full items-center gap-1 truncate text-primary underline-offset-4 hover:underline"
+                className={`inline-flex max-w-full items-center gap-1 truncate text-primary underline-offset-4 hover:underline ${index === 0 ? "font-medium" : ""}`}
                 href={url}
                 rel="noopener noreferrer"
                 target="_blank"
@@ -108,7 +112,12 @@ export function ResultTableView({
                 <ExternalLink className="size-3 shrink-0" />
               </a>
             ) : (
-              <span title={cellText(value)}>{cellText(value)}</span>
+              <span
+                className={index === 0 ? "font-medium" : undefined}
+                title={cellText(value)}
+              >
+                {cellText(value)}
+              </span>
             );
           },
           resizable: true,
@@ -427,29 +436,9 @@ export function ResultTableView({
               <XIcon />
             </Button>
           </SheetClose>
-          <SheetHeader>
-            <SheetTitle>原始结果 · 第 {(detail ?? 0) + 1} 行</SheetTitle>
-            <SheetDescription>
-              工具返回 · 未核验。字段值保持原样，不代表网页核验或法律结论。
-            </SheetDescription>
-          </SheetHeader>
-          <div className="space-y-4 px-4 pb-6">
-            <dl className="space-y-2 break-all text-xs text-muted-foreground">
-              <dt>来源调用</dt>
-              <dd className="font-mono text-foreground">
-                {table.source.toolCallId}
-              </dd>
-              <dt>来源时间</dt>
-              <dd>
-                {table.source.completedAt} ({table.source.timeBasis})
-              </dd>
-            </dl>
-            <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-lg bg-muted p-4 text-xs leading-6">
-              {detail === null
-                ? ""
-                : JSON.stringify(table.rows[detail], null, 2)}
-            </pre>
-          </div>
+          {detail !== null && (
+            <ResultTableRowDetails index={detail} table={table} />
+          )}
         </SheetContent>
       </Sheet>
     </div>

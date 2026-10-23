@@ -244,7 +244,7 @@ test("result-table publishes authoritative view/notes dirty and saving state; fa
       '@/components/ui/button':{Button:'button'},'@/components/ui/input':{Input:'input'},'@/components/ui/textarea':{Textarea:'textarea'},
       '@/components/ui/collapsible':{Collapsible:'collapsible',CollapsibleContent:'collapse-content',CollapsibleTrigger:'collapse-trigger'},
       '@/components/ui/sheet':{Sheet:'sheet',SheetTrigger:'sheet-trigger',SheetClose:'sheet-close',SheetContent:'sheet-content',SheetDescription:'sheet-description',SheetHeader:'sheet-header',SheetTitle:'sheet-title'},
-      '@/lib/artifacts/result-table':helpers,'./result-table-source':{ResultTableSource:'source'},
+      '@/lib/artifacts/result-table':helpers,'./result-table-source':{ResultTableSource:'source'},'./result-table-row-details':{ResultTableRowDetails:'row-details'},
     };
     const output={exports:{}};
     const code=ts.transpileModule(readFileSync('components/chat/result-table.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText;
@@ -276,7 +276,7 @@ test("result-table publishes authoritative view/notes dirty and saving state; fa
       find(tree,node=>node.type==='textarea')[0].props.onChange({target:{value:''}});tree=render();
       assert.equal(saveButton(tree),undefined,'reverting notes removes save action');
       const grid=find(tree,node=>node.type==='grid')[0];assert.equal(grid.props.rowHeight,46);assert.equal(grid.props.headerRowHeight,42);const column=grid.props.columns.find(column=>column.key==='/url');
-      assert.equal(grid.props.columns.find(column=>column.key==='/title').width,220,'primary title leaves room for adjacent evidence');assert.equal(column.width,140,'generic secondary fields stay compact');assert.equal(column.minWidth,120);assert.equal(column.resizable,true,'users can still resize columns');
+      assert.equal(grid.props.columns.find(column=>column.key==='/title').width,220,'primary title leaves room for adjacent evidence');assert.equal(column.width,140,'generic secondary fields stay compact');assert.equal(column.minWidth,120);assert.equal(grid.props.columns.find(column=>column.key==='/title').frozen,true,'first data column remains a record entrance');assert.equal(column.resizable,true,'users can still resize columns');
       assert.equal(column.name,'User source label');const link=column.renderCell({row:{raw:table.rows[0],sourceIndex:0}});
       assert.equal(link.props.href,originalUrl);assert.equal(link.props.title,originalUrl);assert.equal(link.props.children[0],'example.com');
       assert.ok(helpers.resultCsv(table).includes(originalUrl),'CSV preserves full URL');

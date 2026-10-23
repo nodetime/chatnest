@@ -599,7 +599,7 @@ textarea:focus-visible {
 .chat-workbench .chatnest-result-grid {
   --rdg-color: var(--foreground);
   --rdg-background-color: var(--card);
-  --rdg-header-background-color: var(--secondary);
+  --rdg-header-background-color: var(--card);
   --rdg-header-draggable-background-color: var(--muted);
   --rdg-row-hover-background-color: var(--accent);
   --rdg-row-selected-background-color: var(--workbench-selection);
@@ -613,13 +613,13 @@ textarea:focus-visible {
 }
 
 .chat-workbench .chatnest-result-grid [role="gridcell"] {
-  border-inline-end-color: transparent;
+  border-inline-end-color: var(--rdg-border-color);
 }
 
 .chat-workbench .chatnest-result-grid [role="columnheader"] {
   font-weight: 500;
   border-block-end: 1px solid var(--rdg-border-color);
-  border-inline-end-color: transparent;
+  border-inline-end-color: var(--rdg-border-color);
 }
 
 .chat-workbench
@@ -641,4 +641,9 @@ textarea:focus-visible {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* The grid canvas remains visible below its real white rows. */
+.chat-workbench .chatnest-result-grid {
+  background-color: var(--secondary);
 }

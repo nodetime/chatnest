@@ -8,11 +8,13 @@ import { CrossSmallIcon } from "./icons";
 export const PreviewAttachment = ({
   attachment,
   isUploading = false,
+  compact = false,
   onRemove,
   onRetry,
 }: {
   attachment: Attachment;
   isUploading?: boolean;
+  compact?: boolean;
   onRemove?: () => void;
   onRetry?: () => void;
 }) => {
@@ -41,7 +43,11 @@ export const PreviewAttachment = ({
     <div
       className={cn(
         "relative min-w-0 max-w-full shrink-0 overflow-hidden rounded-[12px] border border-border/60 bg-muted/40",
-        isImage ? "h-24 w-24" : "flex h-16 w-72 items-center gap-2 px-3"
+        isImage
+          ? "h-24 w-24"
+          : compact
+            ? "flex h-10 w-40 max-w-[180px] items-center gap-2 rounded-lg px-2"
+            : "flex h-16 w-72 items-center gap-2 px-3"
       )}
       data-testid="input-attachment-preview"
     >
@@ -61,29 +67,35 @@ export const PreviewAttachment = ({
             <p className="truncate font-medium text-foreground" title={name}>
               {name}
             </p>
-            <div
-              className="mt-1 flex min-w-0 items-center gap-1 text-muted-foreground"
-              title={
-                attachment.error ?? attachment.extraction?.warnings.join("\n")
-              }
-            >
-              <span className="max-w-[55%] shrink-0 truncate">
+            {compact ? (
+              <p className="text-[10px] text-muted-foreground">
                 {name?.split(".").pop()?.toUpperCase()}
-                {size === undefined ? "" : ` · ${size}`} ·
-              </span>
-              {!!isUploading && (
-                <Spinner
-                  className="size-3 shrink-0"
-                  data-testid="input-attachment-loader"
-                />
-              )}
-              <span
-                className={cn("truncate", hasError && "text-destructive")}
-                title={status}
+              </p>
+            ) : (
+              <div
+                className="mt-1 flex min-w-0 items-center gap-1 text-muted-foreground"
+                title={
+                  attachment.error ?? attachment.extraction?.warnings.join("\n")
+                }
               >
-                {status}
-              </span>
-            </div>
+                <span className="max-w-[55%] shrink-0 truncate">
+                  {name?.split(".").pop()?.toUpperCase()}
+                  {size === undefined ? "" : ` · ${size}`} ·
+                </span>
+                {!!isUploading && (
+                  <Spinner
+                    className="size-3 shrink-0"
+                    data-testid="input-attachment-loader"
+                  />
+                )}
+                <span
+                  className={cn("truncate", hasError && "text-destructive")}
+                  title={status}
+                >
+                  {status}
+                </span>
+              </div>
+            )}
           </div>
         </>
       )}

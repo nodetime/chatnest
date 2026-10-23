@@ -59,9 +59,11 @@ export function WorkspaceHeader({
               variant="ghost"
             >
               <Icon className="size-4" />
-              <span className="sr-only sm:not-sr-only text-xs">
-                {mode.title}
-              </span>
+              {!(workspace.tab === "document" && children) && (
+                <span className="sr-only sm:not-sr-only text-xs">
+                  {mode.title}
+                </span>
+              )}
               <ChevronDown className="size-3" />
             </Button>
           </DropdownMenuTrigger>

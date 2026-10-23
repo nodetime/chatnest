@@ -14,7 +14,7 @@ const initial: State = {
   expanded: false,
   open: false,
   tab: "browser",
-  width: 58,
+  width: 68,
 };
 
 export function useWorkspace() {

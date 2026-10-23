@@ -447,18 +447,27 @@ function PureArtifact({
           )
         }
       >
-        <div className="flex min-w-0 flex-col gap-0.5">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
           {!embedded && <ArtifactCloseButton />}
-          <ArtifactPicker
-            activeId={artifact.documentId}
-            entries={artifactCatalog(messages)}
-            isContentDirty={isContentDirty}
-            resultTablePendingChanges={hasPendingResultTableChanges}
-            status={artifact.status}
-            title={artifact.title}
-          />
-          <div className="flex min-w-0 items-center gap-2 px-2">
+          <div
+            className="flex min-w-0 items-center gap-2"
+            title={
+              document
+                ? `更新于${formatDistance(new Date(document.createdAt), new Date(), { addSuffix: true, locale: zhCN })}`
+                : undefined
+            }
+          >
+            <ArtifactPicker
+              activeId={artifact.documentId}
+              entries={artifactCatalog(messages)}
+              isContentDirty={isContentDirty}
+              resultTablePendingChanges={hasPendingResultTableChanges}
+              status={artifact.status}
+              title={artifact.title}
+            />
             <ArtifactTypeLabel kind={artifact.kind} />
+          </div>
+          <div className="flex min-w-0 items-center gap-2 px-2">
             {saveError ? (
               <span className="truncate text-xs text-destructive" role="alert">
                 {saveError}
@@ -476,8 +485,6 @@ function PureArtifact({
                 <LoaderIcon size={12} />
                 正在生成… · 暂不能切换
               </span>
-            ) : document ? (
-              <span className="truncate text-[11px] text-muted-foreground">{`更新于${formatDistance(new Date(document.createdAt), new Date(), { addSuffix: true, locale: zhCN })}`}</span>
             ) : null}
           </div>
         </div>

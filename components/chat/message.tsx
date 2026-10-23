@@ -145,6 +145,7 @@ const PurePreviewMessage = ({
             name: attachment.filename ?? "file",
             url: attachment.url,
           }}
+          compact
           key={attachment.url}
         />
       ))}
