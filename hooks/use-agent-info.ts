@@ -15,6 +15,7 @@ export type AgentInfo = {
     name: string;
     status: "configured" | "not_configured";
     tools: string[];
+    toolAliases?: { alias: string; name: string; serverName: string }[];
     missingEnvironment: string[];
     keyless?: boolean;
     source?: "managed" | "file";

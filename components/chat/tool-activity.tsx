@@ -2,16 +2,14 @@
 import type { UseChatHelpers } from "@ai-sdk/react";
 import {
   BookOpen,
-  ExternalLink,
   FileText,
   Globe,
+  LoaderCircle,
   Monitor,
   Search,
 } from "lucide-react";
-import { useCallback, useId, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useCallback, useState } from "react";
 import { useAgentInfo } from "@/hooks/use-agent-info";
-import { collectSourceLinks } from "@/lib/agent/sources";
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
@@ -32,6 +30,12 @@ import {
   toolNeedsAttention,
 } from "./tool-activity-state";
 import { ToolCallDetails } from "./tool-call-details";
+import {
+  projectResult,
+  projectToolIdentity,
+  projectToolResult,
+} from "./tool-presentation";
+import { ToolResultPreview } from "./tool-result-preview";
 
 export function ToolActivity({
   part,
@@ -48,65 +52,23 @@ export function ToolActivity({
   timeline?: boolean;
   onDetailsOpenChange?: (toolCallId: string, open: boolean) => void;
 }) {
-  const name =
-    part.type === "dynamic-tool" ? part.toolName : part.type.slice(5);
   const { data: info } = useAgentInfo();
-  const input = part.input as
-    | {
-        name?: string;
-        query?: string;
-        q?: string;
-        url?: string;
-        filename?: string;
-      }
-    | undefined;
-  // MCP arguments are arbitrary JSON. Only project actual text into the
-  // compact action line; the complete original input stays in call details.
+  const {
+    name,
+    title,
+    context: inputContext,
+    skillLoaded,
+    kind,
+    origin,
+  } = projectToolIdentity(
+    part,
+    info?.servers?.flatMap((server) => server.toolAliases ?? [])
+  );
   const attachment =
-    name === "readAttachment" && part.state === "output-available"
+    part.type === "tool-readAttachment" && part.state === "output-available"
       ? parseAttachmentReadResult(part.output)
       : null;
-  const context =
-    attachment?.name ??
-    [input?.query, input?.q, input?.url, input?.filename, input?.name].find(
-      (value) => typeof value === "string" && value.trim().length > 0
-    );
-  const output = part.output as
-    | { displayName?: string; description?: string }
-    | undefined;
-  const skill =
-    name === "loadSkill"
-      ? info?.skills.find((item) => item.name === input?.name)
-      : undefined;
-  const browserTitles: Record<string, string> = {
-    browser_click: "点击页面",
-    browser_close: "关闭网页",
-    browser_navigate: "打开网页",
-    browser_press_key: "操作键盘",
-    browser_scroll: "滚动页面",
-    browser_snapshot: "查看网页",
-    browser_tabs: "管理网页标签",
-    browser_take_screenshot: "查看页面截图",
-    browser_type: "输入内容",
-  };
-  const shortName = name.split("__").at(-1) ?? name;
-  const title =
-    name === "createResultTable"
-      ? "生成表格产物"
-      : name === "readAttachment"
-        ? "读取文件"
-        : name === "loadSkill"
-          ? typeof output?.displayName === "string"
-            ? output.displayName
-            : (skill?.displayName ?? "读取调查方法")
-          : name === "readSkillResource"
-            ? "读取方法参考"
-            : name.includes("search")
-              ? "搜索资料"
-              : name.includes("extract") || name.includes("fetch")
-                ? "读取网页正文"
-                : (browserTitles[shortName] ?? "执行工具");
-  const sources = name.includes("__") ? collectSourceLinks(part.output) : [];
+  const context = attachment?.name ?? inputContext;
   const approval = "approval" in part ? part.approval : undefined;
   const displayState = activityDisplayState(part, isRunning);
   const errorText = activityErrorText(part);
@@ -139,31 +101,19 @@ export function ToolActivity({
   const setOpen = useCallback((value: boolean) => {
     setDisclosure((current) => ({ ...current, open: value }));
   }, []);
-  const [allSources, setAllSources] = useState(false);
-  const sourceListId = useId();
-  const toggleSources = useCallback(() => setAllSources((value) => !value), []);
-  const visibleSources = allSources ? sources : sources.slice(0, 3);
   const MethodIcon =
-    name === "readAttachment"
+    part.type === "tool-readAttachment" ||
+    part.type === "tool-readSkillResource"
       ? FileText
-      : name === "loadSkill"
+      : part.type === "tool-loadSkill"
         ? BookOpen
-        : name === "readSkillResource"
-          ? FileText
-          : name.includes("search")
+        : name.startsWith("browser__") && title !== name
+          ? Monitor
+          : kind === "search"
             ? Search
-            : name.includes("fetch") || name.includes("extract")
+            : kind === "web"
               ? Globe
-              : name.startsWith("browser__")
-                ? Monitor
-                : undefined;
-  const methodDescription =
-    (typeof output?.description === "string"
-      ? output.description
-      : undefined) ??
-    skill?.shortDescription ??
-    skill?.description ??
-    "读取方法指引，再根据目标选择后续操作。";
+              : undefined;
   const handleDetailsOpenChange = useCallback(
     (value: boolean) => onDetailsOpenChange?.(part.toolCallId, value),
     [onDetailsOpenChange, part.toolCallId]
@@ -200,21 +150,30 @@ export function ToolActivity({
             className="w-fit max-w-full flex-initial"
             context={context}
             icon={
-              MethodIcon ? (
+              [
+                "input-streaming",
+                "input-available",
+                "approval-responded",
+              ].includes(displayState) ? (
+                <LoaderCircle
+                  aria-hidden="true"
+                  className="size-4 shrink-0 animate-spin text-muted-foreground motion-reduce:animate-none"
+                />
+              ) : MethodIcon ? (
                 <MethodIcon className="size-4 shrink-0 text-muted-foreground" />
               ) : undefined
             }
-            inlineContext={name === "readAttachment"}
+            inlineContext={part.type === "tool-readAttachment"}
             state={displayState}
             statusLabel={
               incomplete
                 ? "未完成"
-                : name === "readAttachment" &&
+                : part.type === "tool-readAttachment" &&
                     part.state === "output-available" &&
                     !attachment
                   ? "已返回"
-                  : name === "loadSkill" && part.state === "output-available"
-                    ? "方法已就绪"
+                  : skillLoaded
+                    ? "技能已加载"
                     : undefined
             }
             title={title}
@@ -230,18 +189,19 @@ export function ToolActivity({
           )}
         </div>
         <ToolContent className="space-y-3 px-3 pb-3 pt-1">
-          {name === "loadSkill" && (
-            <p className="text-sm leading-6 text-muted-foreground">
-              {methodDescription}
+          {displayState === "input-streaming" && (
+            <p className="text-sm text-muted-foreground">正在准备调用参数…</p>
+          )}
+          {["input-available", "approval-responded"].includes(displayState) && (
+            <p className="text-sm text-muted-foreground">
+              正在等待工具返回结果…
             </p>
           )}
-          {typeof input?.query === "string" &&
-            input.query &&
-            part.state !== "approval-requested" && (
-              <p className="break-words text-sm text-muted-foreground">
-                查找：{input.query}
-              </p>
-            )}
+          {displayState === "output-denied" && (
+            <p className="text-sm text-muted-foreground">
+              这次操作已被拒绝，未执行。
+            </p>
+          )}
           {!!(incomplete || errorText) && (
             <p className="text-sm text-destructive" role="alert">
               {incomplete
@@ -251,43 +211,23 @@ export function ToolActivity({
                   : errorText}
             </p>
           )}
-          {name === "readAttachment" && part.state === "output-available" && (
-            <AttachmentReadResult output={part.output} />
-          )}
-          {sources.length > 0 && (
-            <div
-              className="mb-3 flex flex-wrap items-center gap-1.5"
-              id={sourceListId}
-            >
-              {visibleSources.map((source) => (
-                <a
-                  className="inline-flex max-w-full items-center gap-1.5 rounded-lg border border-border/60 bg-card px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                  href={source.url}
-                  key={source.url}
-                  rel="noopener noreferrer"
-                  target="_blank"
-                  title={`${source.title} · ${new URL(source.url).hostname}`}
-                >
-                  <span className="min-w-0 max-w-[200px] truncate">
-                    {source.title}
-                  </span>
-                  <ExternalLink className="size-3 shrink-0" />
-                </a>
-              ))}
-              {sources.length > 3 && (
-                <Button
-                  aria-controls={sourceListId}
-                  aria-expanded={allSources}
-                  aria-label={allSources ? "收起来源" : "展开全部来源"}
-                  className="text-muted-foreground"
-                  onClick={toggleSources}
-                  size="xs"
-                  variant="ghost"
-                >
-                  {allSources ? "收起" : `+${sources.length - 3} 条来源`}
-                </Button>
-              )}
-            </div>
+          {part.type === "tool-readAttachment" &&
+            part.state === "output-available" && (
+              <AttachmentReadResult output={part.output} />
+            )}
+          {displayState === "output-available" &&
+            part.type !== "tool-readAttachment" && (
+              <div className="space-y-2">
+                {!!origin && (
+                  <p className="text-xs text-muted-foreground">{origin}</p>
+                )}
+                <ToolResultPreview preview={projectToolResult(part)} />
+              </div>
+            )}
+          {displayState === "output-error" && !incomplete && !errorText && (
+            <p className="text-sm text-destructive" role="alert">
+              工具执行失败，未返回错误说明。
+            </p>
           )}
           {part.state === "approval-requested" && (
             <div
@@ -298,8 +238,15 @@ export function ToolActivity({
               <p className="break-all font-mono text-xs text-muted-foreground">
                 {name}
               </p>
-              <p className="break-words text-muted-foreground [overflow-wrap:anywhere]">
-                {context ?? "查看调用详情中的工具名称与参数，再决定是否执行。"}
+              {!!origin && (
+                <p className="text-xs text-muted-foreground">{origin}</p>
+              )}
+              <ToolResultPreview
+                parameters
+                preview={projectResult(part.input, "parameters")}
+              />
+              <p className="text-xs text-muted-foreground">
+                完整参数保留在查看调用详情中。
               </p>
             </div>
           )}

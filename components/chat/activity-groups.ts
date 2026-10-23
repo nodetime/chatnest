@@ -18,7 +18,9 @@ export function isActivityPart(part: Part): part is Part & ToolPart {
       : part.type.startsWith("tool-")
         ? part.type.slice(5)
         : null;
-  return name !== null && !specialTools.has(name);
+  return (
+    name !== null && (part.type === "dynamic-tool" || !specialTools.has(name))
+  );
 }
 
 // Empty SDK text, step markers and these known transport events are nonvisual. Keep

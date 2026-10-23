@@ -282,3 +282,36 @@ test("pending managed execute obeys per-call abort even when SDK RPC ignores it;
     }
   }
 });
+
+test("capability aliases use the runtime identity and expose no connection secrets", () => {
+  const server = {
+    ...agentConfigSchema.parse({
+      servers: [
+        {
+          allowedTools: ["search.web", "research_delete"],
+          headers: { Authorization: "secret-sentinel" },
+          id: "fixture",
+          name: "Readable provider",
+          url: "https://fixture.example",
+        },
+      ],
+    }).servers[0],
+  };
+  const result = capabilityServers([server]);
+  assert.deepEqual(result[0].toolAliases, [
+    {
+      alias: toolAlias("fixture", "search.web"),
+      name: "search.web",
+      serverName: "Readable provider",
+    },
+    {
+      alias: toolAlias("fixture", "research_delete"),
+      name: "research_delete",
+      serverName: "Readable provider",
+    },
+  ]);
+  assert.doesNotMatch(
+    JSON.stringify(result),
+    /secret-sentinel|fixture\.example|Authorization/
+  );
+});

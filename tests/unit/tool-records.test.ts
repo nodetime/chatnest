@@ -103,6 +103,8 @@ const hookHarness = `
     './attachment-read-result':require('./components/chat/attachment-read-result.tsx'),
     './activity-groups':require('./components/chat/activity-groups.ts'),
     './tool-activity-state':require('./components/chat/tool-activity-state.ts'),
+    './tool-presentation':require('./components/chat/tool-presentation.ts'),
+    './tool-result-preview':require('./components/chat/tool-result-preview.tsx'),
     '@/lib/agent/sources':require('./lib/agent/sources.ts'),
   };
 `;
@@ -486,5 +488,25 @@ test("only the active native table handoff omits a temporary Sheet trigger; fall
     const output={id:'00000000-0000-4000-8000-000000000001',kind:'sheet',title:'Table'};
     const result=nodes(PreviewMessage({...props,isLoading:false,message:{...props.message,parts:[{...table,state:'output-available',output}]}})).find(n=>n.type==='artifact');
     assert.ok(result);assert.equal(result.props.result,output,'successful native artifact renderer remains authoritative');
+  `);
+});
+
+test("actual expanded tool body uses readable results once and preserves honest pending, denied and error bodies", () => {
+  clientScript(`${hookHarness}
+    const scheduler=hooks();const {ToolActivity}=load('components/chat/tool-activity.tsx',{...base,react:scheduler.react});
+    const {ToolResultPreview}=base['./tool-result-preview'];
+    const part={type:'dynamic-tool',toolName:'fixture__search',toolCallId:'readable',state:'input-available',input:{query:'one query'}};
+    const props={part,approve:()=>{},isReadonly:false,isRunning:true};
+    let tree=scheduler.render(ToolActivity,props);assert.ok(JSON.stringify(tree).includes('正在等待工具返回结果'));
+    tree=scheduler.render(ToolActivity,{...props,isRunning:false,part:{...part,state:'output-denied'}});assert.ok(JSON.stringify(tree).includes('这次操作已被拒绝'));
+    tree=scheduler.render(ToolActivity,{...props,isRunning:false,part:{...part,state:'output-error'}});assert.ok(JSON.stringify(tree).includes('未返回错误说明'));
+    const completed={...props,isRunning:false,part:{...part,state:'output-available',output:{content:[{type:'text',text:'Plain exact result'}]}}};
+    tree=scheduler.render(ToolActivity,completed);nodes(tree).find(n=>n.type==='tool').props.onOpenChange(true);
+    tree=scheduler.render(ToolActivity,completed);
+    const content=nodes(tree).find(n=>n.type==='content');const result=nodes(content).find(n=>n.type===ToolResultPreview);
+    assert.ok(result,'actual ToolActivity composes readable result renderer');
+    const React=require('react');const {renderToStaticMarkup}=require('react-dom/server');
+    const html=renderToStaticMarkup(React.createElement(ToolResultPreview,result.props));assert.ok(html.includes('Plain exact result'));assert.ok(!html.includes('one query'));
+    assert.equal(nodes(tree).find(n=>n.type==='tool').props.open,true);
   `);
 });

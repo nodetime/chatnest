@@ -23,7 +23,7 @@ function renderActivity(
     const { SWRConfig } = require('swr');
     const { ToolActivity } = require('./components/chat/tool-activity.tsx');
     global.fetch = () => { throw new Error('Unexpected network access'); };
-    const info = { skills: [{ name: 'fixture-skill', displayName: '调查方法', shortDescription: '技能说明只在详情中' }], servers: [] };
+    const info = { skills: [{ name: 'fixture-skill', displayName: '调查方法', shortDescription: '技能说明只在详情中' }], servers: [{toolAliases:[{alias:'fixture__search',name:'search',serverName:'Fixture'}]}] };
     const value = { provider: () => new Map(), fallback: { '/api/agent': info }, revalidateOnMount: false, revalidateOnFocus: false };
     process.stdout.write(renderToStaticMarkup(React.createElement(SWRConfig, { value }, React.createElement(ToolActivity, {
       part: ${JSON.stringify(part)}, approve: () => { throw new Error('SSR must not approve'); }, isReadonly: ${isReadonly}, isRunning: ${isRunning}
@@ -41,17 +41,33 @@ const success = {
 };
 
 for (const [name, input, output, title] of [
-  ["loadSkill", { name: "fixture-skill" }, {}, "调查方法"],
+  [
+    "loadSkill",
+    { name: "fixture-skill" },
+    {
+      description: "用途",
+      displayName: "通用技能",
+      instructions: "Exact instructions",
+      name: "fixture-skill",
+    },
+    "通用技能",
+  ],
   [
     "fixture__search",
     { query: "fixture query" },
     { title: "来源只在详情中", url: "https://example.test/source" },
     "搜索资料",
   ],
-  ["fixture__custom_alias", {}, {}, "执行工具"],
+  ["fixture__custom_alias", {}, {}, "fixture__custom_alias"],
 ] as const) {
   test(`successful ${name} renders only a compact closed activity line`, () => {
-    const html = renderActivity({ ...success, input, output, toolName: name });
+    const html = renderActivity({
+      ...success,
+      input,
+      output,
+      toolName: name,
+      ...(name === "loadSkill" ? { type: "tool-loadSkill" } : {}),
+    });
     assert.match(html, /data-state="closed"/);
     assert.match(html, /aria-expanded="false"/);
     assert.match(html, /h-9/);
@@ -59,7 +75,7 @@ for (const [name, input, output, title] of [
     assert.ok(html.includes(title));
     assert.doesNotMatch(
       html,
-      /技能说明只在详情中|来源只在详情中|fixture__custom_alias|data-slot="badge"/
+      /技能说明只在详情中|来源只在详情中|data-slot="badge"/
     );
   });
 }
@@ -682,7 +698,7 @@ test("generic artifact header and preview expose all four type labels without ch
     );
   }
   assert.match(
-    renderActivity({ ...success, toolName: "createResultTable" }),
+    renderActivity({ ...success, type: "tool-createResultTable" }),
     /生成表格产物/
   );
 });
@@ -894,7 +910,7 @@ test("approval presents a human action summary while raw arguments are reachable
     state: "approval-requested",
     toolName: "fixture__custom_alias",
   });
-  assert.match(unknown, /执行工具/);
+  assert.match(unknown, /fixture__custom_alias/);
   assert.doesNotMatch(unknown, /只读操作|安全操作/);
 });
 
@@ -923,7 +939,8 @@ test("tool action context skips structured arguments while call details stay rea
   });
   assert.match(html, /https:\/\/example.test\/action/);
   assert.match(html, /查看调用详情/);
-  assert.doesNotMatch(html, /raw structured query|技术详情/);
+  assert.match(html, /raw structured query/);
+  assert.doesNotMatch(html, /技术详情/);
 });
 
 test("open artifacts use a compact chat file card instead of mounting a duplicate editor", () => {
