@@ -191,3 +191,25 @@ test("reader results show only actual headings, prose and sources while original
     const resourceHtml=renderToStaticMarkup(React.createElement(ToolResultPreview,{preview:resource}));assert.ok(resourceHtml.includes('references/guide.md'));assert.match(resourceHtml,/Actual reference excerpt/);
   `);
 });
+
+test("untitled snippets remain readable in standalone and list results", () => {
+  client(`
+    const assert=require('node:assert/strict');const React=require('react');const {renderToStaticMarkup}=require('react-dom/server');
+    const {ToolResultPreview}=require('./components/chat/tool-result-preview.tsx');const {projectResult}=require('./components/chat/tool-presentation.ts');
+    for(const value of [{snippet:'Actual returned snippet'},{items:[{snippet:'Actual returned snippet'}]}]) {
+      const before=JSON.stringify(value);const html=renderToStaticMarkup(React.createElement(ToolResultPreview,{preview:projectResult(value)}));
+      assert.match(html,/Actual returned snippet/);assert.doesNotMatch(html,/<dl|暂无摘要|无摘要/);assert.equal(JSON.stringify(value),before);
+    }
+  `);
+});
+
+test("empty or whitespace-only prose does not leave a blank successful result", () => {
+  client(`
+    const assert=require('node:assert/strict');const React=require('react');const {renderToStaticMarkup}=require('react-dom/server');
+    const {ToolResultPreview}=require('./components/chat/tool-result-preview.tsx');const {projectResult}=require('./components/chat/tool-presentation.ts');
+    for(const value of [{text:''},{text:'   '},{snippet:''},{snippet:'   '}]) {
+      const before=JSON.stringify(value);const html=renderToStaticMarkup(React.createElement(ToolResultPreview,{preview:projectResult(value)}));
+      assert.match(html,/&quot;&quot;|调用详情/);assert.doesNotMatch(html,/暂无摘要|无摘要/);assert.equal(JSON.stringify(value),before);
+    }
+  `);
+});

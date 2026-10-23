@@ -408,7 +408,9 @@ export function projectResult(
         if (
           mode === "result" &&
           typeof child === "string" &&
+          child.trim().length > 0 &&
           [
+            "snippet",
             "text",
             "content",
             "answer",
