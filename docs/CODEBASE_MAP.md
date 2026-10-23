@@ -49,7 +49,7 @@ Chat-only workbench presentation:
 
 Workbench visual refinement (2026-10-22/23):
 - Chat-only semantic light/dark palette and224px sidebar live under `.chat-workbench`; flat panes now share64px top chrome (Vercel composition pass). Admin and global themes are unchanged.
-- `document-preview.tsx` uses actual chat workspace visibility/documenttab + artifactidentity for active compact cards; its original activation also explicitly opens the documenttab. Inactive generic previews are bounded. Actual-hook/component lifecycle tests cover close/reopen, tab switches and chat isolation.
+- `document-preview.tsx` uses actual chat workspace visibility/documenttab + artifactidentity for active compact cards; its original activation also explicitly opens the documenttab. All four kinds use a lightweight file entry in chat; editors and full contents mount only in the normal workspace. Loading, generating and load-error states are distinct and document-scoped. Actual-hook/component lifecycle tests cover close/reopen, tab switches and chat isolation.
 - `toolbar.tsx` is a normal header dropdown delegating original per-kind artifact callbacks; console repair adds an action without replacing originals. Current/read-only/protected-evidence guards remain in artifact.tsx.
 - `workspace.tsx` uses explicit stretch height (overrides preflight hrheight0) and8px pointer target around a1px line; ARIA/keyboard/resize bounds remain.
 
@@ -81,11 +81,11 @@ Unified tool results (2026-10-23):
 Lessie-inspired workbench refinement (2026-10-23):
 - Chat-only neutral white/gray tokens with mint selection, 208px sidebar, 52px aligned header rails and 68% default artifact width; resizable/mobile generic Workspace unchanged.
 - `result-table.tsx` keeps filter/columns/export/source/notes in the top toolbar. Controlled notes Sheet owns no duplicate draft; parent state and expectedVersion CAS remain authoritative. Save appears only for dirty/saving state.
-- Workspace grid uses 42px header/46px rows; inline previews retain 38px geometry matching `document-preview-layout.ts`. Default columns are title220/other140 with min120 and user resizing.
+- Workspace grid uses 42px header/46px rows; chat entries no longer mount duplicate inline tables/editors. Default columns are title220/other140 with min120 and user resizing.
 - `vercel-workbench.test.ts` exercises actual hook/event render state for notes close/reopen/save/errors/readonly and both grid densities. Full acceptance: `docs/superpowers/plans/2026-10-23-lessie-workbench-verification.md`.
 
 Structural correction after rejected visual acceptance (2026-10-23):
-- `PreviewAttachment` compact mode is used only for sent documents (160×40); upload queue/status/error actions and image previews keep their full presentation.
+- `PreviewAttachment` compact mode is used only for sent documents (adaptive width, 32px height); upload queue/status/error actions and image previews keep their full presentation. `file-symbol.tsx` provides the shared quiet file icon for attachments and artifact entries.
 - `result-table-row-details.tsx` displays actual declared labels/values/links; source IDs and original JSON remain in a collapsed technical section. The first displayed result column is frozen and emphasized; raw rows are untouched.
 - Generic artifact header uses one filename/type line, with idle timestamp contextual and pending/error states still visible.
 - Preview CSS can remain stale in persistent Turbopack cache; verify computed browser styles, not only modified source. In this acceptance the owned `.next/dev` cache was moved to ignored backup and the fixture service restarted; no source workaround was added.
@@ -96,3 +96,5 @@ Composition correction after second rejected visual acceptance (2026-10-23):
 - `Artifact` passes a normal `renderHeader` slot through sheet rendering. `ResultTableView` owns its authoritative draft and renders title/actions in that same header; no portal or duplicated table state.
 - Desktop header is one52px row; panes ≤500px use an intentional second action row. Filter/column/export Popovers handle collision outside the clipping artifact container. Last secondary table column absorbs spare width; canvas uses card surface.
 - Visual acceptance must compare against the supplied Lessie reference, not merely old ChatNest screenshots. A passing regression suite does not establish aesthetic equivalence. Keep people/match/outreach semantics out of the generic table unless actual data/features support them.
+
+- Chat detail polish: consecutive assistant messages share one quiet ChatNest sender label. Expanded activity groups use a light timeline and aligned detail controls while preserving approval/error visibility, raw-data sheets and focus restoration.
