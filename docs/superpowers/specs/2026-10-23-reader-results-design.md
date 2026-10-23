@@ -1,0 +1,10 @@
+# Reader-first results, quiet process, balanced artifacts
+
+User correction is explicit: primary results show title, actual summary and source, not raw item_id/price/seller fields. Extend the approved generic flat workbench direction; no new runtime behavior.
+
+- Successful result UI has one reading surface: actual title, returned snippet/description/summary (if present), and associated source/domain. No invented summaries from commerce fields. Missing summary is simply absent. Raw record fields and unknown labeled structures belong to existing exact details, not inline chips or a reformatted debugger. Useful plain text, skill/reference excerpts, genuine empty/mixed/truncation warnings remain. Approval is a distinct parameter view: keep exact canonical identity and arguments before allowing an operation.
+- Make process quiet: one compact group control, plain aligned action rows, remove redundant per-step timeline/check decoration and repeated completed badges where appropriate; running/approval/failure/denied and loaded-skill meaning remain clear. Preserve disclosure logic and Sheet/message identities.
+- Balance the desktop workbench with 50% initial artifact width, user resizing preserved. One header and normal existing renderers; no new dashboard. Result-table links may display compact domain while preserving exact href/title/export/raw values; keep actual user-column labels/data. Improve header/toolbar balance only if necessary, avoid unrelated editor redesign.
+- Keyboard, narrow screens, dark theme, inspection, approvals, unsaved guards, table save/reopen and generic document switching must stay intact. Agent choice, original evidence, provider parameters, schemas, credentials and DB untouched.
+
+Root browser acceptance targets the actual existing source+skill+artifact conversation, real plain/text/empty/generic outcomes, raw details, and saved generic artifacts. Full safe tests/type/lint/direct isolated build, then local main regression; no paid provider calls or push.
