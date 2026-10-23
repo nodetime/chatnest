@@ -213,3 +213,18 @@ test("empty or whitespace-only prose does not leave a blank successful result", 
     }
   `);
 });
+
+test("generic structured falsey results use one details fallback without losing empty or mixed warnings", () => {
+  client(`
+    const assert=require('node:assert/strict');const React=require('react');const {renderToStaticMarkup}=require('react-dom/server');
+    const {ToolResultPreview}=require('./components/chat/tool-result-preview.tsx');const {projectResult}=require('./components/chat/tool-presentation.ts');
+    const render=value=>renderToStaticMarkup(React.createElement(ToolResultPreview,{preview:projectResult(value)}));
+    const structuredContent={ok:false,count:0,empty:'',nullable:null};
+    const value={isError:false,structuredContent,content:[{type:'text',text:JSON.stringify(structuredContent)}]};
+    const before=JSON.stringify(value);const html=render(value);
+    assert.match(html,/结果已返回，完整内容见调用详情。/);assert.equal((html.match(/调用详情/g)||[]).length,1);
+    assert.doesNotMatch(html,/结构化结果预览|仅展示部分返回内容|nullable|count/);assert.equal(JSON.stringify(value),before);
+    const empty=render({isError:false,structuredContent:{items:[]},content:[]});assert.match(empty,/返回列表为空/);assert.doesNotMatch(empty,/结果已返回/);
+    const mixed=render({...value,content:[{type:'image',data:'original-media'}]});assert.match(mixed,/非文本或未识别内容/);assert.doesNotMatch(mixed,/结果已返回|original-media/);
+  `);
+});

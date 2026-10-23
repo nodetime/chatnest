@@ -22,7 +22,10 @@ export function ToolResultPreview({
       blocks.length < preview.blocks.length);
   const detailsOnly =
     !parameters &&
-    !preview.notice &&
+    // A transport preview hint is not an outcome warning. With no readable
+    // content, replace it and the omission caption with one details entry.
+    (!preview.notice ||
+      preview.notice === "结构化结果预览；完整返回内容见调用详情。") &&
     preview.records.length === 0 &&
     blocks.length === 0 &&
     otherSources.length === 0;
@@ -140,7 +143,7 @@ export function ToolResultPreview({
           ))}
         </ul>
       )}
-      {!!preview.notice && (
+      {!!preview.notice && !detailsOnly && (
         <p className="text-muted-foreground">{preview.notice}</p>
       )}
       {!!detailsOnly && (
