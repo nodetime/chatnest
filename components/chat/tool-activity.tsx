@@ -163,7 +163,12 @@ export function ToolActivity({
                 <MethodIcon className="size-4 shrink-0 text-muted-foreground" />
               ) : undefined
             }
-            inlineContext={part.type === "tool-readAttachment"}
+            inlineContext={
+              part.type === "tool-readAttachment" ||
+              part.type === "tool-readSkillResource" ||
+              kind === "search" ||
+              kind === "web"
+            }
             state={displayState}
             statusLabel={
               incomplete

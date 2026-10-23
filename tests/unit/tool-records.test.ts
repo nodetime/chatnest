@@ -510,3 +510,28 @@ test("actual expanded tool body uses readable results once and preserves honest 
     assert.equal(nodes(tree).find(n=>n.type==='tool').props.open,true);
   `);
 });
+
+test("short trusted actions retain their label while subjects truncate before arbitrary aliases or skill names", () => {
+  clientScript(`${hookHarness}
+    const scheduler=hooks();const {ToolActivity}=load('components/chat/tool-activity.tsx',{
+      ...base,react:scheduler.react,
+      '@/hooks/use-agent-info':{useAgentInfo:()=>({data:{servers:[{toolAliases:[
+        {alias:'mapped-search',name:'search.web',serverName:'Provider'},
+        {alias:'mapped-web',name:'tavily_extract',serverName:'Provider'}
+      ]}]}})}
+    });
+    const basePart={type:'dynamic-tool',toolName:'unmapped-long-alias',toolCallId:'width',state:'output-available',input:{query:'A long subject that should truncate first'},output:{}};
+    for(const [patch,expected] of [
+      [{toolName:'mapped-search'},true],
+      [{toolName:'mapped-web'},true],
+      [{type:'tool-readSkillResource'},true],
+      [{type:'tool-readAttachment'},true],
+      [{},false],
+      [{toolName:'readSkillResource'},false],
+      [{type:'tool-loadSkill',output:{name:'skill',displayName:'A potentially very long skill title',description:'Purpose',instructions:'Original'}},false],
+    ]) {
+      const tree=scheduler.render(ToolActivity,{part:{...basePart,...patch},approve:()=>{},isReadonly:false,isRunning:false});
+      assert.equal(nodes(tree).find(n=>n.type==='header').props.inlineContext,expected,JSON.stringify(patch));
+    }
+  `);
+});
