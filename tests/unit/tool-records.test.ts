@@ -251,3 +251,41 @@ test("actual PreviewMessage mixed-part grouping retains timeline boundaries, sta
     const hidden=PreviewMessage({...props,hideActivities:true});assert.equal(nodes(hidden).filter(n=>n.type==='activity').length,0);assert.equal(nodes(hidden).filter(n=>n.type==='actions').length,1);
   `);
 });
+
+test("submitted approval continuation remains active only for the latest group or mixed message, never historical calls", () => {
+  clientScript(`${hookHarness}
+    const {Messages}=load('components/chat/messages.tsx',{
+      ...base,
+      '@/components/ai-elements/conversation':{Conversation:'conversation',ConversationContent:'conversation-content',ConversationScrollButton:'scroll-button'},
+      '@/lib/agent/message-turn':{prepareRegeneration:()=>true},
+      './activity-group':{ActivityGroup:'activity'},
+      './data-stream-provider':{useDataStream:()=>({})},
+      './greeting':{Greeting:'greeting'},
+      './message':{PreviewMessage:'preview',ThinkingMessage:'thinking'},
+    });
+    const {activitySummary}=base['./activity-groups'];
+    const pending={type:'dynamic-tool',toolName:'fixture__operation',toolCallId:'pending',state:'approval-responded',approval:{id:'approval-id',approved:true},input:{}};
+    const old={id:'old',role:'assistant',parts:[{...pending,toolCallId:'stopped'}]};
+    const boundary={id:'user',role:'user',parts:[{type:'text',text:'continue'}]};
+    const latest={id:'latest',role:'assistant',parts:[pending]};
+    const props={chatId:'chat',messages:[old,boundary,latest],addToolApprovalResponse:()=>{},setMessages:()=>{},regenerate:()=>{},isReadonly:false};
+    for(const status of ['submitted','streaming','ready','error']) {
+      const active=status==='submitted'||status==='streaming';
+      const tree=Messages({...props,status});const groups=nodes(tree).filter(n=>n.type==='activity');
+      assert.equal(groups[0].props.isRunning,false,'historical '+status);
+      assert.equal(groups[1].props.isRunning,active,'latest '+status);
+      assert.equal(activitySummary(groups[0].props.parts,groups[0].props.isRunning).label,'未完成');
+      assert.equal(activitySummary(groups[1].props.parts,groups[1].props.isRunning).label,active?'执行中':'未完成');
+      const mixed={...latest,parts:[{type:'text',text:'operation context'},pending]};
+      const mixedTree=Messages({...props,status,messages:[old,boundary,mixed]});
+      const latestPreview=nodes(mixedTree).find(n=>n.type==='preview'&&n.props.message.id==='latest');
+      assert.equal(latestPreview.props.isLoading,active,'mixed latest '+status);
+      const denied={...pending,approval:{id:'approval-id',approved:false}};
+      assert.equal(activitySummary([denied],active).state,'output-denied');
+      const failed={...pending,state:'output-error',errorText:'Exact failure'};
+      assert.equal(activitySummary([failed],active).state,'output-error');
+    }
+    const sending=Messages({...props,status:'submitted',messages:[old,boundary]});
+    assert.equal(nodes(sending).find(n=>n.type==='activity').props.isRunning,false,'new user submission does not revive old tools');
+  `);
+});

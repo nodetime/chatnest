@@ -46,6 +46,10 @@ function PureMessages({
 }: MessagesProps) {
   useDataStream();
 
+  // Approval continuations are active while the SDK submits the next request,
+  // before streaming begins. Keep this scoped to the latest message/group.
+  const isActive = status === "submitted" || status === "streaming";
+
   const renderMessage = (
     message: ChatMessage,
     index: number,
@@ -55,7 +59,7 @@ function PureMessages({
       addToolApprovalResponse={addToolApprovalResponse}
       chatId={chatId}
       hideActivities={hideActivities}
-      isLoading={status === "streaming" && messages.length - 1 === index}
+      isLoading={isActive && messages.length - 1 === index}
       isReadonly={isReadonly}
       key={message.id}
       message={message}
@@ -94,7 +98,7 @@ function PureMessages({
                 approve={addToolApprovalResponse}
                 isReadonly={isReadonly}
                 isRunning={
-                  status === "streaming" &&
+                  isActive &&
                   group.messages.at(-1)?.index === messages.length - 1
                 }
                 key={group.key}
