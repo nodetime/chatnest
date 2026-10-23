@@ -91,7 +91,7 @@ export function ResultTableView({
         .filter((column) => view.visibleColumns.includes(column.path))
         .map((column) => ({
           key: column.path,
-          minWidth: 140,
+          minWidth: 120,
           name: column.label,
           renderCell: ({ row }: { row: (typeof rows)[number] }) => {
             const value = resolvePointer(row.raw, column.path);
@@ -113,7 +113,7 @@ export function ResultTableView({
           },
           resizable: true,
           sortable: true,
-          width: column.path.includes("title") ? 280 : 190,
+          width: column.path.includes("title") ? 220 : 140,
         })),
     ],
     [table.columns, view.visibleColumns]
