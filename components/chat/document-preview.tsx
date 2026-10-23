@@ -12,6 +12,7 @@ import {
 import useSWR from "swr";
 import { useActiveChat } from "@/hooks/use-active-chat";
 import { useArtifact } from "@/hooks/use-artifact";
+import { useWorkspace } from "@/hooks/use-workspace";
 import {
   isProtectedResultTable,
   parseResultTable,
@@ -54,6 +55,7 @@ export function DocumentPreview({
 }: DocumentPreviewProps) {
   const { artifact, setArtifact } = useArtifact();
   const { chatId } = useActiveChat();
+  const workspace = useWorkspace();
 
   const { data: documents, isLoading: isDocumentsFetching } = useSWR<
     Document[]
@@ -116,7 +118,11 @@ export function DocumentPreview({
     return <LoadingSkeleton artifactKind={artifact.kind} />;
   }
 
-  const isOpen = artifact.isVisible && artifact.documentId === document.id;
+  const isOpen =
+    workspace.open &&
+    workspace.tab === "document" &&
+    artifact.isVisible &&
+    artifact.documentId === document.id;
   return (
     <div className="relative w-full max-w-[450px] overflow-hidden rounded-lg border border-border/70 bg-card transition-colors hover:border-ring/40 hover:bg-secondary/30">
       <HitboxLayer
@@ -160,6 +166,7 @@ const PureHitboxLayer = ({
     updaterFn: UIArtifact | ((currentArtifact: UIArtifact) => UIArtifact)
   ) => void;
 }) => {
+  const { show } = useWorkspace();
   const handleClick = useCallback(
     (event: MouseEvent<HTMLElement>) => {
       const boundingBox = event.currentTarget.getBoundingClientRect();
@@ -172,8 +179,11 @@ const PureHitboxLayer = ({
           width: boundingBox.width,
         })
       );
+      // Re-select the pane even when the artifact ID/visibility is unchanged.
+      // Closing or switching workspace tabs does not mutate artifact state.
+      show("document");
     },
-    [setArtifact, result]
+    [setArtifact, result, show]
   );
 
   return (

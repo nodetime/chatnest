@@ -928,7 +928,7 @@ test("open artifacts use a compact chat file card instead of mounting a duplicat
   const source = readFileSync("components/chat/document-preview.tsx", "utf8");
   assert.match(
     source,
-    /artifact\.isVisible && artifact\.documentId === document\.id/
+    /artifact\.isVisible &&\s*artifact\.documentId === document\.id/
   );
   assert.match(source, /!isOpen && <DocumentContent document=\{document\} \/>/);
   assert.match(source, /isOpen=\{isOpen\}/);
@@ -969,4 +969,86 @@ test("compact artifact card keeps its keyboard outline inside the clipped hit ar
     css,
     /\.chat-workbench \[data-testid="document-preview"\]:focus-visible\s*\{[^}]*outline-offset: -3px/
   );
+});
+
+test("artifact card lifecycle reopens the same document after close or tab switch and stays chat-local", () => {
+  clientScript(`
+    const assert = require('node:assert/strict');
+    const { readFileSync } = require('node:fs');
+    const { runInNewContext } = require('node:vm');
+    const ts = require('typescript');
+    const { openArtifactPreview } = require('./lib/artifacts/stream-state.ts');
+    let chatId = 'chat-a';
+    let artifact = { documentId:'doc-a', isVisible:true, status:'idle', content:'original content', title:'Fixture A', kind:'code' };
+    const workspaces = new Map();
+    const jsx = (type, props) => ({type, props});
+    const react = {memo:fn=>fn,useCallback:fn=>fn,useEffect:()=>{},useMemo:fn=>fn(),useRef:()=>({current:null})};
+    const swr = (key, _fetcher, options) => {
+      if (key.startsWith('workspace:')) return {
+        data:workspaces.get(key) ?? options.fallbackData,
+        mutate:fn=>workspaces.set(key,fn(workspaces.get(key) ?? options.fallbackData))
+      };
+      const id = new URL(key,'https://fixture.test').searchParams.get('id');
+      return {data:[{id,title:id,kind:'code',content:'fixture code'}],isLoading:false};
+    };
+    const modules = {
+      'react':react,'react/jsx-runtime':{jsx,jsxs:jsx},'fast-deep-equal':{__esModule:true,default:()=>true},
+      'swr':{__esModule:true,default:swr},
+      './use-active-chat':{useActiveChat:()=>({chatId})},
+      '@/hooks/use-active-chat':{useActiveChat:()=>({chatId})},
+      '@/hooks/use-artifact':{useArtifact:()=>({artifact,setArtifact:fn=>{artifact=fn(artifact);}})},
+      '@/lib/artifacts/stream-state':{openArtifactPreview},
+      '@/lib/artifacts/result-table':{},'@/lib/utils':{cn:()=>'',fetcher:()=>{throw new Error('Unexpected fetch');}},
+      './artifact-type-label':{},'./document-preview-layout':{},'./icons':{},'./image-editor':{},'./result-table':{},'./sheet-editor':{},'./text-editor':{}
+    };
+    const load = path => {
+      const output={exports:{}};
+      const code=ts.transpileModule(readFileSync(path,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText;
+      runInNewContext(code,{exports:output.exports,module:output,process:{env:{}},URL,require:name=>{assert.ok(name in modules,'unexpected '+name);return modules[name];}});
+      return output.exports;
+    };
+    const {useWorkspace}=load('hooks/use-workspace.ts');
+    modules['@/hooks/use-workspace']={useWorkspace};
+    const {DocumentPreview}=load('components/chat/document-preview.tsx');
+    let result={id:'doc-a',title:'Fixture A',kind:'code'};
+    const render = () => {
+      const tree=DocumentPreview({result,isReadonly:false});
+      const children=tree.props.children;
+      return {header:children.find(node=>node && typeof node.props?.isOpen==='boolean'),hitbox:children.find(node=>node?.props?.hitboxRef)};
+    };
+    const activate = view => view.hitbox.type(view.hitbox.props).props.onClick({currentTarget:{getBoundingClientRect:()=>({height:72,width:400,x:0,y:0})}});
+    useWorkspace().show('document');
+    assert.equal(render().header.props.isOpen,true);
+    useWorkspace().close();
+    const closed=render();
+    activate(closed);
+    assert.equal(useWorkspace().open,true,'same visible artifact must reopen a closed workspace');
+    assert.equal(useWorkspace().tab,'document');
+    assert.equal(closed.header.props.isOpen,false,'closed workspace never claims the card is being viewed');
+    assert.equal(render().header.props.isOpen,true);
+    assert.equal(artifact.content,'original content','same-artifact reopen preserves current content');
+    for (const tab of ['sources','browser']) {
+      useWorkspace().show(tab);
+      const otherTab=render();
+      assert.equal(otherTab.header.props.isOpen,false,'other workspace tabs must not claim the document is visible');
+      activate(otherTab);
+      assert.equal(useWorkspace().tab,'document','same artifact activation returns to document pane');
+      assert.equal(render().header.props.isOpen,true);
+    }
+    for (const [open,tab,visible,id,expected] of [[true,'document',true,'doc-a',true],[false,'document',true,'doc-a',false],[true,'sources',true,'doc-a',false],[true,'browser',true,'doc-a',false],[true,'document',false,'doc-a',false],[true,'document',true,'other-document',false]]) {
+      workspaces.set('workspace:chat-a',{open,tab,width:60,expanded:false});
+      artifact={...artifact,isVisible:visible,documentId:id};
+      assert.equal(render().header.props.isOpen,expected,'visible pane identity must be exact');
+    }
+    const previousChat=JSON.stringify(workspaces.get('workspace:chat-a'));
+    chatId='chat-b'; result={id:'doc-b',title:'Fixture B',kind:'code'};
+    assert.equal(useWorkspace().open,false,'new chat has an independent closed workspace');
+    assert.equal(render().header.props.isOpen,false);
+    activate(render());
+    assert.equal(useWorkspace().open,true);
+    assert.equal(useWorkspace().tab,'document');
+    assert.equal(artifact.documentId,'doc-b');
+    assert.equal(artifact.content,'','different artifact does not leak previous content');
+    assert.equal(JSON.stringify(workspaces.get('workspace:chat-a')),previousChat,'opening the new chat must not mutate the old workspace');
+  `);
 });
