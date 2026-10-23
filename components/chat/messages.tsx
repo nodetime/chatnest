@@ -68,6 +68,7 @@ function PureMessages({
       regenerate={regenerate}
       requiresScrollPadding={false}
       setMessages={setMessages}
+      showSender={index === 0 || messages[index - 1]?.role !== "assistant"}
       vote={
         votes ? votes.find((vote) => vote.messageId === message.id) : undefined
       }

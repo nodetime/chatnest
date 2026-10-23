@@ -1,8 +1,9 @@
-import { FileText, RotateCcw } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import type { Attachment } from "@/lib/types";
 import { extractionLabels } from "@/lib/uploads/document-types";
 import { cn } from "@/lib/utils";
 import { Spinner } from "../ui/spinner";
+import { FileSymbol } from "./file-symbol";
 import { CrossSmallIcon } from "./icons";
 
 export const PreviewAttachment = ({
@@ -46,7 +47,7 @@ export const PreviewAttachment = ({
         isImage
           ? "h-24 w-24"
           : compact
-            ? "flex h-10 w-40 max-w-[180px] items-center gap-2 rounded-lg px-2"
+            ? "inline-flex h-8 w-fit items-center gap-1.5 rounded-md bg-background px-2.5"
             : "flex h-16 w-72 items-center gap-2 px-3"
       )}
       data-testid="input-attachment-preview"
@@ -62,13 +63,21 @@ export const PreviewAttachment = ({
         />
       ) : (
         <>
-          <FileText className="size-5 shrink-0 text-muted-foreground" />
-          <div className="min-w-0 flex-1 text-xs">
+          <FileSymbol
+            className={compact ? "size-3.5" : "size-5"}
+            kind={/\.(xlsx?|csv)$/i.test(name ?? "") ? "sheet" : "text"}
+          />
+          <div
+            className={cn(
+              "min-w-0 flex-1 text-xs",
+              compact && "flex items-center gap-2"
+            )}
+          >
             <p className="truncate font-medium text-foreground" title={name}>
               {name}
             </p>
             {compact ? (
-              <p className="text-[10px] text-muted-foreground">
+              <p className="shrink-0 text-[10px] text-muted-foreground">
                 {name?.split(".").pop()?.toUpperCase()}
               </p>
             ) : (

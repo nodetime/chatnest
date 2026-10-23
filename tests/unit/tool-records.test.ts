@@ -41,7 +41,7 @@ test("one attachment step is a direct row with real filename and message actions
   const html = renderGroup([read]);
   assert.doesNotMatch(html, /执行过程|次调用|data-testid="activity-group"/);
   assert.match(html, /读取文件/);
-  assert.match(html, /flex w-fit max-w-full items-center/);
+  assert.match(html, /flex w-full min-w-0 items-start/);
   assert.match(html, /two-pages\.pdf/);
   assert.match(html, /查看调用详情/);
   assert.match(html, /Original message action/);

@@ -418,9 +418,10 @@ test("text renderer identity keys change for documents and versions, never conte
   assert.notEqual(editorKey({ documentId: "document-b" }), original);
   assert.notEqual(editorKey({ currentVersionIndex: 1 }), original);
   const preview = readFileSync("components/chat/document-preview.tsx", "utf8");
-  assert.match(
+  assert.doesNotMatch(
     preview,
-    /<Editor[\s\S]*?key=\{`\$\{document\.id\}:\$\{new Date\(document\.createdAt\)\.toISOString\(\)\}`\}/
+    /<Editor|from "\.\/text-editor"/,
+    "chat file entries must not mount a duplicate editor"
   );
 });
 

@@ -77,7 +77,7 @@ export function ActivityGroup({
       open={singleton || current.open}
     >
       {!singleton && (
-        <TaskTrigger className="flex max-w-full items-center gap-2 min-h-9 rounded-md py-2 pr-2 text-left text-[13px] text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">
+        <TaskTrigger className="flex max-w-full items-center gap-2 min-h-9 rounded-md py-1.5 pr-2 text-left text-[13px] text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">
           <ChevronRight
             className={cn(
               "size-3.5 shrink-0 transition-transform motion-reduce:transition-none",
@@ -111,13 +111,16 @@ export function ActivityGroup({
         </TaskTrigger>
       )}
       <TaskContent
-        className={cn("min-w-0", !singleton && "pt-1")}
+        className={cn("min-w-0", !singleton && "pt-0.5")}
         data-testid={singleton ? undefined : "activity-timeline"}
         forceMount
         hidden={!singleton && !current.open}
       >
         <ol
-          className={cn("min-w-0", !singleton && "space-y-1")}
+          className={cn(
+            "min-w-0",
+            !singleton && "ml-1.5 space-y-0.5 border-l border-border/60 pl-2"
+          )}
           role={singleton ? "presentation" : undefined}
         >
           {parts.map((part) => (

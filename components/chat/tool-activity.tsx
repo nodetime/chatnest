@@ -144,10 +144,10 @@ export function ToolActivity({
         onOpenChange={setOpen}
         open={open}
       >
-        <div className="flex w-fit max-w-full items-center">
+        <div className="flex w-full min-w-0 items-start">
           <ToolHeader
             appearance={timeline ? "timeline" : "compact"}
-            className="w-fit max-w-full flex-initial"
+            className="min-w-0 flex-1"
             context={context}
             icon={
               [
@@ -193,7 +193,7 @@ export function ToolActivity({
             />
           )}
         </div>
-        <ToolContent className="space-y-3 px-3 pb-3 pt-1">
+        <ToolContent className="space-y-2 py-1 pl-9 pr-3 pb-3 text-[13px]">
           {displayState === "input-streaming" && (
             <p className="text-sm text-muted-foreground">正在准备调用参数…</p>
           )}

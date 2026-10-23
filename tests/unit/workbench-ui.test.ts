@@ -613,38 +613,17 @@ test("source and raw-result Sheets localize close controls without changing the 
   );
 });
 
-test("inline result preview sizes filtered rows up to four and bounds generic previews to 128px", () => {
-  assert.ok(
-    existsSync("components/chat/document-preview-layout.ts"),
-    "pure preview layout helper exists"
-  );
-  clientScript(`
-    const assert = require('node:assert/strict');
-    const { documentPreviewLayout } = require('./components/chat/document-preview-layout.ts');
-    const fixture = (count) => ({ columns: [{ label: 'Title', path: '/title' }], rows: Array.from({ length: count }, (_, index) => ({ title: index < 2 ? 'keep' : 'other' })), view: { filter: '', sort: [], visibleColumns: ['/title'] } });
-    for (const [count, height, showFade] of [[0, 115, false], [2, 115, false], [3, 153, false], [4, 191, false], [20, 191, true]]) {
-      assert.deepEqual(documentPreviewLayout(fixture(count)), { height, showFade });
-    }
-    const filtered = fixture(20);
-    filtered.view.filter = 'keep';
-    const before = JSON.stringify(filtered);
-    assert.deepEqual(documentPreviewLayout(filtered), { height: 115, showFade: false });
-    assert.equal(JSON.stringify(filtered), before);
-    assert.deepEqual(documentPreviewLayout(null), { height: 128, showFade: true });
-  `);
-});
-
-test("only parsed inline tables use bounded preview geometry without a 220px grid minimum", () => {
+test("chat artifact entries never mount duplicate text, code, image or sheet renderers", () => {
   const source = readFileSync("components/chat/document-preview.tsx", "utf8");
-  assert.match(source, /documentPreviewLayout\(table\)/);
-  assert.match(source, /style=\{\{ height: previewLayout\.height \}\}/);
-  assert.match(source, /previewLayout\.showFade \?/);
-  const content = source.slice(source.indexOf("const DocumentContent ="));
-  assert.doesNotMatch(content, /h-\[257px\]/);
-  assert.match(content, /const table = parseResultTable\(document.content\)/);
-  assert.match(content, /<ResultTableView\s+inline/);
-  const table = readFileSync("components/chat/result-table.tsx", "utf8");
-  assert.doesNotMatch(table, /minHeight: 220/);
+  assert.doesNotMatch(
+    source,
+    /DocumentContent|ResultTableView|SpreadsheetEditor|ImageEditor|<Editor|<pre/
+  );
+  assert.match(source, /<FileSymbol kind=\{kind\}/);
+  assert.match(source, /title=\{title\}/);
+  assert.match(source, /正在加载…/);
+  assert.match(source, /正在生成…/);
+  assert.match(source, /requestedId === artifact.documentId/);
 });
 
 test("artifact diff selection uses a stable action ID independent of translated descriptions", () => {
@@ -683,7 +662,7 @@ test("generic artifact header and preview expose all four type labels without ch
   for (const label of ["文本", "代码", "图片", "表格"]) {
     assert.ok(html.includes(label));
   }
-  for (const file of ["artifact.tsx", "document-preview.tsx"]) {
+  for (const file of ["artifact.tsx"]) {
     assert.match(
       readFileSync(`components/chat/${file}`, "utf8"),
       /<ArtifactTypeLabel kind=/
@@ -711,7 +690,8 @@ test("quiet process has one summary and plain aligned rows; approvals stay actio
   assert.match(html, /等待确认/);
   assert.match(html, /允许执行/);
   assert.match(html, /data-testid="activity-timeline"/);
-  assert.doesNotMatch(html, /border-l |absolute -left|已完成/);
+  assert.match(html, /border-l border-border\/60 pl-2/);
+  assert.doesNotMatch(html, /absolute -left|已完成/);
   assert.doesNotMatch(html, /group-data-\[state=open\]:rotate-180/);
 });
 
@@ -942,7 +922,7 @@ test("open artifacts use a compact chat file card instead of mounting a duplicat
     source,
     /artifact\.isVisible &&\s*artifact\.documentId === document\.id/
   );
-  assert.match(source, /!isOpen && <DocumentContent document=\{document\} \/>/);
+  assert.doesNotMatch(source, /DocumentContent/);
   assert.match(source, /isOpen=\{isOpen\}/);
   assert.match(source, /正在查看/);
   assert.doesNotMatch(source, /h-\[257px\]/);
@@ -991,6 +971,7 @@ test("artifact card lifecycle reopens the same document after close or tab switc
     const ts = require('typescript');
     const { openArtifactPreview } = require('./lib/artifacts/stream-state.ts');
     let chatId = 'chat-a';
+    let fetching = false; let fetchError; let documentKind = 'code';
     let artifact = { documentId:'doc-a', isVisible:true, status:'idle', content:'original content', title:'Fixture A', kind:'code' };
     const workspaces = new Map();
     const jsx = (type, props) => ({type, props});
@@ -1001,7 +982,7 @@ test("artifact card lifecycle reopens the same document after close or tab switc
         mutate:fn=>workspaces.set(key,fn(workspaces.get(key) ?? options.fallbackData))
       };
       const id = new URL(key,'https://fixture.test').searchParams.get('id');
-      return {data:[{id,title:id,kind:'code',content:'fixture code'}],isLoading:false};
+      return {data:fetching || fetchError ? undefined : [{id,title:id,kind:documentKind,content:'fixture code'}],isLoading:fetching,error:fetchError};
     };
     const modules = {
       'react':react,'react/jsx-runtime':{jsx,jsxs:jsx},'fast-deep-equal':{__esModule:true,default:()=>true},
@@ -1011,7 +992,7 @@ test("artifact card lifecycle reopens the same document after close or tab switc
       '@/hooks/use-artifact':{useArtifact:()=>({artifact,setArtifact:fn=>{artifact=fn(artifact);}})},
       '@/lib/artifacts/stream-state':{openArtifactPreview},
       '@/lib/artifacts/result-table':{},'@/lib/utils':{cn:()=>'',fetcher:()=>{throw new Error('Unexpected fetch');}},
-      './artifact-type-label':{},'./document-preview-layout':{},'./icons':{},'./image-editor':{},'./result-table':{},'./sheet-editor':{},'./text-editor':{}
+      './artifact-type-label':{artifactTypeLabels:{text:'文本',code:'代码',image:'图片',sheet:'表格'}},'./file-symbol':{FileSymbol:'file-symbol'},'lucide-react':{ArrowUpRight:'arrow',LoaderCircle:'loader'}
     };
     const load = path => {
       const output={exports:{}};
@@ -1065,6 +1046,29 @@ test("artifact card lifecycle reopens the same document after close or tab switc
     assert.equal(artifact.documentId,'doc-b');
     assert.equal(artifact.content,'','different artifact does not leak previous content');
     assert.equal(JSON.stringify(workspaces.get('workspace:chat-a')),previousChat,'opening the new chat must not mutate the old workspace');
+    const texts = node => node == null || node === false ? '' : typeof node !== 'object' ? String(node) : (Array.isArray(node) ? node : [node.props?.children]).map(texts).join(' ');
+    for (const [kind,label] of [['text','文本'],['code','代码'],['image','图片'],['sheet','表格']]) {
+      documentKind=kind;result={...result,kind};
+      const view=render();
+      assert.equal(view.header.props.kind,kind);
+      assert.match(texts(view.header.type(view.header.props)),new RegExp(label));
+      assert.equal(DocumentPreview({result,isReadonly:false}).props.children.length,2,'only file header and hitbox mount; never a second editor');
+      useWorkspace().close();activate(view);
+      assert.equal(artifact.kind,kind,'all kinds reopen through the original generic viewer');
+    }
+    artifact={...artifact,status:'streaming',documentId:'unrelated-document'};
+    assert.equal(render().header.props.isStreaming,false,'another document generating never marks this historical card as generating');
+    artifact={...artifact,documentId:result.id};
+    assert.equal(render().header.props.isStreaming,true);
+    assert.match(texts(render().header.type(render().header.props)),/正在生成/);
+    artifact={...artifact,status:'idle'};fetching=true;
+    assert.equal(render().header.props.isLoading,true);
+    assert.equal(render().header.props.isStreaming,false);
+    assert.match(texts(render().header.type(render().header.props)),/正在加载/);
+    fetching=false;fetchError=new Error('fixture unavailable');
+    assert.match(texts(render().header.type(render().header.props)),/加载失败/);
+    assert.doesNotMatch(texts(render().header.type(render().header.props)),/正在生成|正在加载/);
+
   `);
 });
 
@@ -1103,10 +1107,12 @@ test("Lessie composition uses neutral panes, purposeful mint and narrower chat b
   );
 });
 
-test("sent document tiles are compact while image previews and upload queue remain unchanged", () => {
+test("sent document chips adapt to filename length while image previews and upload queue remain unchanged", () => {
   const sent = renderAttachment({}, { compact: true });
-  assert.match(sent, /h-10/);
-  assert.match(sent, /max-w-\[180px\]/);
+  assert.match(sent, /h-8 w-fit/);
+  assert.doesNotMatch(sent, /w-40|max-w-\[180px\]/);
+  assert.match(sent, /title="长文件名/);
+  assert.match(sent, /flex items-center gap-2/);
   assert.match(sent, /PDF/);
   assert.doesNotMatch(sent, /2\.00 KiB|已读取/);
   assert.match(renderAttachment(), /h-16/);
@@ -1148,4 +1154,16 @@ test("record details render actual labels and values first; original JSON and pr
   assert.match(html, /<details(?![^>]* open)[^>]*>/);
   assert.match(html, /技术详情/);
   assert.match(html, /raw-call-id|original-time|raw retained/);
+});
+
+test("assistant sender label appears once at a contiguous assistant transition without changing message ownership", () => {
+  const message = readFileSync("components/chat/message.tsx", "utf8");
+  const messages = readFileSync("components/chat/messages.tsx", "utf8");
+  assert.match(message, /data-testid="assistant-sender"/);
+  assert.match(message, /ChatNest/);
+  assert.match(
+    messages,
+    /showSender=\{index === 0 \|\| messages\[index - 1\]\?\.role !== "assistant"\}/
+  );
+  assert.match(messages, /key=\{message.id\}/);
 });

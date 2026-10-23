@@ -92,7 +92,6 @@ export const ToolHeader = ({
   const derivedName =
     type === "dynamic-tool" ? toolName : type.split("-").slice(1).join("-");
 
-  const timeline = appearance === "timeline";
   const compact = appearance !== "default";
   const attention =
     state === "approval-requested" ||
@@ -103,16 +102,16 @@ export const ToolHeader = ({
     <CollapsibleTrigger
       className={cn(
         "flex min-w-0 items-center gap-3 px-3 text-left [&[data-state=open]>svg:last-child]:rotate-180",
-        timeline ? "w-fit max-w-full" : "w-full justify-between",
+        "w-full justify-between",
         compact
-          ? "h-9 gap-2 rounded-md text-[13px] hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-ring"
+          ? "min-h-9 gap-2 rounded-md px-2 py-2 text-[13px] hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-ring"
           : "py-2.5",
         className
       )}
       {...props}
     >
       <div
-        className={cn("flex min-w-0 items-center gap-2", !timeline && "flex-1")}
+        className="flex min-w-0 flex-1 items-center gap-2"
       >
         {icon ?? (
           <WrenchIcon className="size-4 shrink-0 text-muted-foreground" />

@@ -19,7 +19,6 @@ import { groupActivityParts } from "./activity-groups";
 import { useDataStream } from "./data-stream-provider";
 import { DocumentToolResult } from "./document";
 import { DocumentPreview } from "./document-preview";
-import { SparklesIcon } from "./icons";
 import { MessageActions } from "./message-actions";
 import { MessageReasoning } from "./message-reasoning";
 import { PreviewAttachment } from "./preview-attachment";
@@ -98,6 +97,7 @@ const PurePreviewMessage = ({
   onEdit,
   onRegenerate,
   hideActivities = false,
+  showSender = true,
 }: {
   addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
   chatId: string;
@@ -111,6 +111,7 @@ const PurePreviewMessage = ({
   onEdit?: (message: ChatMessage) => void;
   onRegenerate?: () => void;
   hideActivities?: boolean;
+  showSender?: boolean;
 }) => {
   const attachmentsFromMessage = message.parts.filter(
     (part) => part.type === "file"
@@ -450,7 +451,10 @@ const PurePreviewMessage = ({
         )}
       >
         {isAssistant ? (
-          <div className="flex min-w-0 flex-1 flex-col gap-2">{content}</div>
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
+            {!!showSender && <SenderLabel />}
+            {content}
+          </div>
         ) : (
           content
         )}
@@ -461,19 +465,25 @@ const PurePreviewMessage = ({
 
 export const PreviewMessage = PurePreviewMessage;
 
+function SenderLabel() {
+  return (
+    <div
+      className="mb-1 text-xs font-medium text-muted-foreground"
+      data-testid="assistant-sender"
+    >
+      ChatNest
+    </div>
+  );
+}
+
 export const ThinkingMessage = () => (
   <div
     className="group/message w-full"
     data-role="assistant"
     data-testid="message-assistant-loading"
   >
-    <div className="flex items-start gap-3">
-      <div className="flex h-[calc(13px*1.65)] shrink-0 items-center">
-        <div className="flex size-7 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground ring-1 ring-border/50">
-          <SparklesIcon size={13} />
-        </div>
-      </div>
-
+    <div className="flex min-w-0 flex-col gap-2">
+      <SenderLabel />
       <WaitingText />
     </div>
   </div>
