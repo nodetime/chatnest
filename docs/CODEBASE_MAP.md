@@ -77,3 +77,9 @@ Unified tool results (2026-10-23):
 - `tool-result-preview.tsx` renders compact titled records with their actual links/domains, short original-key fields and plain skill/reference text. MCP transport metadata/mirrored structured text do not become a debug tree; full canonical data stays in ToolCallDetails. URLs must be HTTP(S), credential-free; no automatic media fetch or markup execution.
 - `ToolActivity` retains disclosure/approval/Sheet ownership; all generic outcomes have meaningful bodies. Exact dynamic/native exclusions also apply in `isActivityPart`. Trusted short labels remain intact on narrow screens; arbitrary aliases/skill names still truncate.
 - `tests/unit/unified-tools.test.ts` plus existing lifecycle and MCP projection tests cover bounded/falsey/mixed/malformed results, identity collisions, omitted-field notices, nested empties and credential-free alias mapping.
+
+Lessie-inspired workbench refinement (2026-10-23):
+- Chat-only neutral white/gray tokens with mint selection, 208px sidebar, 52px aligned header rails and 58% default artifact width; resizable/mobile generic Workspace unchanged.
+- `result-table.tsx` keeps filter/columns/export/source/notes in the top toolbar. Controlled notes Sheet owns no duplicate draft; parent state and expectedVersion CAS remain authoritative. Save appears only for dirty/saving state.
+- Workspace grid uses 42px header/46px rows; inline previews retain 38px geometry matching `document-preview-layout.ts`. Default columns are title220/other140 with min120 and user resizing.
+- `vercel-workbench.test.ts` exercises actual hook/event render state for notes close/reopen/save/errors/readonly and both grid densities. Full acceptance: `docs/superpowers/plans/2026-10-23-lessie-workbench-verification.md`.
