@@ -110,6 +110,15 @@ export function ToolActivity({
   const approval = "approval" in part ? part.approval : undefined;
   const displayState = activityDisplayState(part, isRunning);
   const errorText = activityErrorText(part);
+  // The exact native table step hands off to DocumentPreview on success. Do not
+  // open a temporary dialog that this authoritative artifact renderer replaces.
+  // Terminal/fallback evidence and dynamic MCP lookalikes keep call details.
+  const nativeArtifactPending =
+    part.type === "tool-createResultTable" &&
+    isRunning &&
+    ["input-streaming", "input-available", "approval-responded"].includes(
+      displayState
+    );
   const incomplete =
     displayState === "output-error" &&
     part.state !== "output-error" &&
@@ -213,7 +222,12 @@ export function ToolActivity({
               ? { toolName: name, type: "dynamic-tool" }
               : { type: part.type })}
           />
-          <ToolCallDetails onOpenChange={handleDetailsOpenChange} part={part} />
+          {!nativeArtifactPending && (
+            <ToolCallDetails
+              onOpenChange={handleDetailsOpenChange}
+              part={part}
+            />
+          )}
         </div>
         <ToolContent className="space-y-3 px-3 pb-3 pt-1">
           {name === "loadSkill" && (

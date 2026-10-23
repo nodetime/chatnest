@@ -444,3 +444,47 @@ test("canonical tool-only messages omit empty answer actions while text, artifac
     assert.equal(nodes(PreviewMessage({...props,isReadonly:true,onRegenerate:regenerate})).filter(n=>n.type==='actions').length,0);
   `);
 });
+
+test("only the active native table handoff omits a temporary Sheet trigger; fallback evidence and MCP names keep details", () => {
+  clientScript(`${hookHarness}
+    const scheduler=hooks();const {ToolActivity}=load('components/chat/tool-activity.tsx',{...base,react:scheduler.react});
+    const table={type:'tool-createResultTable',toolCallId:'table-handoff',input:{title:'Table'}};
+    for(const state of ['input-streaming','input-available','approval-responded']) {
+      const part={...table,state,...(state==='approval-responded'?{approval:{id:'native-approved',approved:true}}:{})};
+      const tree=scheduler.render(ToolActivity,{part,approve:()=>{},isReadonly:false,isRunning:true});
+      assert.equal(nodes(tree).filter(n=>n.type==='call-details').length,0,'no dialog to unmount during native '+state+' handoff');
+    }
+    for(const part of [
+      {...table,state:'input-available'},
+      {...table,state:'output-error',errorText:'Exact native failure'},
+      {...table,state:'output-denied'},
+      {...table,state:'approval-responded',approval:{id:'denied',approved:false}},
+      {...table,state:'output-available',output:{error:'Native returned failure'}},
+      {...table,state:'output-available',output:null},
+      {...table,state:'approval-requested',approval:{id:'exact-approval'}},
+      {type:'dynamic-tool',toolName:'createResultTable',toolCallId:'dynamic-lookalike',state:'input-available',input:{}},
+      {type:'dynamic-tool',toolName:'provider__createResultTable',toolCallId:'mcp-lookalike',state:'input-available',input:{}},
+    ]) {
+      const tree=scheduler.render(ToolActivity,{part,approve:()=>{},isReadonly:false,isRunning:part.toolCallId!=='table-handoff'||part.state!=='input-available'});
+      assert.equal(nodes(tree).filter(n=>n.type==='call-details').length,1,'details remain reachable for '+part.type+' '+part.state);
+    }
+    const {PreviewMessage}=load('components/chat/message.tsx',{
+      ...base,react:{useCallback:fn=>fn},
+      '@/lib/utils':{cn:()=>'',sanitizeText:text=>text},
+      '../ai-elements/message':{MessageContent:'text',MessageResponse:'response'},
+      '../ai-elements/shimmer':{Shimmer:'shimmer'},
+      './activity-group':{ActivityGroup:'activity'},
+      './data-stream-provider':{useDataStream:()=>({})},
+      './document':{},'./document-preview':{DocumentPreview:'artifact'},'./icons':{},
+      './message-actions':{MessageActions:'actions'},
+      './message-reasoning':{MessageReasoning:'reasoning'},
+      './preview-attachment':{},'./tool-activity':{ToolActivity},'./weather':{},
+    });
+    const props={message:{id:'native-message',role:'assistant',parts:[{...table,state:'input-available'}]},addToolApprovalResponse:()=>{},isLoading:true,isReadonly:false};
+    const pending=nodes(PreviewMessage(props)).find(n=>n.type===ToolActivity);assert.ok(pending);
+    assert.equal(nodes(scheduler.render(ToolActivity,pending.props)).filter(n=>n.type==='call-details').length,0);
+    const output={id:'00000000-0000-4000-8000-000000000001',kind:'sheet',title:'Table'};
+    const result=nodes(PreviewMessage({...props,isLoading:false,message:{...props.message,parts:[{...table,state:'output-available',output}]}})).find(n=>n.type==='artifact');
+    assert.ok(result);assert.equal(result.props.result,output,'successful native artifact renderer remains authoritative');
+  `);
+});
