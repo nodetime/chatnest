@@ -107,7 +107,12 @@ export type ResultPreview = {
     text?: string;
     fields: { label: string; text: string }[];
   }[];
-  blocks: { label: string; fields: { label: string; text: string }[] }[];
+  blocks: {
+    label: string;
+    fields: { label: string; text: string }[];
+    // Only actual prose or a scoped empty-state is part of the reader surface.
+    readable?: boolean;
+  }[];
   sources: PreviewSource[];
   notice?: string;
   truncated: boolean;
@@ -143,9 +148,13 @@ export function projectResult(
   };
   const primitive = (item: unknown) =>
     typeof item === "string" ? (item === "" ? '""' : item) : String(item);
-  const add = (label: string, fields: { label: string; text: string }[]) => {
+  const add = (
+    label: string,
+    fields: { label: string; text: string }[],
+    readable = false
+  ) => {
     if (fields.length) {
-      preview.blocks.push({ fields, label: clip(label, 120) });
+      preview.blocks.push({ fields, label: clip(label, 120), readable });
     }
   };
   const sourceFor = (
@@ -210,9 +219,14 @@ export function projectResult(
       preview.truncated = true;
       return true;
     }
-    const textKey = ["snippet", "description", "summary", "content"].find(
-      (key) => typeof object[key] === "string" && object[key].length > 0
-    );
+    const textKey = [
+      "snippet",
+      "description",
+      "summary",
+      "excerpt",
+      "content",
+      "text",
+    ].find((key) => typeof object[key] === "string" && object[key].length > 0);
     const text = textKey ? (object[textKey] as string) : undefined;
     const fields: { label: string; text: string }[] = [];
     let inspected = 0;
@@ -237,6 +251,8 @@ export function projectResult(
           "description",
           "summary",
           "content",
+          "excerpt",
+          "text",
         ].includes(key)
       ) {
         // A selected heading/snippet/link is represented; other original
@@ -277,7 +293,7 @@ export function projectResult(
     }
     visited += 1;
     if (item === null || typeof item !== "object") {
-      add(label, [{ label: "", text: clip(primitive(item)) }]);
+      add(label, [{ label: "", text: clip(primitive(item)) }], !label);
       return;
     }
     if (seen.has(item) || depth > 5) {
@@ -290,7 +306,7 @@ export function projectResult(
       if (!item.length) {
         if (mode === "result") {
           emptyLists += 1;
-          add(label || "列表", [{ label: "", text: "返回列表为空。" }]);
+          add(label || "列表", [{ label: "", text: "返回列表为空。" }], true);
         } else {
           add(label, [{ label: "", text: "[]" }]);
         }
@@ -332,7 +348,7 @@ export function projectResult(
       if (collectionKey) {
         for (const key of ["answer", "summary", "message"]) {
           if (typeof object[key] === "string") {
-            add("", [{ label: "", text: clip(object[key]) }]);
+            add("", [{ label: "", text: clip(object[key]) }], true);
           }
         }
         for (const key in object) {
@@ -389,7 +405,23 @@ export function projectResult(
       if (mode === "result" && key === "content" && Array.isArray(child)) {
         nested.push([key, child]);
       } else if (child === null || typeof child !== "object") {
-        fields.push({ label: clip(key, 100), text: clip(primitive(child)) });
+        if (
+          mode === "result" &&
+          typeof child === "string" &&
+          [
+            "text",
+            "content",
+            "answer",
+            "summary",
+            "description",
+            "excerpt",
+            "message",
+          ].includes(key)
+        ) {
+          add("", [{ label: "", text: clip(child) }], true);
+        } else {
+          fields.push({ label: clip(key, 100), text: clip(primitive(child)) });
+        }
       } else {
         nested.push([key, child]);
       }

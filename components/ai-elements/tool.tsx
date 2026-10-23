@@ -146,17 +146,19 @@ export const ToolHeader = ({
         </span>
       )}
       {compact ? (
-        <span
-          className={cn(
-            "shrink-0 text-xs text-muted-foreground",
-            attention && "font-medium text-destructive",
-            state === "approval-requested" &&
-              "text-amber-700 dark:text-amber-400"
-          )}
-          role="status"
-        >
-          {statusLabel ?? statusLabels[state]}
-        </span>
+        (state !== "output-available" || !!statusLabel) && (
+          <span
+            className={cn(
+              "shrink-0 text-xs text-muted-foreground",
+              attention && "font-medium text-destructive",
+              state === "approval-requested" &&
+                "text-amber-700 dark:text-amber-400"
+            )}
+            role="status"
+          >
+            {statusLabel ?? statusLabels[state]}
+          </span>
+        )
       ) : (
         <span className="shrink-0">{getStatusBadge(state, statusLabel)}</span>
       )}

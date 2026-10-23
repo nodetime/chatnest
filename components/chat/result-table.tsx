@@ -106,7 +106,7 @@ export function ResultTableView({
                 target="_blank"
                 title={url}
               >
-                {cellText(value)}
+                {new URL(url).hostname}
                 <ExternalLink className="size-3 shrink-0" />
               </a>
             ) : (

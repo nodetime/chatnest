@@ -1,14 +1,13 @@
 "use client";
 
 import type { UseChatHelpers } from "@ai-sdk/react";
-import { Check, ChevronRight, Circle, LoaderCircle } from "lucide-react";
+import { ChevronRight, LoaderCircle } from "lucide-react";
 import { type ReactNode, useCallback, useState } from "react";
 import { Task, TaskContent, TaskTrigger } from "@/components/ai-elements/task";
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import type { ToolPart } from "../ai-elements/tool";
 import {
-  activityDisplayState,
   activitySummary,
   initialActivityDisclosure,
   reconcileActivityDisclosure,
@@ -118,44 +117,22 @@ export function ActivityGroup({
         hidden={!singleton && !current.open}
       >
         <ol
-          className={cn(
-            "min-w-0",
-            !singleton && "ml-[6px] space-y-1 border-l border-border/60 pl-4"
-          )}
+          className={cn("min-w-0", !singleton && "space-y-1")}
           role={singleton ? "presentation" : undefined}
         >
-          {parts.map((part) => {
-            const state = activityDisplayState(part, isRunning);
-            return (
-              <li className="relative min-w-0" key={part.toolCallId}>
-                {!singleton && (
-                  <span
-                    className={cn(
-                      "absolute -left-[21px] top-3 flex size-[9px] items-center justify-center rounded-full bg-background ring-2 ring-background",
-                      toolNeedsAttention(state)
-                        ? "text-amber-600 dark:text-amber-400"
-                        : "text-muted-foreground/70"
-                    )}
-                  >
-                    {state === "output-available" ? (
-                      <Check className="size-2.5" />
-                    ) : (
-                      <Circle className="size-2 fill-current" />
-                    )}
-                  </span>
-                )}
-                <ToolActivity
-                  approve={approve}
-                  isReadonly={isReadonly}
-                  isRunning={isRunning}
-                  key={part.toolCallId}
-                  onDetailsOpenChange={onDetailsOpenChange}
-                  part={part}
-                  timeline={!singleton}
-                />
-              </li>
-            );
-          })}
+          {parts.map((part) => (
+            <li className="min-w-0" key={part.toolCallId}>
+              <ToolActivity
+                approve={approve}
+                isReadonly={isReadonly}
+                isRunning={isRunning}
+                key={part.toolCallId}
+                onDetailsOpenChange={onDetailsOpenChange}
+                part={part}
+                timeline={!singleton}
+              />
+            </li>
+          ))}
         </ol>
       </TaskContent>
       {children}

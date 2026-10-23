@@ -253,6 +253,8 @@ test("result-table publishes authoritative view/notes dirty and saving state; fa
     const source={serverId:'fixture',serverName:'Fixture',toolName:'fixture__search',toolCallId:'call',timeBasis:'tool-completed',recordedAt:'2026-10-23T00:00:00.000Z'};
     const baseline=()=>({chatId:'chat',columns:[{label:'Title',path:'/title'}],notes:'',rows:[{title:'Original evidence'}],source,view:{filter:'',sort:[],visibleColumns:['/title']}});
     table=baseline();
+    const originalUrl='https://example.com/deep/source?exact=value';
+    table.columns.push({label:'User source label',path:'/url'});table.view.visibleColumns.push('/url');table.rows[0].url=originalUrl;
     const evidence=JSON.stringify(table.rows);
     let props={};
     const render=()=>{cursor=0;effects=[];const tree=output.exports.ResultTableView({table,documentId:'document-a',expectedVersion:'2026-10-23T00:00:00.000Z',onPendingChange:publish,onSaved:content=>{table={...table,...JSON.parse(content)}},...props});effects.forEach(fn=>fn());return tree};
@@ -260,6 +262,10 @@ test("result-table publishes authoritative view/notes dirty and saving state; fa
     const saveButton=tree=>find(tree,node=>node.type==='button'&&Array.isArray(node.props.children)&&node.props.children.some(text=>typeof text==='string'&&/保存/.test(text)))[0];
     (async()=>{
       let tree=render();assert.equal(pending.at(-1),false,'clean table publishes unlocked');
+      const grid=find(tree,node=>node.type==='grid')[0];const column=grid.props.columns.find(column=>column.key==='/url');
+      assert.equal(column.name,'User source label');const link=column.renderCell({row:{raw:table.rows[0],sourceIndex:0}});
+      assert.equal(link.props.href,originalUrl);assert.equal(link.props.title,originalUrl);assert.equal(link.props.children[0],'example.com');
+      assert.ok(helpers.resultCsv(table).includes(originalUrl),'CSV preserves full URL');
       find(tree,node=>node.props?.['aria-label']==='筛选结果')[0].props.onChange({target:{value:'Original'}});
       tree=render();assert.equal(pending.at(-1),true,'actual view filter change blocks chooser');
       let save=saveButton(tree).props.onClick();tree=render();assert.equal(pending.at(-1),true,'in-flight save stays blocked');

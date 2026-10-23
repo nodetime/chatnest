@@ -77,7 +77,7 @@ test("result renderer presents actual records and safe title/domain links as tex
   `);
   assert.match(html, /Useful record/);
   assert.match(html, /example\.com/);
-  assert.match(html, /<dl/);
+  assert.doesNotMatch(html, /<dl/);
   assert.match(html, /&lt;script&gt;/);
   assert.doesNotMatch(html, /<script|<img|<pre/);
 });
@@ -169,5 +169,25 @@ test("nested empty arrays are scoped to their field rather than declaring useful
       assert.ok(empty);assert.ok(empty.label==='sources'||empty.label==='items');
     }
     for(const output of [[],{items:[]},{content:[]}]) assert.equal(projectResult(output).notice,'返回列表为空。');
+  `);
+});
+
+test("reader results show only actual headings, prose and sources while original fields remain in approval", () => {
+  client(`
+    const assert=require('node:assert/strict');const React=require('react');const {renderToStaticMarkup}=require('react-dom/server');
+    const {ToolResultPreview}=require('./components/chat/tool-result-preview.tsx');const {projectResult,projectToolResult}=require('./components/chat/tool-presentation.ts');
+    const render=(value,parameters=false)=>renderToStaticMarkup(React.createElement(ToolResultPreview,{preview:projectResult(value,parameters?'parameters':'result'),parameters}));
+    const data={items:[{title:'Actual item',snippet:'Actual returned summary',item_url:'https://example.com/deep/item?q=1',item_id:'original-id',price:59,seller:'original-seller'},{title:'Title without prose',price:42}]};
+    const before=JSON.stringify(data);const html=render(data);
+    for(const text of ['Actual item','Actual returned summary','example.com','Title without prose']) assert.ok(html.includes(text),text);
+    for(const text of ['item_id','original-id','price','seller','original-seller','暂无摘要','无摘要','<dl']) assert.ok(!html.includes(text),text);
+    assert.equal(JSON.stringify(data),before);
+    const parameters=render(data,true);for(const text of ['item_id','original-id','price','seller','original-seller']) assert.ok(parameters.includes(text),text);
+    const generic=render({status:'raw-status',payload:{debug_id:'debug-value',count:0}});
+    assert.match(generic,/调用详情/);assert.doesNotMatch(generic,/raw-status|payload|debug_id|debug-value|<dl/);
+    assert.match(render('Exact plain provider prose'),/Exact plain provider prose/);
+    assert.match(render({text:'Actual text body',count:0}),/Actual text body/);
+    const resource=projectToolResult({type:'tool-readSkillResource',state:'output-available',output:{name:'skill',resource:'references/guide.md',content:'Actual reference excerpt'}});
+    const resourceHtml=renderToStaticMarkup(React.createElement(ToolResultPreview,{preview:resource}));assert.ok(resourceHtml.includes('references/guide.md'));assert.match(resourceHtml,/Actual reference excerpt/);
   `);
 });

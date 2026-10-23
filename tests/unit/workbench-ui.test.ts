@@ -703,7 +703,7 @@ test("generic artifact header and preview expose all four type labels without ch
   );
 });
 
-test("execution timeline has one natural-width summary and real tool count; approvals stay actionable", () => {
+test("quiet process has one summary and plain aligned rows; approvals stay actionable", () => {
   const html = clientScript(`
     const React = require('react');
     const { renderToStaticMarkup } = require('react-dom/server');
@@ -719,6 +719,7 @@ test("execution timeline has one natural-width summary and real tool count; appr
   assert.match(html, /等待确认/);
   assert.match(html, /允许执行/);
   assert.match(html, /data-testid="activity-timeline"/);
+  assert.doesNotMatch(html, /border-l |absolute -left|已完成/);
   assert.doesNotMatch(html, /group-data-\[state=open\]:rotate-180/);
 });
 
@@ -830,7 +831,7 @@ test("dynamic MCP output error fields are evidence data, not the native table fa
       output: { error: "MCP evidence field" },
       toolName,
     });
-    assert.match(html, /已完成/);
+    assert.doesNotMatch(html, /已完成/);
     assert.match(html, /aria-expanded="false"/);
     assert.doesNotMatch(html, /role="alert"|失败/);
   }
@@ -1027,6 +1028,9 @@ test("artifact card lifecycle reopens the same document after close or tab switc
       return output.exports;
     };
     const {useWorkspace}=load('hooks/use-workspace.ts');
+    assert.equal(useWorkspace().width,50,'fresh chat gives conversation and artifact equal width');
+    useWorkspace().update({width:57});useWorkspace().close();useWorkspace().show('document');
+    assert.equal(useWorkspace().width,57,'user width survives close/reopen');
     modules['@/hooks/use-workspace']={useWorkspace};
     const {DocumentPreview}=load('components/chat/document-preview.tsx');
     let result={id:'doc-a',title:'Fixture A',kind:'code'};

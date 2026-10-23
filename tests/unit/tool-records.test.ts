@@ -142,7 +142,7 @@ test("pure call details preserve original name, input, output including falsey J
   clientScript(`
     const assert=require('node:assert/strict');const React=require('react');const {renderToStaticMarkup}=require('react-dom/server');
     const {ToolCallDetailsContent}=require('./components/chat/tool-call-details.tsx');
-    for(const output of [false,0,'',null,{error:'MCP evidence',name:'raw name'}]) {
+    for(const output of [false,0,'',null,{error:'MCP evidence',name:'raw name'},{items:[{title:'Reader heading',item_id:'original-id',price:59,seller:'original-seller'}]}]) {
       const part={type:'dynamic-tool',toolName:'provider__exact_tool',toolCallId:'evidence',state:'output-error',input:{query:{nested:'raw input'}},output,errorText:'An error occurred.'};
       const html=renderToStaticMarkup(React.createElement(ToolCallDetailsContent,{part}));
       assert.ok(html.includes('provider__exact_tool'));
