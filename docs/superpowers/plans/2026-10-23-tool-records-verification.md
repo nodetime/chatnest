@@ -40,3 +40,7 @@ Source sequence: `e9e20d8`, `8ef4d42`, `b7b5023`, `53a3a70`, `12b518c`.
 | Responsive/theme |390×844 and1280×800 light/dark screenshots: no page overflow, visible details target, original source text unchanged. Temporary emulation restored. |
 
 All data/model/MCP requests are isolated local mocks; zero paid-provider calls. Test routing exists only in ignored fixture code, not production. Source runtime, prompts, MCP params, credentials, DB, upload behavior and right-side general artifact architecture are unchanged. Screenshot/interactive preview retained at the exact reported page. No remote push/deployment claimed.
+
+## Local main integration
+
+Fast-forward integrated into local main after reviews/browser/build. Root independently reran the entire explicit safe list in the primary checkout: **257/257 passed**, then typecheck exit0. All265 runtime/config files match across primary checkout, live preview worktree and final production build. Both worktrees clean after verification docs. No remote push. Production smoke server stopped; own local dev/mock preview retained. Final screenshot was explicitly checked with source region visible after the last hot refresh, not merely a collapsed/loading state.
