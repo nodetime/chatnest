@@ -79,7 +79,13 @@ Unified tool results (2026-10-23):
 - `tests/unit/unified-tools.test.ts` plus existing lifecycle and MCP projection tests cover bounded/falsey/mixed/malformed results, identity collisions, omitted-field notices, nested empties and credential-free alias mapping.
 
 Lessie-inspired workbench refinement (2026-10-23):
-- Chat-only neutral white/gray tokens with mint selection, 208px sidebar, 52px aligned header rails and 58% default artifact width; resizable/mobile generic Workspace unchanged.
+- Chat-only neutral white/gray tokens with mint selection, 208px sidebar, 52px aligned header rails and 68% default artifact width; resizable/mobile generic Workspace unchanged.
 - `result-table.tsx` keeps filter/columns/export/source/notes in the top toolbar. Controlled notes Sheet owns no duplicate draft; parent state and expectedVersion CAS remain authoritative. Save appears only for dirty/saving state.
 - Workspace grid uses 42px header/46px rows; inline previews retain 38px geometry matching `document-preview-layout.ts`. Default columns are title220/other140 with min120 and user resizing.
 - `vercel-workbench.test.ts` exercises actual hook/event render state for notes close/reopen/save/errors/readonly and both grid densities. Full acceptance: `docs/superpowers/plans/2026-10-23-lessie-workbench-verification.md`.
+
+Structural correction after rejected visual acceptance (2026-10-23):
+- `PreviewAttachment` compact mode is used only for sent documents (160×40); upload queue/status/error actions and image previews keep their full presentation.
+- `result-table-row-details.tsx` displays actual declared labels/values/links; source IDs and original JSON remain in a collapsed technical section. The first displayed result column is frozen and emphasized; raw rows are untouched.
+- Generic artifact header uses one filename/type line, with idle timestamp contextual and pending/error states still visible.
+- Preview CSS can remain stale in persistent Turbopack cache; verify computed browser styles, not only modified source. In this acceptance the owned `.next/dev` cache was moved to ignored backup and the fixture service restarted; no source workaround was added.
