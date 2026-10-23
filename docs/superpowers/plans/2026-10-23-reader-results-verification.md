@@ -38,3 +38,9 @@ All calls used synthetic local fixtures, not real supplier or paid model service
 Ignored `.local-review/` evidence: `unified-reader-final-units.log`, `unified-reader-final-types.log`, `reader-build-final.log`, `reader-tool-cases.json`, `reader-pending.json`, `reader-data-evidence.json`, `reader-mobile-light.png`, `reader-mobile-dark.png`, `chatnest-reader-results-final.png`.
 
 No push or deployment was performed. Primary-checkout regression and source parity are recorded after the local fast-forward merge.
+
+## Primary checkout completion
+
+- Fast-forwarded local `main`, then independently reran the explicit safe suite: 275/275 passed; TypeScript passed.
+- All 279 runtime/config/skill/public files match between live checkout, primary checkout and isolated production build; zero mismatches (`reader-source-hashes.json`).
+- Production smoke service was stopped; existing local preview and isolated mock services remain. Both checkouts are clean, no push performed.
