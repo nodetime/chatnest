@@ -48,7 +48,17 @@ Chat-only workbench presentation:
 - `components/chat/text-editor.tsx`: ProseMirror mounts once per component lifetime; transaction-based external/streaming updates preserve editor identity, focus, dispatch guards and read-only previews. `tests/unit/text-editor-lifecycle.test.ts` is an isolated hook/ProseMirror-boundary regression harness; actual typing remains browser acceptance.
 
 Workbench visual refinement (2026-10-22/23):
-- Chat-only semantic light/dark palette and224px sidebar live under `.chat-workbench`; flat panes share48px bars. Admin and global themes are unchanged.
+- Chat-only semantic light/dark palette and224px sidebar live under `.chat-workbench`; flat panes now share64px top chrome (Vercel composition pass). Admin and global themes are unchanged.
 - `document-preview.tsx` uses actual chat workspace visibility/documenttab + artifactidentity for active compact cards; its original activation also explicitly opens the documenttab. Inactive generic previews are bounded. Actual-hook/component lifecycle tests cover close/reopen, tab switches and chat isolation.
 - `toolbar.tsx` is a normal header dropdown delegating original per-kind artifact callbacks; console repair adds an action without replacing originals. Current/read-only/protected-evidence guards remain in artifact.tsx.
 - `workspace.tsx` uses explicit stretch height (overrides preflight hrheight0) and8px pointer target around a1px line; ARIA/keyboard/resize bounds remain.
+
+
+Vercel template/component composition (2026-10-23):
+- `components/ai-elements/{artifact,task}.tsx` pin/adapt actual Apache-2.0 upstream primitives; full pinned upstream notice/license and Apache text live beside them, attributed in `THIRD_PARTY_NOTICES.md`. Existing Conversation/PromptInput are reused, not a new runtime/framework.
+- `components/chat/messages.tsx` owns one per-chat Conversation scroll system with native jump-to-bottom; canonical message ordering, activities and callbacks stay intact. `chat-header.tsx` displays the contextual title; original model control lives in PromptInputFooter, with attachment/text structure in Header/Body.
+- `chat-title.ts` projects live/persisted/first-user/new-chat identity. `/api/messages` exposes only the already-authorized fetched chat title; no new query or access rule. `use-active-chat.tsx` exposes presentation title without changing transport or Agent scheduling.
+- `artifact-catalog.ts` indexes successful strict native document/table outputs (UUID id, exact kind, title), excludes errors/dynamic lookalikes and deduplicates latest metadata; no global active-document membership inference. `artifact-picker.tsx` reuses original preview activation plus explicit document mode.
+- `workspace-header.tsx` supplies the sole visible 64px header with file selection, original actions, mode menu and expand/close; browser/source/document bodies remain mounted on mode changes. Actual text/code/image/sheet renderers remain authoritative.
+- `result-table.tsx` projects its existing dirty/saving state through the sheet adapter into existing per-document metadata solely to guard the new file chooser, including late-document callback rejection. Original evidence, CAS, versions and save route are unchanged. Text dirty/streaming guards use their existing states.
+- `tests/unit/vercel-workbench.test.ts` adds pure catalog/title validation plus actual picker/table/parent callback behavioral harnesses. Root browser/HTTP proof stays ignored; mock-model verification does not imply live supplier/model acceptance or durable background execution.
