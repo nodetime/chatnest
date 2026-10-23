@@ -91,16 +91,37 @@ export function Workspace({ children }: { children: ReactNode }) {
         <hr
           aria-label="调整工作区宽度"
           aria-orientation="vertical"
-          aria-valuemax={70}
+          aria-valuemax={80}
           aria-valuemin={35}
-          aria-valuenow={workspace.width}
+          aria-valuenow={workspace.manualWidth ? workspace.width : undefined}
+          aria-valuetext={
+            workspace.manualWidth ? undefined : "自适应宽度，对话约 400 像素"
+          }
           className="relative z-10 -mx-1 hidden h-auto w-2 shrink-0 self-stretch cursor-col-resize border-0 bg-transparent before:absolute before:inset-y-0 before:left-1/2 before:w-px before:bg-border/70 hover:before:bg-ring focus-visible:outline-2 focus-visible:outline-ring focus-visible:before:bg-ring md:block"
           onKeyDown={(event) => {
             if (event.key === "ArrowLeft") {
-              workspace.update({ width: Math.min(70, workspace.width + 5) });
+              workspace.update({
+                width: Math.min(
+                  80,
+                  (pane.current?.parentElement
+                    ? (pane.current.offsetWidth /
+                        pane.current.parentElement.clientWidth) *
+                      100
+                    : workspace.width) + 5
+                ),
+              });
             }
             if (event.key === "ArrowRight") {
-              workspace.update({ width: Math.max(35, workspace.width - 5) });
+              workspace.update({
+                width: Math.max(
+                  35,
+                  (pane.current?.parentElement
+                    ? (pane.current.offsetWidth /
+                        pane.current.parentElement.clientWidth) *
+                      100
+                    : workspace.width) - 5
+                ),
+              });
             }
           }}
           onPointerDown={(event) => {
@@ -118,7 +139,7 @@ export function Workspace({ children }: { children: ReactNode }) {
                 width: Math.max(
                   35,
                   Math.min(
-                    70,
+                    80,
                     ((parent.right - event.clientX) / parent.width) * 100
                   )
                 ),
@@ -145,7 +166,11 @@ export function Workspace({ children }: { children: ReactNode }) {
         data-testid="workspace"
         ref={pane}
         style={
-          { "--workspace-width": `${workspace.width}%` } as React.CSSProperties
+          {
+            "--workspace-width": workspace.manualWidth
+              ? `${workspace.width}%`
+              : "calc(100% - min(400px, 42%))",
+          } as React.CSSProperties
         }
       >
         {(workspace.tab !== "document" || artifact.documentId === "init") && (

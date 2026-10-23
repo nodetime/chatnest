@@ -43,6 +43,7 @@ export type ArtifactToolbarItem = {
 };
 
 type ArtifactContent<M = any> = {
+  renderHeader?: (controls: ReactNode) => ReactNode;
   isReadonly?: boolean;
   documentId?: string;
   expectedVersion?: string;

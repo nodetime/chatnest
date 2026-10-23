@@ -10,10 +10,15 @@ import {
   XIcon,
 } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import DataGrid, { type Column, type SortColumn } from "react-data-grid";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Sheet,
   SheetClose,
@@ -38,6 +43,7 @@ import { ResultTableSource } from "./result-table-source";
 import "react-data-grid/lib/styles.css";
 
 type Props = {
+  renderHeader?: (controls: ReactNode) => ReactNode;
   table: ResultTable;
   documentId?: string;
   expectedVersion?: string;
@@ -62,6 +68,7 @@ export function ResultTableView({
   inline = false,
   onSaved,
   onPendingChange,
+  renderHeader,
 }: Props) {
   const { resolvedTheme } = useTheme();
   const [view, setView] = useState<ResultView>(table.view);
@@ -92,7 +99,7 @@ export function ResultTableView({
       },
       ...table.columns
         .filter((column) => view.visibleColumns.includes(column.path))
-        .map((column, index) => ({
+        .map((column, index, visibleColumns) => ({
           frozen: index === 0,
           key: column.path,
           minWidth: 120,
@@ -122,7 +129,14 @@ export function ResultTableView({
           },
           resizable: true,
           sortable: true,
-          width: column.path.includes("title") ? 220 : 140,
+          // Only the trailing secondary field absorbs spare canvas. The primary
+          // record anchor and user-resized widths retain their own geometry.
+          width:
+            index > 0 && index === visibleColumns.length - 1
+              ? `minmax(${column.path.includes("title") ? 220 : 140}px, 1fr)`
+              : column.path.includes("title")
+                ? 220
+                : 140,
         })),
     ],
     [table.columns, view.visibleColumns]
@@ -193,185 +207,252 @@ export function ResultTableView({
         variant="secondary"
       >
         <Save className="size-3.5" />
-        {saving ? "正在保存…" : "保存"}
+        <span className="hidden @min-[760px]:inline @max-[500px]:inline [[data-slot=sheet-content]_&]:inline">
+          {saving ? "正在保存…" : "保存"}
+        </span>
       </Button>
     ) : null;
+  const controls = (
+    <div
+      className="flex shrink-0 items-center gap-0.5 @max-[500px]:order-3 @max-[500px]:min-h-11 @max-[500px]:w-full @max-[500px]:overflow-x-auto @max-[500px]:border-t @max-[500px]:border-border/70 @max-[500px]:pt-1"
+      data-testid="result-table-controls"
+    >
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            aria-label="筛选结果选项"
+            className="relative h-9 gap-1.5 px-2.5 text-[13px]"
+            title={view.filter ? `筛选：${view.filter}` : "筛选结果"}
+            variant="ghost"
+          >
+            <ListFilter className="size-3.5" />
+            <span className="hidden @min-[760px]:inline @max-[500px]:inline">
+              筛选
+            </span>
+            {!!view.filter && (
+              <span
+                aria-label="已启用筛选"
+                className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-ring"
+                role="img"
+              />
+            )}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="start" className="chat-workbench w-72 p-3">
+          <label
+            className="mb-2 block text-xs text-muted-foreground"
+            htmlFor={`result-filter-${documentId}`}
+          >
+            筛选所有字段
+          </label>
+          <Input
+            aria-label="筛选结果"
+            className="h-9 text-[13px] shadow-none"
+            disabled={saving}
+            id={`result-filter-${documentId}`}
+            onChange={(event) =>
+              setView((current) => ({ ...current, filter: event.target.value }))
+            }
+            placeholder="输入关键词…"
+            value={view.filter}
+          />
+          {!!view.filter && (
+            <Button
+              className="mt-2 h-8 text-xs"
+              disabled={saving}
+              onClick={() => setView((current) => ({ ...current, filter: "" }))}
+              variant="ghost"
+            >
+              清除筛选
+            </Button>
+          )}
+        </PopoverContent>
+      </Popover>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            aria-label="选择显示列"
+            className="flex h-9 cursor-pointer list-none items-center gap-1.5 rounded-md px-2.5 text-[13px] transition-colors hover:bg-accent"
+            variant="ghost"
+          >
+            <Columns3 className="size-3.5" />
+            <span className="hidden @min-[760px]:inline @max-[500px]:inline">
+              列
+            </span>
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent
+          align="end"
+          className="chat-workbench max-h-72 w-56 overflow-auto p-2"
+          collisionPadding={8}
+        >
+          {table.columns.map((column) => (
+            <label
+              className="flex cursor-pointer items-center min-h-9 gap-2 rounded px-2 py-1.5 text-[13px] hover:bg-accent"
+              key={column.path}
+            >
+              <input
+                checked={view.visibleColumns.includes(column.path)}
+                disabled={saving}
+                onChange={() => toggleColumn(column.path)}
+                type="checkbox"
+              />
+              {column.label}
+            </label>
+          ))}
+        </PopoverContent>
+      </Popover>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            aria-label="导出结果"
+            className="flex h-9 cursor-pointer list-none items-center gap-1.5 rounded-md px-2.5 text-[13px] transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring"
+            variant="ghost"
+          >
+            <Download className="size-3.5" />
+            <span className="hidden @min-[760px]:inline @max-[500px]:inline">
+              导出
+            </span>
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent
+          align="end"
+          className="chat-workbench flex w-48 flex-col gap-1 p-1.5"
+          collisionPadding={8}
+        >
+          <Button
+            className="h-9 gap-1 px-2.5 text-[13px]"
+            onClick={() =>
+              download(
+                "results.csv",
+                `\uFEFF${resultCsv(table, view)}`,
+                "text/csv;charset=utf-8"
+              )
+            }
+            size="sm"
+            variant="ghost"
+          >
+            <Download className="size-3.5" />
+            CSV · 当前视图
+          </Button>
+          <Button
+            className="h-9 px-2.5 text-[13px]"
+            onClick={() =>
+              download(
+                "results.json",
+                JSON.stringify(table, null, 2),
+                "application/json"
+              )
+            }
+            size="sm"
+            variant="ghost"
+          >
+            JSON · 原始快照
+          </Button>
+          <p className="px-2.5 py-2 text-xs leading-5 text-muted-foreground">
+            CSV 仅含当前筛选和显示列；JSON 保留原始快照与已保存备注。
+          </p>
+        </PopoverContent>
+      </Popover>
+      <ResultTableSource compact source={table.source} />
+      <Sheet
+        data-testid="result-notes-sheet"
+        onOpenChange={setNotesOpen}
+        open={notesOpen}
+      >
+        <SheetTrigger asChild>
+          <Button
+            aria-label="个人备注"
+            className="relative h-9 gap-1.5 px-2.5 text-[13px]"
+            variant="ghost"
+          >
+            <NotebookPen className="size-3.5" />
+            <span className="hidden @min-[760px]:inline @max-[500px]:inline">
+              备注
+            </span>
+            {!!notes && (
+              <span
+                aria-label="已有备注"
+                className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-ring"
+                role="img"
+              />
+            )}
+          </Button>
+        </SheetTrigger>
+        <SheetContent
+          className="chat-workbench overflow-y-auto sm:max-w-md"
+          showCloseButton={false}
+        >
+          <SheetClose asChild>
+            <Button
+              aria-label="关闭个人备注"
+              className="absolute top-4 right-4"
+              size="icon-sm"
+              variant="ghost"
+            >
+              <XIcon />
+            </Button>
+          </SheetClose>
+          <SheetHeader>
+            <SheetTitle>个人备注</SheetTitle>
+            <SheetDescription>
+              记录你的判断，不会改变原始来源字段。
+              {!readOnly && "关闭面板后草稿仍保留，请保存后再切换产物。"}
+            </SheetDescription>
+          </SheetHeader>
+          <div className="flex flex-1 flex-col gap-4 px-6 pb-6">
+            <Textarea
+              aria-label="备注内容"
+              className="min-h-48 resize-y text-sm leading-6"
+              disabled={readOnly || saving}
+              id={`result-notes-${documentId}`}
+              maxLength={10_000}
+              onChange={(event) => setNotes(event.target.value)}
+              placeholder="添加备注…"
+              value={notes}
+            />
+            {!!readOnly && (
+              <p className="text-xs text-muted-foreground">只读版本</p>
+            )}
+            {!!error && (
+              <p className="text-xs text-destructive" role="alert">
+                {error}
+              </p>
+            )}
+            <div className="flex items-center justify-end gap-3">
+              {!readOnly && dirty && !saving && (
+                <span className="text-xs text-muted-foreground" role="status">
+                  尚未保存
+                </span>
+              )}
+              {saveControl}
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+      {saveControl}
+    </div>
+  );
   return (
     <div
-      className="flex h-full w-full min-h-0 min-w-0 flex-col bg-background"
+      className="@container flex h-full w-full min-h-0 min-w-0 flex-col bg-background"
       data-testid="result-table"
     >
-      {!inline && (
-        <div
-          className="shrink-0 border-b border-border/70 px-3 py-2"
-          data-testid="result-table-toolbar"
-        >
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative min-w-0 basis-36 flex-1 sm:max-w-64">
-              <ListFilter className="absolute top-3 left-2.5 size-3.5 text-muted-foreground" />
-              <Input
-                aria-label="筛选结果"
-                className="h-9 pl-8 text-[13px] shadow-none"
-                disabled={saving}
-                onChange={(event) =>
-                  setView((current) => ({
-                    ...current,
-                    filter: event.target.value,
-                  }))
-                }
-                placeholder="筛选所有字段…"
-                value={view.filter}
-              />
-            </div>
-            <details className="relative">
-              <summary
-                aria-label="选择显示列"
-                className="flex h-9 cursor-pointer list-none items-center gap-1.5 rounded-md px-2.5 text-[13px] transition-colors hover:bg-accent"
-              >
-                <Columns3 className="size-3.5" />列
-              </summary>
-              <div className="absolute top-10 right-0 z-20 max-h-72 w-56 overflow-auto rounded-lg border bg-popover p-2 shadow-md">
-                {table.columns.map((column) => (
-                  <label
-                    className="flex cursor-pointer items-center min-h-9 gap-2 rounded px-2 py-1.5 text-[13px] hover:bg-accent"
-                    key={column.path}
-                  >
-                    <input
-                      checked={view.visibleColumns.includes(column.path)}
-                      disabled={saving}
-                      onChange={() => toggleColumn(column.path)}
-                      type="checkbox"
-                    />
-                    {column.label}
-                  </label>
-                ))}
-              </div>
-            </details>
-            <details className="relative">
-              <summary className="flex h-9 cursor-pointer list-none items-center gap-1.5 rounded-md px-2.5 text-[13px] transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring">
-                <Download className="size-3.5" />
-                导出
-              </summary>
-              <div className="absolute right-0 top-10 z-20 flex w-48 flex-col gap-1 rounded-lg border bg-popover p-1.5 shadow-md">
-                <Button
-                  className="h-9 gap-1 px-2.5 text-[13px]"
-                  onClick={() =>
-                    download(
-                      "results.csv",
-                      `\uFEFF${resultCsv(table, view)}`,
-                      "text/csv;charset=utf-8"
-                    )
-                  }
-                  size="sm"
-                  variant="ghost"
-                >
-                  <Download className="size-3.5" />
-                  CSV · 当前视图
-                </Button>
-                <Button
-                  className="h-9 px-2.5 text-[13px]"
-                  onClick={() =>
-                    download(
-                      "results.json",
-                      JSON.stringify(table, null, 2),
-                      "application/json"
-                    )
-                  }
-                  size="sm"
-                  variant="ghost"
-                >
-                  JSON · 原始快照
-                </Button>
-                <p className="px-2.5 py-2 text-xs leading-5 text-muted-foreground">
-                  CSV 仅含当前筛选和显示列；JSON 保留原始快照与已保存备注。
-                </p>
-              </div>
-            </details>
-            <ResultTableSource source={table.source} />
-            <Sheet
-              data-testid="result-notes-sheet"
-              onOpenChange={setNotesOpen}
-              open={notesOpen}
-            >
-              <SheetTrigger asChild>
-                <Button
-                  aria-label="个人备注"
-                  className="h-9 gap-1.5 px-2.5 text-[13px]"
-                  variant="ghost"
-                >
-                  <NotebookPen className="size-3.5" />
-                  备注
-                  {!!notes && (
-                    <span
-                      aria-label="已有备注"
-                      className="size-1.5 rounded-full bg-ring"
-                      role="img"
-                    />
-                  )}
-                </Button>
-              </SheetTrigger>
-              <SheetContent
-                className="chat-workbench overflow-y-auto sm:max-w-md"
-                showCloseButton={false}
-              >
-                <SheetClose asChild>
-                  <Button
-                    aria-label="关闭个人备注"
-                    className="absolute top-4 right-4"
-                    size="icon-sm"
-                    variant="ghost"
-                  >
-                    <XIcon />
-                  </Button>
-                </SheetClose>
-                <SheetHeader>
-                  <SheetTitle>个人备注</SheetTitle>
-                  <SheetDescription>
-                    记录你的判断，不会改变原始来源字段。
-                    {!readOnly && "关闭面板后草稿仍保留，请保存后再切换产物。"}
-                  </SheetDescription>
-                </SheetHeader>
-                <div className="flex flex-1 flex-col gap-4 px-6 pb-6">
-                  <Textarea
-                    aria-label="备注内容"
-                    className="min-h-48 resize-y text-sm leading-6"
-                    disabled={readOnly || saving}
-                    id={`result-notes-${documentId}`}
-                    maxLength={10_000}
-                    onChange={(event) => setNotes(event.target.value)}
-                    placeholder="添加备注…"
-                    value={notes}
-                  />
-                  {!!readOnly && (
-                    <p className="text-xs text-muted-foreground">只读版本</p>
-                  )}
-                  {!!error && (
-                    <p className="text-xs text-destructive" role="alert">
-                      {error}
-                    </p>
-                  )}
-                  <div className="flex items-center justify-end gap-3">
-                    {!readOnly && dirty && !saving && (
-                      <span
-                        className="text-xs text-muted-foreground"
-                        role="status"
-                      >
-                        尚未保存
-                      </span>
-                    )}
-                    {saveControl}
-                  </div>
-                </div>
-              </SheetContent>
-            </Sheet>
-            <div className="ml-auto">{saveControl}</div>
+      {!inline &&
+        (renderHeader ? (
+          renderHeader(controls)
+        ) : (
+          <div
+            className="shrink-0 border-b px-3 py-2"
+            data-testid="result-table-toolbar"
+          >
+            {controls}
           </div>
-          {!!error && (
-            <p className="pt-2 text-xs text-destructive" role="alert">
-              {error}
-            </p>
-          )}
-        </div>
+        ))}
+      {!inline && !!error && (
+        <p className="shrink-0 px-3 py-2 text-xs text-destructive" role="alert">
+          {error}
+        </p>
       )}
       <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
         <DataGrid

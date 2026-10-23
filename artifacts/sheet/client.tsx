@@ -88,6 +88,7 @@ export const sheetArtifact = new Artifact<"sheet", Metadata>({
     expectedVersion,
     onResultTableSaved,
     onResultTablePendingChange,
+    renderHeader,
   }) => {
     const table = parseResultTable(content);
     if (table) {
@@ -99,6 +100,7 @@ export const sheetArtifact = new Artifact<"sheet", Metadata>({
           onPendingChange={onResultTablePendingChange}
           onSaved={onResultTableSaved}
           readOnly={isReadonly || !isCurrentVersion}
+          renderHeader={renderHeader}
           table={table}
         />
       );

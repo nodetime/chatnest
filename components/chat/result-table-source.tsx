@@ -35,7 +35,13 @@ export function ResultTableSourceDetails({ source }: { source: ResultSource }) {
   );
 }
 
-export function ResultTableSource({ source }: { source: ResultSource }) {
+export function ResultTableSource({
+  source,
+  compact = false,
+}: {
+  source: ResultSource;
+  compact?: boolean;
+}) {
   return (
     <Sheet>
       <SheetTrigger asChild>
@@ -46,7 +52,15 @@ export function ResultTableSource({ source }: { source: ResultSource }) {
           variant="ghost"
         >
           <Info className="size-3.5" />
-          来源
+          <span
+            className={
+              compact
+                ? "hidden @min-[760px]:inline @max-[500px]:inline"
+                : undefined
+            }
+          >
+            来源
+          </span>
         </Button>
       </SheetTrigger>
       <SheetContent

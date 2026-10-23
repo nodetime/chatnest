@@ -5,7 +5,8 @@ import { Toaster } from "sonner";
 import { AppSidebar } from "@/components/chat/app-sidebar";
 import { DataStreamProvider } from "@/components/chat/data-stream-provider";
 import { ChatShell } from "@/components/chat/shell";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { WorkbenchSidebarProvider } from "@/components/chat/workbench-sidebar-provider";
+import { SidebarInset } from "@/components/ui/sidebar";
 import { ActiveChatProvider } from "@/hooks/use-active-chat";
 import { isPlatformAdmin } from "@/lib/admin/access";
 import { auth } from "../(auth)/auth";
@@ -32,7 +33,10 @@ async function SidebarShell({ children }: { children: React.ReactNode }) {
 
   return (
     <ActiveChatProvider ownerId={session?.user.id}>
-      <SidebarProvider className="chat-workbench" defaultOpen={!isCollapsed}>
+      <WorkbenchSidebarProvider
+        className="chat-workbench"
+        defaultOpen={!isCollapsed}
+      >
         <AppSidebar
           isPlatformAdmin={isPlatformAdmin(session?.user)}
           user={session?.user}
@@ -51,7 +55,7 @@ async function SidebarShell({ children }: { children: React.ReactNode }) {
           </Suspense>
           {children}
         </SidebarInset>
-      </SidebarProvider>
+      </WorkbenchSidebarProvider>
     </ActiveChatProvider>
   );
 }

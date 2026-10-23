@@ -27,6 +27,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useWorkspace, type WorkspaceTab } from "@/hooks/use-workspace";
+import { cn } from "@/lib/utils";
 
 const modes = [
   { icon: FileText, id: "document", title: "产物" },
@@ -38,19 +39,25 @@ const modes = [
 export function WorkspaceHeader({
   children,
   actions,
+  controls,
 }: {
   children?: ReactNode;
   actions?: ReactNode;
+  controls?: ReactNode;
 }) {
   const workspace = useWorkspace();
   const mode = modes.find((item) => item.id === workspace.tab) ?? modes[0];
   const Icon = mode.icon;
   return (
     <ArtifactHeader
-      className="h-[52px] shrink-0 gap-2 bg-background px-2 py-1"
+      className={cn(
+        "@container h-[52px] shrink-0 gap-2 bg-background px-2 py-1",
+        controls &&
+          "@max-[500px]:h-auto @max-[500px]:flex-wrap @max-[500px]:gap-y-0"
+      )}
       data-testid="workspace-header"
     >
-      <div className="flex min-w-0 flex-1 items-center gap-1">
+      <div className="flex min-w-0 flex-1 items-center gap-1 @max-[500px]:min-h-[42px]">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -64,7 +71,7 @@ export function WorkspaceHeader({
                   {mode.title}
                 </span>
               )}
-              <ChevronDown className="size-3" />
+              <ChevronDown className="hidden size-3 @min-[600px]:block" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
@@ -92,6 +99,7 @@ export function WorkspaceHeader({
           )}
         </div>
       </div>
+      {controls}
       <ArtifactActions className="shrink-0 gap-0.5">
         {actions}
         <Button

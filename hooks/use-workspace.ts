@@ -9,9 +9,11 @@ type State = {
   tab: WorkspaceTab;
   expanded: boolean;
   width: number;
+  manualWidth: boolean;
 };
 const initial: State = {
   expanded: false,
+  manualWidth: false,
   open: false,
   tab: "browser",
   width: 68,
@@ -26,9 +28,16 @@ export function useWorkspace() {
   );
   const update = useCallback(
     (patch: Partial<State>) => {
-      mutate((current) => ({ ...(current ?? initial), ...patch }), {
-        revalidate: false,
-      });
+      mutate(
+        (current) => ({
+          ...(current ?? initial),
+          ...patch,
+          ...(patch.width === undefined ? {} : { manualWidth: true }),
+        }),
+        {
+          revalidate: false,
+        }
+      );
     },
     [mutate]
   );

@@ -1,3 +1,4 @@
+// biome-ignore-all lint/performance/noJsxPropsBind: Header slot renders in place without owning or remounting editor state.
 import type { UseChatHelpers } from "@ai-sdk/react";
 import { formatDistance } from "date-fns";
 import { zhCN } from "date-fns/locale";
@@ -6,6 +7,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   type Dispatch,
   memo,
+  type ReactNode,
   type SetStateAction,
   useCallback,
   useEffect,
@@ -21,7 +23,10 @@ import { textArtifact } from "@/artifacts/text/client";
 
 import { Artifact as ArtifactFrame } from "@/components/ai-elements/artifact";
 import { useArtifact } from "@/hooks/use-artifact";
-import { isProtectedResultTable } from "@/lib/artifacts/result-table";
+import {
+  isProtectedResultTable,
+  parseResultTable,
+} from "@/lib/artifacts/result-table";
 import type { Document, Vote } from "@/lib/db/schema";
 import type { Attachment, ChatMessage } from "@/lib/types";
 import { cn, fetcher } from "@/lib/utils";
@@ -416,79 +421,88 @@ function PureArtifact({
       )
       .join("\n") || undefined;
 
+  const displayedContent = isCurrentVersion
+    ? artifact.content
+    : getDocumentContentById(currentVersionIndex);
+  const tableOwnsHeader =
+    artifact.kind === "sheet" && !!parseResultTable(displayedContent);
+  const renderHeader = (controls?: ReactNode) => (
+    <WorkspaceHeader
+      actions={
+        isCurrentVersion &&
+        !isReadonly &&
+        !isProtectedResultTable(artifact.content) && (
+          <div className="flex shrink-0 items-center gap-0.5">
+            <ArtifactActions
+              artifact={artifact}
+              currentVersionIndex={currentVersionIndex}
+              handleVersionChange={handleVersionChange}
+              isCurrentVersion={isCurrentVersion}
+              layout="header"
+              metadata={metadata}
+              mode={mode}
+              setMetadata={setMetadata}
+            />
+            <Toolbar
+              artifactKind={artifact.kind}
+              consoleError={consoleError}
+              documentId={artifact.documentId}
+              sendMessage={sendMessage}
+              setMessages={setMessages}
+              status={status}
+              stop={stop}
+            />
+          </div>
+        )
+      }
+      controls={controls}
+    >
+      <div className="flex min-w-0 flex-col items-start gap-y-0.5">
+        {!embedded && <ArtifactCloseButton />}
+        <div
+          className="flex min-w-0 items-center gap-2"
+          title={
+            document
+              ? `更新于${formatDistance(new Date(document.createdAt), new Date(), { addSuffix: true, locale: zhCN })}`
+              : undefined
+          }
+        >
+          <ArtifactPicker
+            activeId={artifact.documentId}
+            entries={artifactCatalog(messages)}
+            isContentDirty={isContentDirty}
+            resultTablePendingChanges={hasPendingResultTableChanges}
+            status={artifact.status}
+            title={artifact.title}
+          />
+          {!tableOwnsHeader && <ArtifactTypeLabel kind={artifact.kind} />}
+        </div>
+        <div className="flex min-w-0 items-center gap-2 px-2">
+          {saveError ? (
+            <span className="truncate text-xs text-destructive" role="alert">
+              {saveError}
+            </span>
+          ) : hasPendingResultTableChanges ? (
+            <span className="truncate text-xs text-muted-foreground">
+              表格视图或备注尚未保存 · 暂不能切换
+            </span>
+          ) : isContentDirty ? (
+            <span className="text-xs text-muted-foreground">
+              正在保存… · 暂不能切换
+            </span>
+          ) : artifact.status === "streaming" ? (
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <LoaderIcon size={12} />
+              正在生成… · 暂不能切换
+            </span>
+          ) : null}
+        </div>
+      </div>
+    </WorkspaceHeader>
+  );
   const artifactPanel = (
     <>
-      <WorkspaceHeader
-        actions={
-          isCurrentVersion &&
-          !isReadonly &&
-          !isProtectedResultTable(artifact.content) && (
-            <div className="flex shrink-0 items-center gap-0.5">
-              <ArtifactActions
-                artifact={artifact}
-                currentVersionIndex={currentVersionIndex}
-                handleVersionChange={handleVersionChange}
-                isCurrentVersion={isCurrentVersion}
-                layout="header"
-                metadata={metadata}
-                mode={mode}
-                setMetadata={setMetadata}
-              />
-              <Toolbar
-                artifactKind={artifact.kind}
-                consoleError={consoleError}
-                documentId={artifact.documentId}
-                sendMessage={sendMessage}
-                setMessages={setMessages}
-                status={status}
-                stop={stop}
-              />
-            </div>
-          )
-        }
-      >
-        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
-          {!embedded && <ArtifactCloseButton />}
-          <div
-            className="flex min-w-0 items-center gap-2"
-            title={
-              document
-                ? `更新于${formatDistance(new Date(document.createdAt), new Date(), { addSuffix: true, locale: zhCN })}`
-                : undefined
-            }
-          >
-            <ArtifactPicker
-              activeId={artifact.documentId}
-              entries={artifactCatalog(messages)}
-              isContentDirty={isContentDirty}
-              resultTablePendingChanges={hasPendingResultTableChanges}
-              status={artifact.status}
-              title={artifact.title}
-            />
-            <ArtifactTypeLabel kind={artifact.kind} />
-          </div>
-          <div className="flex min-w-0 items-center gap-2 px-2">
-            {saveError ? (
-              <span className="truncate text-xs text-destructive" role="alert">
-                {saveError}
-              </span>
-            ) : hasPendingResultTableChanges ? (
-              <span className="truncate text-xs text-muted-foreground">
-                表格视图或备注尚未保存 · 暂不能切换
-              </span>
-            ) : isContentDirty ? (
-              <span className="text-xs text-muted-foreground">
-                正在保存… · 暂不能切换
-              </span>
-            ) : artifact.status === "streaming" ? (
-              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <LoaderIcon size={12} />
-                正在生成… · 暂不能切换
-              </span>
-            ) : null}
-          </div>
-        </div>
-      </WorkspaceHeader>
+      {!tableOwnsHeader && renderHeader()}
       <div
         className={cn(
           "relative min-h-0 min-w-0 flex-1 bg-background",
@@ -523,6 +537,7 @@ function PureArtifact({
           onResultTablePendingChange={handleResultTablePendingChange}
           onResultTableSaved={handleResultTableSaved}
           onSaveContent={saveContent}
+          renderHeader={renderHeader}
           setMetadata={setMetadata}
           status={artifact.status}
           suggestions={[]}

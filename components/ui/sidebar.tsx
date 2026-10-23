@@ -54,6 +54,7 @@ function useSidebar() {
 
 function SidebarProvider({
   defaultOpen = true,
+  temporaryCollapseKey,
   open: openProp,
   onOpenChange: setOpenProp,
   className,
@@ -62,6 +63,7 @@ function SidebarProvider({
   ...props
 }: React.ComponentProps<"div"> & {
   defaultOpen?: boolean
+  temporaryCollapseKey?: string
   open?: boolean
   onOpenChange?: (open: boolean) => void
 }) {
@@ -69,10 +71,21 @@ function SidebarProvider({
   const [openMobile, setOpenMobile] = React.useState(false)
 
   const [_open, _setOpen] = React.useState(defaultOpen)
-  const open = openProp ?? _open
+  // Focus layout is a presentation override, never a persisted preference.
+  const [focusOverride, setFocusOverride] = React.useState<{ key: string; open: boolean } | null>(null)
+  const open = temporaryCollapseKey
+    ? focusOverride?.key === temporaryCollapseKey && focusOverride.open
+    : openProp ?? _open
+  React.useEffect(() => {
+    setFocusOverride(null)
+  }, [temporaryCollapseKey])
   const setOpen = React.useCallback(
     (value: boolean | ((value: boolean) => boolean)) => {
       const openState = typeof value === "function" ? value(open) : value
+      if (temporaryCollapseKey) {
+        setFocusOverride({ key: temporaryCollapseKey, open: openState })
+        return
+      }
       if (setOpenProp) {
         setOpenProp(openState)
       } else {
@@ -81,7 +94,7 @@ function SidebarProvider({
 
       document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
     },
-    [setOpenProp, open]
+    [setOpenProp, open, temporaryCollapseKey]
   )
 
   const toggleSidebar = React.useCallback(() => {

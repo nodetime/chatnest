@@ -244,7 +244,10 @@ test("history attachments wrap and chat-specific surface leaves global theme and
     /className="[^"]*flex-wrap[^"]*"\s+data-testid=\{"message-attachments"\}/
   );
   const layout = readFileSync("app/(chat)/layout.tsx", "utf8");
-  assert.match(layout, /SidebarProvider className="chat-workbench"/);
+  assert.match(
+    layout,
+    /WorkbenchSidebarProvider[\s\S]*?className="chat-workbench"/
+  );
   const css = readFileSync("app/globals.css", "utf8");
   assert.match(css, /\.chat-workbench\s*\{/);
   assert.match(css, /\.dark \.chat-workbench/);
@@ -333,9 +336,11 @@ test("result workspace shows only compact source identity and a details entry, w
     html,
     /fixture__raw_alias_only_in_details|fixture-call-id-only-in-details|fixture-server-id|2026-10-21T12:00:00.000Z|结果表格/
   );
-  assert.match(html, /aria-label="筛选结果"/);
-  assert.match(html, /CSV · 当前视图/);
-  assert.match(html, /JSON · 原始快照/);
+  assert.match(html, /aria-label="筛选结果选项"/);
+  assert.match(html, /aria-label="导出结果"/);
+  const source = readFileSync("components/chat/result-table.tsx", "utf8");
+  assert.match(source, /CSV · 当前视图/);
+  assert.match(source, /JSON · 原始快照/);
 });
 
 test("source Sheet details retain every original source field and explain both time bases", () => {
@@ -418,7 +423,7 @@ test("embedded artifact keeps the real single title and a shrinkable result-cont
   const result = readFileSync("components/chat/result-table.tsx", "utf8");
   assert.match(result, /flex h-full w-full min-h-0 min-w-0 flex-col/);
   assert.match(result, /min-h-0 min-w-0 flex-1/);
-  assert.match(result, /flex flex-wrap items-center gap-2/);
+  assert.match(result, /flex shrink-0 items-center gap-0.5/);
   // Existing exports and row-index raw detail are deliberately unchanged.
   assert.match(result, /resultCsv\(table, view\)/);
   assert.match(result, /JSON\.stringify\(table, null, 2\)/);
@@ -905,7 +910,7 @@ test("approval presents a human action summary while raw arguments are reachable
 test("artifact and table actions keep readable 36px targets without leaking table controls to the viewer", () => {
   const html = renderResultTable();
   assert.match(html, /aria-label="选择显示列"/);
-  assert.match(html, /h-9 pl-8 text-\[13px\]/);
+  assert.match(html, /aria-label="筛选结果选项"/);
   const actions = readFileSync("components/chat/artifact-actions.tsx", "utf8");
   assert.match(actions, /size-9 rounded-md/);
   const viewer = readFileSync("components/chat/artifact.tsx", "utf8");
@@ -1015,9 +1020,9 @@ test("artifact card lifecycle reopens the same document after close or tab switc
       return output.exports;
     };
     const {useWorkspace}=load('hooks/use-workspace.ts');
-    assert.equal(useWorkspace().width,68,'fresh chat gives artifacts the broader canvas');
+    assert.equal(useWorkspace().width,68,'legacy percentage is retained as fallback');assert.equal(useWorkspace().manualWidth,false,'fresh chat uses responsive 400px conversation rather than fallback percentage');
     useWorkspace().update({width:57});useWorkspace().close();useWorkspace().show('document');
-    assert.equal(useWorkspace().width,57,'user width survives close/reopen');
+    assert.equal(useWorkspace().width,57,'user width survives close/reopen');assert.equal(useWorkspace().manualWidth,true,'actual user resize overrides automatic composition');
     modules['@/hooks/use-workspace']={useWorkspace};
     const {DocumentPreview}=load('components/chat/document-preview.tsx');
     let result={id:'doc-a',title:'Fixture A',kind:'code'};
@@ -1076,7 +1081,7 @@ test("workspace resize grip stretches across the pane with an 8px hit area and a
   assert.match(grip, /before:w-px/);
   assert.match(source, /aria-label="调整工作区宽度"/);
   assert.match(source, /aria-orientation="vertical"/);
-  assert.match(source, /aria-valuemax=\{70\}/);
+  assert.match(source, /aria-valuemax=\{80\}/);
   assert.match(source, /aria-valuemin=\{35\}/);
   assert.match(source, /tabIndex=\{0\}/);
 });

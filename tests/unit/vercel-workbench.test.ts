@@ -242,6 +242,7 @@ test("result-table publishes authoritative view/notes dirty and saving state; fa
       react,'react/jsx-runtime':{jsx,jsxs:jsx},'lucide-react':{},'next-themes':{useTheme:()=>({resolvedTheme:'light'})},
       'react-data-grid':{__esModule:true,default:'grid'},'react-data-grid/lib/styles.css':{},
       '@/components/ui/button':{Button:'button'},'@/components/ui/input':{Input:'input'},'@/components/ui/textarea':{Textarea:'textarea'},
+      '@/components/ui/popover':{Popover:'popover',PopoverTrigger:'popover-trigger',PopoverContent:'popover-content'},
       '@/components/ui/collapsible':{Collapsible:'collapsible',CollapsibleContent:'collapse-content',CollapsibleTrigger:'collapse-trigger'},
       '@/components/ui/sheet':{Sheet:'sheet',SheetTrigger:'sheet-trigger',SheetClose:'sheet-close',SheetContent:'sheet-content',SheetDescription:'sheet-description',SheetHeader:'sheet-header',SheetTitle:'sheet-title'},
       '@/lib/artifacts/result-table':helpers,'./result-table-source':{ResultTableSource:'source'},'./result-table-row-details':{ResultTableRowDetails:'row-details'},
@@ -257,11 +258,12 @@ test("result-table publishes authoritative view/notes dirty and saving state; fa
     table.columns.push({label:'User source label',path:'/url'});table.view.visibleColumns.push('/url');table.rows[0].url=originalUrl;
     const evidence=JSON.stringify(table.rows);
     let props={};
-    const render=()=>{cursor=0;effects=[];const tree=output.exports.ResultTableView({table,documentId:'document-a',expectedVersion:'2026-10-23T00:00:00.000Z',onPendingChange:publish,onSaved:content=>{table={...table,...JSON.parse(content)}},...props});effects.forEach(fn=>fn());return tree};
+    const renderHeader=controls=>jsx('workspace-header',{children:controls});
+    const render=()=>{cursor=0;effects=[];const tree=output.exports.ResultTableView({renderHeader,table,documentId:'document-a',expectedVersion:'2026-10-23T00:00:00.000Z',onPendingChange:publish,onSaved:content=>{table={...table,...JSON.parse(content)}},...props});effects.forEach(fn=>fn());return tree};
     const find=(tree,predicate)=>{const found=[];const walk=node=>{if(Array.isArray(node)){node.forEach(walk);return}if(!node||typeof node!=='object')return;if(predicate(node))found.push(node);walk(node.props?.children)};walk(tree);return found};
-    const saveButton=tree=>find(tree,node=>node.type==='button'&&Array.isArray(node.props.children)&&node.props.children.some(text=>typeof text==='string'&&/保存/.test(text)))[0];
+    const saveButton=tree=>find(tree,node=>node.type==='button'&&node.props['aria-label']==='保存视图与备注')[0];
     (async()=>{
-      let tree=render();assert.equal(pending.at(-1),false,'clean table publishes unlocked');
+      let tree=render();assert.equal(find(tree,node=>node.type==='workspace-header').length,1,'one in-place header owns real table controls');assert.equal(find(tree,node=>node.props?.['data-testid']==='result-table-toolbar').length,0,'no duplicate second rail');assert.equal(find(tree,node=>node.type==='popover-content').length,3,'filter, columns and exports use collision-aware overlays instead of clipped absolute menus');assert.ok(find(tree,node=>node.type==='popover-content'&&node.props.collisionPadding===8).length===2,'columns and exports stay within narrow viewport edges');assert.equal(pending.at(-1),false,'clean table publishes unlocked');
       assert.equal(saveButton(tree),undefined,'clean table has no permanent disabled save control');
       const notesSheet=tree=>find(tree,node=>node.type==='sheet'&&node.props['data-testid']==='result-notes-sheet')[0];
       assert.equal(notesSheet(tree)?.props.open,false,'notes are a controlled closed Sheet');
@@ -276,7 +278,7 @@ test("result-table publishes authoritative view/notes dirty and saving state; fa
       find(tree,node=>node.type==='textarea')[0].props.onChange({target:{value:''}});tree=render();
       assert.equal(saveButton(tree),undefined,'reverting notes removes save action');
       const grid=find(tree,node=>node.type==='grid')[0];assert.equal(grid.props.rowHeight,46);assert.equal(grid.props.headerRowHeight,42);const column=grid.props.columns.find(column=>column.key==='/url');
-      assert.equal(grid.props.columns.find(column=>column.key==='/title').width,220,'primary title leaves room for adjacent evidence');assert.equal(column.width,140,'generic secondary fields stay compact');assert.equal(column.minWidth,120);assert.equal(grid.props.columns.find(column=>column.key==='/title').frozen,true,'first data column remains a record entrance');assert.equal(column.resizable,true,'users can still resize columns');
+      assert.equal(grid.props.columns.find(column=>column.key==='/title').width,220,'primary title leaves room for adjacent evidence');assert.equal(column.width,'minmax(140px, 1fr)','only trailing secondary field fills spare canvas without shrinking below its usual width');assert.equal(column.minWidth,120);assert.equal(grid.props.columns.find(column=>column.key==='/title').frozen,true,'first data column remains a record entrance');assert.equal(column.resizable,true,'users can still resize columns');
       assert.equal(column.name,'User source label');const link=column.renderCell({row:{raw:table.rows[0],sourceIndex:0}});
       assert.equal(link.props.href,originalUrl);assert.equal(link.props.title,originalUrl);assert.equal(link.props.children[0],'example.com');
       assert.ok(helpers.resultCsv(table).includes(originalUrl),'CSV preserves full URL');
@@ -335,12 +337,12 @@ test("actual artifact callback scopes pending metadata to the originating docume
       '@/artifacts/code/client':{codeArtifact:definitions.code},'@/artifacts/image/client':{imageArtifact:definitions.image},'@/artifacts/sheet/client':{sheetArtifact:definitions.sheet},'@/artifacts/text/client':{textArtifact:definitions.text},
       '@/components/ai-elements/artifact':{Artifact:'frame'},
       '@/hooks/use-artifact':{useArtifact:()=>{const id=artifact.documentId;return {artifact,setArtifact:()=>{},metadata:metadata.get(id),setMetadata:fn=>metadata.set(id,fn(metadata.get(id)))}}},
-      '@/lib/artifacts/result-table':{isProtectedResultTable:()=>true},'@/lib/utils':{cn:()=>'',fetcher:()=>{}},
+      '@/lib/artifacts/result-table':{isProtectedResultTable:()=>true,parseResultTable:()=>({})},'@/lib/utils':{cn:()=>'',fetcher:()=>{}},
       './artifact-actions':{ArtifactActions:'actions'},'./artifact-catalog':{artifactCatalog:()=>[]},'./artifact-close-button':{ArtifactCloseButton:'close'},'./artifact-picker':{ArtifactPicker:'picker'},'./artifact-type-label':{ArtifactTypeLabel:'kind'},'./icons':{LoaderIcon:'loader'},'./toolbar':{Toolbar:'toolbar'},'./version-footer':{VersionFooter:'versions'},'./workspace-header':{WorkspaceHeader:'header'},
     };
     const output={exports:{}};const code=ts.transpileModule(readFileSync('components/chat/artifact.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText;
     runInNewContext(code,{exports:output.exports,module:output,process:{env:{}},require:name=>{assert.ok(name in modules,'unexpected '+name);return modules[name]}});
-    const find=(tree,predicate)=>{if(Array.isArray(tree)){for(const node of tree){const hit=find(node,predicate);if(hit)return hit}return}if(!tree||typeof tree!=='object')return;if(predicate(tree))return tree;return find(tree.props?.children,predicate)};
+    const find=(tree,predicate)=>{if(Array.isArray(tree)){for(const node of tree){const hit=find(node,predicate);if(hit)return hit}return}if(!tree||typeof tree!=='object')return;if(predicate(tree))return tree;return find(tree.props?.children,predicate) ?? (tree.type==='sheet-content' ? find(tree.props.renderHeader?.('table-controls'),predicate) : undefined)};
     const render=()=>{cursor=0;return output.exports.Artifact({chatId:'chat',messages:[],embedded:true,isReadonly:false,status:'ready'})};
     const callbackA=find(render(),node=>node.type==='sheet-content').props.onResultTablePendingChange;
     assert.equal(typeof callbackA,'function');callbackA(true);
@@ -351,9 +353,75 @@ test("actual artifact callback scopes pending metadata to the originating docume
     callbackA(false);callbackA(true);
     assert.equal(metadata.get('b').resultTablePendingChanges,undefined,'old callback cannot lock or unlock new document');
     callbackB(true);assert.equal(metadata.get('b').resultTablePendingChanges,true);callbackB(false);assert.equal(metadata.get('b').resultTablePendingChanges,false);assert.equal(metadata.get('b').other,'preserved-b');
-    const tree=render();const picker=find(tree,node=>node.type==='picker');assert.equal(picker.props.resultTablePendingChanges,false);
+    const tree=render();const picker=find(tree,node=>node.type==='picker');assert.equal(picker.props.resultTablePendingChanges,false);assert.equal(find(tree,node=>node.type==='header').props.controls,'table-controls','guarded picker shares header with real table controls');for(const kind of ['text','code','image']){artifact={...artifact,kind};const generic=render();assert.ok(find(generic,node=>node.type===kind+'-content'));assert.equal(find(generic,node=>node.type==='header').props.controls,undefined,'generic viewer retains header without table actions')}
   `,
     ],
     { encoding: "utf8", env: { ...process.env, NODE_OPTIONS: "" } }
   );
+});
+
+test("actual sidebar focus override hides history without cookie writes, permits reopening and restores each saved preference", () => {
+  execFileSync(
+    process.execPath,
+    [
+      "--import",
+      "tsx",
+      "-e",
+      `
+    const assert=require('node:assert/strict');const {readFileSync}=require('node:fs');const {runInNewContext}=require('node:vm');const ts=require('typescript');
+    const jsx=(type,props)=>({type,props});let slots=[],cursor=0,effects=[],mobile=false,cookies=[];
+    const same=(a,b)=>a&&b&&a.length===b.length&&a.every((v,i)=>v===b[i]);
+    const react={createContext:()=>({Provider:'context'}),useMemo:fn=>fn(),useCallback:fn=>fn,useState:initial=>{const i=cursor++;if(!slots[i])slots[i]={value:initial};return [slots[i].value,v=>{slots[i].value=typeof v==='function'?v(slots[i].value):v}]},useEffect:(fn,deps)=>{const i=cursor++;const slot=slots[i]??(slots[i]={});if(!same(slot.deps,deps)){slot.deps=deps;effects.push(fn)}}};
+    const document={set cookie(value){cookies.push(value)}};
+    const modules={'react':react,'react/jsx-runtime':{jsx,jsxs:jsx},'class-variance-authority':{cva:()=>()=>''},'radix-ui':{Slot:{}},'@/hooks/use-mobile':{useIsMobile:()=>mobile},'@/lib/utils':{cn:()=>''}};
+    const output={exports:{}};runInNewContext(ts.transpileModule(readFileSync('components/ui/sidebar.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports:output.exports,module:output,document,window:{addEventListener(){},removeEventListener(){}},require:name=>modules[name]??{}});
+    for(const preferred of [true,false]){
+      slots=[];cookies=[];let key;
+      const render=()=>{cursor=0;effects=[];const tree=output.exports.SidebarProvider({defaultOpen:preferred,temporaryCollapseKey:key});effects.forEach(fn=>fn());return tree.props.value};
+      assert.equal(render().open,preferred);key='chat-a';assert.equal(render().open,false);
+      render().toggleSidebar();assert.equal(render().open,true,'explicit history reopen works inside focus');assert.deepEqual(cookies,[],'focus override never writes persisted preference');
+      render().toggleSidebar();assert.equal(render().open,false);key=undefined;assert.equal(render().open,preferred,'closing artifact restores original preference');
+      key='chat-a';assert.equal(render().open,false,'next focus session starts hidden');render().toggleSidebar();assert.equal(render().open,true);key='chat-b';assert.equal(render().open,false,'focus override does not leak to another chat');
+      key=undefined;assert.equal(render().open,preferred);render().toggleSidebar();assert.equal(render().open,!preferred);assert.equal(cookies.length,1,'ordinary sidebar toggles still persist');
+      mobile=true;key='chat-a';render().toggleSidebar();assert.equal(render().openMobile,true,'mobile sheet still opens independently');assert.equal(cookies.length,1);mobile=false;
+    }
+    let workspace={open:true,tab:'document'},artifact={isVisible:true,documentId:'doc'},chatId='chat-a';
+    const wrapper={exports:{}};const wrappers={'react/jsx-runtime':{jsx,jsxs:jsx},'@/components/ui/sidebar':{SidebarProvider:'sidebar'},'@/hooks/use-active-chat':{useActiveChat:()=>({chatId})},'@/hooks/use-artifact':{useArtifact:()=>({artifact})},'@/hooks/use-workspace':{useWorkspace:()=>workspace}};
+    runInNewContext(ts.transpileModule(readFileSync('components/chat/workbench-sidebar-provider.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports:wrapper.exports,module:wrapper,require:name=>wrappers[name]});
+    const focus=()=>wrapper.exports.WorkbenchSidebarProvider({defaultOpen:true}).props.temporaryCollapseKey;
+    assert.equal(focus(),'chat-a');workspace.open=false;assert.equal(focus(),undefined);workspace.open=true;workspace.tab='browser';assert.equal(focus(),undefined);workspace.tab='sources';assert.equal(focus(),undefined);workspace.tab='document';artifact.documentId='init';assert.equal(focus(),undefined);artifact.documentId='doc';artifact.isVisible=false;assert.equal(focus(),undefined);
+  `,
+    ],
+    { encoding: "utf8", env: { ...process.env, NODE_OPTIONS: "" } }
+  );
+});
+
+test("focus composition defaults to a 400px conversation with manual resize retained and bounded icon controls", () => {
+  const workspace = readFileSync("components/chat/workspace.tsx", "utf8");
+  assert.match(
+    workspace,
+    /workspace.manualWidth[\s\S]*?calc\(100% - min\(400px, 42%\)\)/
+  );
+  assert.match(workspace, /pane.current.offsetWidth/);
+  assert.match(workspace, /md:w-\[var\(--workspace-width\)\]/);
+  const hook = readFileSync("hooks/use-workspace.ts", "utf8");
+  assert.match(
+    hook,
+    /patch.width === undefined \? \{\} : \{ manualWidth: true \}/
+  );
+  const header = readFileSync("components/chat/workspace-header.tsx", "utf8");
+  assert.match(header, /@container h-\[52px\]/);
+  assert.match(header, /\{controls\}/);
+  const table = readFileSync("components/chat/result-table.tsx", "utf8");
+  assert.match(table, /hidden @min-\[760px\]:inline/);
+  assert.match(table, /renderHeader\(controls\)/);
+  assert.match(table, /@max-\[500px\]:order-3/);
+  assert.match(table, /@max-\[500px\]:overflow-x-auto/);
+  assert.match(header, /@max-\[500px\]:flex-wrap/);
+  assert.doesNotMatch(table, /<details|<summary/);
+  const sheet = readFileSync("artifacts/sheet/client.tsx", "utf8");
+  assert.match(sheet, /renderHeader=\{renderHeader\}/);
+  const artifact = readFileSync("components/chat/artifact.tsx", "utf8");
+  assert.match(artifact, /!tableOwnsHeader && renderHeader\(\)/);
+  assert.doesNotMatch(artifact, /createPortal/);
 });
