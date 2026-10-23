@@ -142,3 +142,32 @@ test("structured preview keeps a nontext warning and has only one truncation/det
     const mixed=projectResult({content:[{type:'image',data:'binary-original'}],structuredContent});assert.equal(mixed.truncated,true);assert.match(mixed.notice,/非文本/);assert.ok(!JSON.stringify(mixed).includes('binary-original'));
   `);
 });
+
+test("compact collection and record selection explicitly marks omitted original fields", () => {
+  client(`
+    const assert=require('node:assert/strict');const {projectResult}=require('./components/chat/tool-presentation.ts');
+    for(const output of [
+      {items:[{title:'A',price:1}],warning:'Partial supplier response',cursor:'next'},
+      {title:'A',summary:'Short',content:'Additional exact text'},
+      {title:'A',name:'Other identity',snippet:'Short'},
+      {title:'A',description:'',summary:'Short'},
+    ]) {
+      const before=JSON.stringify(output);const preview=projectResult(output);
+      assert.equal(preview.truncated,true,JSON.stringify(output));assert.equal(JSON.stringify(output),before);
+    }
+    assert.equal(projectResult({items:[{title:'A',price:1}]}).truncated,false);
+    assert.equal(projectResult({title:'A',summary:'Short'}).truncated,false);
+  `);
+});
+
+test("nested empty arrays are scoped to their field rather than declaring useful results empty", () => {
+  client(`
+    const assert=require('node:assert/strict');const {projectResult}=require('./components/chat/tool-presentation.ts');
+    for(const output of [{text:'Useful result',sources:[]},{answer:'Useful result',items:[]},{content:[{type:'text',text:'Useful result'}],sources:[]}]) {
+      const preview=projectResult(output);assert.notEqual(preview.notice,'返回列表为空。');assert.ok(JSON.stringify(preview).includes('Useful result'));
+      const empty=preview.blocks.find(block=>block.fields.some(field=>field.text==='返回列表为空。'));
+      assert.ok(empty);assert.ok(empty.label==='sources'||empty.label==='items');
+    }
+    for(const output of [[],{items:[]},{content:[]}]) assert.equal(projectResult(output).notice,'返回列表为空。');
+  `);
+});

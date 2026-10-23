@@ -129,6 +129,7 @@ export function projectResult(
   let visited = 0;
   let parseBudget = 20_000;
   let nonText = false;
+  let emptyLists = 0;
   const seen = new Set<object>();
   const clip = (text: string, limit = 700) => {
     const length = Math.min(limit, remaining);
@@ -194,12 +195,13 @@ export function projectResult(
     }
   };
   const addRecord = (object: Record<string, unknown>) => {
-    const title =
+    const titleKey =
       typeof object.title === "string"
-        ? object.title
+        ? "title"
         : typeof object.name === "string"
-          ? object.name
+          ? "name"
           : undefined;
+    const title = titleKey ? (object[titleKey] as string) : undefined;
     const source = sourceFor(object);
     if (!title && !source) {
       return false;
@@ -208,15 +210,10 @@ export function projectResult(
       preview.truncated = true;
       return true;
     }
-    const text = [
-      object.snippet,
-      object.description,
-      object.summary,
-      object.content,
-    ].find(
-      (candidate): candidate is string =>
-        typeof candidate === "string" && candidate.length > 0
+    const textKey = ["snippet", "description", "summary", "content"].find(
+      (key) => typeof object[key] === "string" && object[key].length > 0
     );
+    const text = textKey ? (object[textKey] as string) : undefined;
     const fields: { label: string; text: string }[] = [];
     let inspected = 0;
     for (const key in object) {
@@ -242,6 +239,16 @@ export function projectResult(
           "content",
         ].includes(key)
       ) {
+        // A selected heading/snippet/link is represented; other original
+        // values under these familiar keys are still omissions, even falsey.
+        const represented =
+          key === titleKey ||
+          key === textKey ||
+          (["url", "source_url", "href", "item_url"].includes(key) &&
+            object[key] === source?.url);
+        if (!represented) {
+          preview.truncated = true;
+        }
         continue;
       }
       const child = object[key];
@@ -282,7 +289,8 @@ export function projectResult(
     if (Array.isArray(item)) {
       if (!item.length) {
         if (mode === "result") {
-          preview.notice = "返回列表为空。";
+          emptyLists += 1;
+          add(label || "列表", [{ label: "", text: "返回列表为空。" }]);
         } else {
           add(label, [{ label: "", text: "[]" }]);
         }
@@ -327,7 +335,21 @@ export function projectResult(
             add("", [{ label: "", text: clip(object[key]) }]);
           }
         }
-        visit(object[collectionKey], "", depth + 1);
+        for (const key in object) {
+          if (!Object.hasOwn(object, key)) {
+            continue;
+          }
+          if (
+            key === collectionKey ||
+            (["answer", "summary", "message"].includes(key) &&
+              typeof object[key] === "string")
+          ) {
+            continue;
+          }
+          preview.truncated = true;
+          break;
+        }
+        visit(object[collectionKey], collectionKey, depth + 1);
         return;
       }
       if (addRecord(object)) {
@@ -427,6 +449,16 @@ export function projectResult(
         : "工具没有返回内容。";
   } else {
     visit(value);
+  }
+  if (
+    emptyLists > 0 &&
+    !preview.truncated &&
+    preview.blocks.length === emptyLists &&
+    preview.records.length === 0 &&
+    preview.sources.length === 0
+  ) {
+    preview.blocks = [];
+    preview.notice = "返回列表为空。";
   }
   if (
     preview.truncated &&
