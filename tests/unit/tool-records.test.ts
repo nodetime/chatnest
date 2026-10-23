@@ -289,3 +289,56 @@ test("submitted approval continuation remains active only for the latest group o
     assert.equal(nodes(sending).find(n=>n.type==='activity').props.isRunning,false,'new user submission does not revive old tools');
   `);
 });
+
+test("an open call-details Sheet pins its exact multi-step trigger through completion and close, not ordinary completion", () => {
+  clientScript(`${hookHarness}
+    const scheduler=hooks();const {ActivityGroup}=load('components/chat/activity-group.tsx',{...base,react:scheduler.react});
+    const active={type:'dynamic-tool',toolName:'fixture__operation',toolCallId:'first',state:'input-available',input:{}};
+    const second={...active,toolCallId:'second'};
+    const props={parts:[active,second],approve:()=>{},isReadonly:false,isRunning:true};
+    let tree=scheduler.render(ActivityGroup,props);
+    const firstStep=nodes(tree).find(n=>n.type==='step'&&n.props.part.toolCallId==='first');
+    assert.equal(typeof firstStep.props.onDetailsOpenChange,'function','group exposes inspection callback');
+    const childScheduler=hooks();
+    const {ToolActivity}=load('components/chat/tool-activity.tsx',{...base,react:childScheduler.react});
+    const child=childScheduler.render(ToolActivity,firstStep.props);
+    const details=nodes(child).find(n=>n.type==='call-details');
+    const {ToolCallDetails}=load('components/chat/tool-call-details.tsx',{
+      ...base,
+      '@/components/ui/sheet':{Sheet:'sheet',SheetTrigger:'sheet-trigger',SheetContent:'sheet-content',SheetClose:'sheet-close',SheetHeader:'sheet-header',SheetTitle:'sheet-title',SheetDescription:'sheet-description'},
+    });
+    const sheet=ToolCallDetails(details.props);
+    assert.equal(typeof sheet.props.onOpenChange,'function','actual Sheet forwards inspection events');
+    sheet.props.onOpenChange(true);
+    const completed={...props,isRunning:false,parts:props.parts.map(p=>({...p,state:'output-available',output:{result:'done'}}))};
+    tree=scheduler.render(ActivityGroup,completed);
+    assert.equal(nodes(tree).find(n=>n.type==='task').props.open,true,'completion retains visible exact trigger');
+    assert.equal(nodes(tree).find(n=>n.type==='task-content').props.hidden,false);
+    sheet.props.onOpenChange(false);
+    tree=scheduler.render(ActivityGroup,completed);
+    assert.equal(nodes(tree).find(n=>n.type==='task').props.open,true,'close autofocus can still reach original row');
+    nodes(tree).find(n=>n.type==='task').props.onOpenChange(false);
+    assert.equal(nodes(scheduler.render(ActivityGroup,completed)).find(n=>n.type==='task').props.open,false,'manual collapse still works');
+    const ordinary=hooks();ordinary.render(ActivityGroup,props);
+    assert.equal(nodes(ordinary.render(ActivityGroup,completed)).find(n=>n.type==='task').props.open,false,'ordinary successful group still auto-collapses');
+  `);
+});
+
+test("removed inspections and stale Sheet close events cannot pin or dismiss a different current call", () => {
+  clientScript(`${hookHarness}
+    const scheduler=hooks();const {ActivityGroup}=load('components/chat/activity-group.tsx',{...base,react:scheduler.react});
+    const tool=id=>({type:'dynamic-tool',toolName:'fixture__operation',toolCallId:id,state:'input-available',input:{}});
+    const props={parts:[tool('first'),tool('second'),tool('third')],approve:()=>{},isReadonly:false,isRunning:true};
+    let tree=scheduler.render(ActivityGroup,props);
+    const report=nodes(tree).find(n=>n.type==='step').props.onDetailsOpenChange;
+    assert.equal(typeof report,'function');
+    report('first',true);report('second',true);report('first',false);
+    const completed={...props,isRunning:false,parts:props.parts.map(p=>({...p,state:'output-available',output:{}}))};
+    tree=scheduler.render(ActivityGroup,completed);
+    assert.equal(nodes(tree).find(n=>n.type==='task').props.open,true,'stale close preserves current second inspection');
+    const removed=hooks();let other=removed.render(ActivityGroup,props);
+    nodes(other).find(n=>n.type==='step').props.onDetailsOpenChange('first',true);
+    other=removed.render(ActivityGroup,{...completed,parts:completed.parts.slice(1)});
+    assert.equal(nodes(other).find(n=>n.type==='task').props.open,false,'removed trigger cannot pin completion open');
+  `);
+});

@@ -42,9 +42,15 @@ export function ToolCallDetailsContent({ part }: { part: ToolPart }) {
 
 // Lives next to the disclosure button, not inside its collapsible body. Radix
 // owns the dialog, Escape, focus trap and return to the exact triggering row.
-export function ToolCallDetails({ part }: { part: ToolPart }) {
+export function ToolCallDetails({
+  part,
+  onOpenChange,
+}: {
+  part: ToolPart;
+  onOpenChange?: (open: boolean) => void;
+}) {
   return (
-    <Sheet>
+    <Sheet onOpenChange={onOpenChange}>
       <SheetTrigger asChild>
         <Button
           aria-label="查看调用详情"

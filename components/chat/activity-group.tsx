@@ -35,15 +35,35 @@ export function ActivityGroup({
     ...initialActivityDisclosure(summary),
     singleton,
   }));
+  const [inspectedCallId, setInspectedCallId] = useState<string | null>(null);
+  const inspecting = parts.some((part) => part.toolCallId === inspectedCallId);
+  if (inspectedCallId !== null && !inspecting) {
+    setInspectedCallId(null);
+  }
+  const onDetailsOpenChange = useCallback((id: string, open: boolean) => {
+    // A removed/older dialog must not clear a newer row's inspection.
+    setInspectedCallId((inspected) =>
+      open ? id : inspected === id ? null : inspected
+    );
+  }, []);
   const reconciled = reconcileActivityDisclosure(disclosure, summary);
   const current = {
     ...reconciled,
     // The first row stays mounted when streaming adds a second step. Expose the
     // new group without hiding a manually opened excerpt or approval controls.
-    open: disclosure.singleton && !singleton ? true : reconciled.open,
+    open:
+      inspecting || (disclosure.singleton && !singleton)
+        ? true
+        : reconciled.open,
     singleton,
   };
-  if (reconciled !== disclosure || disclosure.singleton !== singleton) {
+  // While its dialog is open, retain the source row through completion. Store
+  // that open choice so Radix can return focus to the same trigger on close.
+  if (
+    reconciled !== disclosure ||
+    disclosure.singleton !== singleton ||
+    (inspecting && !disclosure.open)
+  ) {
     setDisclosure(current);
   }
   const attention = toolNeedsAttention(summary.state);
@@ -129,6 +149,7 @@ export function ActivityGroup({
                   isReadonly={isReadonly}
                   isRunning={isRunning}
                   key={part.toolCallId}
+                  onDetailsOpenChange={onDetailsOpenChange}
                   part={part}
                   timeline={!singleton}
                 />

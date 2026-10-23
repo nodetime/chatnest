@@ -39,12 +39,14 @@ export function ToolActivity({
   isReadonly,
   isRunning,
   timeline = false,
+  onDetailsOpenChange,
 }: {
   part: ToolPart;
   approve: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
   isReadonly: boolean;
   isRunning: boolean;
   timeline?: boolean;
+  onDetailsOpenChange?: (toolCallId: string, open: boolean) => void;
 }) {
   const name =
     part.type === "dynamic-tool" ? part.toolName : part.type.slice(5);
@@ -153,6 +155,10 @@ export function ToolActivity({
     skill?.shortDescription ??
     skill?.description ??
     "读取方法指引，再根据目标选择后续操作。";
+  const handleDetailsOpenChange = useCallback(
+    (value: boolean) => onDetailsOpenChange?.(part.toolCallId, value),
+    [onDetailsOpenChange, part.toolCallId]
+  );
   const handleDeny = useCallback(() => {
     if (approval) {
       approve({ approved: false, id: approval.id, reason: "用户拒绝执行" });
@@ -207,7 +213,7 @@ export function ToolActivity({
               ? { toolName: name, type: "dynamic-tool" }
               : { type: part.type })}
           />
-          <ToolCallDetails part={part} />
+          <ToolCallDetails onOpenChange={handleDetailsOpenChange} part={part} />
         </div>
         <ToolContent className="space-y-3 px-3 pb-3 pt-1">
           {name === "loadSkill" && (
