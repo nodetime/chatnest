@@ -7,8 +7,6 @@ import {
 import { prepareRegeneration } from "@/lib/agent/message-turn";
 import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
-import { ActivityGroup } from "./activity-group";
-import { groupActivityMessages } from "./activity-groups";
 import { useDataStream } from "./data-stream-provider";
 import { Greeting } from "./greeting";
 import { PreviewMessage, ThinkingMessage } from "./message";
@@ -47,18 +45,13 @@ function PureMessages({
   useDataStream();
 
   // Approval continuations are active while the SDK submits the next request,
-  // before streaming begins. Keep this scoped to the latest message/group.
+  // before streaming begins. Keep this scoped to the latest message.
   const isActive = status === "submitted" || status === "streaming";
 
-  const renderMessage = (
-    message: ChatMessage,
-    index: number,
-    hideActivities = false
-  ) => (
+  const renderMessage = (message: ChatMessage, index: number) => (
     <PreviewMessage
       addToolApprovalResponse={addToolApprovalResponse}
       chatId={chatId}
-      hideActivities={hideActivities}
       isLoading={isActive && messages.length - 1 === index}
       isReadonly={isReadonly}
       key={message.id}
@@ -90,28 +83,9 @@ function PureMessages({
       )}
       <Conversation className="absolute inset-0 min-h-0" key={chatId}>
         <ConversationContent className="mx-auto min-h-full w-full min-w-0 max-w-[800px] gap-5 px-5 py-8 sm:px-8 md:gap-7">
-          {groupActivityMessages(messages).map((group) =>
-            group.kind === "message" ? (
-              renderMessage(group.message, group.index)
-            ) : (
-              <ActivityGroup
-                approve={addToolApprovalResponse}
-                isReadonly={isReadonly}
-                isRunning={
-                  isActive &&
-                  group.messages.at(-1)?.index === messages.length - 1
-                }
-                key={group.key}
-                parts={group.parts}
-              >
-                <div className="space-y-1 pl-4">
-                  {group.messages.map(({ message, index }) =>
-                    renderMessage(message, index, true)
-                  )}
-                </div>
-              </ActivityGroup>
-            )
-          )}
+          {/* A canonical message always owns its tool subtree. Appending answer
+              text must not reparent an open details dialog or its focus target. */}
+          {messages.map(renderMessage)}
 
           {status === "submitted" && messages.at(-1)?.role !== "assistant" && (
             <ThinkingMessage />

@@ -192,7 +192,7 @@ test("singleton to multi keeps the same keyed step path, user disclosure state a
   );
 });
 
-test("actual Messages keeps cross-message order, callbacks and original per-message actions through grouping", () => {
+test("actual Messages keeps canonical keyed messages, order and callbacks without content-dependent regrouping", () => {
   clientScript(
     `${hookHarness}
     const {Messages}=load('components/chat/messages.tsx',{
@@ -210,15 +210,13 @@ test("actual Messages keeps cross-message order, callbacks and original per-mess
     const boundary={id:'boundary',role:'assistant',parts:[{type:'text',text:'answer'}]};
     const c={id:'c',role:'assistant',parts:[{...first,toolCallId:'third'}]};
     const props={messages:[a,b,boundary,c],chatId:'chat',status:'streaming',addToolApprovalResponse:approve,onEditMessage:edit,setMessages:()=>{},regenerate:()=>{},isReadonly:false};
-    const tree=Messages(props);const groups=nodes(tree).filter(n=>n.type==='activity');
-    assert.equal(groups.length,2);assert.equal(groups[0].props.parts.map(p=>p.toolCallId).join(','),'read-fixture,second');
-    assert.equal(groups[1].props.parts[0].toolCallId,'third');assert.equal(groups[1].props.isRunning,true);
+    const tree=Messages(props);assert.equal(nodes(tree).filter(n=>n.type==='activity').length,0);
     const previews=nodes(tree).filter(n=>n.type==='preview');assert.equal(previews.map(n=>n.props.message.id).join(','),'a,b,boundary,c');
     assert.equal(previews[0].props.message,a);assert.equal(previews[1].props.message,b);
-    for(const node of previews){assert.equal(node.props.onEdit,edit);assert.equal(node.props.addToolApprovalResponse,approve);}
-    assert.equal(previews[0].props.hideActivities,true);assert.equal(previews[2].props.hideActivities,false);
-    const singleton=Messages({...props,messages:[a]});const firstGroup=nodes(singleton).find(n=>n.type==='activity');
-    assert.equal(firstGroup.key,groups[0].key);assert.equal(firstGroup.props.parts[0],groups[0].props.parts[0]);
+    for(const node of previews){assert.equal(node.key,node.props.message.id);assert.equal(node.props.onEdit,edit);assert.equal(node.props.addToolApprovalResponse,approve);assert.notEqual(node.props.hideActivities,true);}
+    assert.equal(previews[0].props.isLoading,false);assert.equal(previews[3].props.isLoading,true);
+    const singleton=Messages({...props,messages:[a]});const firstPreview=nodes(singleton).find(n=>n.type==='preview');
+    assert.equal(firstPreview.key,previews[0].key);assert.equal(firstPreview.props.message,previews[0].props.message);
   `
   );
 });
@@ -271,11 +269,11 @@ test("submitted approval continuation remains active only for the latest group o
     const props={chatId:'chat',messages:[old,boundary,latest],addToolApprovalResponse:()=>{},setMessages:()=>{},regenerate:()=>{},isReadonly:false};
     for(const status of ['submitted','streaming','ready','error']) {
       const active=status==='submitted'||status==='streaming';
-      const tree=Messages({...props,status});const groups=nodes(tree).filter(n=>n.type==='activity');
-      assert.equal(groups[0].props.isRunning,false,'historical '+status);
-      assert.equal(groups[1].props.isRunning,active,'latest '+status);
-      assert.equal(activitySummary(groups[0].props.parts,groups[0].props.isRunning).label,'未完成');
-      assert.equal(activitySummary(groups[1].props.parts,groups[1].props.isRunning).label,active?'执行中':'未完成');
+      const tree=Messages({...props,status});const previews=nodes(tree).filter(n=>n.type==='preview'&&n.props.message.role==='assistant');
+      assert.equal(previews[0].props.isLoading,false,'historical '+status);
+      assert.equal(previews[1].props.isLoading,active,'latest '+status);
+      assert.equal(activitySummary(previews[0].props.message.parts,previews[0].props.isLoading).label,'未完成');
+      assert.equal(activitySummary(previews[1].props.message.parts,previews[1].props.isLoading).label,active?'执行中':'未完成');
       const mixed={...latest,parts:[{type:'text',text:'operation context'},pending]};
       const mixedTree=Messages({...props,status,messages:[old,boundary,mixed]});
       const latestPreview=nodes(mixedTree).find(n=>n.type==='preview'&&n.props.message.id==='latest');
@@ -286,7 +284,7 @@ test("submitted approval continuation remains active only for the latest group o
       assert.equal(activitySummary([failed],active).state,'output-error');
     }
     const sending=Messages({...props,status:'submitted',messages:[old,boundary]});
-    assert.equal(nodes(sending).find(n=>n.type==='activity').props.isRunning,false,'new user submission does not revive old tools');
+    assert.equal(nodes(sending).find(n=>n.type==='preview').props.isLoading,false,'new user submission does not revive old tools');
   `);
 });
 
@@ -340,5 +338,109 @@ test("removed inspections and stale Sheet close events cannot pin or dismiss a d
     nodes(other).find(n=>n.type==='step').props.onDetailsOpenChange('first',true);
     other=removed.render(ActivityGroup,{...completed,parts:completed.parts.slice(1)});
     assert.equal(nodes(other).find(n=>n.type==='task').props.open,false,'removed trigger cannot pin completion open');
+  `);
+});
+
+test("actual Messages preserves the inspected tool subtree when the same assistant message gains answer text", () => {
+  clientScript(`${hookHarness}
+    let currentHooks;
+    const react={useCallback:fn=>fn,useId:()=> 'source-list',useState:initial=>currentHooks.react.useState(initial)};
+    const FixtureSheet=props=>{
+      const [open,setOpen]=react.useState(false);
+      const part=nodes(props.children).find(n=>n.props?.part)?.props.part;
+      return jsx('fixture-sheet',{...props,callId:part?.toolCallId,open,onOpenChange:value=>{setOpen(value);props.onOpenChange?.(value);}});
+    };
+    const {ToolCallDetails}=load('components/chat/tool-call-details.tsx',{
+      ...base,react,
+      '@/components/ui/sheet':{Sheet:FixtureSheet,SheetTrigger:'sheet-trigger',SheetContent:'sheet-content',SheetClose:'sheet-close',SheetHeader:'sheet-header',SheetTitle:'sheet-title',SheetDescription:'sheet-description'},
+    });
+    const {ToolActivity}=load('components/chat/tool-activity.tsx',{...base,react,'./tool-call-details':{ToolCallDetails}});
+    const {ActivityGroup}=load('components/chat/activity-group.tsx',{...base,react,'./tool-activity':{ToolActivity}});
+    const {PreviewMessage}=load('components/chat/message.tsx',{
+      ...base,react,
+      '@/lib/utils':{cn:()=>'',sanitizeText:text=>text},
+      '../ai-elements/message':{MessageContent:'text',MessageResponse:'response'},
+      '../ai-elements/shimmer':{Shimmer:'shimmer'},
+      './activity-group':{ActivityGroup},
+      './data-stream-provider':{useDataStream:()=>({})},
+      './document':{},'./document-preview':{},'./icons':{},
+      './message-actions':{MessageActions:'actions'},
+      './message-reasoning':{MessageReasoning:'reasoning'},
+      './preview-attachment':{},'./tool-activity':{ToolActivity},'./weather':{},
+    });
+    const {Messages}=load('components/chat/messages.tsx',{
+      ...base,react,
+      '@/components/ai-elements/conversation':{Conversation:'conversation',ConversationContent:'conversation-content',ConversationScrollButton:'scroll-button'},
+      '@/lib/agent/message-turn':{prepareRegeneration:()=>true},
+      './activity-group':{ActivityGroup},
+      './data-stream-provider':{useDataStream:()=>({})},
+      './greeting':{Greeting:'greeting'},
+      './message':{PreviewMessage,ThinkingMessage:'thinking'},
+    });
+    // Preserve hooks only for the same element type and keyed ancestry, matching
+    // React's ownership boundary. This catches content-dependent reparenting,
+    // unlike a Group-only callback test that never renders its parent switch.
+    const componentIds=new Map();const instances=new Map();let sequence=0;
+    const expand=(node,path='root')=>{
+      if(Array.isArray(node))return node.map((child,index)=>expand(child,path+'/'+(child?.key??index)));
+      if(!node||typeof node!=='object')return node;
+      if(typeof node.type==='function'){
+        if(!componentIds.has(node.type))componentIds.set(node.type,++sequence);
+        const identity=path+':component-'+componentIds.get(node.type);
+        if(!instances.has(identity))instances.set(identity,hooks());
+        currentHooks=instances.get(identity);
+        const rendered=currentHooks.render(node.type,node.props);
+        return expand(rendered,identity+'/render');
+      }
+      return {...node,identity:path,props:{...node.props,children:expand(node.props?.children,path+'/'+String(node.type))}};
+    };
+    const tool=id=>({type:'dynamic-tool',toolName:'fixture__search',toolCallId:id,state:'input-available',input:{query:id}});
+    const pending={id:'canonical-assistant',role:'assistant',parts:[tool('first'),tool('second')]};
+    const props={chatId:'chat',messages:[pending],status:'streaming',addToolApprovalResponse:()=>{},setMessages:()=>{},regenerate:()=>{},isReadonly:false};
+    let tree=expand(jsx(Messages,props));
+    let sheet=nodes(tree).find(n=>n.type==='fixture-sheet'&&n.props.callId==='second');
+    assert.ok(sheet);sheet.props.onOpenChange(true);
+    tree=expand(jsx(Messages,props));sheet=nodes(tree).find(n=>n.type==='fixture-sheet'&&n.props.callId==='second');
+    assert.equal(sheet.props.open,true);const identity=sheet.identity;
+    const completed={...pending,parts:[...pending.parts.map(p=>({...p,state:'output-available',output:{result:p.toolCallId}})),{type:'text',text:'Final answer'}]};
+    tree=expand(jsx(Messages,{...props,status:'ready',messages:[completed]}));
+    sheet=nodes(tree).find(n=>n.type==='fixture-sheet'&&n.props.callId==='second');
+    assert.equal(sheet.identity,identity,'same canonical message/tool must retain its keyed ownership path');
+    assert.equal(sheet.props.open,true,'answer text must not destroy an open call-details dialog');
+    assert.equal(nodes(tree).find(n=>n.type==='task').props.open,true);
+    assert.ok(nodes(tree).some(n=>n.type==='response'&&n.props.children==='Final answer'));
+    sheet.props.onOpenChange(false);
+    tree=expand(jsx(Messages,{...props,status:'ready',messages:[completed]}));
+    sheet=nodes(tree).find(n=>n.type==='fixture-sheet'&&n.props.callId==='second');
+    assert.equal(sheet.identity,identity);assert.equal(sheet.props.open,false);
+    assert.equal(nodes(tree).find(n=>n.type==='task').props.open,true,'original trigger remains visible for close autofocus');
+  `);
+});
+
+test("canonical tool-only messages omit empty answer actions while text, artifacts and final regeneration retain theirs", () => {
+  clientScript(`${hookHarness}
+    const {PreviewMessage}=load('components/chat/message.tsx',{
+      ...base,react:{useCallback:fn=>fn},
+      '@/lib/utils':{cn:()=>'',sanitizeText:text=>text},
+      '../ai-elements/message':{MessageContent:'text',MessageResponse:'response'},
+      '../ai-elements/shimmer':{Shimmer:'shimmer'},
+      './activity-group':{ActivityGroup:'activity'},
+      './data-stream-provider':{useDataStream:()=>({})},
+      './document':{},'./document-preview':{DocumentPreview:'artifact'},'./icons':{},
+      './message-actions':{MessageActions:'actions'},
+      './message-reasoning':{MessageReasoning:'reasoning'},
+      './preview-attachment':{},'./tool-activity':{},'./weather':{},
+    });
+    const message={id:'tool-only',role:'assistant',parts:[${JSON.stringify(read)}]};
+    const props={message,addToolApprovalResponse:()=>{},isLoading:false,isReadonly:false};
+    assert.equal(nodes(PreviewMessage(props)).filter(n=>n.type==='actions').length,0,'no copy/vote bar under bare action rows');
+    let regenerateCount=0;const regenerate=()=>regenerateCount++;
+    let tree=PreviewMessage({...props,onRegenerate:regenerate});
+    const actions=nodes(tree).find(n=>n.type==='actions');assert.ok(actions);actions.props.onRegenerate();assert.equal(regenerateCount,1);
+    tree=PreviewMessage({...props,message:{...message,parts:[...message.parts,{type:'text',text:'Answer'}]}});
+    assert.equal(nodes(tree).filter(n=>n.type==='actions').length,1,'answer actions preserved');
+    tree=PreviewMessage({...props,message:{...message,parts:[{type:'tool-createDocument',toolCallId:'artifact',state:'output-available',input:{title:'Artifact'},output:{id:'artifact-id',kind:'text',title:'Artifact'}}]}});
+    assert.equal(nodes(tree).filter(n=>n.type==='artifact').length,1);assert.equal(nodes(tree).filter(n=>n.type==='actions').length,1,'artifact message actions preserved');
+    assert.equal(nodes(PreviewMessage({...props,isReadonly:true,onRegenerate:regenerate})).filter(n=>n.type==='actions').length,0);
   `);
 });

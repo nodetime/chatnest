@@ -391,7 +391,8 @@ const PurePreviewMessage = ({
     }
     return null;
   };
-  const parts = groupActivityParts(message.parts).map((group) =>
+  const groupedParts = groupActivityParts(message.parts);
+  const parts = groupedParts.map((group) =>
     group.kind === "activity" ? (
       hideActivities ? null : (
         <ActivityGroup
@@ -407,7 +408,11 @@ const PurePreviewMessage = ({
     )
   );
 
-  const actions = !isReadonly && (
+  const toolOnlyAssistant =
+    isAssistant &&
+    groupedParts.length > 0 &&
+    groupedParts.every((group) => group.kind === "activity");
+  const actions = !isReadonly && (!toolOnlyAssistant || onRegenerate) && (
     <MessageActions
       chatId={chatId}
       isLoading={isLoading}
