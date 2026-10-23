@@ -89,3 +89,10 @@ Structural correction after rejected visual acceptance (2026-10-23):
 - `result-table-row-details.tsx` displays actual declared labels/values/links; source IDs and original JSON remain in a collapsed technical section. The first displayed result column is frozen and emphasized; raw rows are untouched.
 - Generic artifact header uses one filename/type line, with idle timestamp contextual and pending/error states still visible.
 - Preview CSS can remain stale in persistent Turbopack cache; verify computed browser styles, not only modified source. In this acceptance the owned `.next/dev` cache was moved to ignored backup and the fixture service restarted; no source workaround was added.
+
+Composition correction after second rejected visual acceptance (2026-10-23):
+- `WorkbenchSidebarProvider` opts only chat into `SidebarProvider.temporaryCollapseKey`. Artifact focus temporarily hides history without changing cookie preference; explicit reopening is local to focus, closing restores the saved choice.
+- `Workspace` defaults to remaining width after a 400px conversation. Manual resize stays chat-local (35–80%); mobile remains a full-screen generic viewer.
+- `Artifact` passes a normal `renderHeader` slot through sheet rendering. `ResultTableView` owns its authoritative draft and renders title/actions in that same header; no portal or duplicated table state.
+- Desktop header is one52px row; panes ≤500px use an intentional second action row. Filter/column/export Popovers handle collision outside the clipping artifact container. Last secondary table column absorbs spare width; canvas uses card surface.
+- Visual acceptance must compare against the supplied Lessie reference, not merely old ChatNest screenshots. A passing regression suite does not establish aesthetic equivalence. Keep people/match/outreach semantics out of the generic table unless actual data/features support them.
