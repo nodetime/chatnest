@@ -47,6 +47,7 @@ type ArtifactContent<M = any> = {
   documentId?: string;
   expectedVersion?: string;
   onResultTableSaved?: (content: string) => Promise<void> | void;
+  onResultTablePendingChange?: (pending: boolean) => void;
   title: string;
   content: string;
   mode: "edit" | "diff";

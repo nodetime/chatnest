@@ -87,6 +87,7 @@ export const sheetArtifact = new Artifact<"sheet", Metadata>({
     documentId,
     expectedVersion,
     onResultTableSaved,
+    onResultTablePendingChange,
   }) => {
     const table = parseResultTable(content);
     if (table) {
@@ -95,6 +96,7 @@ export const sheetArtifact = new Artifact<"sheet", Metadata>({
           documentId={documentId}
           expectedVersion={expectedVersion}
           key={`${documentId}:${expectedVersion}`}
+          onPendingChange={onResultTablePendingChange}
           onSaved={onResultTableSaved}
           readOnly={isReadonly || !isCurrentVersion}
           table={table}

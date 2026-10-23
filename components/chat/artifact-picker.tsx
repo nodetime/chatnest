@@ -23,6 +23,7 @@ export function ArtifactPicker({
   activeId,
   title,
   isContentDirty = false,
+  resultTablePendingChanges = false,
   status = "idle",
   list = false,
 }: {
@@ -30,10 +31,15 @@ export function ArtifactPicker({
   activeId?: string;
   title?: string;
   isContentDirty?: boolean;
+  resultTablePendingChanges?: boolean;
   status?: "idle" | "streaming";
   list?: boolean;
 }) {
-  const blockedReason = artifactSwitchReason({ isContentDirty, status });
+  const blockedReason = artifactSwitchReason({
+    isContentDirty,
+    resultTablePendingChanges,
+    status,
+  });
   const { setArtifact } = useArtifact();
   const { show } = useWorkspace();
   const select = useCallback(

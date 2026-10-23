@@ -202,7 +202,7 @@ test("real picker event handlers reopen the same file, reset new-file content an
     find(render(),'item')[0].props.onSelect();
     assert.equal(open,true);assert.equal(tab,'document');assert.equal(artifact.content,'unsaved fixture');
     const original=JSON.stringify(artifact);open=false;
-    for(const guard of [{isContentDirty:true},{status:'streaming'}]){
+    for(const guard of [{isContentDirty:true},{status:'streaming'},{resultTablePendingChanges:true}]){
       const tree=render(guard);
       assert.equal(find(tree,'button')[0].props.disabled,true);
       find(tree,'item')[1].props.onSelect();
@@ -215,6 +215,123 @@ test("real picker event handlers reopen the same file, reset new-file content an
     assert.equal(find(empty,'button')[0].props.disabled,true);
     const list=output.exports.ArtifactPicker({entries,list:true});
     find(list,'button')[0].props.onClick();assert.equal(artifact.documentId,'a');
+  `,
+    ],
+    { encoding: "utf8", env: { ...process.env, NODE_OPTIONS: "" } }
+  );
+});
+
+test("result-table publishes authoritative view/notes dirty and saving state; failures stay blocked and successful saves release", () => {
+  execFileSync(
+    process.execPath,
+    [
+      "--import",
+      "tsx",
+      "-e",
+      `
+    const assert = require('node:assert/strict');
+    const { readFileSync } = require('node:fs');
+    const { runInNewContext } = require('node:vm');
+    const ts = require('typescript');
+    const helpers = require('./lib/artifacts/result-table.ts');
+    const jsx = (type,props) => ({type,props});
+    const slots=[];let cursor=0,effects=[],pending=[],resolveFetch,bodySent,table;
+    const same=(a,b)=>a&&b&&a.length===b.length&&a.every((v,i)=>v===b[i]);
+    const react={useMemo:fn=>fn(),useState:initial=>{const index=cursor++;if(!slots[index])slots[index]={value:initial};return [slots[index].value,value=>{slots[index].value=typeof value==='function'?value(slots[index].value):value}]},useEffect:(fn,deps)=>{const index=cursor++;const slot=slots[index]??(slots[index]={});if(!same(slot.deps,deps)){slot.deps=deps;effects.push(()=>{slot.cleanup?.();slot.cleanup=fn()})}}};
+    const modules={
+      react,'react/jsx-runtime':{jsx,jsxs:jsx},'lucide-react':{},'next-themes':{useTheme:()=>({resolvedTheme:'light'})},
+      'react-data-grid':{__esModule:true,default:'grid'},'react-data-grid/lib/styles.css':{},
+      '@/components/ui/button':{Button:'button'},'@/components/ui/input':{Input:'input'},'@/components/ui/textarea':{Textarea:'textarea'},
+      '@/components/ui/collapsible':{Collapsible:'collapsible',CollapsibleContent:'collapse-content',CollapsibleTrigger:'collapse-trigger'},
+      '@/components/ui/sheet':{Sheet:'sheet',SheetClose:'sheet-close',SheetContent:'sheet-content',SheetDescription:'sheet-description',SheetHeader:'sheet-header',SheetTitle:'sheet-title'},
+      '@/lib/artifacts/result-table':helpers,'./result-table-source':{ResultTableSource:'source'},
+    };
+    const output={exports:{}};
+    const code=ts.transpileModule(readFileSync('components/chat/result-table.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText;
+    runInNewContext(code,{exports:output.exports,module:output,process:{env:{}},setTimeout,URL,Blob,fetch:(_url,options)=>{bodySent=JSON.parse(options.body);return new Promise(resolve=>{resolveFetch=resolve})},require:name=>{assert.ok(name in modules,'unexpected '+name);return modules[name]}});
+    const publish=value=>pending.push(value);
+    const source={serverId:'fixture',serverName:'Fixture',toolName:'fixture__search',toolCallId:'call',timeBasis:'tool-completed',recordedAt:'2026-10-23T00:00:00.000Z'};
+    const baseline=()=>({chatId:'chat',columns:[{label:'Title',path:'/title'}],notes:'',rows:[{title:'Original evidence'}],source,view:{filter:'',sort:[],visibleColumns:['/title']}});
+    table=baseline();
+    const evidence=JSON.stringify(table.rows);
+    let props={};
+    const render=()=>{cursor=0;effects=[];const tree=output.exports.ResultTableView({table,documentId:'document-a',expectedVersion:'2026-10-23T00:00:00.000Z',onPendingChange:publish,onSaved:content=>{table={...table,...JSON.parse(content)}},...props});effects.forEach(fn=>fn());return tree};
+    const find=(tree,predicate)=>{const found=[];const walk=node=>{if(Array.isArray(node)){node.forEach(walk);return}if(!node||typeof node!=='object')return;if(predicate(node))found.push(node);walk(node.props?.children)};walk(tree);return found};
+    const saveButton=tree=>find(tree,node=>node.type==='button'&&Array.isArray(node.props.children)&&node.props.children.some(text=>typeof text==='string'&&/保存/.test(text)))[0];
+    (async()=>{
+      let tree=render();assert.equal(pending.at(-1),false,'clean table publishes unlocked');
+      find(tree,node=>node.props?.['aria-label']==='筛选结果')[0].props.onChange({target:{value:'Original'}});
+      tree=render();assert.equal(pending.at(-1),true,'actual view filter change blocks chooser');
+      let save=saveButton(tree).props.onClick();tree=render();assert.equal(pending.at(-1),true,'in-flight save stays blocked');
+      assert.equal(bodySent.expectedVersion,'2026-10-23T00:00:00.000Z');assert.equal(bodySent.id,'document-a');
+      resolveFetch({ok:true,json:async()=>[{content:JSON.stringify({view:bodySent.view,notes:bodySent.notes})}]});await save;
+      tree=render();assert.equal(pending.at(-1),false,'successful rebaseline releases chooser');
+      for(const status of [409,500]){
+        find(tree,node=>node.type==='textarea')[0].props.onChange({target:{value:'Pending note '+status}});tree=render();assert.equal(pending.at(-1),true,'actual note edit blocks chooser');
+        save=saveButton(tree).props.onClick();render();resolveFetch({ok:false,status,json:async()=>({})});await save;tree=render();
+        assert.equal(pending.at(-1),true,'failed/CAS-conflicted edits stay blocked');assert.ok(find(tree,node=>node.props?.role==='alert').length);
+      }
+      for(const mode of [{readOnly:true},{inline:true}]){props=mode;render();assert.equal(pending.at(-1),false,'readonly/history or inline preview never invents a pending-save lock')}
+      props={};render();assert.equal(pending.at(-1),true);for(const slot of slots)slot.cleanup?.();assert.equal(pending.at(-1),false,'unmount releases its original lock');
+      assert.equal(JSON.stringify(table.rows),evidence,'pending projection never changes evidence');
+    })().catch(error=>{console.error(error);process.exitCode=1});
+  `,
+    ],
+    { encoding: "utf8", env: { ...process.env, NODE_OPTIONS: "" } }
+  );
+});
+
+test("table pending projection is composed through the existing sheet renderer and file picker", () => {
+  const content = readFileSync("components/chat/create-artifact.tsx", "utf8");
+  assert.match(content, /onResultTablePendingChange\?:/);
+  const sheet = readFileSync("artifacts/sheet/client.tsx", "utf8");
+  assert.match(sheet, /onPendingChange=\{onResultTablePendingChange\}/);
+  const picker = readFileSync("components/chat/artifact-picker.tsx", "utf8");
+  assert.match(picker, /resultTablePendingChanges/);
+  const artifact = readFileSync("components/chat/artifact.tsx", "utf8");
+  assert.match(
+    artifact,
+    /onResultTablePendingChange=\{handleResultTablePendingChange\}/
+  );
+});
+
+test("actual artifact callback scopes pending metadata to the originating document and ignores late table notifications", () => {
+  execFileSync(
+    process.execPath,
+    [
+      "--import",
+      "tsx",
+      "-e",
+      `
+    const assert=require('node:assert/strict');const {readFileSync}=require('node:fs');const {runInNewContext}=require('node:vm');const ts=require('typescript');
+    const jsx=(type,props)=>({type,props});const refs=[];let cursor=0;
+    let artifact={documentId:'a',title:'Table A',kind:'sheet',content:'protected table',status:'idle',isVisible:true,boundingBox:{}};
+    const metadata=new Map([['a',{other:'preserved-a'}],['b',{other:'preserved-b'}]]);
+    const definitions=Object.fromEntries(['code','image','sheet','text'].map(kind=>[kind,{kind,content:kind+'-content'}]));
+    const modules={
+      'react':{memo:fn=>fn,useState:initial=>[initial,()=>{}],useCallback:fn=>fn,useEffect:()=>{},useRef:initial=>{const index=cursor++;return refs[index]??(refs[index]={current:initial})}},
+      'react/jsx-runtime':{jsx,jsxs:jsx,Fragment:'fragment'},'date-fns':{formatDistance:()=>''},'date-fns/locale':{zhCN:{}},'fast-deep-equal':{__esModule:true,default:()=>true},'framer-motion':{AnimatePresence:'presence',motion:{div:'motion'}},
+      'swr':{__esModule:true,default:()=>({}),useSWRConfig:()=>({mutate:async()=>{}})},'usehooks-ts':{useWindowSize:()=>({width:1280,height:900})},
+      '@/artifacts/code/client':{codeArtifact:definitions.code},'@/artifacts/image/client':{imageArtifact:definitions.image},'@/artifacts/sheet/client':{sheetArtifact:definitions.sheet},'@/artifacts/text/client':{textArtifact:definitions.text},
+      '@/components/ai-elements/artifact':{Artifact:'frame'},
+      '@/hooks/use-artifact':{useArtifact:()=>{const id=artifact.documentId;return {artifact,setArtifact:()=>{},metadata:metadata.get(id),setMetadata:fn=>metadata.set(id,fn(metadata.get(id)))}}},
+      '@/lib/artifacts/result-table':{isProtectedResultTable:()=>true},'@/lib/utils':{cn:()=>'',fetcher:()=>{}},
+      './artifact-actions':{ArtifactActions:'actions'},'./artifact-catalog':{artifactCatalog:()=>[]},'./artifact-close-button':{ArtifactCloseButton:'close'},'./artifact-picker':{ArtifactPicker:'picker'},'./artifact-type-label':{ArtifactTypeLabel:'kind'},'./icons':{LoaderIcon:'loader'},'./toolbar':{Toolbar:'toolbar'},'./version-footer':{VersionFooter:'versions'},'./workspace-header':{WorkspaceHeader:'header'},
+    };
+    const output={exports:{}};const code=ts.transpileModule(readFileSync('components/chat/artifact.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText;
+    runInNewContext(code,{exports:output.exports,module:output,process:{env:{}},require:name=>{assert.ok(name in modules,'unexpected '+name);return modules[name]}});
+    const find=(tree,predicate)=>{if(Array.isArray(tree)){for(const node of tree){const hit=find(node,predicate);if(hit)return hit}return}if(!tree||typeof tree!=='object')return;if(predicate(tree))return tree;return find(tree.props?.children,predicate)};
+    const render=()=>{cursor=0;return output.exports.Artifact({chatId:'chat',messages:[],embedded:true,isReadonly:false,status:'ready'})};
+    const callbackA=find(render(),node=>node.type==='sheet-content').props.onResultTablePendingChange;
+    assert.equal(typeof callbackA,'function');callbackA(true);
+    assert.equal(metadata.get('a').resultTablePendingChanges,true);assert.equal(metadata.get('a').other,'preserved-a');
+    assert.equal(find(render(),node=>node.type==='picker').props.resultTablePendingChanges,true,'real metadata locks the composed picker');
+    artifact={...artifact,documentId:'b',title:'Table B'};
+    const callbackB=find(render(),node=>node.type==='sheet-content').props.onResultTablePendingChange;
+    callbackA(false);callbackA(true);
+    assert.equal(metadata.get('b').resultTablePendingChanges,undefined,'old callback cannot lock or unlock new document');
+    callbackB(true);assert.equal(metadata.get('b').resultTablePendingChanges,true);callbackB(false);assert.equal(metadata.get('b').resultTablePendingChanges,false);assert.equal(metadata.get('b').other,'preserved-b');
+    const tree=render();const picker=find(tree,node=>node.type==='picker');assert.equal(picker.props.resultTablePendingChanges,false);
   `,
     ],
     { encoding: "utf8", env: { ...process.env, NODE_OPTIONS: "" } }

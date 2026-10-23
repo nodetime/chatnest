@@ -285,6 +285,20 @@ function PureArtifact({
       setArtifact,
     ]
   );
+  const handleResultTablePendingChange = useCallback(
+    (pending: boolean) => {
+      // A previous table can finish/clean up after a different file is opened.
+      // setMetadata is already scoped to this callback's original document ID.
+      if (activeIdRef.current !== artifact.documentId) {
+        return;
+      }
+      setMetadata((current: Record<string, unknown> | null) => ({
+        ...current,
+        resultTablePendingChanges: pending,
+      }));
+    },
+    [artifact.documentId, setMetadata]
+  );
   const handleResultTableSaved = useCallback(
     async (content: string) => {
       const id = artifact.documentId;
@@ -388,6 +402,12 @@ function PureArtifact({
     return null;
   }
 
+  const hasPendingResultTableChanges =
+    isCurrentVersion &&
+    !isReadonly &&
+    isProtectedResultTable(artifact.content) &&
+    metadata?.resultTablePendingChanges === true;
+
   const consoleError =
     metadata?.outputs
       ?.filter((o: { status: string }) => o.status === "failed")
@@ -433,6 +453,7 @@ function PureArtifact({
             activeId={artifact.documentId}
             entries={artifactCatalog(messages)}
             isContentDirty={isContentDirty}
+            resultTablePendingChanges={hasPendingResultTableChanges}
             status={artifact.status}
             title={artifact.title}
           />
@@ -441,6 +462,10 @@ function PureArtifact({
             {saveError ? (
               <span className="truncate text-xs text-destructive" role="alert">
                 {saveError}
+              </span>
+            ) : hasPendingResultTableChanges ? (
+              <span className="truncate text-xs text-muted-foreground">
+                表格视图或备注尚未保存 · 暂不能切换
               </span>
             ) : isContentDirty ? (
               <span className="text-xs text-muted-foreground">
@@ -488,6 +513,7 @@ function PureArtifact({
           isReadonly={isReadonly}
           metadata={metadata}
           mode={mode}
+          onResultTablePendingChange={handleResultTablePendingChange}
           onResultTableSaved={handleResultTableSaved}
           onSaveContent={saveContent}
           setMetadata={setMetadata}

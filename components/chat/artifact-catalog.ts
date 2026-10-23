@@ -58,12 +58,17 @@ export function artifactCatalog(
 export function artifactSwitchReason({
   isContentDirty,
   status,
+  resultTablePendingChanges = false,
 }: {
+  resultTablePendingChanges?: boolean;
   isContentDirty: boolean;
   status: "idle" | "streaming";
 }): string | null {
   if (status === "streaming") {
     return "产物正在生成，完成后可切换文件";
+  }
+  if (resultTablePendingChanges) {
+    return "表格视图或备注尚未保存，保存完成后可切换文件";
   }
   if (isContentDirty) {
     return "修改尚未保存，保存完成后可切换文件";

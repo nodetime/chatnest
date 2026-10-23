@@ -10,7 +10,7 @@ import {
   XIcon,
 } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import DataGrid, { type Column, type SortColumn } from "react-data-grid";
 import { Button } from "@/components/ui/button";
 import {
@@ -47,6 +47,7 @@ type Props = {
   readOnly?: boolean;
   inline?: boolean;
   onSaved?: (content: string) => Promise<void> | void;
+  onPendingChange?: (pending: boolean) => void;
 };
 function download(name: string, content: string, type: string) {
   const url = URL.createObjectURL(new Blob([content], { type }));
@@ -63,6 +64,7 @@ export function ResultTableView({
   readOnly = false,
   inline = false,
   onSaved,
+  onPendingChange,
 }: Props) {
   const { resolvedTheme } = useTheme();
   const [view, setView] = useState<ResultView>(table.view);
@@ -73,6 +75,11 @@ export function ResultTableView({
   const dirty =
     JSON.stringify(view) !== JSON.stringify(table.view) ||
     notes !== table.notes;
+  // Publish the real local view/notes/save state, never a second dirty model.
+  useEffect(() => {
+    onPendingChange?.(!readOnly && !inline && (dirty || saving));
+  }, [dirty, saving, readOnly, inline, onPendingChange]);
+  useEffect(() => () => onPendingChange?.(false), [onPendingChange]);
   const rows = useMemo(() => resultRows(table, view), [table, view]);
   const columns = useMemo<Column<(typeof rows)[number]>[]>(
     () => [
