@@ -1,4 +1,4 @@
-# Reviewed offline suites only; never expand tests/unit/*.test.ts here.
+# Reviewed offline suites only; suites are co-located at their current real paths; new suites must be appended explicitly, never via wildcard.
 app/branding.test.ts
 app/_components/admin/admin-template.test.ts
 server/admin/platform-admin-separation.test.ts

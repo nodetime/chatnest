@@ -29,7 +29,7 @@ pnpm dev --hostname 127.0.0.1 --port 3003
 ## 硬约束
 
 - 禁止 `pnpm build`(会先执行数据库迁移);类型检查用 `tsc --noEmit`。
-- 离线测试白名单 `scripts/ci/offline-tests.txt` 只能显式追加,不用 `tests/unit/*.test.ts` 通配。
+- 离线测试白名单 `scripts/ci/offline-tests.txt` 只能显式追加,不做全目录通配(套件已就近搬迁,条目为当前实际路径)。
 - 不做付费模型/供应商调用;mock 不进生产代码。
 - `.env*`、密钥、`.local-review/`、日志截图不提交。
 - Git:Conventional Commits,作者 codeYang,不加任何 AI 署名标记。
