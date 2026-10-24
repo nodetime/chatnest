@@ -1,7 +1,7 @@
 import "server-only";
-import { connectionSchema } from "@/server/agent/mcp-settings/schema";
-import type { Environment } from "@/server/agent/mcp-settings/security";
-import type { Connection } from "@/server/agent/mcp-settings/types";
+import { connectionSchema } from "./schema";
+import type { Environment } from "./security";
+import type { Connection } from "./types";
 export const MAX_RESPONSE_BYTES = 1_048_576;
 export const DISCOVERY_TIMEOUT_MS = 10_000;
 export function allowedOrigins(env: Environment = process.env) {

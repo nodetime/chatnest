@@ -1,10 +1,7 @@
 import { lookup } from "node:dns/promises";
 import { createServer, type IncomingHttpHeaders, request } from "node:http";
 import { connect, type Socket } from "node:net";
-import {
-  isPublicAddress,
-  publicBrowserUrl,
-} from "@/server/agent/browser-policy";
+import { isPublicAddress, publicBrowserUrl } from "./browser-policy";
 
 async function destination(host: string) {
   const addresses = await lookup(host, { all: true });

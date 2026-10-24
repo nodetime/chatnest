@@ -19,8 +19,6 @@ import {
 import type { ChatMessage, WaitingStatusData } from "@/app/_lib/types";
 import { convertToUIMessages, generateUUID } from "@/app/_lib/utils";
 import { auth, type UserType } from "@/app/(auth)/auth";
-import { ChatbotError } from "@/lib/errors";
-import { checkIpRateLimit } from "@/lib/ratelimit";
 import { applyToolApprovals } from "@/server/agent/approvals";
 import { createBrowserTools } from "@/server/agent/browser-tools";
 import {
@@ -66,6 +64,8 @@ import {
   updateMessage,
 } from "@/server/db/queries";
 import type { DBMessage } from "@/server/db/schema";
+import { ChatbotError } from "@/server/shared/errors";
+import { checkIpRateLimit } from "@/server/shared/ratelimit";
 import { prepareAttachmentContext } from "@/server/uploads/context";
 import { AttachmentRoundBudget } from "@/server/uploads/document-budget";
 import { readAttachmentTool } from "@/server/uploads/read-attachment";

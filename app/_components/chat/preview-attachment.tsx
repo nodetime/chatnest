@@ -1,10 +1,10 @@
 import { RotateCcw } from "lucide-react";
-import { FileSymbol } from "@/app/_components/chat/file-symbol";
-import { CrossSmallIcon } from "@/app/_components/chat/icons";
-import { Spinner } from "@/app/_components/ui/spinner";
 import type { Attachment } from "@/app/_lib/types";
 import { cn } from "@/app/_lib/utils";
 import { extractionLabels } from "@/server/uploads/document-types";
+import { Spinner } from "../ui/spinner";
+import { FileSymbol } from "./file-symbol";
+import { CrossSmallIcon } from "./icons";
 
 export const PreviewAttachment = ({
   attachment,

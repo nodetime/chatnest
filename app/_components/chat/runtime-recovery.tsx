@@ -2,9 +2,9 @@
 
 import type { UseChatHelpers } from "@ai-sdk/react";
 import { useCallback, useRef, useState } from "react";
-import type { ToolPart } from "@/app/_components/ai-elements/tool";
-import { activityDisplayState } from "@/app/_components/chat/activity-groups";
 import type { ChatMessage } from "@/app/_lib/types";
+import type { ToolPart } from "../ai-elements/tool";
+import { activityDisplayState } from "./activity-groups";
 
 export function hasRecoverableToolFailure(message: ChatMessage) {
   if (message.role !== "assistant") {

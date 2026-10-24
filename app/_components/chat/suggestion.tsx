@@ -2,9 +2,10 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback } from "react";
-import { CrossIcon, SparklesIcon } from "@/app/_components/chat/icons";
-import { Button } from "@/app/_components/ui/button";
+
 import type { UISuggestion } from "@/app/_lib/editor/suggestions";
+import { Button } from "../ui/button";
+import { CrossIcon, SparklesIcon } from "./icons";
 
 export const SuggestionDialog = ({
   suggestion,

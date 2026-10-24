@@ -1,6 +1,6 @@
 // biome-ignore-all lint/suspicious/noArrayIndexKey: Bounded read-only text snapshots have no per-row state or reorder interactions.
 import { ExternalLink } from "lucide-react";
-import type { ResultPreview } from "@/app/_components/chat/tool-presentation";
+import type { ResultPreview } from "./tool-presentation";
 
 export function ToolResultPreview({
   preview,

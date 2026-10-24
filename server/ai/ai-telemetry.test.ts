@@ -17,7 +17,7 @@ function modelCalls(
     const name = join(path, entry.name);
     if (entry.isDirectory()) {
       calls.push(...modelCalls(name));
-    } else if (/\.tsx?$/.test(name)) {
+    } else if (/\.tsx?$/.test(name) && !/\.test\.tsx?$/.test(name)) {
       const file = ts.createSourceFile(
         name,
         readFileSync(name, "utf8"),
@@ -43,7 +43,7 @@ function modelCalls(
 }
 
 test("all nine application model calls explicitly use metadata-only telemetry", () => {
-  const calls = ["app", "lib", "artifacts"].flatMap(modelCalls);
+  const calls = ["app", "server"].flatMap(modelCalls);
   assert.equal(calls.length, 9);
   for (const { file, call } of calls) {
     const [options] = call.arguments;

@@ -1,4 +1,4 @@
-import type { ToolPart } from "@/app/_components/ai-elements/tool";
+import type { ToolPart } from "../ai-elements/tool";
 
 type ToolState = ToolPart["state"];
 export type ToolDisclosure = {

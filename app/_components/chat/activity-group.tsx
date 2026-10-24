@@ -8,16 +8,16 @@ import {
   TaskContent,
   TaskTrigger,
 } from "@/app/_components/ai-elements/task";
-import type { ToolPart } from "@/app/_components/ai-elements/tool";
+import type { ChatMessage } from "@/app/_lib/types";
+import { cn } from "@/app/_lib/utils";
+import type { ToolPart } from "../ai-elements/tool";
 import {
   activitySummary,
   initialActivityDisclosure,
   reconcileActivityDisclosure,
-} from "@/app/_components/chat/activity-groups";
-import { ToolActivity } from "@/app/_components/chat/tool-activity";
-import { toolNeedsAttention } from "@/app/_components/chat/tool-activity-state";
-import type { ChatMessage } from "@/app/_lib/types";
-import { cn } from "@/app/_lib/utils";
+} from "./activity-groups";
+import { ToolActivity } from "./tool-activity";
+import { toolNeedsAttention } from "./tool-activity-state";
 
 export function ActivityGroup({
   parts,

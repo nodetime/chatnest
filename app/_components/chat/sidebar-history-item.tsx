@@ -10,15 +10,6 @@ import {
 import { toast } from "sonner";
 import { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
-import {
-  CheckCircleFillIcon,
-  GlobeIcon,
-  LockIcon,
-  MoreHorizontalIcon,
-  ShareIcon,
-  TrashIcon,
-} from "@/app/_components/chat/icons";
-import { getChatHistoryPaginationKey } from "@/app/_components/chat/sidebar-history";
 import { Button } from "@/app/_components/ui/button";
 import {
   Dialog,
@@ -27,6 +18,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/app/_components/ui/dialog";
+import { useChatVisibility } from "@/app/_hooks/use-chat-visibility";
+import { renameChat } from "@/app/(chat)/actions";
+import type { Chat } from "@/server/db/schema";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,15 +30,21 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from "@/app/_components/ui/dropdown-menu";
+} from "../ui/dropdown-menu";
 import {
   SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/app/_components/ui/sidebar";
-import { useChatVisibility } from "@/app/_hooks/use-chat-visibility";
-import { renameChat } from "@/app/(chat)/actions";
-import type { Chat } from "@/server/db/schema";
+} from "../ui/sidebar";
+import {
+  CheckCircleFillIcon,
+  GlobeIcon,
+  LockIcon,
+  MoreHorizontalIcon,
+  ShareIcon,
+  TrashIcon,
+} from "./icons";
+import { getChatHistoryPaginationKey } from "./sidebar-history";
 
 const PureChatItem = ({
   chat,

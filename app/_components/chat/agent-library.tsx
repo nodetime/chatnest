@@ -7,10 +7,6 @@ import {
   useCallback,
   useState,
 } from "react";
-import {
-  AgentLibraryPanel,
-  type AgentLibraryTab as Tab,
-} from "@/app/_components/chat/agent-library-panel";
 import { Button } from "@/app/_components/ui/button";
 import {
   Dialog,
@@ -21,6 +17,10 @@ import {
   DialogTrigger,
 } from "@/app/_components/ui/dialog";
 import { useAgentInfo } from "@/app/_hooks/use-agent-info";
+import {
+  AgentLibraryPanel,
+  type AgentLibraryTab as Tab,
+} from "./agent-library-panel";
 
 export function AgentLibrary({
   tab = "skills",

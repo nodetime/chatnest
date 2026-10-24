@@ -1,4 +1,4 @@
-import type { ArtifactKind } from "@/app/_components/chat/artifact";
+import type { ArtifactKind } from "./artifact";
 
 export type ArtifactEntry = { id: string; title: string; kind: ArtifactKind };
 type CatalogMessage = { role: string; parts?: readonly unknown[] };

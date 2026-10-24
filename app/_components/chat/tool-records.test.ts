@@ -31,7 +31,7 @@ function renderGroup(parts: unknown[]) {
     const React = require('react');
     const {renderToStaticMarkup} = require('react-dom/server');
     const {SWRConfig} = require('swr');
-    const {ActivityGroup} = require('./components/chat/activity-group.tsx');
+    const {ActivityGroup} = require('./app/_components/chat/activity-group.tsx');
     global.fetch = () => {throw new Error('Unexpected network');};
     process.stdout.write(renderToStaticMarkup(React.createElement(SWRConfig, {value:{provider:()=>new Map(),revalidateOnMount:false}},React.createElement(ActivityGroup,{parts:${JSON.stringify(parts)},approve:()=>{},isReadonly:false},React.createElement('button',null,'Original message action')))));
   `);
@@ -93,27 +93,27 @@ const hookHarness = `
   };
   const base={
     'react/jsx-runtime':{jsx,jsxs:jsx,Fragment:'fragment'},
-    '@/lib/utils':{cn:(...args)=>args.filter(Boolean).join(' ')},
-    '@/components/ui/button':{Button:'button'},
-    '@/hooks/use-agent-info':{useAgentInfo:()=>({data:{skills:[]}})},
+    '@/app/_lib/utils':{cn:(...args)=>args.filter(Boolean).join(' ')},
+    '@/app/_components/ui/button':{Button:'button'},
+    '@/app/_hooks/use-agent-info':{useAgentInfo:()=>({data:{skills:[]}})},
     '../ai-elements/tool':{Tool:'tool',ToolHeader:'header',ToolContent:'content',ToolInput:'input',ToolOutput:'output'},
-    '@/components/ai-elements/task':{Task:'task',TaskTrigger:'task-trigger',TaskContent:'task-content'},
+    '@/app/_components/ai-elements/task':{Task:'task',TaskTrigger:'task-trigger',TaskContent:'task-content'},
     './tool-activity':{ToolActivity:'step'},
     './runtime-recovery':{RuntimeRecovery:'recovery'},
     './tool-call-details':{ToolCallDetails:'call-details'},
-    './attachment-read-result':require('./components/chat/attachment-read-result.tsx'),
-    './activity-groups':require('./components/chat/activity-groups.ts'),
-    './tool-activity-state':require('./components/chat/tool-activity-state.ts'),
-    './tool-presentation':require('./components/chat/tool-presentation.ts'),
-    './tool-result-preview':require('./components/chat/tool-result-preview.tsx'),
-    '@/lib/agent/sources':require('./lib/agent/sources.ts'),
+    './attachment-read-result':require('./app/_components/chat/attachment-read-result.tsx'),
+    './activity-groups':require('./app/_components/chat/activity-groups.ts'),
+    './tool-activity-state':require('./app/_components/chat/tool-activity-state.ts'),
+    './tool-presentation':require('./app/_components/chat/tool-presentation.ts'),
+    './tool-result-preview':require('./app/_components/chat/tool-result-preview.tsx'),
+    '@/server/agent/sources':require('./server/agent/sources.ts'),
   };
 `;
 
 test("expanded attachment excerpts are direct, exact, bounded and retain real partial-read warnings", () => {
   const html = clientScript(`
     const React=require('react');const {renderToStaticMarkup}=require('react-dom/server');
-    const {AttachmentReadResult}=require('./components/chat/attachment-read-result.tsx');
+    const {AttachmentReadResult}=require('./app/_components/chat/attachment-read-result.tsx');
     process.stdout.write(renderToStaticMarkup(React.createElement(AttachmentReadResult,{output:${JSON.stringify({ ...read.output, nextSegment: 2, status: "truncated", totalSegments: 3, warnings: ["Exact parser warning"] })}})));
   `);
   assert.match(html, /page:2/);
@@ -128,7 +128,7 @@ test("expanded attachment excerpts are direct, exact, bounded and retain real pa
 test("unknown or malformed attachment returns are not rendered as successful source evidence", () => {
   clientScript(`
     const assert=require('node:assert/strict');const React=require('react');const {renderToStaticMarkup}=require('react-dom/server');
-    const {AttachmentReadResult,parseAttachmentReadResult}=require('./components/chat/attachment-read-result.tsx');
+    const {AttachmentReadResult,parseAttachmentReadResult}=require('./app/_components/chat/attachment-read-result.tsx');
     const good=${JSON.stringify(read.output)};
     for(const output of [null, false, 'raw', [], {}, {...good,name:{}}, {...good,segments:{}}, {...good,segments:[{ref:3,text:'bad'}]}, {...good,warnings:{}}, {...good,nextSegment:'unknown'}, {...good,startSegment:-1}, {...good,totalSegments:NaN}, {...good,status:'locked'}]) {
       assert.equal(parseAttachmentReadResult(output),null);
@@ -142,7 +142,7 @@ test("unknown or malformed attachment returns are not rendered as successful sou
 test("pure call details preserve original name, input, output including falsey JSON and raw error", () => {
   clientScript(`
     const assert=require('node:assert/strict');const React=require('react');const {renderToStaticMarkup}=require('react-dom/server');
-    const {ToolCallDetailsContent}=require('./components/chat/tool-call-details.tsx');
+    const {ToolCallDetailsContent}=require('./app/_components/chat/tool-call-details.tsx');
     for(const output of [false,0,'',null,{error:'MCP evidence',name:'raw name'},{items:[{title:'Reader heading',item_id:'original-id',price:59,seller:'original-seller'}]}]) {
       const part={type:'dynamic-tool',toolName:'provider__exact_tool',toolCallId:'evidence',state:'output-error',input:{query:{nested:'raw input'}},output,errorText:'An error occurred.'};
       const html=renderToStaticMarkup(React.createElement(ToolCallDetailsContent,{part}));
@@ -159,7 +159,7 @@ test("pure call details preserve original name, input, output including falsey J
 test("actual ToolActivity disclosure, canonical approval identity, callbacks and readonly guard remain intact", () => {
   clientScript(
     `${hookHarness}
-    const scheduler=hooks();const {ToolActivity}=load('components/chat/tool-activity.tsx',{...base,react:scheduler.react});
+    const scheduler=hooks();const {ToolActivity}=load('app/_components/chat/tool-activity.tsx',{...base,react:scheduler.react});
     const decisions=[];const part={type:'dynamic-tool',toolName:'billing__perform_operation',toolCallId:'call',state:'approval-requested',input:{opaque:{amount:7}},approval:{id:'exact-id'}};
     let props={part,approve:value=>decisions.push(value),isReadonly:false,isRunning:true};
     let tree=scheduler.render(ToolActivity,props);
@@ -180,7 +180,7 @@ test("actual ToolActivity disclosure, canonical approval identity, callbacks and
 test("singleton to multi keeps the same keyed step path, user disclosure state and children reachable", () => {
   clientScript(
     `${hookHarness}
-    const scheduler=hooks();const {ActivityGroup}=load('components/chat/activity-group.tsx',{...base,react:scheduler.react});
+    const scheduler=hooks();const {ActivityGroup}=load('app/_components/chat/activity-group.tsx',{...base,react:scheduler.react});
     const first=${JSON.stringify(read)};let props={parts:[first],approve:()=>{},isReadonly:false,children:jsx('original-actions',{children:'actions'})};
     let tree=scheduler.render(ActivityGroup,props);
     const path=(node,key,p=[])=>{if(Array.isArray(node)){for(let i=0;i<node.length;i++){const found=path(node[i],key,[...p,i]);if(found)return found;}return;}if(!node||typeof node!=='object')return;if(node.type==='step'&&node.key===key)return p;return path(node.props?.children,key,[...p,node.type]);};
@@ -198,10 +198,10 @@ test("singleton to multi keeps the same keyed step path, user disclosure state a
 test("actual Messages keeps canonical keyed messages, order and callbacks without content-dependent regrouping", () => {
   clientScript(
     `${hookHarness}
-    const {Messages}=load('components/chat/messages.tsx',{
+    const {Messages}=load('app/_components/chat/messages.tsx',{
       ...base,
-      '@/components/ai-elements/conversation':{Conversation:'conversation',ConversationContent:'conversation-content',ConversationScrollButton:'scroll-button'},
-      '@/lib/agent/message-turn':{prepareRegeneration:()=>true},
+      '@/app/_components/ai-elements/conversation':{Conversation:'conversation',ConversationContent:'conversation-content',ConversationScrollButton:'scroll-button'},
+      '@/server/agent/message-turn':{prepareRegeneration:()=>true},
       './activity-group':{ActivityGroup:'activity'},
       './data-stream-provider':{useDataStream:()=>({})},
       './greeting':{Greeting:'greeting'},
@@ -226,9 +226,9 @@ test("actual Messages keeps canonical keyed messages, order and callbacks withou
 
 test("actual PreviewMessage mixed-part grouping retains timeline boundaries, stable keys and message action callbacks", () => {
   clientScript(`${hookHarness}
-    const {PreviewMessage}=load('components/chat/message.tsx',{
+    const {PreviewMessage}=load('app/_components/chat/message.tsx',{
       ...base,react:{useCallback:fn=>fn},
-      '@/lib/utils':{cn:()=>'',sanitizeText:text=>text},
+      '@/app/_lib/utils':{cn:()=>'',sanitizeText:text=>text},
       '../ai-elements/message':{MessageContent:'text',MessageResponse:'response'},
       '../ai-elements/shimmer':{Shimmer:'shimmer'},
       './activity-group':{ActivityGroup:'activity'},
@@ -255,10 +255,10 @@ test("actual PreviewMessage mixed-part grouping retains timeline boundaries, sta
 
 test("submitted approval continuation remains active only for the latest group or mixed message, never historical calls", () => {
   clientScript(`${hookHarness}
-    const {Messages}=load('components/chat/messages.tsx',{
+    const {Messages}=load('app/_components/chat/messages.tsx',{
       ...base,
-      '@/components/ai-elements/conversation':{Conversation:'conversation',ConversationContent:'conversation-content',ConversationScrollButton:'scroll-button'},
-      '@/lib/agent/message-turn':{prepareRegeneration:()=>true},
+      '@/app/_components/ai-elements/conversation':{Conversation:'conversation',ConversationContent:'conversation-content',ConversationScrollButton:'scroll-button'},
+      '@/server/agent/message-turn':{prepareRegeneration:()=>true},
       './activity-group':{ActivityGroup:'activity'},
       './data-stream-provider':{useDataStream:()=>({})},
       './greeting':{Greeting:'greeting'},
@@ -293,7 +293,7 @@ test("submitted approval continuation remains active only for the latest group o
 
 test("an open call-details Sheet pins its exact multi-step trigger through completion and close, not ordinary completion", () => {
   clientScript(`${hookHarness}
-    const scheduler=hooks();const {ActivityGroup}=load('components/chat/activity-group.tsx',{...base,react:scheduler.react});
+    const scheduler=hooks();const {ActivityGroup}=load('app/_components/chat/activity-group.tsx',{...base,react:scheduler.react});
     const active={type:'dynamic-tool',toolName:'fixture__operation',toolCallId:'first',state:'input-available',input:{}};
     const second={...active,toolCallId:'second'};
     const props={parts:[active,second],approve:()=>{},isReadonly:false,isRunning:true};
@@ -301,12 +301,12 @@ test("an open call-details Sheet pins its exact multi-step trigger through compl
     const firstStep=nodes(tree).find(n=>n.type==='step'&&n.props.part.toolCallId==='first');
     assert.equal(typeof firstStep.props.onDetailsOpenChange,'function','group exposes inspection callback');
     const childScheduler=hooks();
-    const {ToolActivity}=load('components/chat/tool-activity.tsx',{...base,react:childScheduler.react});
+    const {ToolActivity}=load('app/_components/chat/tool-activity.tsx',{...base,react:childScheduler.react});
     const child=childScheduler.render(ToolActivity,firstStep.props);
     const details=nodes(child).find(n=>n.type==='call-details');
-    const {ToolCallDetails}=load('components/chat/tool-call-details.tsx',{
+    const {ToolCallDetails}=load('app/_components/chat/tool-call-details.tsx',{
       ...base,
-      '@/components/ui/sheet':{Sheet:'sheet',SheetTrigger:'sheet-trigger',SheetContent:'sheet-content',SheetClose:'sheet-close',SheetHeader:'sheet-header',SheetTitle:'sheet-title',SheetDescription:'sheet-description'},
+      '@/app/_components/ui/sheet':{Sheet:'sheet',SheetTrigger:'sheet-trigger',SheetContent:'sheet-content',SheetClose:'sheet-close',SheetHeader:'sheet-header',SheetTitle:'sheet-title',SheetDescription:'sheet-description'},
     });
     const sheet=ToolCallDetails(details.props);
     assert.equal(typeof sheet.props.onOpenChange,'function','actual Sheet forwards inspection events');
@@ -327,7 +327,7 @@ test("an open call-details Sheet pins its exact multi-step trigger through compl
 
 test("removed inspections and stale Sheet close events cannot pin or dismiss a different current call", () => {
   clientScript(`${hookHarness}
-    const scheduler=hooks();const {ActivityGroup}=load('components/chat/activity-group.tsx',{...base,react:scheduler.react});
+    const scheduler=hooks();const {ActivityGroup}=load('app/_components/chat/activity-group.tsx',{...base,react:scheduler.react});
     const tool=id=>({type:'dynamic-tool',toolName:'fixture__operation',toolCallId:id,state:'input-available',input:{}});
     const props={parts:[tool('first'),tool('second'),tool('third')],approve:()=>{},isReadonly:false,isRunning:true};
     let tree=scheduler.render(ActivityGroup,props);
@@ -353,15 +353,15 @@ test("actual Messages preserves the inspected tool subtree when the same assista
       const part=nodes(props.children).find(n=>n.props?.part)?.props.part;
       return jsx('fixture-sheet',{...props,callId:part?.toolCallId,open,onOpenChange:value=>{setOpen(value);props.onOpenChange?.(value);}});
     };
-    const {ToolCallDetails}=load('components/chat/tool-call-details.tsx',{
+    const {ToolCallDetails}=load('app/_components/chat/tool-call-details.tsx',{
       ...base,react,
-      '@/components/ui/sheet':{Sheet:FixtureSheet,SheetTrigger:'sheet-trigger',SheetContent:'sheet-content',SheetClose:'sheet-close',SheetHeader:'sheet-header',SheetTitle:'sheet-title',SheetDescription:'sheet-description'},
+      '@/app/_components/ui/sheet':{Sheet:FixtureSheet,SheetTrigger:'sheet-trigger',SheetContent:'sheet-content',SheetClose:'sheet-close',SheetHeader:'sheet-header',SheetTitle:'sheet-title',SheetDescription:'sheet-description'},
     });
-    const {ToolActivity}=load('components/chat/tool-activity.tsx',{...base,react,'./tool-call-details':{ToolCallDetails}});
-    const {ActivityGroup}=load('components/chat/activity-group.tsx',{...base,react,'./tool-activity':{ToolActivity}});
-    const {PreviewMessage}=load('components/chat/message.tsx',{
+    const {ToolActivity}=load('app/_components/chat/tool-activity.tsx',{...base,react,'./tool-call-details':{ToolCallDetails}});
+    const {ActivityGroup}=load('app/_components/chat/activity-group.tsx',{...base,react,'./tool-activity':{ToolActivity}});
+    const {PreviewMessage}=load('app/_components/chat/message.tsx',{
       ...base,react,
-      '@/lib/utils':{cn:()=>'',sanitizeText:text=>text},
+      '@/app/_lib/utils':{cn:()=>'',sanitizeText:text=>text},
       '../ai-elements/message':{MessageContent:'text',MessageResponse:'response'},
       '../ai-elements/shimmer':{Shimmer:'shimmer'},
       './activity-group':{ActivityGroup},
@@ -371,10 +371,10 @@ test("actual Messages preserves the inspected tool subtree when the same assista
       './message-reasoning':{MessageReasoning:'reasoning'},
       './preview-attachment':{},'./tool-activity':{ToolActivity},'./weather':{},
     });
-    const {Messages}=load('components/chat/messages.tsx',{
+    const {Messages}=load('app/_components/chat/messages.tsx',{
       ...base,react,
-      '@/components/ai-elements/conversation':{Conversation:'conversation',ConversationContent:'conversation-content',ConversationScrollButton:'scroll-button'},
-      '@/lib/agent/message-turn':{prepareRegeneration:()=>true},
+      '@/app/_components/ai-elements/conversation':{Conversation:'conversation',ConversationContent:'conversation-content',ConversationScrollButton:'scroll-button'},
+      '@/server/agent/message-turn':{prepareRegeneration:()=>true},
       './activity-group':{ActivityGroup},
       './data-stream-provider':{useDataStream:()=>({})},
       './greeting':{Greeting:'greeting'},
@@ -422,9 +422,9 @@ test("actual Messages preserves the inspected tool subtree when the same assista
 
 test("canonical tool-only messages omit empty answer actions while text, artifacts and final regeneration retain theirs", () => {
   clientScript(`${hookHarness}
-    const {PreviewMessage}=load('components/chat/message.tsx',{
+    const {PreviewMessage}=load('app/_components/chat/message.tsx',{
       ...base,react:{useCallback:fn=>fn},
-      '@/lib/utils':{cn:()=>'',sanitizeText:text=>text},
+      '@/app/_lib/utils':{cn:()=>'',sanitizeText:text=>text},
       '../ai-elements/message':{MessageContent:'text',MessageResponse:'response'},
       '../ai-elements/shimmer':{Shimmer:'shimmer'},
       './activity-group':{ActivityGroup:'activity'},
@@ -450,7 +450,7 @@ test("canonical tool-only messages omit empty answer actions while text, artifac
 
 test("only the active native table handoff omits a temporary Sheet trigger; fallback evidence and MCP names keep details", () => {
   clientScript(`${hookHarness}
-    const scheduler=hooks();const {ToolActivity}=load('components/chat/tool-activity.tsx',{...base,react:scheduler.react});
+    const scheduler=hooks();const {ToolActivity}=load('app/_components/chat/tool-activity.tsx',{...base,react:scheduler.react});
     const table={type:'tool-createResultTable',toolCallId:'table-handoff',input:{title:'Table'}};
     for(const state of ['input-streaming','input-available','approval-responded']) {
       const part={...table,state,...(state==='approval-responded'?{approval:{id:'native-approved',approved:true}}:{})};
@@ -471,9 +471,9 @@ test("only the active native table handoff omits a temporary Sheet trigger; fall
       const tree=scheduler.render(ToolActivity,{part,approve:()=>{},isReadonly:false,isRunning:part.toolCallId!=='table-handoff'||part.state!=='input-available'});
       assert.equal(nodes(tree).filter(n=>n.type==='call-details').length,1,'details remain reachable for '+part.type+' '+part.state);
     }
-    const {PreviewMessage}=load('components/chat/message.tsx',{
+    const {PreviewMessage}=load('app/_components/chat/message.tsx',{
       ...base,react:{useCallback:fn=>fn},
-      '@/lib/utils':{cn:()=>'',sanitizeText:text=>text},
+      '@/app/_lib/utils':{cn:()=>'',sanitizeText:text=>text},
       '../ai-elements/message':{MessageContent:'text',MessageResponse:'response'},
       '../ai-elements/shimmer':{Shimmer:'shimmer'},
       './activity-group':{ActivityGroup:'activity'},
@@ -494,7 +494,7 @@ test("only the active native table handoff omits a temporary Sheet trigger; fall
 
 test("actual expanded tool body uses readable results once and preserves honest pending, denied and error bodies", () => {
   clientScript(`${hookHarness}
-    const scheduler=hooks();const {ToolActivity}=load('components/chat/tool-activity.tsx',{...base,react:scheduler.react});
+    const scheduler=hooks();const {ToolActivity}=load('app/_components/chat/tool-activity.tsx',{...base,react:scheduler.react});
     const {ToolResultPreview}=base['./tool-result-preview'];
     const part={type:'dynamic-tool',toolName:'fixture__search',toolCallId:'readable',state:'input-available',input:{query:'one query'}};
     const props={part,approve:()=>{},isReadonly:false,isRunning:true};
@@ -514,9 +514,9 @@ test("actual expanded tool body uses readable results once and preserves honest 
 
 test("short trusted actions retain their label while subjects truncate before arbitrary aliases or skill names", () => {
   clientScript(`${hookHarness}
-    const scheduler=hooks();const {ToolActivity}=load('components/chat/tool-activity.tsx',{
+    const scheduler=hooks();const {ToolActivity}=load('app/_components/chat/tool-activity.tsx',{
       ...base,react:scheduler.react,
-      '@/hooks/use-agent-info':{useAgentInfo:()=>({data:{servers:[{toolAliases:[
+      '@/app/_hooks/use-agent-info':{useAgentInfo:()=>({data:{servers:[{toolAliases:[
         {alias:'mapped-search',name:'search.web',serverName:'Provider'},
         {alias:'mapped-web',name:'tavily_extract',serverName:'Provider'}
       ]}]}})}

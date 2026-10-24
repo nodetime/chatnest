@@ -5,8 +5,8 @@ import type { ChatMessage } from "@/app/_lib/types";
 import { codeDocumentHandler } from "@/server/artifacts/code/server";
 import { sheetDocumentHandler } from "@/server/artifacts/sheet/server";
 import { textDocumentHandler } from "@/server/artifacts/text/server";
-import { saveDocument } from "@/server/db/queries";
-import type { Document } from "@/server/db/schema";
+import { saveDocument } from "../db/queries";
+import type { Document } from "../db/schema";
 
 export type SaveDocumentProps = {
   id: string;

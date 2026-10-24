@@ -3,7 +3,6 @@
 import { MoreHorizontal, Plus, Search } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import useSWR from "swr";
-import { McpEditor, requestMcp } from "@/app/_components/chat/mcp-editor";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,6 +49,7 @@ import type {
   ServerProjection,
   SettingsProjection,
 } from "@/server/agent/mcp-settings/types";
+import { McpEditor, requestMcp } from "./mcp-editor";
 
 async function readSettings(url: string): Promise<SettingsProjection> {
   const response = await fetch(url);

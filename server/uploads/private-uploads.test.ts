@@ -287,7 +287,7 @@ test("upload routes and chat entry wire private lifecycle before persistence/tit
     "model receives resolved inline bytes"
   );
   const preview = await readFile(
-    "components/chat/preview-attachment.tsx",
+    "app/_components/chat/preview-attachment.tsx",
     "utf8"
   );
   assert.ok(!preview.includes("next/image"));
@@ -410,10 +410,13 @@ test("process upload admission rejects excess requests without reading their bod
 test("admin navigation marks only the actual storage route active and exposes real storage controls", async () => {
   const { existsSync, readFileSync } = await import("node:fs");
   assert.ok(
-    existsSync("components/admin/admin-navigation.tsx"),
+    existsSync("app/_components/admin/admin-navigation.tsx"),
     "route-aware admin navigation exists"
   );
-  const source = readFileSync("components/admin/admin-navigation.tsx", "utf8");
+  const source = readFileSync(
+    "app/_components/admin/admin-navigation.tsx",
+    "utf8"
+  );
   assert.match(source, /usePathname/);
   assert.match(source, /aria-current/);
   const { execFileSync } = await import("node:child_process");
@@ -423,7 +426,7 @@ test("admin navigation marks only the actual storage route active and exposes re
       "--import",
       "tsx",
       "-e",
-      `const React=require('react');const {renderToStaticMarkup}=require('react-dom/server');const {AdminNavigationItems}=require('./components/admin/admin-navigation');const {SidebarProvider}=require('./components/ui/sidebar');const {TooltipProvider}=require('./components/ui/tooltip');console.log(renderToStaticMarkup(React.createElement(TooltipProvider,null,React.createElement(SidebarProvider,null,React.createElement(AdminNavigationItems,{pathname:'/demo/admin/storage'})))));`,
+      `const React=require('react');const {renderToStaticMarkup}=require('react-dom/server');const {AdminNavigationItems}=require('./app/_components/admin/admin-navigation');const {SidebarProvider}=require('./app/_components/ui/sidebar');const {TooltipProvider}=require('./app/_components/ui/tooltip');console.log(renderToStaticMarkup(React.createElement(TooltipProvider,null,React.createElement(SidebarProvider,null,React.createElement(AdminNavigationItems,{pathname:'/demo/admin/storage'})))));`,
     ],
     { encoding: "utf8", env: { ...process.env, NODE_OPTIONS: "" } }
   );
@@ -432,7 +435,7 @@ test("admin navigation marks only the actual storage route active and exposes re
     /href="\/admin\/storage"[^>]*aria-current="page"|aria-current="page"[^>]*href="\/admin\/storage"/
   );
   assert.equal((html.match(/aria-current="page"/g) ?? []).length, 1);
-  const ui = readFileSync("components/admin/admin-storage.tsx", "utf8");
+  const ui = readFileSync("app/_components/admin/admin-storage.tsx", "utf8");
   for (const action of ["test", "configure", "cleanup"]) {
     assert.ok(ui.includes(`'${action}'`) || ui.includes(`"${action}"`));
   }
@@ -460,9 +463,15 @@ test("missing finalized pending reservation is a conflict rather than a successf
 });
 test("client editing never deletes persisted history and rolls back SDK-swallowed validation errors", async () => {
   const { readFileSync } = await import("node:fs");
-  const source = readFileSync("components/chat/message-editor.tsx", "utf8");
+  const source = readFileSync(
+    "app/_components/chat/message-editor.tsx",
+    "utf8"
+  );
   assert.ok(!source.includes("deleteTrailingMessages"));
-  const composer = readFileSync("components/chat/multimodal-input.tsx", "utf8");
+  const composer = readFileSync(
+    "app/_components/chat/multimodal-input.tsx",
+    "utf8"
+  );
   assert.match(composer, /原图片保留，编辑时只修改文字/);
   assert.match(composer, /disabled=\{Boolean\(editingMessage\)\}/);
   const { submitEditedMessage } = await import(
@@ -530,7 +539,7 @@ test("decoder saturation reports busy rather than falsely labelling valid image 
 });
 test("completed user markdown renders statically instead of reusing streaming block cache after edits", async () => {
   const { readFileSync } = await import("node:fs");
-  const source = readFileSync("components/chat/message.tsx", "utf8");
+  const source = readFileSync("app/_components/chat/message.tsx", "utf8");
   assert.match(
     source,
     /<MessageResponse\s+mode=\{isUser\s*\?\s*"static"\s*:\s*"streaming"\}/

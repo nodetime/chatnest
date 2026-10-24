@@ -9,36 +9,33 @@ import {
   Search,
 } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
+import { useAgentInfo } from "@/app/_hooks/use-agent-info";
+import type { ChatMessage } from "@/app/_lib/types";
+import { cn } from "@/app/_lib/utils";
 import {
   Tool,
   ToolContent,
   ToolHeader,
   type ToolPart,
-} from "@/app/_components/ai-elements/tool";
-import {
-  activityDisplayState,
-  activityErrorText,
-} from "@/app/_components/chat/activity-groups";
+} from "../ai-elements/tool";
+import { activityDisplayState, activityErrorText } from "./activity-groups";
 import {
   AttachmentReadResult,
   parseAttachmentReadResult,
-} from "@/app/_components/chat/attachment-read-result";
+} from "./attachment-read-result";
 import {
   initialToolDisclosure,
   reconcileToolDisclosure,
   toolDisclosureIdentity,
   toolNeedsAttention,
-} from "@/app/_components/chat/tool-activity-state";
-import { ToolCallDetails } from "@/app/_components/chat/tool-call-details";
+} from "./tool-activity-state";
+import { ToolCallDetails } from "./tool-call-details";
 import {
   projectResult,
   projectToolIdentity,
   projectToolResult,
-} from "@/app/_components/chat/tool-presentation";
-import { ToolResultPreview } from "@/app/_components/chat/tool-result-preview";
-import { useAgentInfo } from "@/app/_hooks/use-agent-info";
-import type { ChatMessage } from "@/app/_lib/types";
-import { cn } from "@/app/_lib/utils";
+} from "./tool-presentation";
+import { ToolResultPreview } from "./tool-result-preview";
 
 export function ToolActivity({
   part,

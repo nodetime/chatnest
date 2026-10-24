@@ -1,8 +1,6 @@
 // biome-ignore-all lint/performance/noJsxPropsBind: React Compiler memoizes the workspace toggle.
 "use client";
 import { PanelLeft, PanelRight, PenSquare } from "lucide-react";
-import { ChatMenu } from "@/app/_components/chat/chat-menu";
-import type { VisibilityType } from "@/app/_components/chat/visibility-selector";
 import { Button } from "@/app/_components/ui/button";
 import { useSidebar } from "@/app/_components/ui/sidebar";
 import {
@@ -12,6 +10,8 @@ import {
 } from "@/app/_components/ui/tooltip";
 import { useActiveChat } from "@/app/_hooks/use-active-chat";
 import { useWorkspace } from "@/app/_hooks/use-workspace";
+import { ChatMenu } from "./chat-menu";
+import type { VisibilityType } from "./visibility-selector";
 
 export function ChatHeader({
   chatId,

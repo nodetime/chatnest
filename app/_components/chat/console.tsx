@@ -6,14 +6,11 @@ import {
   useRef,
   useState,
 } from "react";
-import {
-  CrossSmallIcon,
-  TerminalWindowIcon,
-} from "@/app/_components/chat/icons";
-import { Button } from "@/app/_components/ui/button";
-import { Spinner } from "@/app/_components/ui/spinner";
 import { useArtifactSelector } from "@/app/_hooks/use-artifact";
 import { cn } from "@/app/_lib/utils";
+import { Button } from "../ui/button";
+import { Spinner } from "../ui/spinner";
+import { CrossSmallIcon, TerminalWindowIcon } from "./icons";
 
 export type ConsoleOutputContent = {
   type: "text" | "image";

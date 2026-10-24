@@ -131,7 +131,7 @@ function editorFixture() {
   };
   const modules: Record<string, unknown> = {
     "./suggestion": {},
-    "@/lib/editor/config": {
+    "@/app/_lib/editor/config": {
       documentSchema: {},
       handleTransaction: ({
         editorRef,
@@ -153,12 +153,12 @@ function editorFixture() {
       },
       headingRule: () => ({}),
     },
-    "@/lib/editor/functions": {
+    "@/app/_lib/editor/functions": {
       buildContentFromDocument: (doc: ReturnType<typeof document>) => doc.text,
       buildDocumentFromContent: document,
       createDecorations: () => ({}),
     },
-    "@/lib/editor/suggestions": {
+    "@/app/_lib/editor/suggestions": {
       projectWithPositions: () => [],
       suggestionsPlugin: {},
       suggestionsPluginKey: {},
@@ -181,7 +181,7 @@ function editorFixture() {
   };
   const output = { exports: {} as { Editor: (props: Props) => void } };
   const compiled = ts.transpileModule(
-    readFileSync("components/chat/text-editor.tsx", "utf8"),
+    readFileSync("app/_components/chat/text-editor.tsx", "utf8"),
     {
       compilerOptions: {
         jsx: ts.JsxEmit.ReactJSX,
@@ -361,17 +361,17 @@ test("text renderer identity keys change for documents and versions, never conte
   ): Element => ({ key, props, type });
   const modules: Record<string, unknown> = {
     "../actions": {},
-    "@/components/chat/create-artifact": {
+    "@/app/_components/chat/create-artifact": {
       Artifact: class {
         constructor(config: unknown) {
           Object.assign(this, config);
         }
       },
     },
-    "@/components/chat/diffview": {},
-    "@/components/chat/document-skeleton": {},
-    "@/components/chat/icons": {},
-    "@/components/chat/text-editor": { Editor: "editor" },
+    "@/app/_components/chat/diffview": {},
+    "@/app/_components/chat/document-skeleton": {},
+    "@/app/_components/chat/icons": {},
+    "@/app/_components/chat/text-editor": { Editor: "editor" },
     "react/jsx-runtime": { jsx, jsxs: jsx },
     sonner: { toast: {} },
   };
@@ -381,7 +381,7 @@ test("text renderer identity keys change for documents and versions, never conte
     },
   };
   const compiled = ts.transpileModule(
-    readFileSync("artifacts/text/client.tsx", "utf8"),
+    readFileSync("app/_artifacts/text/client.tsx", "utf8"),
     {
       compilerOptions: {
         jsx: ts.JsxEmit.ReactJSX,
@@ -417,7 +417,10 @@ test("text renderer identity keys change for documents and versions, never conte
   assert.equal(editorKey({ isReadonly: true }), original);
   assert.notEqual(editorKey({ documentId: "document-b" }), original);
   assert.notEqual(editorKey({ currentVersionIndex: 1 }), original);
-  const preview = readFileSync("components/chat/document-preview.tsx", "utf8");
+  const preview = readFileSync(
+    "app/_components/chat/document-preview.tsx",
+    "utf8"
+  );
   assert.doesNotMatch(
     preview,
     /<Editor|from "\.\/text-editor"/,
@@ -426,7 +429,7 @@ test("text renderer identity keys change for documents and versions, never conte
 });
 
 test("the empty text editor host retains usable width inside its flex renderer", () => {
-  const source = readFileSync("components/chat/text-editor.tsx", "utf8");
+  const source = readFileSync("app/_components/chat/text-editor.tsx", "utf8");
   const hostClasses = source
     .match(/className="([^"]*)"\s+ref=\{containerRef\}/)?.[1]
     .split(/\s+/);

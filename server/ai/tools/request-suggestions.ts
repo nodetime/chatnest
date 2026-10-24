@@ -3,11 +3,11 @@ import type { Session } from "next-auth";
 import { z } from "zod";
 import type { ChatMessage } from "@/app/_lib/types";
 import { generateUUID } from "@/app/_lib/utils";
-import { getLanguageModel } from "@/server/ai/providers";
 import { metadataOnlyTelemetry } from "@/server/ai/telemetry";
 import { isProtectedResultTable } from "@/server/artifacts/result-table";
 import { getDocumentById, saveSuggestions } from "@/server/db/queries";
 import type { Suggestion } from "@/server/db/schema";
+import { getLanguageModel } from "../providers";
 
 type RequestSuggestionsProps = {
   session: Session;

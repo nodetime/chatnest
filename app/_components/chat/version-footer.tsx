@@ -6,11 +6,11 @@ import type { Dispatch, SetStateAction } from "react";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { useSWRConfig } from "swr";
-import { LoaderIcon } from "@/app/_components/chat/icons";
 import { useArtifact } from "@/app/_hooks/use-artifact";
 import { cn, getDocumentTimestampByIndex } from "@/app/_lib/utils";
 import { isProtectedResultTable } from "@/server/artifacts/result-table";
 import type { Document } from "@/server/db/schema";
+import { LoaderIcon } from "./icons";
 
 type VersionFooterProps = {
   chatId?: string;

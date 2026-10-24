@@ -1,7 +1,7 @@
 "use client";
 import { useCallback } from "react";
 import useSWR from "swr";
-import { useActiveChat } from "@/app/_hooks/use-active-chat";
+import { useActiveChat } from "./use-active-chat";
 
 export type WorkspaceTab = "browser" | "document" | "sources";
 type State = {

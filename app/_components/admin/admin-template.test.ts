@@ -11,7 +11,7 @@ function render(code: string) {
       "--import",
       "tsx",
       "-e",
-      `const React=require('react');const server=require('react-dom/server');const {TooltipProvider}=require('./components/ui/tooltip.tsx');const renderToStaticMarkup=(tree)=>server.renderToStaticMarkup(React.createElement(TooltipProvider,null,tree));${code}`,
+      `const React=require('react');const server=require('react-dom/server');const {TooltipProvider}=require('./app/_components/ui/tooltip.tsx');const renderToStaticMarkup=(tree)=>server.renderToStaticMarkup(React.createElement(TooltipProvider,null,tree));${code}`,
     ],
     { encoding: "utf8", env: { ...process.env, NODE_OPTIONS: "" } }
   );
@@ -19,7 +19,7 @@ function render(code: string) {
 
 test("template shell provides inset, collapsible navigation, current identity and only real routes", () => {
   const html = render(
-    "const {AdminShell}=require('./components/admin/admin-shell.tsx');process.stdout.write(renderToStaticMarkup(React.createElement(AdminShell,{identity:{name:'Fixture Admin',email:'fixture@example.test'}},React.createElement('h1',null,'概览'))));"
+    "const {AdminShell}=require('./app/_components/admin/admin-shell.tsx');process.stdout.write(renderToStaticMarkup(React.createElement(AdminShell,{identity:{name:'Fixture Admin',email:'fixture@example.test'}},React.createElement('h1',null,'概览'))));"
   );
   assert.match(html, /data-slot="sidebar-wrapper"/);
   assert.match(html, /data-slot="sidebar-inset"/);
@@ -36,7 +36,7 @@ test("template shell provides inset, collapsible navigation, current identity an
     html,
     /Billing|Notifications|Quick Create|\/admin\/(users|billing|logs)/
   );
-  const shell = readFileSync("components/admin/admin-shell.tsx", "utf8");
+  const shell = readFileSync("app/_components/admin/admin-shell.tsx", "utf8");
   assert.match(shell, /tooltip="ChatNest 平台管理"/);
   assert.match(shell, /SheetContent/);
   assert.match(shell, /side="left"/);
@@ -57,7 +57,7 @@ test("navigation marks exactly the current real route including demo base path",
     "/demo/admin/storage",
   ]) {
     const html = render(
-      `const {SidebarProvider}=require('./components/ui/sidebar.tsx');const {AdminNavigationItems}=require('./components/admin/admin-navigation.tsx');process.stdout.write(renderToStaticMarkup(React.createElement(SidebarProvider,null,React.createElement(AdminNavigationItems,{pathname:'${path}'}))));`
+      `const {SidebarProvider}=require('./app/_components/ui/sidebar.tsx');const {AdminNavigationItems}=require('./app/_components/admin/admin-navigation.tsx');process.stdout.write(renderToStaticMarkup(React.createElement(SidebarProvider,null,React.createElement(AdminNavigationItems,{pathname:'${path}'}))));`
     );
     assert.equal((html.match(/aria-current="page"/g) ?? []).length, 1);
     const current = path.replace("/demo", "");
@@ -72,7 +72,7 @@ test("navigation marks exactly the current real route including demo base path",
 
 test("MCP table exposes real columns, read-only file source, accessible actions and sheet editor", () => {
   const html = render(
-    "const {SWRConfig}=require('swr');const {McpConnections}=require('./components/chat/mcp-connections.tsx');const data={configured:true,revision:1,servers:[{id:'fixture',name:'资料工具',enabled:true,allowedTools:['search'],origin:'https://fixture.example',headerNames:['Authorization'],source:'managed'},{id:'file',name:'预设工具',enabled:true,allowedTools:[],origin:'',headerNames:[],source:'file'}]};process.stdout.write(renderToStaticMarkup(React.createElement(SWRConfig,{value:{fallback:{'/api/agent/mcp':data}}},React.createElement(McpConnections))));"
+    "const {SWRConfig}=require('swr');const {McpConnections}=require('./app/_components/chat/mcp-connections.tsx');const data={configured:true,revision:1,servers:[{id:'fixture',name:'资料工具',enabled:true,allowedTools:['search'],origin:'https://fixture.example',headerNames:['Authorization'],source:'managed'},{id:'file',name:'预设工具',enabled:true,allowedTools:[],origin:'',headerNames:[],source:'file'}]};process.stdout.write(renderToStaticMarkup(React.createElement(SWRConfig,{value:{fallback:{'/api/agent/mcp':data}}},React.createElement(McpConnections))));"
   );
   assert.match(html, /<table/);
   for (const text of [
@@ -88,14 +88,14 @@ test("MCP table exposes real columns, read-only file source, accessible actions 
   }
   assert.doesNotMatch(html, /Authorization/);
   assert.match(
-    readFileSync("components/chat/mcp-connections.tsx", "utf8"),
+    readFileSync("app/_components/chat/mcp-connections.tsx", "utf8"),
     /SheetContent/
   );
 });
 
 test("storage separates live configuration cards, controls, limits and collapsed deployment details", () => {
   const html = render(
-    "const {SWRConfig}=require('swr');const {AdminStorage}=require('./components/admin/admin-storage.tsx');const data={enabled:true,revision:1,configured:true,driver:'local',formats:['image/png','image/jpeg'],maxFileBytes:5242880,maxImages:15,maxContextBytes:20971520};process.stdout.write(renderToStaticMarkup(React.createElement(SWRConfig,{value:{fallback:{'/api/admin/storage':data}}},React.createElement(AdminStorage))));"
+    "const {SWRConfig}=require('swr');const {AdminStorage}=require('./app/_components/admin/admin-storage.tsx');const data={enabled:true,revision:1,configured:true,driver:'local',formats:['image/png','image/jpeg'],maxFileBytes:5242880,maxImages:15,maxContextBytes:20971520};process.stdout.write(renderToStaticMarkup(React.createElement(SWRConfig,{value:{fallback:{'/api/admin/storage':data}}},React.createElement(AdminStorage))));"
   );
   assert.ok((html.match(/data-slot="card"/g) ?? []).length >= 2);
   for (const label of [
@@ -112,14 +112,14 @@ test("storage separates live configuration cards, controls, limits and collapsed
   assert.match(html, /<details/);
   assert.doesNotMatch(html, /S3|云存储/);
   assert.match(
-    readFileSync("components/chat/conversation-notice.tsx", "utf8"),
+    readFileSync("app/_components/chat/conversation-notice.tsx", "utf8"),
     /label="检查连接" tab="tools"/
   );
 });
 
 test("overview independently authorizes, isolates failures and never projects credentials", async () => {
   assert.ok(
-    existsSync("lib/admin/overview.ts"),
+    existsSync("server/admin/overview.ts"),
     "guarded overview boundary exists"
   );
   const { createOverviewHandler } = await import("@/server/admin/overview");
@@ -156,7 +156,7 @@ test("overview independently authorizes, isolates failures and never projects cr
 });
 
 test("overview readiness uses existing services and attributed upstream assets, not demos", () => {
-  assert.ok(existsSync("components/admin/admin-overview.tsx"));
+  assert.ok(existsSync("app/_components/admin/admin-overview.tsx"));
   const route = readFileSync("app/api/admin/overview/route.ts", "utf8");
   for (const source of [
     "readAgentConfig",
@@ -240,7 +240,7 @@ test("readiness counts missing file credentials and disabled managed connections
 
 test("overview stays focused on three real readiness cards without instructional filler", () => {
   const html = render(
-    "const {AdminOverview}=require('./components/admin/admin-overview.tsx');process.stdout.write(renderToStaticMarkup(React.createElement(AdminOverview)));"
+    "const {AdminOverview}=require('./app/_components/admin/admin-overview.tsx');process.stdout.write(renderToStaticMarkup(React.createElement(AdminOverview)));"
   );
   assert.equal((html.match(/data-slot="card"/g) ?? []).length, 3);
   assert.doesNotMatch(html, /配置与使用分离|固定执行流程/);
@@ -248,7 +248,7 @@ test("overview stays focused on three real readiness cards without instructional
 
 test("current breadcrumb location is text, not an unfocusable simulated link", () => {
   const html = render(
-    "const {BreadcrumbPage}=require('./components/ui/breadcrumb.tsx');process.stdout.write(renderToStaticMarkup(React.createElement(BreadcrumbPage,null,'文件存储')));"
+    "const {BreadcrumbPage}=require('./app/_components/ui/breadcrumb.tsx');process.stdout.write(renderToStaticMarkup(React.createElement(BreadcrumbPage,null,'文件存储')));"
   );
   assert.match(html, /aria-current="page"/);
   assert.doesNotMatch(html, /role="link"|aria-disabled/);

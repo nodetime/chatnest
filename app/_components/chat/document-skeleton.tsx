@@ -1,6 +1,6 @@
 "use client";
 
-import type { ArtifactKind } from "@/app/_components/chat/artifact";
+import type { ArtifactKind } from "./artifact";
 
 export const DocumentSkeleton = ({
   artifactKind,

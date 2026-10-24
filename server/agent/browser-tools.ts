@@ -3,7 +3,7 @@ import {
   browserReadTools,
   browserToolNames,
   getBrowserSession,
-} from "@/server/agent/browser-session";
+} from "./browser-session";
 
 export async function createBrowserTools(
   owner: string,

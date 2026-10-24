@@ -6,10 +6,6 @@ import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { type CSSProperties, type ReactNode, useCallback } from "react";
 import {
-  AdminNavigation,
-  adminLocation,
-} from "@/app/_components/admin/admin-navigation";
-import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbLink,
@@ -47,6 +43,7 @@ import {
   useSidebar,
 } from "@/app/_components/ui/sidebar";
 import { TooltipProvider } from "@/app/_components/ui/tooltip";
+import { AdminNavigation, adminLocation } from "./admin-navigation";
 
 export type AdminIdentity = { name: string; email: string };
 function AdminAccount({ identity }: { identity: AdminIdentity }) {

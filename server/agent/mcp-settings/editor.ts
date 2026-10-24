@@ -1,5 +1,5 @@
-import { connectionSchema } from "@/server/agent/mcp-settings/schema";
-import type { ConnectionEdit } from "@/server/agent/mcp-settings/types";
+import { connectionSchema } from "./schema";
+import type { ConnectionEdit } from "./types";
 export function parseHeaderInput(text: string) {
   return connectionSchema.shape.headers.parse(JSON.parse(text.trim() || "{}"));
 }

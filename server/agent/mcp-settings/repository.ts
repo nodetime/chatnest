@@ -2,7 +2,7 @@ import "server-only";
 import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import { mcpSettings } from "@/server/db/schema";
+import { mcpSettings } from "../../db/schema";
 export type SettingsRow = {
   revision: number;
   encrypted: string;

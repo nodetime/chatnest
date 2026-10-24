@@ -7,9 +7,6 @@ import { signOut, useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
 import { useCallback, useState } from "react";
 import { PlatformAdminLink } from "@/app/_components/admin/platform-admin-link";
-import { AgentLibrary } from "@/app/_components/chat/agent-library";
-import { LoaderIcon } from "@/app/_components/chat/icons";
-import { toast } from "@/app/_components/chat/toast";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,6 +20,9 @@ import {
   SidebarMenuItem,
 } from "@/app/_components/ui/sidebar";
 import { guestRegex } from "@/app/_lib/constants";
+import { AgentLibrary } from "./agent-library";
+import { LoaderIcon } from "./icons";
+import { toast } from "./toast";
 
 function emailToHue(email: string): number {
   let hash = 0;

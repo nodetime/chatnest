@@ -4,11 +4,6 @@
 import type { UseChatHelpers } from "@ai-sdk/react";
 import { MoreHorizontal, Square, WrenchIcon } from "lucide-react";
 import { useCallback } from "react";
-import {
-  type ArtifactKind,
-  artifactDefinitions,
-} from "@/app/_components/chat/artifact";
-import type { ArtifactToolbarItem } from "@/app/_components/chat/create-artifact";
 import { Button } from "@/app/_components/ui/button";
 import {
   DropdownMenu,
@@ -19,6 +14,8 @@ import {
   DropdownMenuTrigger,
 } from "@/app/_components/ui/dropdown-menu";
 import type { ChatMessage } from "@/app/_lib/types";
+import { type ArtifactKind, artifactDefinitions } from "./artifact";
+import type { ArtifactToolbarItem } from "./create-artifact";
 
 const createFixErrorTool = (
   consoleOutput: string,

@@ -8,12 +8,6 @@ import {
   useMemo,
   useState,
 } from "react";
-import {
-  CheckCircleFillIcon,
-  ChevronDownIcon,
-  GlobeIcon,
-  LockIcon,
-} from "@/app/_components/chat/icons";
 import { Button } from "@/app/_components/ui/button";
 import {
   DropdownMenu,
@@ -23,6 +17,12 @@ import {
 } from "@/app/_components/ui/dropdown-menu";
 import { useChatVisibility } from "@/app/_hooks/use-chat-visibility";
 import { cn } from "@/app/_lib/utils";
+import {
+  CheckCircleFillIcon,
+  ChevronDownIcon,
+  GlobeIcon,
+  LockIcon,
+} from "./icons";
 
 export type VisibilityType = "private" | "public";
 

@@ -1,7 +1,7 @@
 import { BookOpen, Check, Monitor, Moon, Plug, Sun } from "lucide-react";
 import type { MouseEventHandler } from "react";
-import { AgentGeneralStatus } from "@/app/_components/chat/agent-general-status";
 import type { AgentInfo } from "@/app/_hooks/use-agent-info";
+import { AgentGeneralStatus } from "./agent-general-status";
 
 export type AgentLibraryTab = "skills" | "tools" | "settings";
 

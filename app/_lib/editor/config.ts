@@ -6,7 +6,7 @@ import type { Transaction } from "prosemirror-state";
 import type { EditorView } from "prosemirror-view";
 import type { MutableRefObject } from "react";
 
-import { buildContentFromDocument } from "@/app/_lib/editor/functions";
+import { buildContentFromDocument } from "./functions";
 
 export const documentSchema = new Schema({
   marks: schema.spec.marks,

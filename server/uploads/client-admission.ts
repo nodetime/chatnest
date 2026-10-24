@@ -1,4 +1,4 @@
-import { MAX_IMAGES } from "@/server/uploads/limits";
+import { MAX_IMAGES } from "./limits";
 export type UploadTicket = {
   generation: number;
   count: number;

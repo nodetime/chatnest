@@ -1,7 +1,6 @@
 import { z } from "zod";
 import type { ArtifactKind } from "@/app/_components/chat/artifact";
 import { auth } from "@/app/(auth)/auth";
-import { ChatbotError } from "@/lib/errors";
 import {
   isProtectedResultTable,
   parseResultTable,
@@ -13,6 +12,7 @@ import {
   saveDocument,
   updateDocumentContent,
 } from "@/server/db/queries";
+import { ChatbotError } from "@/server/shared/errors";
 
 const documentSchema = z.object({
   content: z.string(),

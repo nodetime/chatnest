@@ -1,35 +1,25 @@
 import { createMCPClient, type MCPClient } from "@ai-sdk/mcp";
 import { dynamicTool, type ToolSet } from "ai";
-import { resolveServerConnection } from "@/server/agent/config";
-import { normalizeMcpOutput } from "@/server/agent/mcp-output";
-import {
-  abortable,
-  closeManagedClient,
-} from "@/server/agent/mcp-settings/lifecycle";
+import { resolveServerConnection } from "./config";
+import { normalizeMcpOutput } from "./mcp-output";
+import { abortable, closeManagedClient } from "./mcp-settings/lifecycle";
 import {
   listNativeTools,
   nativeRuntimeTools,
-} from "@/server/agent/mcp-settings/native-tools";
-import {
-  DISCOVERY_TIMEOUT_MS,
-  guardedFetch,
-} from "@/server/agent/mcp-settings/network";
+} from "./mcp-settings/native-tools";
+import { DISCOVERY_TIMEOUT_MS, guardedFetch } from "./mcp-settings/network";
 import {
   type RuntimeConfig,
   readRuntimeConfig,
   toolAlias,
-} from "@/server/agent/mcp-settings/runtime-config";
-import { createPortaToolError } from "@/server/agent/porta-error";
+} from "./mcp-settings/runtime-config";
+import { createPortaToolError } from "./porta-error";
 import {
   type McpSourceMetadata,
   ResultEvidenceLedger,
   sourceModelOutput,
-} from "@/server/agent/result-evidence";
-import {
-  buildSkillsPrompt,
-  createSkillTools,
-  discoverSkills,
-} from "@/server/agent/skills";
+} from "./result-evidence";
+import { buildSkillsPrompt, createSkillTools, discoverSkills } from "./skills";
 
 export async function createAgentRuntime(
   signal: AbortSignal,

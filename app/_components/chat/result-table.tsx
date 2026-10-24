@@ -12,8 +12,6 @@ import {
 import { useTheme } from "next-themes";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import DataGrid, { type Column, type SortColumn } from "react-data-grid";
-import { ResultTableRowDetails } from "@/app/_components/chat/result-table-row-details";
-import { ResultTableSource } from "@/app/_components/chat/result-table-source";
 import { Button } from "@/app/_components/ui/button";
 import { Input } from "@/app/_components/ui/input";
 import {
@@ -40,6 +38,8 @@ import {
   resultRows,
   safeSourceUrl,
 } from "@/server/artifacts/result-table";
+import { ResultTableRowDetails } from "./result-table-row-details";
+import { ResultTableSource } from "./result-table-source";
 import "react-data-grid/lib/styles.css";
 
 type Props = {

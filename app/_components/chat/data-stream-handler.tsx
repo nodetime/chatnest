@@ -3,11 +3,11 @@
 import { useEffect } from "react";
 import { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
-import { artifactDefinitions } from "@/app/_components/chat/artifact";
-import { useDataStream } from "@/app/_components/chat/data-stream-provider";
-import { getChatHistoryPaginationKey } from "@/app/_components/chat/sidebar-history";
 import { initialArtifactData, useArtifact } from "@/app/_hooks/use-artifact";
 import { applyResultTableEvent } from "@/server/artifacts/stream-state";
+import { artifactDefinitions } from "./artifact";
+import { useDataStream } from "./data-stream-provider";
+import { getChatHistoryPaginationKey } from "./sidebar-history";
 
 export function DataStreamHandler() {
   const { dataStream, setDataStream } = useDataStream();

@@ -7,7 +7,7 @@ import test from "node:test";
 const require = createRequire(import.meta.url);
 function feature(file: string) {
   assert.ok(existsSync(file), `Missing workbench feature: ${file}`);
-  return require(`../../${file}`);
+  return require(`../../../${file}`);
 }
 const uuid = (id: string) =>
   `10000000-0000-4000-8000-${Buffer.from(id).toString("hex").slice(0, 12).padEnd(12, "0")}`;
@@ -27,7 +27,9 @@ const messages = (parts: unknown[]) => [
 ];
 
 test("artifact collection accepts successful native outputs only, deduplicating latest names in first-seen order", () => {
-  const { artifactCatalog } = feature("components/chat/artifact-catalog.ts");
+  const { artifactCatalog } = feature(
+    "app/_components/chat/artifact-catalog.ts"
+  );
   const input = messages([
     native("a", "First"),
     native("b", "Code", "tool-createDocument", { kind: "code" }),
@@ -60,7 +62,7 @@ test("artifact collection accepts successful native outputs only, deduplicating 
 
 test("selection guards derive from actual streaming and unsaved editor state", () => {
   const { artifactSwitchReason } = feature(
-    "components/chat/artifact-catalog.ts"
+    "app/_components/chat/artifact-catalog.ts"
   );
   assert.equal(
     artifactSwitchReason({ isContentDirty: false, status: "idle" }),
@@ -77,7 +79,7 @@ test("selection guards derive from actual streaming and unsaved editor state", (
 });
 
 test("title projects native live title then persisted title then real first user text, never model or tool data", () => {
-  const { projectChatTitle } = feature("components/chat/chat-title.ts");
+  const { projectChatTitle } = feature("app/_components/chat/chat-title.ts");
   const input = [
     { parts: [{ text: "not a title", type: "text" }], role: "assistant" },
     { parts: [{ text: "  First\n question  ", type: "text" }], role: "user" },
@@ -106,7 +108,10 @@ test("title projects native live title then persisted title then real first user
 });
 
 test("actual upstream primitives own task, artifact header and one keyed conversation scroller", () => {
-  const activity = readFileSync("components/chat/activity-group.tsx", "utf8");
+  const activity = readFileSync(
+    "app/_components/chat/activity-group.tsx",
+    "utf8"
+  );
   assert.match(activity, /<Task[\s>]/);
   assert.match(activity, /<TaskTrigger/);
   const html = execFileSync(
@@ -115,13 +120,13 @@ test("actual upstream primitives own task, artifact header and one keyed convers
       "--import",
       "tsx",
       "-e",
-      `const React=require('react');const {renderToStaticMarkup}=require('react-dom/server');const {Task,TaskTrigger}=require('./components/ai-elements/task.tsx');process.stdout.write(renderToStaticMarkup(React.createElement(Task,null,React.createElement(TaskTrigger,{title:'Native task'}))));`,
+      `const React=require('react');const {renderToStaticMarkup}=require('react-dom/server');const {Task,TaskTrigger}=require('./app/_components/ai-elements/task.tsx');process.stdout.write(renderToStaticMarkup(React.createElement(Task,null,React.createElement(TaskTrigger,{title:'Native task'}))));`,
     ],
     { encoding: "utf8", env: { ...process.env, NODE_OPTIONS: "" } }
   );
   assert.match(html, /<button[^>]+type="button"/);
   assert.match(html, /Native task/);
-  const source = readFileSync("components/chat/messages.tsx", "utf8");
+  const source = readFileSync("app/_components/chat/messages.tsx", "utf8");
   assert.match(source, /<Conversation[\s\S]*?key=\{chatId\}/);
   assert.match(source, /<ConversationContent/);
   assert.match(source, /<ConversationScrollButton/);
@@ -129,36 +134,45 @@ test("actual upstream primitives own task, artifact header and one keyed convers
     source,
     /useMessages|messagesContainerRef|overflow-y-auto/
   );
-  const header = readFileSync("components/chat/chat-header.tsx", "utf8");
+  const header = readFileSync("app/_components/chat/chat-header.tsx", "utf8");
   assert.match(header, /chatTitle/);
   assert.doesNotMatch(header, /ModelSelectorCompact/);
-  const input = readFileSync("components/chat/multimodal-input.tsx", "utf8");
+  const input = readFileSync(
+    "app/_components/chat/multimodal-input.tsx",
+    "utf8"
+  );
   assert.match(input, /<PromptInputBody/);
   assert.match(input, /<PromptInputHeader/);
   assert.match(
     input,
     /<PromptInputFooter[\s\S]*?<ModelSelectorCompact[\s\S]*?onModelChange=\{onModelChange\}/
   );
-  const workspace = readFileSync("components/chat/workspace.tsx", "utf8");
+  const workspace = readFileSync("app/_components/chat/workspace.tsx", "utf8");
   assert.doesNotMatch(workspace, /role="tablist"/);
   assert.match(
     workspace,
     /workspace\.tab !== "document" \|\| artifact\.documentId === "init"/
   );
-  const artifact = readFileSync("components/chat/artifact.tsx", "utf8");
+  const artifact = readFileSync("app/_components/chat/artifact.tsx", "utf8");
   assert.match(artifact, /<WorkspaceHeader/);
   assert.match(artifact, /isContentDirty=\{isContentDirty\}/);
   assert.match(artifact, /<ArtifactFrame/);
 });
 
 test("workspace chrome has one aligned top row and exposes existing action labels on wide screens", () => {
-  const header = readFileSync("components/chat/workspace-header.tsx", "utf8");
-  const chat = readFileSync("components/chat/chat-header.tsx", "utf8");
-  const sidebar = readFileSync("components/chat/app-sidebar.tsx", "utf8");
+  const header = readFileSync(
+    "app/_components/chat/workspace-header.tsx",
+    "utf8"
+  );
+  const chat = readFileSync("app/_components/chat/chat-header.tsx", "utf8");
+  const sidebar = readFileSync("app/_components/chat/app-sidebar.tsx", "utf8");
   for (const source of [header, chat, sidebar]) {
     assert.match(source, /\bh-\[52px\]/);
   }
-  const actions = readFileSync("components/chat/artifact-actions.tsx", "utf8");
+  const actions = readFileSync(
+    "app/_components/chat/artifact-actions.tsx",
+    "utf8"
+  );
   assert.match(actions, /action.label \?\? action.description/);
   assert.match(actions, /hidden lg:inline/);
   assert.match(actions, /aria-label=\{action.description\}/);
@@ -176,23 +190,23 @@ test("real picker event handlers reopen the same file, reset new-file content an
     const { readFileSync } = require('node:fs');
     const { runInNewContext } = require('node:vm');
     const ts = require('typescript');
-    const { openArtifactPreview } = require('./lib/artifacts/stream-state.ts');
-    const { artifactSwitchReason } = require('./components/chat/artifact-catalog.ts');
+    const { openArtifactPreview } = require('./server/artifacts/stream-state.ts');
+    const { artifactSwitchReason } = require('./app/_components/chat/artifact-catalog.ts');
     const jsx = (type,props) => ({type,props});
     let artifact = {documentId:'a',title:'A',kind:'text',status:'idle',content:'unsaved fixture',boundingBox:{top:0,left:0,width:0,height:0},isVisible:true};
     let tab='browser', open=false;
     const modules={
       'react':{useCallback:fn=>fn}, 'react/jsx-runtime':{jsx,jsxs:jsx},
       'lucide-react':{Check:'check',ChevronsUpDown:'chevron',FileText:'file'},
-      '@/components/ui/button':{Button:'button'},
-      '@/components/ui/dropdown-menu':{DropdownMenu:'menu',DropdownMenuContent:'content',DropdownMenuItem:'item',DropdownMenuLabel:'label',DropdownMenuSeparator:'separator',DropdownMenuTrigger:'trigger'},
-      '@/hooks/use-artifact':{useArtifact:()=>({setArtifact:fn=>{artifact=fn(artifact)}})},
-      '@/hooks/use-workspace':{useWorkspace:()=>({show:next=>{tab=next;open=true}})},
-      '@/lib/artifacts/stream-state':{openArtifactPreview},
+      '@/app/_components/ui/button':{Button:'button'},
+      '@/app/_components/ui/dropdown-menu':{DropdownMenu:'menu',DropdownMenuContent:'content',DropdownMenuItem:'item',DropdownMenuLabel:'label',DropdownMenuSeparator:'separator',DropdownMenuTrigger:'trigger'},
+      '@/app/_hooks/use-artifact':{useArtifact:()=>({setArtifact:fn=>{artifact=fn(artifact)}})},
+      '@/app/_hooks/use-workspace':{useWorkspace:()=>({show:next=>{tab=next;open=true}})},
+      '@/server/artifacts/stream-state':{openArtifactPreview},
       './artifact-catalog':{artifactSwitchReason}, './artifact-type-label':{ArtifactTypeLabel:'kind'},
     };
     const output={exports:{}};
-    const code=ts.transpileModule(readFileSync('components/chat/artifact-picker.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText;
+    const code=ts.transpileModule(readFileSync('app/_components/chat/artifact-picker.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText;
     runInNewContext(code,{exports:output.exports,module:output,require:name=>{assert.ok(name in modules,'unexpected '+name);return modules[name]}});
     const entries=[{id:'a',title:'A',kind:'text'},{id:'b',title:'B',kind:'code'}];
     const find=(tree,type)=>{
@@ -233,7 +247,7 @@ test("result-table publishes authoritative view/notes dirty and saving state; fa
     const { readFileSync } = require('node:fs');
     const { runInNewContext } = require('node:vm');
     const ts = require('typescript');
-    const helpers = require('./lib/artifacts/result-table.ts');
+    const helpers = require('./server/artifacts/result-table.ts');
     const jsx = (type,props) => ({type,props});
     const slots=[];let cursor=0,effects=[],pending=[],resolveFetch,bodySent,table;
     const same=(a,b)=>a&&b&&a.length===b.length&&a.every((v,i)=>v===b[i]);
@@ -241,14 +255,14 @@ test("result-table publishes authoritative view/notes dirty and saving state; fa
     const modules={
       react,'react/jsx-runtime':{jsx,jsxs:jsx},'lucide-react':{},'next-themes':{useTheme:()=>({resolvedTheme:'light'})},
       'react-data-grid':{__esModule:true,default:'grid'},'react-data-grid/lib/styles.css':{},
-      '@/components/ui/button':{Button:'button'},'@/components/ui/input':{Input:'input'},'@/components/ui/textarea':{Textarea:'textarea'},
-      '@/components/ui/popover':{Popover:'popover',PopoverTrigger:'popover-trigger',PopoverContent:'popover-content'},
-      '@/components/ui/collapsible':{Collapsible:'collapsible',CollapsibleContent:'collapse-content',CollapsibleTrigger:'collapse-trigger'},
-      '@/components/ui/sheet':{Sheet:'sheet',SheetTrigger:'sheet-trigger',SheetClose:'sheet-close',SheetContent:'sheet-content',SheetDescription:'sheet-description',SheetHeader:'sheet-header',SheetTitle:'sheet-title'},
-      '@/lib/artifacts/result-table':helpers,'./result-table-source':{ResultTableSource:'source'},'./result-table-row-details':{ResultTableRowDetails:'row-details'},
+      '@/app/_components/ui/button':{Button:'button'},'@/app/_components/ui/input':{Input:'input'},'@/app/_components/ui/textarea':{Textarea:'textarea'},
+      '@/app/_components/ui/popover':{Popover:'popover',PopoverTrigger:'popover-trigger',PopoverContent:'popover-content'},
+      '@/app/_components/ui/collapsible':{Collapsible:'collapsible',CollapsibleContent:'collapse-content',CollapsibleTrigger:'collapse-trigger'},
+      '@/app/_components/ui/sheet':{Sheet:'sheet',SheetTrigger:'sheet-trigger',SheetClose:'sheet-close',SheetContent:'sheet-content',SheetDescription:'sheet-description',SheetHeader:'sheet-header',SheetTitle:'sheet-title'},
+      '@/server/artifacts/result-table':helpers,'./result-table-source':{ResultTableSource:'source'},'./result-table-row-details':{ResultTableRowDetails:'row-details'},
     };
     const output={exports:{}};
-    const code=ts.transpileModule(readFileSync('components/chat/result-table.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText;
+    const code=ts.transpileModule(readFileSync('app/_components/chat/result-table.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText;
     runInNewContext(code,{exports:output.exports,module:output,process:{env:{}},setTimeout,URL,Blob,fetch:(_url,options)=>{bodySent=JSON.parse(options.body);return new Promise(resolve=>{resolveFetch=resolve})},require:name=>{assert.ok(name in modules,'unexpected '+name);return modules[name]}});
     const publish=value=>pending.push(value);
     const source={serverId:'fixture',serverName:'Fixture',toolName:'fixture__search',toolCallId:'call',timeBasis:'tool-completed',recordedAt:'2026-10-23T00:00:00.000Z'};
@@ -304,13 +318,19 @@ test("result-table publishes authoritative view/notes dirty and saving state; fa
 });
 
 test("table pending projection is composed through the existing sheet renderer and file picker", () => {
-  const content = readFileSync("components/chat/create-artifact.tsx", "utf8");
+  const content = readFileSync(
+    "app/_components/chat/create-artifact.tsx",
+    "utf8"
+  );
   assert.match(content, /onResultTablePendingChange\?:/);
-  const sheet = readFileSync("artifacts/sheet/client.tsx", "utf8");
+  const sheet = readFileSync("app/_artifacts/sheet/client.tsx", "utf8");
   assert.match(sheet, /onPendingChange=\{onResultTablePendingChange\}/);
-  const picker = readFileSync("components/chat/artifact-picker.tsx", "utf8");
+  const picker = readFileSync(
+    "app/_components/chat/artifact-picker.tsx",
+    "utf8"
+  );
   assert.match(picker, /resultTablePendingChanges/);
-  const artifact = readFileSync("components/chat/artifact.tsx", "utf8");
+  const artifact = readFileSync("app/_components/chat/artifact.tsx", "utf8");
   assert.match(
     artifact,
     /onResultTablePendingChange=\{handleResultTablePendingChange\}/
@@ -334,13 +354,13 @@ test("actual artifact callback scopes pending metadata to the originating docume
       'react':{memo:fn=>fn,useState:initial=>[initial,()=>{}],useCallback:fn=>fn,useEffect:()=>{},useRef:initial=>{const index=cursor++;return refs[index]??(refs[index]={current:initial})}},
       'react/jsx-runtime':{jsx,jsxs:jsx,Fragment:'fragment'},'date-fns':{formatDistance:()=>''},'date-fns/locale':{zhCN:{}},'fast-deep-equal':{__esModule:true,default:()=>true},'framer-motion':{AnimatePresence:'presence',motion:{div:'motion'}},
       'swr':{__esModule:true,default:()=>({}),useSWRConfig:()=>({mutate:async()=>{}})},'usehooks-ts':{useWindowSize:()=>({width:1280,height:900})},
-      '@/artifacts/code/client':{codeArtifact:definitions.code},'@/artifacts/image/client':{imageArtifact:definitions.image},'@/artifacts/sheet/client':{sheetArtifact:definitions.sheet},'@/artifacts/text/client':{textArtifact:definitions.text},
-      '@/components/ai-elements/artifact':{Artifact:'frame'},
-      '@/hooks/use-artifact':{useArtifact:()=>{const id=artifact.documentId;return {artifact,setArtifact:()=>{},metadata:metadata.get(id),setMetadata:fn=>metadata.set(id,fn(metadata.get(id)))}}},
-      '@/lib/artifacts/result-table':{isProtectedResultTable:()=>true,parseResultTable:()=>({})},'@/lib/utils':{cn:()=>'',fetcher:()=>{}},
+      '@/app/_artifacts/code/client':{codeArtifact:definitions.code},'@/app/_artifacts/image/client':{imageArtifact:definitions.image},'@/app/_artifacts/sheet/client':{sheetArtifact:definitions.sheet},'@/app/_artifacts/text/client':{textArtifact:definitions.text},
+      '@/app/_components/ai-elements/artifact':{Artifact:'frame'},
+      '@/app/_hooks/use-artifact':{useArtifact:()=>{const id=artifact.documentId;return {artifact,setArtifact:()=>{},metadata:metadata.get(id),setMetadata:fn=>metadata.set(id,fn(metadata.get(id)))}}},
+      '@/server/artifacts/result-table':{isProtectedResultTable:()=>true,parseResultTable:()=>({})},'@/app/_lib/utils':{cn:()=>'',fetcher:()=>{}},
       './artifact-actions':{ArtifactActions:'actions'},'./artifact-catalog':{artifactCatalog:()=>[]},'./artifact-close-button':{ArtifactCloseButton:'close'},'./artifact-picker':{ArtifactPicker:'picker'},'./artifact-type-label':{ArtifactTypeLabel:'kind'},'./icons':{LoaderIcon:'loader'},'./toolbar':{Toolbar:'toolbar'},'./version-footer':{VersionFooter:'versions'},'./workspace-header':{WorkspaceHeader:'header'},
     };
-    const output={exports:{}};const code=ts.transpileModule(readFileSync('components/chat/artifact.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText;
+    const output={exports:{}};const code=ts.transpileModule(readFileSync('app/_components/chat/artifact.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText;
     runInNewContext(code,{exports:output.exports,module:output,process:{env:{}},require:name=>{assert.ok(name in modules,'unexpected '+name);return modules[name]}});
     const find=(tree,predicate)=>{if(Array.isArray(tree)){for(const node of tree){const hit=find(node,predicate);if(hit)return hit}return}if(!tree||typeof tree!=='object')return;if(predicate(tree))return tree;return find(tree.props?.children,predicate) ?? (tree.type==='sheet-content' ? find(tree.props.renderHeader?.('table-controls'),predicate) : undefined)};
     const render=()=>{cursor=0;return output.exports.Artifact({chatId:'chat',messages:[],embedded:true,isReadonly:false,status:'ready'})};
@@ -373,8 +393,8 @@ test("actual sidebar focus override hides history without cookie writes, permits
     const same=(a,b)=>a&&b&&a.length===b.length&&a.every((v,i)=>v===b[i]);
     const react={createContext:()=>({Provider:'context'}),useMemo:fn=>fn(),useCallback:fn=>fn,useState:initial=>{const i=cursor++;if(!slots[i])slots[i]={value:initial};return [slots[i].value,v=>{slots[i].value=typeof v==='function'?v(slots[i].value):v}]},useEffect:(fn,deps)=>{const i=cursor++;const slot=slots[i]??(slots[i]={});if(!same(slot.deps,deps)){slot.deps=deps;effects.push(fn)}}};
     const document={set cookie(value){cookies.push(value)}};
-    const modules={'react':react,'react/jsx-runtime':{jsx,jsxs:jsx},'class-variance-authority':{cva:()=>()=>''},'radix-ui':{Slot:{}},'@/hooks/use-mobile':{useIsMobile:()=>mobile},'@/lib/utils':{cn:()=>''}};
-    const output={exports:{}};runInNewContext(ts.transpileModule(readFileSync('components/ui/sidebar.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports:output.exports,module:output,document,window:{addEventListener(){},removeEventListener(){}},require:name=>modules[name]??{}});
+    const modules={'react':react,'react/jsx-runtime':{jsx,jsxs:jsx},'class-variance-authority':{cva:()=>()=>''},'radix-ui':{Slot:{}},'@/app/_hooks/use-mobile':{useIsMobile:()=>mobile},'@/app/_lib/utils':{cn:()=>''}};
+    const output={exports:{}};runInNewContext(ts.transpileModule(readFileSync('app/_components/ui/sidebar.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports:output.exports,module:output,document,window:{addEventListener(){},removeEventListener(){}},require:name=>modules[name]??{}});
     for(const preferred of [true,false]){
       slots=[];cookies=[];let key;
       const render=()=>{cursor=0;effects=[];const tree=output.exports.SidebarProvider({defaultOpen:preferred,temporaryCollapseKey:key});effects.forEach(fn=>fn());return tree.props.value};
@@ -386,8 +406,8 @@ test("actual sidebar focus override hides history without cookie writes, permits
       mobile=true;key='chat-a';render().toggleSidebar();assert.equal(render().openMobile,true,'mobile sheet still opens independently');assert.equal(cookies.length,1);mobile=false;
     }
     let workspace={open:true,tab:'document'},artifact={isVisible:true,documentId:'doc'},chatId='chat-a';
-    const wrapper={exports:{}};const wrappers={'react/jsx-runtime':{jsx,jsxs:jsx},'@/components/ui/sidebar':{SidebarProvider:'sidebar'},'@/hooks/use-active-chat':{useActiveChat:()=>({chatId})},'@/hooks/use-artifact':{useArtifact:()=>({artifact})},'@/hooks/use-workspace':{useWorkspace:()=>workspace}};
-    runInNewContext(ts.transpileModule(readFileSync('components/chat/workbench-sidebar-provider.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports:wrapper.exports,module:wrapper,require:name=>wrappers[name]});
+    const wrapper={exports:{}};const wrappers={'react/jsx-runtime':{jsx,jsxs:jsx},'@/app/_components/ui/sidebar':{SidebarProvider:'sidebar'},'@/app/_hooks/use-active-chat':{useActiveChat:()=>({chatId})},'@/app/_hooks/use-artifact':{useArtifact:()=>({artifact})},'@/app/_hooks/use-workspace':{useWorkspace:()=>workspace}};
+    runInNewContext(ts.transpileModule(readFileSync('app/_components/chat/workbench-sidebar-provider.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports:wrapper.exports,module:wrapper,require:name=>wrappers[name]});
     const focus=()=>wrapper.exports.WorkbenchSidebarProvider({defaultOpen:true}).props.temporaryCollapseKey;
     assert.equal(focus(),'chat-a');workspace.open=false;assert.equal(focus(),undefined);workspace.open=true;workspace.tab='browser';assert.equal(focus(),undefined);workspace.tab='sources';assert.equal(focus(),undefined);workspace.tab='document';artifact.documentId='init';assert.equal(focus(),undefined);artifact.documentId='doc';artifact.isVisible=false;assert.equal(focus(),undefined);
   `,
@@ -397,31 +417,34 @@ test("actual sidebar focus override hides history without cookie writes, permits
 });
 
 test("focus composition defaults to a 400px conversation with manual resize retained and bounded icon controls", () => {
-  const workspace = readFileSync("components/chat/workspace.tsx", "utf8");
+  const workspace = readFileSync("app/_components/chat/workspace.tsx", "utf8");
   assert.match(
     workspace,
     /workspace.manualWidth[\s\S]*?calc\(100% - min\(400px, 42%\)\)/
   );
   assert.match(workspace, /pane.current.offsetWidth/);
   assert.match(workspace, /md:w-\[var\(--workspace-width\)\]/);
-  const hook = readFileSync("hooks/use-workspace.ts", "utf8");
+  const hook = readFileSync("app/_hooks/use-workspace.ts", "utf8");
   assert.match(
     hook,
     /patch.width === undefined \? \{\} : \{ manualWidth: true \}/
   );
-  const header = readFileSync("components/chat/workspace-header.tsx", "utf8");
+  const header = readFileSync(
+    "app/_components/chat/workspace-header.tsx",
+    "utf8"
+  );
   assert.match(header, /@container h-\[52px\]/);
   assert.match(header, /\{controls\}/);
-  const table = readFileSync("components/chat/result-table.tsx", "utf8");
+  const table = readFileSync("app/_components/chat/result-table.tsx", "utf8");
   assert.match(table, /hidden @min-\[760px\]:inline/);
   assert.match(table, /renderHeader\(controls\)/);
   assert.match(table, /@max-\[500px\]:order-3/);
   assert.match(table, /@max-\[500px\]:overflow-x-auto/);
   assert.match(header, /@max-\[500px\]:flex-wrap/);
   assert.doesNotMatch(table, /<details|<summary/);
-  const sheet = readFileSync("artifacts/sheet/client.tsx", "utf8");
+  const sheet = readFileSync("app/_artifacts/sheet/client.tsx", "utf8");
   assert.match(sheet, /renderHeader=\{renderHeader\}/);
-  const artifact = readFileSync("components/chat/artifact.tsx", "utf8");
+  const artifact = readFileSync("app/_components/chat/artifact.tsx", "utf8");
   assert.match(artifact, /!tableOwnsHeader && renderHeader\(\)/);
   assert.doesNotMatch(artifact, /createPortal/);
 });

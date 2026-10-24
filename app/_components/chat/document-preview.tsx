@@ -11,15 +11,15 @@ import {
   useRef,
 } from "react";
 import useSWR from "swr";
-import type { ArtifactKind, UIArtifact } from "@/app/_components/chat/artifact";
-import { artifactTypeLabels } from "@/app/_components/chat/artifact-type-label";
-import { FileSymbol } from "@/app/_components/chat/file-symbol";
 import { useActiveChat } from "@/app/_hooks/use-active-chat";
 import { useArtifact } from "@/app/_hooks/use-artifact";
 import { useWorkspace } from "@/app/_hooks/use-workspace";
 import { fetcher } from "@/app/_lib/utils";
 import { openArtifactPreview } from "@/server/artifacts/stream-state";
 import type { Document } from "@/server/db/schema";
+import type { ArtifactKind, UIArtifact } from "./artifact";
+import { artifactTypeLabels } from "./artifact-type-label";
+import { FileSymbol } from "./file-symbol";
 
 type DocumentToolOutput = {
   id: string;

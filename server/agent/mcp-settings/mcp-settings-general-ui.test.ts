@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
 test("customer general settings HTML contains only appearance/service status, not deployment instructions", () => {
-  const code = `const React=require('react');const {renderToStaticMarkup}=require('react-dom/server');const {AgentGeneralStatus}=require('./components/chat/agent-general-status.tsx');process.stdout.write(renderToStaticMarkup(React.createElement(AgentGeneralStatus,{modelConfigured:true,uploadsConfigured:false,connectionCount:2})));`;
+  const code = `const React=require('react');const {renderToStaticMarkup}=require('react-dom/server');const {AgentGeneralStatus}=require('./app/_components/chat/agent-general-status.tsx');process.stdout.write(renderToStaticMarkup(React.createElement(AgentGeneralStatus,{modelConfigured:true,uploadsConfigured:false,connectionCount:2})));`;
   const html = execFileSync(process.execPath, ["--import", "tsx", "-e", code], {
     cwd: process.cwd(),
     encoding: "utf8",
@@ -32,7 +32,7 @@ test("customer general settings HTML contains only appearance/service status, no
   ]) {
     assert.ok(!html.includes(text));
   }
-  const source = readFileSync("components/chat/agent-library.tsx", "utf8");
+  const source = readFileSync("app/_components/chat/agent-library.tsx", "utf8");
   for (const text of [
     "environmentTemplate",
     "handleCopyConfig",

@@ -6,7 +6,6 @@ import { EditorState } from "prosemirror-state";
 import { type Decoration, DecorationSet, EditorView } from "prosemirror-view";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { SuggestionDialog } from "@/app/_components/chat/suggestion";
 import {
   documentSchema,
   handleTransaction,
@@ -24,6 +23,7 @@ import {
   type UISuggestion,
 } from "@/app/_lib/editor/suggestions";
 import type { Suggestion } from "@/server/db/schema";
+import { SuggestionDialog } from "./suggestion";
 
 type EditorProps = {
   content: string;

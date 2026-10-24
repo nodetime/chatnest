@@ -25,7 +25,7 @@ function render(code: string) {
 
 test("platform access preserves legacy exact regular UUIDs and only explicitly overrides", async () => {
   assert.ok(
-    existsSync("lib/admin/access.ts"),
+    existsSync("server/admin/access.ts"),
     "shared server-side platform access exists"
   );
   const { isPlatformAdmin, requirePlatformAdmin } = await import(
@@ -82,11 +82,11 @@ test("platform access preserves legacy exact regular UUIDs and only explicitly o
 
 test("standalone admin shell has only real navigation and return-to-workspace link", () => {
   assert.ok(
-    existsSync("components/admin/admin-shell.tsx"),
+    existsSync("app/_components/admin/admin-shell.tsx"),
     "standalone shell exists"
   );
   const html = render(
-    "const {AdminShell}=require('./components/admin/admin-shell.tsx');process.stdout.write(renderToStaticMarkup(React.createElement(AdminShell,{identity:{name:'Fixture Admin',email:'admin@example.test'}},React.createElement('h1',null,'工具连接'))));"
+    "const {AdminShell}=require('./app/_components/admin/admin-shell.tsx');process.stdout.write(renderToStaticMarkup(React.createElement(AdminShell,{identity:{name:'Fixture Admin',email:'admin@example.test'}},React.createElement('h1',null,'工具连接'))));"
   );
   assert.match(html, /平台管理/);
   assert.match(html, /href="\/admin\/connections"/);
@@ -103,28 +103,31 @@ test("standalone admin shell has only real navigation and return-to-workspace li
   );
   assert.doesNotMatch(layout, /ChatShell|AppSidebar|export const runtime/);
   const connections = readFileSync(
-    "components/admin/admin-connections.tsx",
+    "app/_components/admin/admin-connections.tsx",
     "utf8"
   );
   assert.match(connections, /<McpConnections/);
 });
 
 test("personal panel renders read-only tools even when the capability response identifies an admin", () => {
-  const library = readFileSync("components/chat/agent-library.tsx", "utf8");
+  const library = readFileSync(
+    "app/_components/chat/agent-library.tsx",
+    "utf8"
+  );
   assert.doesNotMatch(
     library,
     /McpConnections|McpEditor/,
     "personal settings must never mount management components"
   );
   const html = render(
-    "const {AgentLibraryPanel}=require('./components/chat/agent-library-panel.tsx');const info={mcpManagement:{admin:true,configured:true},skills:[{name:'fixture',description:'查找资料'}],servers:[{id:'fixture',name:'资料工具',status:'configured',tools:['search'],missingEnvironment:['SECRET_ENV']}],modelConfigured:true,uploadsConfigured:false,limits:{maxSteps:1,timeoutMs:1}};process.stdout.write(renderToStaticMarkup(React.createElement(AgentLibraryPanel,{tab:'tools',info,theme:'system'})));"
+    "const {AgentLibraryPanel}=require('./app/_components/chat/agent-library-panel.tsx');const info={mcpManagement:{admin:true,configured:true},skills:[{name:'fixture',description:'查找资料'}],servers:[{id:'fixture',name:'资料工具',status:'configured',tools:['search'],missingEnvironment:['SECRET_ENV']}],modelConfigured:true,uploadsConfigured:false,limits:{maxSteps:1,timeoutMs:1}};process.stdout.write(renderToStaticMarkup(React.createElement(AgentLibraryPanel,{tab:'tools',info,theme:'system'})));"
   );
   assert.match(html, /资料工具/);
   assert.match(html, /search/);
   assert.match(html, /服务状态/);
   assert.doesNotMatch(html, /新增连接|编辑|删除|SECRET_ENV|MCP_|\.env|部署/);
   const general = render(
-    "const {AgentLibraryPanel}=require('./components/chat/agent-library-panel.tsx');process.stdout.write(renderToStaticMarkup(React.createElement(AgentLibraryPanel,{tab:'settings',theme:'system'})));"
+    "const {AgentLibraryPanel}=require('./app/_components/chat/agent-library-panel.tsx');process.stdout.write(renderToStaticMarkup(React.createElement(AgentLibraryPanel,{tab:'settings',theme:'system'})));"
   );
   assert.match(general, /外观/);
   assert.doesNotMatch(general, /服务状态|对话服务|存储/);
@@ -132,12 +135,12 @@ test("personal panel renders read-only tools even when the capability response i
 
 test("platform menu link is controlled by server-computed props, not a client role", () => {
   assert.ok(
-    existsSync("components/admin/platform-admin-link.tsx"),
+    existsSync("app/_components/admin/platform-admin-link.tsx"),
     "permission-aware menu link exists"
   );
   const html = (admin: boolean) =>
     render(
-      `const {PlatformAdminLink}=require('./components/admin/platform-admin-link.tsx');process.stdout.write(renderToStaticMarkup(React.createElement(PlatformAdminLink,{isPlatformAdmin:${admin}})));`
+      `const {PlatformAdminLink}=require('./app/_components/admin/platform-admin-link.tsx');process.stdout.write(renderToStaticMarkup(React.createElement(PlatformAdminLink,{isPlatformAdmin:${admin}})));`
     );
   assert.equal(html(false), "");
   assert.match(html(true), /href="\/admin"/);
@@ -147,29 +150,29 @@ test("platform menu link is controlled by server-computed props, not a client ro
     /isPlatformAdmin=\{isPlatformAdmin\(session\?\.user\)\}/
   );
   assert.match(
-    readFileSync("components/chat/app-sidebar.tsx", "utf8"),
+    readFileSync("app/_components/chat/app-sidebar.tsx", "utf8"),
     /<SidebarUserNav isPlatformAdmin=\{isPlatformAdmin\}/
   );
   assert.match(
-    readFileSync("components/chat/sidebar-user-nav.tsx", "utf8"),
+    readFileSync("app/_components/chat/sidebar-user-nav.tsx", "utf8"),
     /<PlatformAdminLink isPlatformAdmin=\{isPlatformAdmin\}/
   );
 });
 
 test("missing upload storage points users to administrators instead of a nonexistent personal setting", () => {
   for (const file of [
-    "components/chat/composer-menu.tsx",
-    "components/chat/multimodal-input.tsx",
+    "app/_components/chat/composer-menu.tsx",
+    "app/_components/chat/multimodal-input.tsx",
   ]) {
     assert.doesNotMatch(
       readFileSync(file, "utf8"),
       /可在设置中配置|设置中查看存储连接说明/
     );
   }
-  assert.ok(existsSync("components/chat/upload-unavailable-hint.tsx"));
+  assert.ok(existsSync("app/_components/chat/upload-unavailable-hint.tsx"));
   const html = (admin: boolean) =>
     render(
-      `const {UploadUnavailableHint}=require('./components/chat/upload-unavailable-hint.tsx');process.stdout.write(renderToStaticMarkup(React.createElement(UploadUnavailableHint,{isPlatformAdmin:${admin}})));`
+      `const {UploadUnavailableHint}=require('./app/_components/chat/upload-unavailable-hint.tsx');process.stdout.write(renderToStaticMarkup(React.createElement(UploadUnavailableHint,{isPlatformAdmin:${admin}})));`
     );
   assert.match(html(false), /联系管理员/);
   assert.doesNotMatch(html(false), /href=/);
@@ -178,11 +181,14 @@ test("missing upload storage points users to administrators instead of a nonexis
 
 test("admin connection management reads its guarded API independently of model and skills summaries", () => {
   const connections = readFileSync(
-    "components/admin/admin-connections.tsx",
+    "app/_components/admin/admin-connections.tsx",
     "utf8"
   );
   assert.doesNotMatch(connections, /useAgentInfo|info=\{/);
-  const manager = readFileSync("components/chat/mcp-connections.tsx", "utf8");
+  const manager = readFileSync(
+    "app/_components/chat/mcp-connections.tsx",
+    "utf8"
+  );
   assert.match(manager, /\/api\/agent\/mcp/);
   assert.doesNotMatch(manager, /info\.mcpManagement|info\.servers/);
   assert.doesNotMatch(
@@ -193,12 +199,15 @@ test("admin connection management reads its guarded API independently of model a
 
 test("admin management HTML exposes existing CRUD while both personal capability views remain read-only", () => {
   const management = render(
-    "const {SWRConfig}=require('swr');const {McpConnections}=require('./components/chat/mcp-connections.tsx');const data={configured:true,revision:1,servers:[{id:'fixture',name:'资料工具',enabled:true,allowedTools:['search'],origin:'https://fixture.example',headerNames:['Authorization'],source:'managed'}]};process.stdout.write(renderToStaticMarkup(React.createElement(SWRConfig,{value:{fallback:{'/api/agent/mcp':data}}},React.createElement(McpConnections))));"
+    "const {SWRConfig}=require('swr');const {McpConnections}=require('./app/_components/chat/mcp-connections.tsx');const data={configured:true,revision:1,servers:[{id:'fixture',name:'资料工具',enabled:true,allowedTools:['search'],origin:'https://fixture.example',headerNames:['Authorization'],source:'managed'}]};process.stdout.write(renderToStaticMarkup(React.createElement(SWRConfig,{value:{fallback:{'/api/agent/mcp':data}}},React.createElement(McpConnections))));"
   );
   for (const label of ["资料工具", "新增连接", "资料工具的操作", "开放工具"]) {
     assert.ok(management.includes(label));
   }
-  const manager = readFileSync("components/chat/mcp-connections.tsx", "utf8");
+  const manager = readFileSync(
+    "app/_components/chat/mcp-connections.tsx",
+    "utf8"
+  );
   for (const action of [
     "setEditing(server)",
     'change(server, "toggle")',
@@ -208,12 +217,12 @@ test("admin management HTML exposes existing CRUD while both personal capability
   }
   for (const admin of [false, true]) {
     const personal = render(
-      `const {AgentLibraryPanel}=require('./components/chat/agent-library-panel.tsx');const info={mcpManagement:{admin:${admin},configured:true},skills:[{name:'fixture',description:'查找资料'}],servers:[{id:'fixture',name:'资料工具',status:'configured',tools:['search'],missingEnvironment:[]}],modelConfigured:true,uploadsConfigured:false,limits:{maxSteps:1,timeoutMs:1}};process.stdout.write(renderToStaticMarkup(React.createElement(AgentLibraryPanel,{tab:'tools',info})));`
+      `const {AgentLibraryPanel}=require('./app/_components/chat/agent-library-panel.tsx');const info={mcpManagement:{admin:${admin},configured:true},skills:[{name:'fixture',description:'查找资料'}],servers:[{id:'fixture',name:'资料工具',status:'configured',tools:['search'],missingEnvironment:[]}],modelConfigured:true,uploadsConfigured:false,limits:{maxSteps:1,timeoutMs:1}};process.stdout.write(renderToStaticMarkup(React.createElement(AgentLibraryPanel,{tab:'tools',info})));`
     );
     assert.match(personal, /资料工具/);
     assert.doesNotMatch(personal, /新增连接|编辑|停用|删除|Authorization/);
     const skills = render(
-      `const {AgentLibraryPanel}=require('./components/chat/agent-library-panel.tsx');process.stdout.write(renderToStaticMarkup(React.createElement(AgentLibraryPanel,{tab:'skills',info:{mcpManagement:{admin:${admin}},skills:[{name:'fixture',description:'查找资料'}]}})));`
+      `const {AgentLibraryPanel}=require('./app/_components/chat/agent-library-panel.tsx');process.stdout.write(renderToStaticMarkup(React.createElement(AgentLibraryPanel,{tab:'skills',info:{mcpManagement:{admin:${admin}},skills:[{name:'fixture',description:'查找资料'}]}})));`
     );
     assert.match(skills, /查找资料/);
     assert.match(skills, /可用/);

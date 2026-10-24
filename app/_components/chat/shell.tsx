@@ -2,15 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Artifact } from "@/app/_components/chat/artifact";
-import { ChatHeader } from "@/app/_components/chat/chat-header";
-import { ConversationNotice } from "@/app/_components/chat/conversation-notice";
-import { DataStreamHandler } from "@/app/_components/chat/data-stream-handler";
-import { Greeting } from "@/app/_components/chat/greeting";
-import { submitEditedMessage } from "@/app/_components/chat/message-editor";
-import { Messages } from "@/app/_components/chat/messages";
-import { MultimodalInput } from "@/app/_components/chat/multimodal-input";
-import { Workspace } from "@/app/_components/chat/workspace";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,6 +20,15 @@ import {
 } from "@/app/_hooks/use-artifact";
 import type { Attachment, ChatMessage } from "@/app/_lib/types";
 import { cn } from "@/app/_lib/utils";
+import { Artifact } from "./artifact";
+import { ChatHeader } from "./chat-header";
+import { ConversationNotice } from "./conversation-notice";
+import { DataStreamHandler } from "./data-stream-handler";
+import { Greeting } from "./greeting";
+import { submitEditedMessage } from "./message-editor";
+import { Messages } from "./messages";
+import { MultimodalInput } from "./multimodal-input";
+import { Workspace } from "./workspace";
 
 export function ChatShell() {
   const {

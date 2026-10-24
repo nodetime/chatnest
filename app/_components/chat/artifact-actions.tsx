@@ -1,20 +1,13 @@
 import { memo, useCallback, useState } from "react";
 import { toast } from "sonner";
-import {
-  artifactDefinitions,
-  type UIArtifact,
-} from "@/app/_components/chat/artifact";
+import { cn } from "@/app/_lib/utils";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
+import { artifactDefinitions, type UIArtifact } from "./artifact";
 import {
   type ArtifactAction,
   type ArtifactActionContext,
   isArtifactActionActive,
-} from "@/app/_components/chat/create-artifact";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/app/_components/ui/tooltip";
-import { cn } from "@/app/_lib/utils";
+} from "./create-artifact";
 
 type ArtifactActionsProps = {
   artifact: UIArtifact;

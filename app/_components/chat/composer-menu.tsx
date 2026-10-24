@@ -2,9 +2,6 @@
 import { Globe, ImagePlus, ListPlus, Plus, Settings2 } from "lucide-react";
 import { type RefObject, useCallback, useState } from "react";
 import useSWR from "swr";
-import { AgentLibrary } from "@/app/_components/chat/agent-library";
-import { TaskDialog } from "@/app/_components/chat/task-dialog";
-import { UploadUnavailableHint } from "@/app/_components/chat/upload-unavailable-hint";
 import { Button } from "@/app/_components/ui/button";
 import {
   DropdownMenu,
@@ -18,6 +15,9 @@ import { useActiveChat } from "@/app/_hooks/use-active-chat";
 import { useAgentInfo } from "@/app/_hooks/use-agent-info";
 import { fetcher } from "@/app/_lib/utils";
 import type { ModelCapabilities } from "@/server/ai/models";
+import { AgentLibrary } from "./agent-library";
+import { TaskDialog } from "./task-dialog";
+import { UploadUnavailableHint } from "./upload-unavailable-hint";
 
 export function ComposerMenu({
   fileInputRef,

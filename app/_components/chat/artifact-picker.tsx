@@ -3,11 +3,6 @@
 
 import { Check, ChevronsUpDown, FileText } from "lucide-react";
 import { useCallback } from "react";
-import {
-  type ArtifactEntry,
-  artifactSwitchReason,
-} from "@/app/_components/chat/artifact-catalog";
-import { ArtifactTypeLabel } from "@/app/_components/chat/artifact-type-label";
 import { Button } from "@/app/_components/ui/button";
 import {
   DropdownMenu,
@@ -20,6 +15,8 @@ import {
 import { useArtifact } from "@/app/_hooks/use-artifact";
 import { useWorkspace } from "@/app/_hooks/use-workspace";
 import { openArtifactPreview } from "@/server/artifacts/stream-state";
+import { type ArtifactEntry, artifactSwitchReason } from "./artifact-catalog";
+import { ArtifactTypeLabel } from "./artifact-type-label";
 
 export function ArtifactPicker({
   entries,

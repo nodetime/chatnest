@@ -4,7 +4,7 @@ import {
   chatModels,
   DEFAULT_CHAT_MODEL,
   type ModelCapabilities,
-} from "@/server/ai/models";
+} from "./models";
 
 type Environment = Record<string, string | undefined>;
 

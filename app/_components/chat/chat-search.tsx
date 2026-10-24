@@ -4,7 +4,6 @@ import { MessageSquare, Search } from "lucide-react";
 import Link from "next/link";
 import { type ChangeEvent, useCallback, useEffect, useState } from "react";
 import useSWR from "swr";
-import type { ChatHistory } from "@/app/_components/chat/sidebar-history";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +14,7 @@ import {
 } from "@/app/_components/ui/dialog";
 import { SidebarMenuButton, useSidebar } from "@/app/_components/ui/sidebar";
 import { fetcher } from "@/app/_lib/utils";
+import type { ChatHistory } from "./sidebar-history";
 
 export function ChatSearch() {
   const [open, setOpen] = useState(false);

@@ -2,8 +2,8 @@
 
 import { Plug, RefreshCw } from "lucide-react";
 import { useCallback } from "react";
-import { AgentLibrary } from "@/app/_components/chat/agent-library";
 import { useAgentInfo } from "@/app/_hooks/use-agent-info";
+import { AgentLibrary } from "./agent-library";
 
 export function SetupNotice() {
   const { data, error, mutate } = useAgentInfo();

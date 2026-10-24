@@ -2,11 +2,6 @@
 import { ListPlus, MessageSquare, PanelLeft, PenSquare } from "lucide-react";
 import type { User } from "next-auth";
 import { useCallback, useState } from "react";
-import { AgentLibrary } from "@/app/_components/chat/agent-library";
-import { ChatSearch } from "@/app/_components/chat/chat-search";
-import { SidebarHistory } from "@/app/_components/chat/sidebar-history";
-import { SidebarUserNav } from "@/app/_components/chat/sidebar-user-nav";
-import { TaskDialog } from "@/app/_components/chat/task-dialog";
 import {
   Sidebar,
   SidebarContent,
@@ -19,6 +14,11 @@ import {
   useSidebar,
 } from "@/app/_components/ui/sidebar";
 import { useActiveChat } from "@/app/_hooks/use-active-chat";
+import { AgentLibrary } from "./agent-library";
+import { ChatSearch } from "./chat-search";
+import { SidebarHistory } from "./sidebar-history";
+import { SidebarUserNav } from "./sidebar-user-nav";
+import { TaskDialog } from "./task-dialog";
 
 export function AppSidebar({
   user,

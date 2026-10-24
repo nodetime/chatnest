@@ -10,7 +10,7 @@ function renderSidebar(open: boolean) {
       "--import",
       "tsx",
       "-e",
-      `const React=require('react');const {renderToStaticMarkup}=require('react-dom/server');const {SidebarProvider,Sidebar,SidebarInset}=require('./components/ui/sidebar.tsx');process.stdout.write(renderToStaticMarkup(React.createElement(SidebarProvider,{defaultOpen:${open}},React.createElement(Sidebar),React.createElement(SidebarInset,null,React.createElement('div',{style:{width:1280}},'Wide workspace content')))));`,
+      `const React=require('react');const {renderToStaticMarkup}=require('react-dom/server');const {SidebarProvider,Sidebar,SidebarInset}=require('./app/_components/ui/sidebar.tsx');process.stdout.write(renderToStaticMarkup(React.createElement(SidebarProvider,{defaultOpen:${open}},React.createElement(Sidebar),React.createElement(SidebarInset,null,React.createElement('div',{style:{width:1280}},'Wide workspace content')))));`,
     ],
     { encoding: "utf8", env: { ...process.env, NODE_OPTIONS: "" } }
   );
@@ -38,7 +38,10 @@ for (const open of [true, false]) {
 }
 
 test("composer file input is hidden from accessibility navigation, not just visually offscreen", () => {
-  const composer = readFileSync("components/chat/multimodal-input.tsx", "utf8");
+  const composer = readFileSync(
+    "app/_components/chat/multimodal-input.tsx",
+    "utf8"
+  );
   const fileInput = composer.match(/<input\b[^>]*type="file"[^>]*\/>/)?.[0];
   assert.ok(fileInput);
   assert.match(fileInput, /\bhidden\b/);
@@ -50,13 +53,16 @@ test("composer file input is hidden from accessibility navigation, not just visu
 });
 
 test("visible attachment menu continues to activate the composer file input", () => {
-  const menu = readFileSync("components/chat/composer-menu.tsx", "utf8");
+  const menu = readFileSync("app/_components/chat/composer-menu.tsx", "utf8");
   assert.match(menu, /aria-label="添加附件和工具"/);
   assert.match(menu, /\(\) => fileInputRef\.current\?\.click\(\)/);
   assert.match(
     menu,
     /<DropdownMenuItem disabled=\{busy \|\| !canUpload\} onSelect=\{addImage\}>/
   );
-  const composer = readFileSync("components/chat/multimodal-input.tsx", "utf8");
+  const composer = readFileSync(
+    "app/_components/chat/multimodal-input.tsx",
+    "utf8"
+  );
   assert.match(composer, /<ComposerMenu[\s\S]*?fileInputRef=\{fileInputRef\}/);
 });

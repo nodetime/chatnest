@@ -1,11 +1,4 @@
 import "server-only";
-import type {
-  AdminOverviewData,
-  ModelReadiness,
-  Readiness,
-  StorageReadiness,
-  ToolsReadiness,
-} from "@/server/admin/overview-types";
 import {
   resolveServerConnection,
   type ServerConfig,
@@ -16,6 +9,13 @@ import {
   SettingsError,
 } from "@/server/agent/mcp-settings/security";
 import type { SettingsProjection } from "@/server/agent/mcp-settings/types";
+import type {
+  AdminOverviewData,
+  ModelReadiness,
+  Readiness,
+  StorageReadiness,
+  ToolsReadiness,
+} from "./overview-types";
 
 export function summarizeTools(
   file: ServerConfig[],

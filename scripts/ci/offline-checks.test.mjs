@@ -78,7 +78,7 @@ test("suite is explicit, serial and excludes live browser/database tests", (t) =
   const { args } = JSON.parse(result.stdout);
   assert.ok(args.includes("--test-concurrency=1"));
   assert.ok(args.includes("--conditions=react-server"));
-  assert.ok(args.includes("tests/unit/runtime-interactions.test.ts"));
+  assert.ok(args.includes("app/_components/chat/runtime-interactions.test.ts"));
   assert.ok(
     !args.some((arg) => /[*?]|browser-runtime|regeneration-db/.test(arg))
   );

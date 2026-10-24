@@ -4,16 +4,13 @@ import {
   ConversationContent,
   ConversationScrollButton,
 } from "@/app/_components/ai-elements/conversation";
-import { useDataStream } from "@/app/_components/chat/data-stream-provider";
-import { Greeting } from "@/app/_components/chat/greeting";
-import {
-  PreviewMessage,
-  ThinkingMessage,
-} from "@/app/_components/chat/message";
-import { RuntimeRecovery } from "@/app/_components/chat/runtime-recovery";
 import type { ChatMessage } from "@/app/_lib/types";
 import { prepareRegeneration } from "@/server/agent/message-turn";
 import type { Vote } from "@/server/db/schema";
+import { useDataStream } from "./data-stream-provider";
+import { Greeting } from "./greeting";
+import { PreviewMessage, ThinkingMessage } from "./message";
+import { RuntimeRecovery } from "./runtime-recovery";
 
 type MessagesProps = {
   addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];

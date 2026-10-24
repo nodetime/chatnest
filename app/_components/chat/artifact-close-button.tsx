@@ -1,6 +1,6 @@
 import { memo, useCallback } from "react";
-import { CrossIcon } from "@/app/_components/chat/icons";
 import { initialArtifactData, useArtifact } from "@/app/_hooks/use-artifact";
+import { CrossIcon } from "./icons";
 
 function PureArtifactCloseButton() {
   const { setArtifact } = useArtifact();

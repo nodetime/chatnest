@@ -20,7 +20,9 @@ const toolNames = [
   "upload_img",
   "item_search_img",
 ].map((name) => `onebound_1688_${name}`);
-const defaultConfig = JSON.parse(readFileSync("config/agent.json", "utf8"));
+const defaultConfig = JSON.parse(
+  readFileSync("server/config/agent.json", "utf8")
+);
 const porta = () => {
   const server = agentConfigSchema
     .parse(defaultConfig)

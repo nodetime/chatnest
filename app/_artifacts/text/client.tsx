@@ -1,5 +1,4 @@
 import { toast } from "sonner";
-import { getSuggestions } from "@/app/_artifacts/actions";
 import { Artifact } from "@/app/_components/chat/create-artifact";
 import { DiffView } from "@/app/_components/chat/diffview";
 import { DocumentSkeleton } from "@/app/_components/chat/document-skeleton";
@@ -13,6 +12,7 @@ import {
 } from "@/app/_components/chat/icons";
 import { Editor } from "@/app/_components/chat/text-editor";
 import type { Suggestion } from "@/server/db/schema";
+import { getSuggestions } from "../actions";
 
 type TextArtifactMetadata = {
   suggestions: Suggestion[];

@@ -8,8 +8,6 @@ import { type MouseEvent, useCallback, useState } from "react";
 import { toast } from "sonner";
 import { useSWRConfig } from "swr";
 import useSWRInfinite from "swr/infinite";
-import { LoaderIcon } from "@/app/_components/chat/icons";
-import { ChatItem } from "@/app/_components/chat/sidebar-history-item";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,6 +27,8 @@ import {
 } from "@/app/_components/ui/sidebar";
 import { fetcher } from "@/app/_lib/utils";
 import type { Chat } from "@/server/db/schema";
+import { LoaderIcon } from "./icons";
+import { ChatItem } from "./sidebar-history-item";
 
 type GroupedChats = {
   today: Chat[];

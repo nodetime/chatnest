@@ -1,13 +1,8 @@
 import { memo, useCallback } from "react";
 import { toast } from "sonner";
-import type { ArtifactKind } from "@/app/_components/chat/artifact";
-import {
-  FileIcon,
-  LoaderIcon,
-  MessageIcon,
-  PencilEditIcon,
-} from "@/app/_components/chat/icons";
 import { useArtifact } from "@/app/_hooks/use-artifact";
+import type { ArtifactKind } from "./artifact";
+import { FileIcon, LoaderIcon, MessageIcon, PencilEditIcon } from "./icons";
 
 const getActionText = (
   type: "create" | "update" | "request-suggestions",

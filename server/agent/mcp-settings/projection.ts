@@ -1,8 +1,5 @@
-import { resolveServerConnection } from "@/server/agent/config";
-import {
-  type RuntimeServer,
-  toolAlias,
-} from "@/server/agent/mcp-settings/runtime-config";
+import { resolveServerConnection } from "../config";
+import { type RuntimeServer, toolAlias } from "./runtime-config";
 // Explicit allowlist projection. Never spread a server configuration into a response.
 export function capabilityServers(servers: RuntimeServer[]) {
   return servers.map((server) => {

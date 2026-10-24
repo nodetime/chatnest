@@ -146,7 +146,10 @@ test("editor lifetime rejects duplicate work and suppresses late probe/save/conf
 
 test("MCP Sheet guards every busy dismissal and editor passes abort/current checks to async work", async () => {
   const { readFileSync } = await import("node:fs");
-  const manager = readFileSync("components/chat/mcp-connections.tsx", "utf8");
+  const manager = readFileSync(
+    "app/_components/chat/mcp-connections.tsx",
+    "utf8"
+  );
   for (const guard of [
     "editorBusyRef.current",
     "showCloseButton={!editorBusy}",
@@ -157,7 +160,7 @@ test("MCP Sheet guards every busy dismissal and editor passes abort/current chec
   ]) {
     assert.ok(manager.includes(guard), guard);
   }
-  const source = readFileSync("components/chat/mcp-editor.tsx", "utf8");
+  const source = readFileSync("app/_components/chat/mcp-editor.tsx", "utf8");
   assert.match(source, /createEditorLifetime/);
   assert.match(source, /lifetime\.dispose\(/);
   assert.ok((source.match(/operation\.isCurrent\(\)/g) ?? []).length >= 5);

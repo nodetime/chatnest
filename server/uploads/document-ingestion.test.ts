@@ -101,7 +101,7 @@ test("readAttachment reauthorizes every call and enforces percall and round text
   );
 });
 test("production worker is standalone traced JS and no app environment is forwarded", async () => {
-  const parser = await readFile("lib/uploads/document-parser.ts", "utf8");
+  const parser = await readFile("server/uploads/document-parser.ts", "utf8");
   const config = await readFile("next.config.ts", "utf8");
   assert.match(parser, /execArgv:\s*\[\]/);
   assert.match(parser, /resourceLimits/);
@@ -306,8 +306,8 @@ test("text output truncation and busy parser admission are explicit", async () =
   assert.ok(out.warnings.length);
 });
 test("documents persist quota-accounted extraction and read tool checks actual committed association", async () => {
-  const service = await readFile("lib/uploads/service.ts", "utf8");
-  const schema = await readFile("lib/db/schema.ts", "utf8");
+  const service = await readFile("server/uploads/service.ts", "utf8");
+  const schema = await readFile("server/db/schema.ts", "utf8");
   const route = await readFile("app/(chat)/api/chat/route.ts", "utf8");
   assert.match(service, /derivedBytes/);
   assert.match(service, /readAttachmentAsset/);
@@ -318,15 +318,18 @@ test("documents persist quota-accounted extraction and read tool checks actual c
 });
 test("composer admits documents without vision and exposes truthful reading/error/retry states", async () => {
   const composer = await readFile(
-    "components/chat/multimodal-input.tsx",
+    "app/_components/chat/multimodal-input.tsx",
     "utf8"
   );
   const preview = await readFile(
-    "components/chat/preview-attachment.tsx",
+    "app/_components/chat/preview-attachment.tsx",
     "utf8"
   );
-  const menu = await readFile("components/chat/composer-menu.tsx", "utf8");
-  const admin = await readFile("components/admin/admin-storage.tsx", "utf8");
+  const menu = await readFile("app/_components/chat/composer-menu.tsx", "utf8");
+  const admin = await readFile(
+    "app/_components/admin/admin-storage.tsx",
+    "utf8"
+  );
   assert.match(composer, /ATTACHMENT_ACCEPT/);
   assert.match(composer, /isImageMime\(.*contentType/);
   assert.match(preview, /extractionLabels/);
@@ -408,7 +411,7 @@ test("ZIP local headers cannot disagree with preflight central names or hide ext
   );
 });
 test("cheap storage enabled/ownership/quota admission precedes expensive document parsing", async () => {
-  const source = await readFile("lib/uploads/service.ts", "utf8");
+  const source = await readFile("server/uploads/service.ts", "utf8");
   const start = source.indexOf("export async function registerUpload");
   const body = source.slice(start);
   assert.ok(
@@ -531,7 +534,7 @@ test("historical attachment reads keep canonical UI data but do not replay unbou
   assert.match(JSON.stringify(out), /HISTORICAL_ATTACHMENT_READ_METADATA/);
 });
 test("Node worker construction bypasses browser-worker bundler rewriting; CJS still explicitly traced", async () => {
-  const source = await readFile("lib/uploads/document-parser.ts", "utf8");
+  const source = await readFile("server/uploads/document-parser.ts", "utf8");
   assert.match(source, /Reflect\.construct\(Worker/);
   assert.ok(!source.includes("new Worker("));
 });
@@ -854,7 +857,7 @@ test("round source budget is shared across assets and seeded by actual deduplica
   assert.equal(checks, 8);
 });
 test("host native parser dependency seeds retain pnpm resolution links in Next route trace", async () => {
-  const host = await readFile("lib/uploads/document-parser.ts", "utf8");
+  const host = await readFile("server/uploads/document-parser.ts", "utf8");
   const config = await readFile("next.config.ts", "utf8");
   for (const name of ["mammoth", "exceljs", "yauzl", "saxes", "papaparse"]) {
     assert.ok(

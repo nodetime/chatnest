@@ -2,16 +2,16 @@
 "use client";
 import { FileText } from "lucide-react";
 import { type ReactNode, useEffect, useRef } from "react";
-import { artifactCatalog } from "@/app/_components/chat/artifact-catalog";
-import { ArtifactPicker } from "@/app/_components/chat/artifact-picker";
-import { BrowserWorkspace } from "@/app/_components/chat/browser-workspace";
-import { ConversationSources } from "@/app/_components/chat/conversation-sources";
-import { WorkspaceHeader } from "@/app/_components/chat/workspace-header";
 import { useActiveChat } from "@/app/_hooks/use-active-chat";
 import { useArtifact } from "@/app/_hooks/use-artifact";
 import { useWorkspace } from "@/app/_hooks/use-workspace";
 import { cn } from "@/app/_lib/utils";
 import { browserWorkspaceEvents } from "@/server/agent/workspace-events";
+import { artifactCatalog } from "./artifact-catalog";
+import { ArtifactPicker } from "./artifact-picker";
+import { BrowserWorkspace } from "./browser-workspace";
+import { ConversationSources } from "./conversation-sources";
+import { WorkspaceHeader } from "./workspace-header";
 
 export function Workspace({ children }: { children: ReactNode }) {
   const workspace = useWorkspace();

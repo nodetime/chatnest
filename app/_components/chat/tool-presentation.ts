@@ -1,4 +1,4 @@
-import type { ToolPart } from "@/app/_components/ai-elements/tool";
+import type { ToolPart } from "../ai-elements/tool";
 
 const browserTitles: Record<string, string> = {
   browser__browser_click: "点击页面",

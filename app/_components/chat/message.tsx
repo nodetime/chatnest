@@ -1,31 +1,28 @@
 "use client";
 import type { UseChatHelpers } from "@ai-sdk/react";
-import {
-  MessageContent,
-  MessageResponse,
-} from "@/app/_components/ai-elements/message";
-import { Shimmer } from "@/app/_components/ai-elements/shimmer";
-import type { ToolPart } from "@/app/_components/ai-elements/tool";
+import type { ChatMessage } from "@/app/_lib/types";
+import { cn, sanitizeText } from "@/app/_lib/utils";
+import type { Vote } from "@/server/db/schema";
+import { MessageContent, MessageResponse } from "../ai-elements/message";
+import { Shimmer } from "../ai-elements/shimmer";
+import type { ToolPart } from "../ai-elements/tool";
 import {
   Tool,
   ToolContent,
   ToolHeader,
   ToolInput,
   ToolOutput,
-} from "@/app/_components/ai-elements/tool";
-import { ActivityGroup } from "@/app/_components/chat/activity-group";
-import { groupActivityParts } from "@/app/_components/chat/activity-groups";
-import { useDataStream } from "@/app/_components/chat/data-stream-provider";
-import { DocumentToolResult } from "@/app/_components/chat/document";
-import { DocumentPreview } from "@/app/_components/chat/document-preview";
-import { MessageActions } from "@/app/_components/chat/message-actions";
-import { MessageReasoning } from "@/app/_components/chat/message-reasoning";
-import { PreviewAttachment } from "@/app/_components/chat/preview-attachment";
-import { ToolActivity } from "@/app/_components/chat/tool-activity";
-import { Weather } from "@/app/_components/chat/weather";
-import type { ChatMessage } from "@/app/_lib/types";
-import { cn, sanitizeText } from "@/app/_lib/utils";
-import type { Vote } from "@/server/db/schema";
+} from "../ai-elements/tool";
+import { ActivityGroup } from "./activity-group";
+import { groupActivityParts } from "./activity-groups";
+import { useDataStream } from "./data-stream-provider";
+import { DocumentToolResult } from "./document";
+import { DocumentPreview } from "./document-preview";
+import { MessageActions } from "./message-actions";
+import { MessageReasoning } from "./message-reasoning";
+import { PreviewAttachment } from "./preview-attachment";
+import { ToolActivity } from "./tool-activity";
+import { Weather } from "./weather";
 
 function WaitingText() {
   const { waitingStatus } = useDataStream();

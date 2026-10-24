@@ -36,7 +36,7 @@ test("dynamic names matching special native tools remain ordinary inspectable ac
 test("presentation uses exact native contracts and conservative dynamic identity", () => {
   client(`
     const assert=require('node:assert/strict');
-    const {projectToolIdentity,projectToolResult}=require('./components/chat/tool-presentation.ts');
+    const {projectToolIdentity,projectToolResult}=require('./app/_components/chat/tool-presentation.ts');
     const part={type:'dynamic-tool',toolName:'research_delete',state:'output-available',input:{query:'topic'},output:{error:'a data field'},toolCallId:'call'};
     assert.equal(projectToolIdentity(part).title,'research_delete');
     for(const name of ['readAttachment','loadSkill','readSkillResource','createResultTable','unknown__search','unknown__fetch']) assert.equal(projectToolIdentity({...part,toolName:name}).title,name);
@@ -52,7 +52,7 @@ test("presentation uses exact native contracts and conservative dynamic identity
 
 test("bounded projection retains falsey, mixed records and MCP text without fetching media or interpreting errors", () => {
   client(`
-    const assert=require('node:assert/strict');const {projectResult}=require('./components/chat/tool-presentation.ts');
+    const assert=require('node:assert/strict');const {projectResult}=require('./app/_components/chat/tool-presentation.ts');
     for(const [value,expected] of [[false,'false'],[0,'0'],['','""'],[null,'null'],[[],'返回列表为空'],[{},'{}']]) assert.ok(JSON.stringify(projectResult(value)).includes(expected));
     assert.match(projectResult(undefined).notice,/没有返回内容/);
     const original={content:[{type:'text',text:JSON.stringify({results:[{title:'One source',url:'https://example.com/a',summary:'Actual useful summary',count:0,available:false},{title:'Second',url:'javascript:alert(1)',nullable:null}]})},{type:'text',text:'Plain provider passage'},{type:'image',data:'PRIVATE_IMAGE_DATA',mimeType:'image/png'}]};
@@ -70,8 +70,8 @@ test("bounded projection retains falsey, mixed records and MCP text without fetc
 test("result renderer presents actual records and safe title/domain links as text, not a JSON wall", () => {
   const html = client(`
     const React=require('react');const {renderToStaticMarkup}=require('react-dom/server');
-    const {ToolResultPreview}=require('./components/chat/tool-result-preview.tsx');
-    const {projectResult}=require('./components/chat/tool-presentation.ts');
+    const {ToolResultPreview}=require('./app/_components/chat/tool-result-preview.tsx');
+    const {projectResult}=require('./app/_components/chat/tool-presentation.ts');
     const preview=projectResult({results:[{title:'Useful record',url:'https://example.com/doc',description:'<script>bad()</script>',count:0}]});
     process.stdout.write(renderToStaticMarkup(React.createElement(ToolResultPreview,{preview})));
   `);
@@ -84,7 +84,7 @@ test("result renderer presents actual records and safe title/domain links as tex
 
 test("exact catalog aliases provide friendly actions without hiding unknown or destructive tool names", () => {
   client(`
-    const assert=require('node:assert/strict');const {projectToolIdentity,projectResult}=require('./components/chat/tool-presentation.ts');
+    const assert=require('node:assert/strict');const {projectToolIdentity,projectResult}=require('./app/_components/chat/tool-presentation.ts');
     const part={type:'dynamic-tool',toolName:'opaque_hash',toolCallId:'exact',state:'output-available',input:{q:'one query'},output:{}};
     const catalog=[{alias:'opaque_hash',name:'search.web',serverName:'Provider'}];
     assert.equal(projectToolIdentity(part,catalog).title,'搜索资料');
@@ -101,7 +101,7 @@ test("exact catalog aliases provide friendly actions without hiding unknown or d
 
 test("empty MCP content remains visible, inherited lookup names are literal and sources are not repeated as raw fields", () => {
   client(`
-    const assert=require('node:assert/strict');const {projectResult,projectToolIdentity}=require('./components/chat/tool-presentation.ts');
+    const assert=require('node:assert/strict');const {projectResult,projectToolIdentity}=require('./app/_components/chat/tool-presentation.ts');
     assert.ok(projectResult({content:[]}).notice.includes('返回列表为空'));
     assert.equal(projectToolIdentity({type:'dynamic-tool',toolName:'toString',state:'output-available',toolCallId:'x'}).title,'toString');
     const result=projectResult({title:'Source title',url:'https://example.com/source',excerpt:'Meaningful excerpt'});
@@ -112,7 +112,7 @@ test("empty MCP content remains visible, inherited lookup names are literal and 
 
 test("generic content lists remain records rather than being mistaken for MCP media", () => {
   client(`
-    const assert=require('node:assert/strict');const {projectResult}=require('./components/chat/tool-presentation.ts');
+    const assert=require('node:assert/strict');const {projectResult}=require('./app/_components/chat/tool-presentation.ts');
     assert.ok(JSON.stringify(projectResult({content:[{name:'ordinary record',count:0}]})).includes('ordinary record'));
     assert.ok(projectResult({content:[]}).notice.includes('返回列表为空'));
     assert.match(projectResult(undefined,'parameters').notice,/参数未记录/);
@@ -121,7 +121,7 @@ test("generic content lists remain records rather than being mistaken for MCP me
 
 test("structured MCP lists become compact named records with associated sources, not transport metadata or mirrored JSON", () => {
   client(`
-    const assert=require('node:assert/strict');const {projectResult,projectToolResult}=require('./components/chat/tool-presentation.ts');
+    const assert=require('node:assert/strict');const {projectResult,projectToolResult}=require('./app/_components/chat/tool-presentation.ts');
     const payload={fixture:true,request_id:'debug-id',total:2,items:[{item_id:'123',title:'Actual useful item',item_url:'https://example.com/item',price:59,platform:'Shop',available:false},{name:'Second',count:0}]};
     const preview=projectResult({isError:false,content:[{type:'text',text:JSON.stringify(payload)}],structuredContent:payload});
     assert.equal(preview.records.length,2);assert.equal(preview.records[0].title,'Actual useful item');assert.equal(preview.records[0].source.domain,'example.com');assert.ok(preview.records[0].fields.some(f=>f.text==='59'));assert.equal(preview.blocks.length,0);
@@ -136,7 +136,7 @@ test("structured MCP lists become compact named records with associated sources,
 
 test("structured preview keeps a nontext warning and has only one truncation/details caption", () => {
   client(`
-    const assert=require('node:assert/strict');const {projectResult}=require('./components/chat/tool-presentation.ts');
+    const assert=require('node:assert/strict');const {projectResult}=require('./app/_components/chat/tool-presentation.ts');
     const structuredContent={items:Array.from({length:8},(_,i)=>({title:'Result '+i,price:i}))};
     const plain=projectResult({content:[],structuredContent});assert.equal(plain.truncated,true);assert.equal(plain.notice,undefined);
     const mixed=projectResult({content:[{type:'image',data:'binary-original'}],structuredContent});assert.equal(mixed.truncated,true);assert.match(mixed.notice,/非文本/);assert.ok(!JSON.stringify(mixed).includes('binary-original'));
@@ -145,7 +145,7 @@ test("structured preview keeps a nontext warning and has only one truncation/det
 
 test("compact collection and record selection explicitly marks omitted original fields", () => {
   client(`
-    const assert=require('node:assert/strict');const {projectResult}=require('./components/chat/tool-presentation.ts');
+    const assert=require('node:assert/strict');const {projectResult}=require('./app/_components/chat/tool-presentation.ts');
     for(const output of [
       {items:[{title:'A',price:1}],warning:'Partial supplier response',cursor:'next'},
       {title:'A',summary:'Short',content:'Additional exact text'},
@@ -162,7 +162,7 @@ test("compact collection and record selection explicitly marks omitted original 
 
 test("nested empty arrays are scoped to their field rather than declaring useful results empty", () => {
   client(`
-    const assert=require('node:assert/strict');const {projectResult}=require('./components/chat/tool-presentation.ts');
+    const assert=require('node:assert/strict');const {projectResult}=require('./app/_components/chat/tool-presentation.ts');
     for(const output of [{text:'Useful result',sources:[]},{answer:'Useful result',items:[]},{content:[{type:'text',text:'Useful result'}],sources:[]}]) {
       const preview=projectResult(output);assert.notEqual(preview.notice,'返回列表为空。');assert.ok(JSON.stringify(preview).includes('Useful result'));
       const empty=preview.blocks.find(block=>block.fields.some(field=>field.text==='返回列表为空。'));
@@ -175,7 +175,7 @@ test("nested empty arrays are scoped to their field rather than declaring useful
 test("reader results show only actual headings, prose and sources while original fields remain in approval", () => {
   client(`
     const assert=require('node:assert/strict');const React=require('react');const {renderToStaticMarkup}=require('react-dom/server');
-    const {ToolResultPreview}=require('./components/chat/tool-result-preview.tsx');const {projectResult,projectToolResult}=require('./components/chat/tool-presentation.ts');
+    const {ToolResultPreview}=require('./app/_components/chat/tool-result-preview.tsx');const {projectResult,projectToolResult}=require('./app/_components/chat/tool-presentation.ts');
     const render=(value,parameters=false)=>renderToStaticMarkup(React.createElement(ToolResultPreview,{preview:projectResult(value,parameters?'parameters':'result'),parameters}));
     const data={items:[{title:'Actual item',snippet:'Actual returned summary',item_url:'https://example.com/deep/item?q=1',item_id:'original-id',price:59,seller:'original-seller'},{title:'Title without prose',price:42}]};
     const before=JSON.stringify(data);const html=render(data);
@@ -195,7 +195,7 @@ test("reader results show only actual headings, prose and sources while original
 test("untitled snippets remain readable in standalone and list results", () => {
   client(`
     const assert=require('node:assert/strict');const React=require('react');const {renderToStaticMarkup}=require('react-dom/server');
-    const {ToolResultPreview}=require('./components/chat/tool-result-preview.tsx');const {projectResult}=require('./components/chat/tool-presentation.ts');
+    const {ToolResultPreview}=require('./app/_components/chat/tool-result-preview.tsx');const {projectResult}=require('./app/_components/chat/tool-presentation.ts');
     for(const value of [{snippet:'Actual returned snippet'},{items:[{snippet:'Actual returned snippet'}]}]) {
       const before=JSON.stringify(value);const html=renderToStaticMarkup(React.createElement(ToolResultPreview,{preview:projectResult(value)}));
       assert.match(html,/Actual returned snippet/);assert.doesNotMatch(html,/<dl|暂无摘要|无摘要/);assert.equal(JSON.stringify(value),before);
@@ -206,7 +206,7 @@ test("untitled snippets remain readable in standalone and list results", () => {
 test("empty or whitespace-only prose does not leave a blank successful result", () => {
   client(`
     const assert=require('node:assert/strict');const React=require('react');const {renderToStaticMarkup}=require('react-dom/server');
-    const {ToolResultPreview}=require('./components/chat/tool-result-preview.tsx');const {projectResult}=require('./components/chat/tool-presentation.ts');
+    const {ToolResultPreview}=require('./app/_components/chat/tool-result-preview.tsx');const {projectResult}=require('./app/_components/chat/tool-presentation.ts');
     for(const value of [{text:''},{text:'   '},{snippet:''},{snippet:'   '}]) {
       const before=JSON.stringify(value);const html=renderToStaticMarkup(React.createElement(ToolResultPreview,{preview:projectResult(value)}));
       assert.match(html,/&quot;&quot;|调用详情/);assert.doesNotMatch(html,/暂无摘要|无摘要/);assert.equal(JSON.stringify(value),before);
@@ -217,7 +217,7 @@ test("empty or whitespace-only prose does not leave a blank successful result", 
 test("generic structured falsey results use one details fallback without losing empty or mixed warnings", () => {
   client(`
     const assert=require('node:assert/strict');const React=require('react');const {renderToStaticMarkup}=require('react-dom/server');
-    const {ToolResultPreview}=require('./components/chat/tool-result-preview.tsx');const {projectResult}=require('./components/chat/tool-presentation.ts');
+    const {ToolResultPreview}=require('./app/_components/chat/tool-result-preview.tsx');const {projectResult}=require('./app/_components/chat/tool-presentation.ts');
     const render=value=>renderToStaticMarkup(React.createElement(ToolResultPreview,{preview:projectResult(value)}));
     const structuredContent={ok:false,count:0,empty:'',nullable:null};
     const value={isError:false,structuredContent,content:[{type:'text',text:JSON.stringify(structuredContent)}]};

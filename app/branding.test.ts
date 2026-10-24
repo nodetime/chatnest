@@ -20,7 +20,7 @@ test("admin metadata overrides the root title with ChatNest Admin", () => {
 });
 
 test("home button keeps its new-chat action with visible and accessible ChatNest branding", () => {
-  const sidebar = readFileSync("components/chat/app-sidebar.tsx", "utf8");
+  const sidebar = readFileSync("app/_components/chat/app-sidebar.tsx", "utf8");
   assert.match(
     sidebar,
     /<button\s+aria-label="ChatNest 首页"[^>]*onClick=\{handleNew\}[^>]*>[\s\S]*?\sChatNest\s*<\/button>/
@@ -29,7 +29,7 @@ test("home button keeps its new-chat action with visible and accessible ChatNest
 
 test("conversation download uses a ChatNest filename and the existing Markdown exporter", () => {
   const sources = readFileSync(
-    "components/chat/conversation-sources.tsx",
+    "app/_components/chat/conversation-sources.tsx",
     "utf8"
   );
   assert.ok(sources.includes("new Blob([conversationMarkdown(messages)]"));

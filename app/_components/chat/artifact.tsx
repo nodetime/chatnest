@@ -20,17 +20,8 @@ import { codeArtifact } from "@/app/_artifacts/code/client";
 import { imageArtifact } from "@/app/_artifacts/image/client";
 import { sheetArtifact } from "@/app/_artifacts/sheet/client";
 import { textArtifact } from "@/app/_artifacts/text/client";
+
 import { Artifact as ArtifactFrame } from "@/app/_components/ai-elements/artifact";
-import { ArtifactActions } from "@/app/_components/chat/artifact-actions";
-import { artifactCatalog } from "@/app/_components/chat/artifact-catalog";
-import { ArtifactCloseButton } from "@/app/_components/chat/artifact-close-button";
-import { ArtifactPicker } from "@/app/_components/chat/artifact-picker";
-import { ArtifactTypeLabel } from "@/app/_components/chat/artifact-type-label";
-import { LoaderIcon } from "@/app/_components/chat/icons";
-import { Toolbar } from "@/app/_components/chat/toolbar";
-import { VersionFooter } from "@/app/_components/chat/version-footer";
-import type { VisibilityType } from "@/app/_components/chat/visibility-selector";
-import { WorkspaceHeader } from "@/app/_components/chat/workspace-header";
 import { useArtifact } from "@/app/_hooks/use-artifact";
 import type { Attachment, ChatMessage } from "@/app/_lib/types";
 import { cn, fetcher } from "@/app/_lib/utils";
@@ -39,6 +30,16 @@ import {
   parseResultTable,
 } from "@/server/artifacts/result-table";
 import type { Document, Vote } from "@/server/db/schema";
+import { ArtifactActions } from "./artifact-actions";
+import { artifactCatalog } from "./artifact-catalog";
+import { ArtifactCloseButton } from "./artifact-close-button";
+import { ArtifactPicker } from "./artifact-picker";
+import { ArtifactTypeLabel } from "./artifact-type-label";
+import { LoaderIcon } from "./icons";
+import { Toolbar } from "./toolbar";
+import { VersionFooter } from "./version-footer";
+import type { VisibilityType } from "./visibility-selector";
+import { WorkspaceHeader } from "./workspace-header";
 
 export const artifactDefinitions = [
   textArtifact,

@@ -2,8 +2,8 @@ import "server-only";
 import type { MCPClient } from "@ai-sdk/mcp";
 import type { JSONSchema7 } from "@ai-sdk/provider";
 import { jsonSchema } from "ai";
-import { abortable } from "@/server/agent/mcp-settings/lifecycle";
-import { toolNameSchema } from "@/server/agent/mcp-settings/schema";
+import { abortable } from "./lifecycle";
+import { toolNameSchema } from "./schema";
 
 type NativeTool = Awaited<ReturnType<MCPClient["listTools"]>>["tools"][number];
 export async function listNativeTools(client: MCPClient, signal: AbortSignal) {

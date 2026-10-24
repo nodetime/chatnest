@@ -2,14 +2,11 @@ import type { UseChatHelpers } from "@ai-sdk/react";
 import equal from "fast-deep-equal";
 import { AnimatePresence, motion } from "framer-motion";
 import { memo } from "react";
-import type { UIArtifact } from "@/app/_components/chat/artifact";
-import {
-  PreviewMessage,
-  ThinkingMessage,
-} from "@/app/_components/chat/message";
 import { useMessages } from "@/app/_hooks/use-messages";
 import type { ChatMessage } from "@/app/_lib/types";
 import type { Vote } from "@/server/db/schema";
+import type { UIArtifact } from "./artifact";
+import { PreviewMessage, ThinkingMessage } from "./message";
 
 type ArtifactMessagesProps = {
   addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];

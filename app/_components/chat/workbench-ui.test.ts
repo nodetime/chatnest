@@ -21,7 +21,7 @@ function renderActivity(
     const React = require('react');
     const { renderToStaticMarkup } = require('react-dom/server');
     const { SWRConfig } = require('swr');
-    const { ToolActivity } = require('./components/chat/tool-activity.tsx');
+    const { ToolActivity } = require('./app/_components/chat/tool-activity.tsx');
     global.fetch = () => { throw new Error('Unexpected network access'); };
     const info = { skills: [{ name: 'fixture-skill', displayName: '调查方法', shortDescription: '技能说明只在详情中' }], servers: [{toolAliases:[{alias:'fixture__search',name:'search',serverName:'Fixture'}]}] };
     const value = { provider: () => new Map(), fallback: { '/api/agent': info }, revalidateOnMount: false, revalidateOnFocus: false };
@@ -35,7 +35,7 @@ function renderCallDetails(part: Record<string, unknown>) {
   return clientScript(`
     const React = require('react');
     const { renderToStaticMarkup } = require('react-dom/server');
-    const { ToolCallDetailsContent } = require('./components/chat/tool-call-details.tsx');
+    const { ToolCallDetailsContent } = require('./app/_components/chat/tool-call-details.tsx');
     process.stdout.write(renderToStaticMarkup(React.createElement(ToolCallDetailsContent, { part: ${JSON.stringify(part)} })));
   `);
 }
@@ -134,7 +134,7 @@ test("readonly approval shows its state but not mutation controls; approval IDs 
   );
   assert.match(html, /等待确认/);
   assert.doesNotMatch(html, /允许执行|>拒绝</);
-  const source = readFileSync("components/chat/tool-activity.tsx", "utf8");
+  const source = readFileSync("app/_components/chat/tool-activity.tsx", "utf8");
   assert.match(source, /await approve\(\{\s*approved,\s*id: approval\.id/);
   assert.match(source, /submitDecision\(true\)/);
   assert.match(source, /submitDecision\(false\)/);
@@ -176,12 +176,12 @@ test("generic SDK error has a Chinese visible explanation without inlining its r
 
 test("disclosure transitions collapse success, open new attention states, and preserve manual choices on same-state rerenders", () => {
   assert.ok(
-    existsSync("components/chat/tool-activity-state.ts"),
+    existsSync("app/_components/chat/tool-activity-state.ts"),
     "pure disclosure transition helper exists"
   );
   clientScript(`
     const assert = require('node:assert/strict');
-    const { initialToolDisclosure, reconcileToolDisclosure } = require('./components/chat/tool-activity-state.ts');
+    const { initialToolDisclosure, reconcileToolDisclosure } = require('./app/_components/chat/tool-activity-state.ts');
     for (const state of ['approval-requested', 'output-error', 'output-denied']) {
       let current = initialToolDisclosure(state);
       assert.equal(current.open, true);
@@ -196,7 +196,7 @@ test("disclosure transitions collapse success, open new attention states, and pr
       assert.equal(reconcileToolDisclosure(current, 'approval-requested').open, true);
     }
   `);
-  const source = readFileSync("components/chat/tool-activity.tsx", "utf8");
+  const source = readFileSync("app/_components/chat/tool-activity.tsx", "utf8");
   assert.match(source, /reconcileToolDisclosure\(/);
 });
 
@@ -207,7 +207,7 @@ function renderAttachment(
   return clientScript(`
     const React = require('react');
     const { renderToStaticMarkup } = require('react-dom/server');
-    const { PreviewAttachment } = require('./components/chat/preview-attachment.tsx');
+    const { PreviewAttachment } = require('./app/_components/chat/preview-attachment.tsx');
     const props = ${JSON.stringify(props)};
     if (props.onRemove) props.onRemove = () => {};
     if (props.onRetry) props.onRetry = () => {};
@@ -263,7 +263,7 @@ test("draft remove and failed retry are always visible touch and keyboard target
 });
 
 test("history attachments wrap and chat-specific surface leaves global theme and file submission alone", () => {
-  const message = readFileSync("components/chat/message.tsx", "utf8");
+  const message = readFileSync("app/_components/chat/message.tsx", "utf8");
   assert.match(
     message,
     /className="[^"]*flex-wrap[^"]*"\s+data-testid=\{"message-attachments"\}/
@@ -276,7 +276,10 @@ test("history attachments wrap and chat-specific surface leaves global theme and
   const css = readFileSync("app/globals.css", "utf8");
   assert.match(css, /\.chat-workbench\s*\{/);
   assert.match(css, /\.dark \.chat-workbench/);
-  const composer = readFileSync("components/chat/multimodal-input.tsx", "utf8");
+  const composer = readFileSync(
+    "app/_components/chat/multimodal-input.tsx",
+    "utf8"
+  );
   assert.match(composer, /\[&>div\]:rounded-\[10px\]/);
   assert.match(composer, /<input[\s\S]*?hidden[\s\S]*?ref=\{fileInputRef\}/);
 });
@@ -297,7 +300,7 @@ test("legacy ToolHeader callers keep the default badge appearance", () => {
   const html = clientScript(`
     const React = require('react');
     const { renderToStaticMarkup } = require('react-dom/server');
-    const { Tool, ToolHeader } = require('./components/ai-elements/tool.tsx');
+    const { Tool, ToolHeader } = require('./app/_components/ai-elements/tool.tsx');
     process.stdout.write(renderToStaticMarkup(React.createElement(Tool, null, React.createElement(ToolHeader, { type: 'tool-fixture', state: 'output-available' }))));
   `);
   assert.match(html, /data-slot="badge"/);
@@ -321,12 +324,12 @@ test("a rejected approval response is presented as denied rather than an ordinar
 });
 
 test("message stack reduces inter-message space without changing paragraph typography", () => {
-  const messages = readFileSync("components/chat/messages.tsx", "utf8");
+  const messages = readFileSync("app/_components/chat/messages.tsx", "utf8");
   assert.match(
     messages,
     /<ConversationContent[^>]*gap-5 px-4 py-6 sm:px-6 md:gap-6/
   );
-  const message = readFileSync("components/chat/message.tsx", "utf8");
+  const message = readFileSync("app/_components/chat/message.tsx", "utf8");
   assert.match(message, /text-\[15px\] leading-\[1\.75\]/);
 });
 
@@ -344,7 +347,7 @@ function renderResultTable(notes = "", readOnly = false) {
     require.extensions['.css'] = () => {};
     const React = require('react');
     const { renderToStaticMarkup } = require('react-dom/server');
-    const { ResultTableView } = require('./components/chat/result-table.tsx');
+    const { ResultTableView } = require('./app/_components/chat/result-table.tsx');
     global.fetch = () => { throw new Error('Unexpected network access'); };
     const table = { chatId: 'fixture-chat', columns: [{ label: 'Title', path: '/title' }], notes: ${JSON.stringify(notes)}, rows: [{ title: 'fixture row', secret: 'complete raw field' }], source: ${JSON.stringify(resultSource)}, view: { filter: '', sort: [], visibleColumns: ['/title'] } };
     process.stdout.write(renderToStaticMarkup(React.createElement(ResultTableView, { documentId: 'fixture-document', expectedVersion: '2026-10-21T12:00:00.000Z', readOnly: ${readOnly}, table })));
@@ -363,13 +366,13 @@ test("result workspace shows only compact source identity and a details entry, w
   );
   assert.match(html, /aria-label="筛选结果选项"/);
   assert.match(html, /aria-label="导出结果"/);
-  const source = readFileSync("components/chat/result-table.tsx", "utf8");
+  const source = readFileSync("app/_components/chat/result-table.tsx", "utf8");
   assert.match(source, /CSV · 当前视图/);
   assert.match(source, /JSON · 原始快照/);
 });
 
 test("source Sheet details retain every original source field and explain both time bases", () => {
-  assert.ok(existsSync("components/chat/result-table-source.tsx"));
+  assert.ok(existsSync("app/_components/chat/result-table-source.tsx"));
   for (const [timeBasis, explanation] of [
     ["tool-completed", "工具完成时间"],
     ["message-recorded", "消息记录时间"],
@@ -378,7 +381,7 @@ test("source Sheet details retain every original source field and explain both t
     const html = clientScript(`
       const React = require('react');
       const { renderToStaticMarkup } = require('react-dom/server');
-      const { ResultTableSourceDetails } = require('./components/chat/result-table-source.tsx');
+      const { ResultTableSourceDetails } = require('./app/_components/chat/result-table-source.tsx');
       process.stdout.write(renderToStaticMarkup(React.createElement(ResultTableSourceDetails, { source: ${JSON.stringify(source)} })));
     `);
     for (const [field, value] of Object.entries(source)) {
@@ -389,7 +392,7 @@ test("source Sheet details retain every original source field and explain both t
     assert.match(html, /break-all/);
   }
   const source = readFileSync(
-    "components/chat/result-table-source.tsx",
+    "app/_components/chat/result-table-source.tsx",
     "utf8"
   );
   assert.match(source, /<SheetTrigger asChild>/);
@@ -401,7 +404,7 @@ test("notes live in a Sheet and clean tables have no permanent save or helper fo
   const html = renderResultTable();
   assert.match(html, /个人备注/);
   assert.doesNotMatch(html, /<textarea|保存视图与备注|点击行查看原始字段/);
-  const source = readFileSync("components/chat/result-table.tsx", "utf8");
+  const source = readFileSync("app/_components/chat/result-table.tsx", "utf8");
   assert.match(source, /data-testid="result-notes-sheet"/);
   assert.match(source, /response\.status === 409/);
   assert.match(source, /await onSaved\?\.\(body\[0\]\.content\)/);
@@ -415,13 +418,16 @@ test("saved notes start closed with discoverable indicator and readonly history 
   assert.match(historical, /已有备注/);
   assert.doesNotMatch(historical, /<textarea/);
   assert.doesNotMatch(historical, /保存视图与备注/);
-  const sheet = readFileSync("artifacts/sheet/client.tsx", "utf8");
+  const sheet = readFileSync("app/_artifacts/sheet/client.tsx", "utf8");
   assert.match(sheet, /readOnly=\{isReadonly \|\| !isCurrentVersion\}/);
 });
 
 test("workspace uses a keyboard mode menu and preserves resize and overlay semantics", () => {
-  const workspace = readFileSync("components/chat/workspace.tsx", "utf8");
-  const header = readFileSync("components/chat/workspace-header.tsx", "utf8");
+  const workspace = readFileSync("app/_components/chat/workspace.tsx", "utf8");
+  const header = readFileSync(
+    "app/_components/chat/workspace-header.tsx",
+    "utf8"
+  );
   for (const title of ["浏览器", "产物", "来源"]) {
     assert.ok(header.includes(`title: "${title}"`));
   }
@@ -435,7 +441,7 @@ test("workspace uses a keyboard mode menu and preserves resize and overlay seman
 });
 
 test("embedded artifact keeps the real single title and a shrinkable result-content flex chain", () => {
-  const artifact = readFileSync("components/chat/artifact.tsx", "utf8");
+  const artifact = readFileSync("app/_components/chat/artifact.tsx", "utf8");
   assert.match(artifact, /!embedded && <ArtifactCloseButton \/>/);
   assert.equal(artifact.match(/\{artifact\.title\}/g)?.length, 2);
   assert.match(artifact, /<WorkspaceHeader/);
@@ -445,7 +451,7 @@ test("embedded artifact keeps the real single title and a shrinkable result-cont
   );
   assert.match(artifact, /relative min-h-0 min-w-0 flex-1/);
   assert.doesNotMatch(artifact, /className="h-5 px-1.5"/);
-  const result = readFileSync("components/chat/result-table.tsx", "utf8");
+  const result = readFileSync("app/_components/chat/result-table.tsx", "utf8");
   assert.match(result, /flex h-full w-full min-h-0 min-w-0 flex-col/);
   assert.match(result, /min-h-0 min-w-0 flex-1/);
   assert.match(result, /flex shrink-0 items-center gap-0.5/);
@@ -454,7 +460,7 @@ test("embedded artifact keeps the real single title and a shrinkable result-cont
   assert.match(result, /JSON\.stringify\(table, null, 2\)/);
   assert.match(result, /setDetail\(row\.sourceIndex\)/);
   assert.match(
-    readFileSync("components/chat/result-table-row-details.tsx", "utf8"),
+    readFileSync("app/_components/chat/result-table-row-details.tsx", "utf8"),
     /JSON\.stringify\(row, null, 2\)/
   );
 });
@@ -463,7 +469,7 @@ test("result grid keeps theme classes and renders the scoped 13px / 46px density
   const html = renderResultTable();
   assert.match(html, /chatnest-result-grid/);
   assert.match(html, /rdg-light/);
-  const source = readFileSync("components/chat/result-table.tsx", "utf8");
+  const source = readFileSync("app/_components/chat/result-table.tsx", "utf8");
   assert.match(source, /resolvedTheme === "dark" \? "rdg-dark" : "rdg-light"/);
   assert.match(source, /rowHeight=\{inline \? 38 : 46\}/);
   assert.match(source, /headerRowHeight=\{inline \? 38 : 42\}/);
@@ -510,7 +516,7 @@ test("result grid tokens are scoped with enough specificity and semantic cells r
 });
 
 test("artifact lifecycle is Chinese and relative dates use the installed Chinese locale", () => {
-  const source = readFileSync("components/chat/artifact.tsx", "utf8");
+  const source = readFileSync("app/_components/chat/artifact.tsx", "utf8");
   for (const label of ["正在保存…", "更新于", "正在生成…"]) {
     assert.ok(source.includes(label), `${label} lifecycle label exists`);
   }
@@ -528,7 +534,10 @@ test("artifact lifecycle is Chinese and relative dates use the installed Chinese
 });
 
 test("version footer exposes Chinese version labels and keeps restore protections", () => {
-  const source = readFileSync("components/chat/version-footer.tsx", "utf8");
+  const source = readFileSync(
+    "app/_components/chat/version-footer.tsx",
+    "utf8"
+  );
   for (const label of [
     "上一版本",
     "下一版本",
@@ -585,7 +594,7 @@ test("all artifact action and toolbar descriptions and copy toasts are Chinese w
     ],
   };
   for (const [kind, labels] of Object.entries(expected)) {
-    const source = readFileSync(`artifacts/${kind}/client.tsx`, "utf8");
+    const source = readFileSync(`app/_artifacts/${kind}/client.tsx`, "utf8");
     for (const label of labels) {
       assert.ok(source.includes(`"${label}"`), `${kind}: ${label}`);
     }
@@ -615,7 +624,7 @@ test("all artifact action and toolbar descriptions and copy toasts are Chinese w
     ["text", "Please add suggestions you have that could improve the writing."],
   ]) {
     assert.ok(
-      readFileSync(`artifacts/${kind}/client.tsx`, "utf8").includes(
+      readFileSync(`app/_artifacts/${kind}/client.tsx`, "utf8").includes(
         `text: "${message}"`
       )
     );
@@ -624,8 +633,8 @@ test("all artifact action and toolbar descriptions and copy toasts are Chinese w
 
 test("source and raw-result Sheets localize close controls without changing the shared Sheet", () => {
   for (const [file, label] of [
-    ["components/chat/result-table-source.tsx", "关闭来源详情"],
-    ["components/chat/result-table.tsx", "关闭原始结果"],
+    ["app/_components/chat/result-table-source.tsx", "关闭来源详情"],
+    ["app/_components/chat/result-table.tsx", "关闭原始结果"],
   ]) {
     const source = readFileSync(file, "utf8");
     assert.match(source, /showCloseButton=\{false\}/);
@@ -633,13 +642,16 @@ test("source and raw-result Sheets localize close controls without changing the 
     assert.ok(source.includes(`aria-label="${label}"`));
   }
   assert.match(
-    readFileSync("components/ui/sheet.tsx", "utf8"),
+    readFileSync("app/_components/ui/sheet.tsx", "utf8"),
     />Close<\/span>/
   );
 });
 
 test("chat artifact entries never mount duplicate text, code, image or sheet renderers", () => {
-  const source = readFileSync("components/chat/document-preview.tsx", "utf8");
+  const source = readFileSync(
+    "app/_components/chat/document-preview.tsx",
+    "utf8"
+  );
   assert.doesNotMatch(
     source,
     /DocumentContent|ResultTableView|SpreadsheetEditor|ImageEditor|<Editor|<pre/
@@ -652,12 +664,15 @@ test("chat artifact entries never mount duplicate text, code, image or sheet ren
 });
 
 test("artifact diff selection uses a stable action ID independent of translated descriptions", () => {
-  const config = readFileSync("components/chat/create-artifact.tsx", "utf8");
+  const config = readFileSync(
+    "app/_components/chat/create-artifact.tsx",
+    "utf8"
+  );
   assert.match(config, /id\?: string/);
   assert.match(config, /export function isArtifactActionActive/);
   clientScript(`
     const assert = require('node:assert/strict');
-    const { isArtifactActionActive } = require('./components/chat/create-artifact.tsx');
+    const { isArtifactActionActive } = require('./app/_components/chat/create-artifact.tsx');
     for (const description of ['View changes', '查看更改']) {
       const action = { id: 'view-changes', description };
       assert.equal(isArtifactActionActive(action, 'diff'), true);
@@ -666,11 +681,14 @@ test("artifact diff selection uses a stable action ID independent of translated 
     }
     assert.equal(isArtifactActionActive({ id: 'copy', description: '查看更改' }, 'diff'), false);
   `);
-  const consumer = readFileSync("components/chat/artifact-actions.tsx", "utf8");
+  const consumer = readFileSync(
+    "app/_components/chat/artifact-actions.tsx",
+    "utf8"
+  );
   assert.match(consumer, /isActive=\{isArtifactActionActive\(action, mode\)\}/);
   assert.doesNotMatch(consumer, /action.description ===/);
   assert.match(consumer, /toast.error\("操作执行失败，请重试。"\)/);
-  const text = readFileSync("artifacts/text/client.tsx", "utf8");
+  const text = readFileSync("app/_artifacts/text/client.tsx", "utf8");
   assert.match(
     text,
     /description: "查看更改",\s+icon: <ClockRewind[^\n]+\s+id: "view-changes"/
@@ -681,7 +699,7 @@ test("generic artifact header and preview expose all four type labels without ch
   const html = clientScript(`
     const React = require('react');
     const { renderToStaticMarkup } = require('react-dom/server');
-    const { ArtifactTypeLabel } = require('./components/chat/artifact-type-label.tsx');
+    const { ArtifactTypeLabel } = require('./app/_components/chat/artifact-type-label.tsx');
     process.stdout.write(['text','code','image','sheet'].map(kind => renderToStaticMarkup(React.createElement(ArtifactTypeLabel, {kind}))).join(''));
   `);
   for (const label of ["文本", "代码", "图片", "表格"]) {
@@ -689,7 +707,7 @@ test("generic artifact header and preview expose all four type labels without ch
   }
   for (const file of ["artifact.tsx"]) {
     assert.match(
-      readFileSync(`components/chat/${file}`, "utf8"),
+      readFileSync(`app/_components/chat/${file}`, "utf8"),
       /<ArtifactTypeLabel kind=/
     );
   }
@@ -704,7 +722,7 @@ test("quiet process has one summary and plain aligned rows; approvals stay actio
     const React = require('react');
     const { renderToStaticMarkup } = require('react-dom/server');
     const { SWRConfig } = require('swr');
-    const { ActivityGroup } = require('./components/chat/activity-group.tsx');
+    const { ActivityGroup } = require('./app/_components/chat/activity-group.tsx');
     global.fetch = () => { throw new Error('Unexpected network'); };
     const part = ${JSON.stringify(success)};
     const parts = [part, {...part, toolCallId:'pending', state:'approval-requested', approval:{id:'approval-original'}}];
@@ -721,12 +739,15 @@ test("quiet process has one summary and plain aligned rows; approvals stay actio
 });
 
 test("artifact header actions have accessible names and version navigation has a single home", () => {
-  const actions = readFileSync("components/chat/artifact-actions.tsx", "utf8");
+  const actions = readFileSync(
+    "app/_components/chat/artifact-actions.tsx",
+    "utf8"
+  );
   assert.match(actions, /aria-label=\{action.description\}/);
   assert.match(actions, /layout === "header"/);
   assert.match(actions, /previous-version/);
   assert.match(actions, /next-version/);
-  const artifact = readFileSync("components/chat/artifact.tsx", "utf8");
+  const artifact = readFileSync("app/_components/chat/artifact.tsx", "utf8");
   assert.match(artifact, /layout="header"/);
   assert.doesNotMatch(artifact, /artifactActions=\{/);
 });
@@ -747,7 +768,7 @@ test("an idle approved call without output is unfinished, not still executing", 
 test("a new approval on the same call reopens its child details even when state is unchanged", () => {
   clientScript(`
     const assert = require('node:assert/strict');
-    const { initialToolDisclosure, reconcileToolDisclosure } = require('./components/chat/tool-activity-state.ts');
+    const { initialToolDisclosure, reconcileToolDisclosure } = require('./app/_components/chat/tool-activity-state.ts');
     let current = { ...initialToolDisclosure('approval-requested', 'call:approval-a'), open: false };
     assert.equal(reconcileToolDisclosure(current, 'approval-requested', 'call:approval-a'), current);
     current = reconcileToolDisclosure(current, 'approval-requested', 'call:approval-b');
@@ -756,7 +777,7 @@ test("a new approval on the same call reopens its child details even when state 
     assert.equal(reconcileToolDisclosure(current, 'approval-requested', 'call:approval-b'), current);
     assert.equal(reconcileToolDisclosure(current, 'output-available', 'call:approval-b').open, false);
   `);
-  const source = readFileSync("components/chat/tool-activity.tsx", "utf8");
+  const source = readFileSync("app/_components/chat/tool-activity.tsx", "utf8");
   assert.match(source, /toolDisclosureIdentity\(part\)/);
 });
 
@@ -766,12 +787,12 @@ test("mixed reasoning and tools render in their original SDK order rather than m
     const { readFileSync } = require('node:fs');
     const { runInNewContext } = require('node:vm');
     const ts = require('typescript');
-    const { groupActivityParts } = require('./components/chat/activity-groups.ts');
+    const { groupActivityParts } = require('./app/_components/chat/activity-groups.ts');
     const jsx = (type, props) => ({type, props});
     const modules = {
       'react': {useCallback: fn => fn},
       'react/jsx-runtime': {jsx, jsxs:jsx, Fragment:'fragment'},
-      '@/lib/utils': {cn:()=>'', sanitizeText: text=>text},
+      '@/app/_lib/utils': {cn:()=>'', sanitizeText: text=>text},
       '../ai-elements/message': {MessageContent:'text', MessageResponse:'response'},
       '../ai-elements/shimmer': {Shimmer:'shimmer'},
       '../ai-elements/tool': {},
@@ -784,7 +805,7 @@ test("mixed reasoning and tools render in their original SDK order rather than m
       './preview-attachment': {}, './tool-activity': {}, './weather': {},
     };
     const output = {exports:{}};
-    const code = ts.transpileModule(readFileSync('components/chat/message.tsx','utf8'), {compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText;
+    const code = ts.transpileModule(readFileSync('app/_components/chat/message.tsx','utf8'), {compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText;
     runInNewContext(code, {exports:output.exports,module:output,require:name=>{assert.ok(name in modules, 'unexpected '+name);return modules[name];}});
     const tool = id => ({type:'dynamic-tool',toolName:'fixture__search',toolCallId:id,state:'output-available',input:{},output:{}});
     const message = {id:'mixed',role:'assistant',parts:[{type:'reasoning',text:'reason-a'},tool('tool-a'),{type:'reasoning',text:'reason-b'},tool('tool-b'),{type:'text',text:'final-answer'}]};
@@ -858,7 +879,7 @@ test("chat-local palette defines gentle light and dark semantic surfaces without
     css,
     /\.chat-workbench :where\(button, a, summary, \[tabindex\]\):focus-visible/
   );
-  const shell = readFileSync("components/chat/shell.tsx", "utf8");
+  const shell = readFileSync("app/_components/chat/shell.tsx", "utf8");
   assert.doesNotMatch(shell, /md:p-2|md:rounded-|md:border|flex-row gap-2/);
   assert.match(shell, /chat-workbench-shell flex h-dvh w-full min-w-0/);
 });
@@ -867,16 +888,19 @@ test("generic empty conversation has a readable invitation and one softly elevat
   const html = clientScript(`
     const React = require('react');
     const { renderToStaticMarkup } = require('react-dom/server');
-    const { Greeting } = require('./components/chat/greeting.tsx');
+    const { Greeting } = require('./app/_components/chat/greeting.tsx');
     process.stdout.write(renderToStaticMarkup(React.createElement(Greeting)));
   `);
   assert.match(html, /<h1/);
   assert.match(html, /描述你的目标，或添加文件作为起点/);
   assert.match(html, /text-sm leading-6/);
-  const composer = readFileSync("components/chat/multimodal-input.tsx", "utf8");
+  const composer = readFileSync(
+    "app/_components/chat/multimodal-input.tsx",
+    "utf8"
+  );
   assert.match(composer, /shadow-\[var\(--shadow-composer\)\]/);
   assert.doesNotMatch(composer, /focus-within:border-foreground\/25/);
-  const sidebar = readFileSync("components/chat/app-sidebar.tsx", "utf8");
+  const sidebar = readFileSync("app/_components/chat/app-sidebar.tsx", "utf8");
   assert.match(sidebar, /h-\[52px\] shrink-0/);
   for (const entry of [
     "新对话",
@@ -926,9 +950,12 @@ test("artifact and table actions keep readable 36px targets without leaking tabl
   const html = renderResultTable();
   assert.match(html, /aria-label="选择显示列"/);
   assert.match(html, /aria-label="筛选结果选项"/);
-  const actions = readFileSync("components/chat/artifact-actions.tsx", "utf8");
+  const actions = readFileSync(
+    "app/_components/chat/artifact-actions.tsx",
+    "utf8"
+  );
   assert.match(actions, /size-9 rounded-md/);
-  const viewer = readFileSync("components/chat/artifact.tsx", "utf8");
+  const viewer = readFileSync("app/_components/chat/artifact.tsx", "utf8");
   assert.doesNotMatch(
     viewer,
     /ListFilter|Columns3|筛选所有字段|保存视图与备注/
@@ -952,7 +979,10 @@ test("tool action context skips structured arguments while call details stay rea
 });
 
 test("open artifacts use a compact chat file card instead of mounting a duplicate editor", () => {
-  const source = readFileSync("components/chat/document-preview.tsx", "utf8");
+  const source = readFileSync(
+    "app/_components/chat/document-preview.tsx",
+    "utf8"
+  );
   assert.match(
     source,
     /artifact\.isVisible &&\s*artifact\.documentId === document\.id/
@@ -969,7 +999,7 @@ test("open artifacts use a compact chat file card instead of mounting a duplicat
 });
 
 test("artifact assistant actions live in a named header menu, never a floating toolbar", () => {
-  const source = readFileSync("components/chat/toolbar.tsx", "utf8");
+  const source = readFileSync("app/_components/chat/toolbar.tsx", "utf8");
   assert.match(source, /DropdownMenuTrigger asChild/);
   assert.match(source, /aria-label="更多产物操作"/);
   assert.match(
@@ -979,7 +1009,7 @@ test("artifact assistant actions live in a named header menu, never a floating t
   assert.match(source, /artifactDefinition\.toolbar/);
   assert.match(source, /createFixErrorTool\(consoleError, documentId\)/);
   assert.doesNotMatch(source, /fixed right-|bottom-6|motion\.div/);
-  const viewer = readFileSync("components/chat/artifact.tsx", "utf8");
+  const viewer = readFileSync("app/_components/chat/artifact.tsx", "utf8");
   const toolbar = viewer.indexOf("<Toolbar");
   assert.ok(
     toolbar > 0 && toolbar < viewer.indexOf('data-slot="artifact-content"')
@@ -1004,7 +1034,7 @@ test("artifact card lifecycle reopens the same document after close or tab switc
     const { readFileSync } = require('node:fs');
     const { runInNewContext } = require('node:vm');
     const ts = require('typescript');
-    const { openArtifactPreview } = require('./lib/artifacts/stream-state.ts');
+    const { openArtifactPreview } = require('./server/artifacts/stream-state.ts');
     let chatId = 'chat-a';
     let fetching = false; let fetchError; let documentKind = 'code';
     let artifact = { documentId:'doc-a', isVisible:true, status:'idle', content:'original content', title:'Fixture A', kind:'code' };
@@ -1023,10 +1053,10 @@ test("artifact card lifecycle reopens the same document after close or tab switc
       'react':react,'react/jsx-runtime':{jsx,jsxs:jsx},'fast-deep-equal':{__esModule:true,default:()=>true},
       'swr':{__esModule:true,default:swr},
       './use-active-chat':{useActiveChat:()=>({chatId})},
-      '@/hooks/use-active-chat':{useActiveChat:()=>({chatId})},
-      '@/hooks/use-artifact':{useArtifact:()=>({artifact,setArtifact:fn=>{artifact=fn(artifact);}})},
-      '@/lib/artifacts/stream-state':{openArtifactPreview},
-      '@/lib/artifacts/result-table':{},'@/lib/utils':{cn:()=>'',fetcher:()=>{throw new Error('Unexpected fetch');}},
+      '@/app/_hooks/use-active-chat':{useActiveChat:()=>({chatId})},
+      '@/app/_hooks/use-artifact':{useArtifact:()=>({artifact,setArtifact:fn=>{artifact=fn(artifact);}})},
+      '@/server/artifacts/stream-state':{openArtifactPreview},
+      '@/server/artifacts/result-table':{},'@/app/_lib/utils':{cn:()=>'',fetcher:()=>{throw new Error('Unexpected fetch');}},
       './artifact-type-label':{artifactTypeLabels:{text:'文本',code:'代码',image:'图片',sheet:'表格'}},'./file-symbol':{FileSymbol:'file-symbol'},'lucide-react':{ArrowUpRight:'arrow',LoaderCircle:'loader'}
     };
     const load = path => {
@@ -1035,12 +1065,12 @@ test("artifact card lifecycle reopens the same document after close or tab switc
       runInNewContext(code,{exports:output.exports,module:output,process:{env:{}},URL,require:name=>{assert.ok(name in modules,'unexpected '+name);return modules[name];}});
       return output.exports;
     };
-    const {useWorkspace}=load('hooks/use-workspace.ts');
+    const {useWorkspace}=load('app/_hooks/use-workspace.ts');
     assert.equal(useWorkspace().width,68,'legacy percentage is retained as fallback');assert.equal(useWorkspace().manualWidth,false,'fresh chat uses responsive 400px conversation rather than fallback percentage');
     useWorkspace().update({width:57});useWorkspace().close();useWorkspace().show('document');
     assert.equal(useWorkspace().width,57,'user width survives close/reopen');assert.equal(useWorkspace().manualWidth,true,'actual user resize overrides automatic composition');
-    modules['@/hooks/use-workspace']={useWorkspace};
-    const {DocumentPreview}=load('components/chat/document-preview.tsx');
+    modules['@/app/_hooks/use-workspace']={useWorkspace};
+    const {DocumentPreview}=load('app/_components/chat/document-preview.tsx');
     let result={id:'doc-a',title:'Fixture A',kind:'code'};
     const render = () => {
       const tree=DocumentPreview({result,isReadonly:false});
@@ -1108,7 +1138,7 @@ test("artifact card lifecycle reopens the same document after close or tab switc
 });
 
 test("workspace resize grip stretches across the pane with an 8px hit area and a single-pixel divider", () => {
-  const source = readFileSync("components/chat/workspace.tsx", "utf8");
+  const source = readFileSync("app/_components/chat/workspace.tsx", "utf8");
   const grip = source.match(/<hr[\s\S]*?className="([^"]+)"/)?.[1];
   assert.ok(grip, "native separator exists");
   // Tailwind preflight explicitly gives hr height:0; flex stretch alone does
@@ -1131,13 +1161,16 @@ test("Lessie composition uses neutral panes, purposeful mint and narrower chat b
   assert.match(scoped, /--background: oklch\(1 0 0\)/);
   assert.match(scoped, /--workbench-selection:/);
   assert.doesNotMatch(scoped, /0\.00[1-8] (?:65|85)\)/);
-  assert.match(readFileSync("hooks/use-workspace.ts", "utf8"), /width: 68/);
   assert.match(
-    readFileSync("components/chat/messages.tsx", "utf8"),
+    readFileSync("app/_hooks/use-workspace.ts", "utf8"),
+    /width: 68/
+  );
+  assert.match(
+    readFileSync("app/_components/chat/messages.tsx", "utf8"),
     /max-w-\[720px\]/
   );
   assert.match(
-    readFileSync("components/chat/multimodal-input.tsx", "utf8"),
+    readFileSync("app/_components/chat/multimodal-input.tsx", "utf8"),
     /min-h-\[44px\]/
   );
 });
@@ -1155,24 +1188,24 @@ test("sent document chips adapt to filename length while image previews and uplo
     renderAttachment({ contentType: "image/png" }, { compact: true }),
     /h-24 w-24/
   );
-  const message = readFileSync("components/chat/message.tsx", "utf8");
+  const message = readFileSync("app/_components/chat/message.tsx", "utf8");
   assert.match(message, /<PreviewAttachment[\s\S]*?compact/);
   assert.doesNotMatch(
-    readFileSync("components/chat/multimodal-input.tsx", "utf8"),
+    readFileSync("app/_components/chat/multimodal-input.tsx", "utf8"),
     /compact=|compact[\s]*\/>/
   );
 });
 
 test("record details render actual labels and values first; original JSON and provenance are collapsed", () => {
   assert.ok(
-    existsSync("components/chat/result-table-row-details.tsx"),
+    existsSync("app/_components/chat/result-table-row-details.tsx"),
     "content-first detail renderer exists"
   );
   const html = clientScript(`
     const React = require('react');
     const { renderToStaticMarkup } = require('react-dom/server');
-    const { ResultTableRowDetails } = require('./components/chat/result-table-row-details.tsx');
-    const { Sheet } = require('./components/ui/sheet.tsx');
+    const { ResultTableRowDetails } = require('./app/_components/chat/result-table-row-details.tsx');
+    const { Sheet } = require('./app/_components/ui/sheet.tsx');
     const table = {columns:[{label:'名称',path:'/name'},{label:'价格',path:'/price'},{label:'来源',path:'/url'},{label:'危险原值',path:'/unsafe'}],rows:[{name:'Actual record',price:0,url:'https://example.test/exact?q=1',unsafe:'javascript:alert(1)',hidden:'raw retained'}],source:{toolCallId:'raw-call-id',completedAt:'original-time',timeBasis:'tool-completed'}};
     process.stdout.write(renderToStaticMarkup(React.createElement(Sheet,{open:true},React.createElement(ResultTableRowDetails,{table,index:0}))));
   `);
@@ -1192,8 +1225,8 @@ test("record details render actual labels and values first; original JSON and pr
 });
 
 test("assistant sender label appears once at a contiguous assistant transition without changing message ownership", () => {
-  const message = readFileSync("components/chat/message.tsx", "utf8");
-  const messages = readFileSync("components/chat/messages.tsx", "utf8");
+  const message = readFileSync("app/_components/chat/message.tsx", "utf8");
+  const messages = readFileSync("app/_components/chat/messages.tsx", "utf8");
   assert.match(message, /data-testid="assistant-sender"/);
   assert.match(message, /ChatNest/);
   assert.match(

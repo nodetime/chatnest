@@ -1,7 +1,6 @@
 "use client";
 
 import { MoreHorizontal, XIcon } from "lucide-react";
-import type { ToolPart } from "@/app/_components/ai-elements/tool";
 import { Button } from "@/app/_components/ui/button";
 import {
   Sheet,
@@ -12,6 +11,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/app/_components/ui/sheet";
+import type { ToolPart } from "../ai-elements/tool";
 
 // JSON strings stay quoted: false, 0, "", and null are actual returned values,
 // not absent output. No normalization of provider names, keys or raw errors.

@@ -2,8 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback } from "react";
-import { SparklesIcon } from "@/app/_components/chat/icons";
 import { suggestions } from "@/app/_lib/constants";
+import { SparklesIcon } from "./icons";
 
 function PreviewSuggestionButton({
   suggestion,

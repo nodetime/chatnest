@@ -1,6 +1,6 @@
 import { FileCode2, FileImage, FileSpreadsheet, FileText } from "lucide-react";
-import type { ArtifactKind } from "@/app/_components/chat/artifact";
 import { cn } from "@/app/_lib/utils";
+import type { ArtifactKind } from "./artifact";
 
 // The same quiet file silhouette for uploaded files and generated artifacts.
 export function FileSymbol({

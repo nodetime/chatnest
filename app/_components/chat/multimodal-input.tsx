@@ -36,25 +36,6 @@ import {
   ModelSelectorName,
   ModelSelectorTrigger,
 } from "@/app/_components/ai-elements/model-selector";
-import {
-  PromptInput,
-  PromptInputBody,
-  PromptInputFooter,
-  PromptInputHeader,
-  PromptInputSubmit,
-  PromptInputTextarea,
-  PromptInputTools,
-} from "@/app/_components/ai-elements/prompt-input";
-import { ComposerMenu } from "@/app/_components/chat/composer-menu";
-import { StopIcon } from "@/app/_components/chat/icons";
-import { PreviewAttachment } from "@/app/_components/chat/preview-attachment";
-import type { VisibilityType } from "@/app/_components/chat/visibility-selector";
-import { Button } from "@/app/_components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/app/_components/ui/tooltip";
 import { useActiveChat } from "@/app/_hooks/use-active-chat";
 import { useAgentInfo } from "@/app/_hooks/use-agent-info";
 import type { Attachment, ChatMessage } from "@/app/_lib/types";
@@ -75,6 +56,21 @@ import {
   isImageMime,
   MAX_DOCUMENT_BYTES,
 } from "@/server/uploads/document-types";
+import {
+  PromptInput,
+  PromptInputBody,
+  PromptInputFooter,
+  PromptInputHeader,
+  PromptInputSubmit,
+  PromptInputTextarea,
+  PromptInputTools,
+} from "../ai-elements/prompt-input";
+import { Button } from "../ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
+import { ComposerMenu } from "./composer-menu";
+import { StopIcon } from "./icons";
+import { PreviewAttachment } from "./preview-attachment";
+import type { VisibilityType } from "./visibility-selector";
 
 function setCookie(name: string, value: string) {
   const maxAge = 60 * 60 * 24 * 365;

@@ -1,23 +1,14 @@
 import "server-only";
 import { createMCPClient } from "@ai-sdk/mcp";
-import {
-  abortable,
-  closeManagedClient,
-} from "@/server/agent/mcp-settings/lifecycle";
-import { listNativeTools } from "@/server/agent/mcp-settings/native-tools";
+import { abortable, closeManagedClient } from "./lifecycle";
+import { listNativeTools } from "./native-tools";
 import {
   DISCOVERY_TIMEOUT_MS,
   guardedFetch,
   validateConnection,
-} from "@/server/agent/mcp-settings/network";
-import {
-  type Environment,
-  SettingsError,
-} from "@/server/agent/mcp-settings/security";
-import type {
-  Connection,
-  ToolMetadata,
-} from "@/server/agent/mcp-settings/types";
+} from "./network";
+import { type Environment, SettingsError } from "./security";
+import type { Connection, ToolMetadata } from "./types";
 export async function discoverConnection(
   connection: Connection,
   env: Environment = process.env,

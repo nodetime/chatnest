@@ -1,6 +1,6 @@
-import type { ToolPart } from "@/app/_components/ai-elements/tool";
-import { toolNeedsAttention } from "@/app/_components/chat/tool-activity-state";
 import type { ChatMessage } from "@/app/_lib/types";
+import type { ToolPart } from "../ai-elements/tool";
+import { toolNeedsAttention } from "./tool-activity-state";
 
 type Part = ChatMessage["parts"][number];
 const specialTools = new Set([

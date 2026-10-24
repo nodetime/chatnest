@@ -1,14 +1,14 @@
 import sharp from "sharp";
-import { decodeCapacity, UploadCapacityError } from "@/server/uploads/capacity";
+import { decodeCapacity, UploadCapacityError } from "./capacity";
 import {
   ATTACHMENT_MIMES,
   DOCUMENT_MIMES,
   isImageMime,
   MAX_DOCUMENT_BYTES,
-} from "@/server/uploads/document-types";
-import { UUID_PATTERN } from "@/server/uploads/refs";
+} from "./document-types";
+import { UUID_PATTERN } from "./refs";
 
-export { MAX_CONTEXT_BYTES, MAX_IMAGES } from "@/server/uploads/limits";
+export { MAX_CONTEXT_BYTES, MAX_IMAGES } from "./limits";
 export const MAX_FILE_BYTES = 5 * 1024 * 1024;
 export const MAX_REQUEST_BYTES = MAX_DOCUMENT_BYTES + 64 * 1024;
 export class UploadError extends Error {

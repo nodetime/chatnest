@@ -2,8 +2,8 @@
 
 import { AlertCircle, RotateCcw, X } from "lucide-react";
 import { useCallback } from "react";
-import { AgentLibrary } from "@/app/_components/chat/agent-library";
 import { useActiveChat } from "@/app/_hooks/use-active-chat";
+import { AgentLibrary } from "./agent-library";
 
 export function ConversationNotice({ onRestore }: { onRestore: () => void }) {
   const { error, clearError, loadError, retryLoad } = useActiveChat();

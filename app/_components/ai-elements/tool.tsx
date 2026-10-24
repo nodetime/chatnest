@@ -19,7 +19,7 @@ import {
 } from "@/app/_components/ui/collapsible";
 import { cn } from "@/app/_lib/utils";
 
-import { CodeBlock } from "@/app/_components/ai-elements/code-block";
+import { CodeBlock } from "./code-block";
 
 export type ToolProps = ComponentProps<typeof Collapsible>;
 
