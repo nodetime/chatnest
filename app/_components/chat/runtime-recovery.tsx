@@ -3,6 +3,7 @@
 import type { UseChatHelpers } from "@ai-sdk/react";
 import { useCallback, useRef, useState } from "react";
 import type { ChatMessage } from "@/app/_lib/types";
+import { hasRunFailure } from "@/server/agent/run-failure";
 import type { ToolPart } from "../ai-elements/tool";
 import { activityDisplayState } from "./activity-groups";
 
@@ -17,7 +18,10 @@ export function hasRecoverableToolFailure(message: ChatMessage) {
   // Resolve the current confirmation before asking the Agent to continue.
   return (
     !tools.some((part) => part.state === "approval-requested") &&
-    tools.some((part) => activityDisplayState(part, false) === "output-error")
+    (hasRunFailure(message) ||
+      tools.some(
+        (part) => activityDisplayState(part, false) === "output-error"
+      ))
   );
 }
 

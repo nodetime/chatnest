@@ -536,3 +536,37 @@ test("short trusted actions retain their label while subjects truncate before ar
     }
   `);
 });
+
+test("reopened failed-only assistant is visible without answer actions or forged text", () => {
+  clientScript(`${hookHarness}
+    const {PreviewMessage}=load('app/_components/chat/message.tsx',{
+      ...base,react:{useCallback:fn=>fn},
+      '@/app/_lib/utils':{cn:()=>'',sanitizeText:text=>text},
+      '../ai-elements/message':{MessageContent:'text',MessageResponse:'response'},
+      '../ai-elements/shimmer':{Shimmer:'shimmer'},
+      './activity-group':{ActivityGroup:'activity'},
+      './data-stream-provider':{useDataStream:()=>({})},
+      './document':{},'./document-preview':{},
+      './message-actions':{MessageActions:'actions'},
+      './message-reasoning':{MessageReasoning:'reasoning'},
+      './preview-attachment':{},'./tool-activity':{},'./weather':{},
+    });
+    const message={id:'failed',role:'assistant',parts:[{type:'data-run-status',id:'run-status',data:{state:'failed'}}]};
+    const props={message,isLoading:false,isReadonly:false};
+    const tree=PreviewMessage(props);assert.equal(tree.props.hidden,false);
+    assert.ok(nodes(tree).some(n=>n.props?.['data-testid']==='run-failure'));
+    assert.ok(!nodes(tree).some(n=>['actions','response','shimmer'].includes(n.type)));
+    assert.equal(PreviewMessage({...props,message:{...message,parts:[]}}).props.hidden,true);
+    const tool={type:'dynamic-tool',toolName:'porta__test',toolCallId:'call',state:'output-available',input:{},output:{value:'original'}};
+    for(const state of ['failed','resumed']){
+      const mixed=PreviewMessage({...props,message:{...message,parts:[tool,{...message.parts[0],data:{state}}]}});
+      assert.ok(!nodes(mixed).some(n=>n.type==='actions'),'status must not turn tool-only into an answer');
+    }
+    const {groupActivityParts}=require('./app/_components/chat/activity-groups.ts');
+    const grouped=groupActivityParts([tool,{...message.parts[0],data:{state:'resumed'}},{...tool,toolCallId:'second'}]);
+    assert.equal(grouped.length,1);assert.equal(grouped[0].parts.length,2);
+
+    const partial=PreviewMessage({...props,message:{...message,parts:[{type:'text',text:'original partial response'},...message.parts]}});
+    assert.ok(nodes(partial).some(n=>n.type==='response'&&n.props.children==='original partial response'));
+  `);
+});

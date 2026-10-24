@@ -30,7 +30,10 @@ export function DataStreamHandler() {
         setArtifact((current) => applyResultTableEvent(current, delta.data));
         continue;
       }
-      if (delta.type === "data-mcp-source") {
+      if (
+        delta.type === "data-mcp-source" ||
+        delta.type === "data-run-status"
+      ) {
         continue;
       }
       if (delta.type === "data-kind") {

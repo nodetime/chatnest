@@ -30,3 +30,7 @@ app/_components/chat/vercel-workbench.test.ts
 app/_components/chat/tool-records.test.ts
 app/_components/chat/unified-tools.test.ts
 app/_components/chat/runtime-interactions.test.ts
+
+server/skills/porta-skill.test.ts
+server/agent/run-failure.test.ts
+server/ai/model-settings/model-settings.test.ts

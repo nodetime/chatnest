@@ -42,9 +42,9 @@ function modelCalls(
   return calls;
 }
 
-test("all nine application model calls explicitly use metadata-only telemetry", () => {
+test("all ten application model calls explicitly use metadata-only telemetry", () => {
   const calls = ["app", "server"].flatMap(modelCalls);
-  assert.equal(calls.length, 9);
+  assert.equal(calls.length, 10);
   for (const { file, call } of calls) {
     const [options] = call.arguments;
     assert.ok(options && ts.isObjectLiteralExpression(options), file.fileName);

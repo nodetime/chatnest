@@ -10,7 +10,8 @@ export async function proxy(request: NextRequest) {
     return new Response("pong", { status: 200 });
   }
 
-  if (pathname.startsWith("/api/auth")) {
+  // Admin APIs own their authorization and return 401/403, never create guest sessions.
+  if (pathname.startsWith("/api/auth") || pathname.startsWith("/api/admin/")) {
     return NextResponse.next();
   }
 

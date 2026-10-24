@@ -8,11 +8,12 @@
 - 目标式任务入口、按需加载的 Skills、真实工具状态与执行确认。
 - 支持 OpenAI 兼容接口的自定义地址、模型与密钥，也支持 Vercel AI Gateway。
 - 默认接入免密钥、限流的 Exa 搜索与网页读取 MCP；可选 Tavily。
+- 已内置 Porta 通用 skill，复用现有 HTTP MCP；[Codex / ChatNest 接入指南](docs/integrations/porta-hosts.md)与[实际验收边界](docs/integrations/porta-host-verification.md)。
 - 管理员可在设置页管理 HTTP MCP 连接，详见 [可视化 MCP 配置](docs/integrations/mcp-settings.md)。
 
 ## 本地运行
 
-复制 `deploy/.env.example` 为本地 `.env.local`，设置 `AUTH_SECRET`、`POSTGRES_URL` 和模型连接。OpenAI 兼容接口使用 `MODEL_PROVIDER=openai`、`OPENAI_API_KEY`、`OPENAI_BASE_URL`、`OPENAI_MODEL`；不需要 Gateway Key。要启用内置浏览器，设置 `BROWSER_RUNTIME=local`，并安装匹配版本的 Chromium。
+复制 `deploy/.env.example` 为本地 `.env.local`，设置 `AUTH_SECRET`、`POSTGRES_URL`。完成迁移与管理员/加密主密钥配置后，可在 `/admin/models` 管理模型地址、Key、默认/开放模型并测试连接，无需反复改环境变量；详见 [模型配置](docs/integrations/model-settings.md)。首次启动也支持环境变量配置模型连接。OpenAI 兼容接口使用 `MODEL_PROVIDER=openai`、`OPENAI_API_KEY`、`OPENAI_BASE_URL`、`OPENAI_MODEL`；不需要 Gateway Key。要启用内置浏览器，设置 `BROWSER_RUNTIME=local`，并安装匹配版本的 Chromium。
 
 ```sh
 corepack pnpm install --frozen-lockfile

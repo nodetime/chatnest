@@ -178,7 +178,7 @@ export function AdminOverview() {
               />
               默认模型
             </CardTitle>
-            <CardDescription>服务端配置 · 只读</CardDescription>
+            <CardDescription>平台模型服务</CardDescription>
           </CardHeader>
           <CardContent className="flex-1 space-y-4">
             {data ? (
@@ -215,9 +215,9 @@ export function AdminOverview() {
             )}
           </CardContent>
           <CardFooter>
-            <p className="text-xs text-muted-foreground">
-              由部署环境管理，模型选择仍在工作台。
-            </p>
+            <Button asChild className="w-full" variant="outline">
+              <Link href="/admin/models">管理模型</Link>
+            </Button>
           </CardFooter>
         </Card>
       </div>

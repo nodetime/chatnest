@@ -9,7 +9,7 @@
 - `app/_components/ui/`: existing shadcn/radix components/tokens; reuse instead of redesigning.
 - 单元测试就近放在各模块旁(`server/agent/`、`server/uploads/`、`app/_components/chat/` 等): tsx/node:test offline suites; existing tests inject fake MCP clients and temporary configs. 离线白名单 `scripts/ci/offline-tests.txt`;`tests/` 保留 e2e 与共享 fixtures。
 - `server/config/agent.json`: default file-managed Exa/Tavily/Porta services. Preserve compatibility and environment secrets.
-- `server/ai/telemetry.ts`: shared metadata-only AI tracing policy, explicitly applied to all nine model calls; input/output content recording stays off even with global OTel registration.
+- `server/ai/telemetry.ts`: shared metadata-only AI tracing policy, explicitly applied to all ten model calls; input/output content recording stays off even with global OTel registration.
 - `server/agent/browser-policy.ts`: existing browser policy, not a sufficient MCP egress policy by itself.
 - `.local-review/` is ignored; private probes/fixtures must stay out of tracked files.
 
@@ -104,3 +104,16 @@ Runtime interactions (2026-10-24):
 - `runtime-recovery.tsx` offers recovery only for the latest idle writable failed/incomplete assistant turn. It sends a normal conversation message through the existing Agent transport, never directly retries a tool, reuses approval or clears failed evidence.
 - `conversation-notice.tsx` separates a readable transport failure summary from exact collapsed error details; input restore remains authoritative. `message.tsx` hides only empty final assistant presentation without replacing its canonical keyed wrapper.
 - `app/_components/chat/runtime-interactions.test.ts` covers approval double/stale submission, state labels, recovery guards, transport notices and empty final presentation. Browser acceptance and the inherited cross-tab approval concurrency boundary are recorded in `docs/superpowers/plans/2026-10-24-runtime-interactions-verification.md`.
+
+Porta host integration:
+- `server/skills/porta/` is a byte-identical pinned Porta skill snapshot; `server/config/porta-skill.lock.json` records upstream revision/hash. `server/skills/porta-skill.test.ts` checks provenance and the actual existing loader. No new shell runner/provider logic.
+- `server/agent/run-failure.ts` supplies request-scoped once-only sanitized failure metadata. Chat stream reports terminal failures, persists via SDK onEnd, and explicitly guards failed edits/regenerations. Approval continuation updates the same status ID to resumed without altering tool evidence.
+- Chat message/recovery components display persisted run failure after reopening, without inventing assistant text; marker-only messages omit answer actions. Status events are excluded from artifact stream handling and SDK model-message conversion.
+
+
+Admin model settings (2026-10-24):
+- `/admin/models` and guarded `/api/admin/models`: one active OpenAI-compatible service, original model IDs/capabilities/default selection, masked Key keep/replace, explicit directory lookup and inference probe. Save does not imply successful connection.
+- `server/ai/model-settings/`: independent encrypted ModelSettings row/AAD with CAS; precise endpoint binding for retained keys, no Anthropic credential inference, no browser-side persisted secrets. Environment configuration remains fallback only until an explicit save.
+- `network.ts`: public HTTPS, DNS pinned to validated IP, TLS validation and no redirects, response/request/deadline bounds. Reserved fake-IP proxy answers are rejected with a specific message; they are not interpreted as invalid credentials. Loopback is a deployment opt-in for development tests only.
+- `model-context.ts`, `model-settings/runtime.ts`: immutable per-request AsyncLocalStorage snapshot shared across chat, title and artifact model children; no process.env mutation. Public model discovery/default and admin readiness use the same snapshot. Config corruption fails closed.
+- `server/ai/model-settings/model-settings.test.ts`: encryption/domain isolation, endpoint binding, CAS, authorization/CSRF/bounds, local HTTP SDK probes, null-body statuses, concurrent real SDK SSE/tool-child snapshot isolation. Local protocol fixtures are not live model acceptance.

@@ -29,6 +29,7 @@ function isStructuralPart(part: Part) {
   return (
     part.type === "step-start" ||
     part.type === "data-mcp-source" ||
+    (part.type === "data-run-status" && part.data?.state === "resumed") ||
     part.type === "data-chat-title" ||
     part.type === "data-resultTable" ||
     (part.type === "text" && part.text.trim().length === 0)

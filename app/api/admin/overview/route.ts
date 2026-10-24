@@ -6,24 +6,25 @@ import {
   getModelConnection,
   getRuntimeModels,
 } from "@/server/ai/model-connection";
+import { withModelSettings } from "@/server/ai/model-settings/runtime";
 import { DEFAULT_CHAT_MODEL } from "@/server/ai/models";
 import { storageStatus } from "@/server/uploads/service";
 
 export const GET = createOverviewHandler({
-  // biome-ignore lint/suspicious/useAwait: Match the isolated async readiness-reader contract; this service is synchronous and performs no model calls.
-  model: async () => {
-    const connection = getModelConnection();
-    const models = getRuntimeModels();
-    const model =
-      connection.provider === "openai"
-        ? models[0]
-        : models.find((candidate) => candidate.id === DEFAULT_CHAT_MODEL);
-    return {
-      configured: connection.configured,
-      name: model?.name ?? DEFAULT_CHAT_MODEL,
-      provider: connection.provider,
-    };
-  },
+  model: () =>
+    withModelSettings(() => {
+      const connection = getModelConnection();
+      const models = getRuntimeModels();
+      const model =
+        connection.provider === "openai"
+          ? models.find((candidate) => candidate.id === connection.modelId)
+          : models.find((candidate) => candidate.id === DEFAULT_CHAT_MODEL);
+      return {
+        configured: connection.configured,
+        name: model?.name ?? DEFAULT_CHAT_MODEL,
+        provider: connection.provider,
+      };
+    }),
   session: async () => (await auth())?.user,
   storage: async () => {
     const status = await storageStatus();

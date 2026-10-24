@@ -123,7 +123,7 @@ export function ActiveChatProvider({
     chatId: string;
     title: string;
   } | null>(null);
-  const [currentModelId, setCurrentModelId] = useState(DEFAULT_CHAT_MODEL);
+  const [currentModelId, setCurrentModelId] = useState("");
   const { data: modelCatalog } = useSWR(
     `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/models`,
     fetcher,
@@ -131,8 +131,15 @@ export function ActiveChatProvider({
   );
   useEffect(() => {
     const ids: string[] | undefined = modelCatalog?.selectableModelIds;
+    if (modelCatalog && !ids && !currentModelId) {
+      setCurrentModelId(DEFAULT_CHAT_MODEL);
+    }
     if (ids?.length && !ids.includes(currentModelId)) {
-      setCurrentModelId(ids[0]);
+      setCurrentModelId(
+        ids.includes(modelCatalog?.defaultModelId)
+          ? modelCatalog.defaultModelId
+          : ids[0]
+      );
     }
   }, [modelCatalog, currentModelId]);
   const currentModelIdRef = useRef(currentModelId);
