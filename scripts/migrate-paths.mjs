@@ -25,7 +25,6 @@ const MOVES = {
   "artifacts/sheet/server.ts": "server/artifacts/sheet/server.ts",
   "artifacts/text/client.tsx": "app/_artifacts/text/client.tsx",
   "artifacts/text/server.ts": "server/artifacts/text/server.ts",
-  // ui
   components: "app/_components",
   config: "server/config",
   hooks: "app/_hooks",
@@ -35,18 +34,14 @@ const MOVES = {
   "lib/artifacts": "server/artifacts",
   "lib/auth-cookies.ts": "server/shared/auth-cookies.ts",
   "lib/constants.ts": "app/_lib/constants.ts",
-  // core
   "lib/db": "server/db",
   "lib/editor": "app/_lib/editor",
-  // shared
   "lib/errors.ts": "server/shared/errors.ts",
   "lib/ratelimit.ts": "server/shared/ratelimit.ts",
   "lib/types.ts": "app/_lib/types.ts",
-  // domains
   "lib/uploads": "server/uploads",
   "lib/utils.ts": "app/_lib/utils.ts",
   skills: "server/skills",
-  // deploy
   "vercel-template.json": "deploy/vercel-template.json",
 };
 
@@ -141,8 +136,31 @@ const BATCHES = {
 };
 
 const ALL_MOVES = { ...MOVES, ...TEST_MOVES };
+
+const args = process.argv.slice(2);
+const planOnly = args.includes("--plan");
+const batchFlag = args.find((a) => a.startsWith("--batch"));
+const batchName = batchFlag?.split("=")[1] ?? args[args.indexOf(batchFlag) + 1];
+const keys = planOnly
+  ? Object.keys(MOVES).concat("@tests")
+  : BATCHES[batchName];
+if (!keys) {
+  console.error("用法: --batch ui|core|domains|shared|deploy 或 --plan");
+  process.exit(1);
+}
+
+// 本批移动映射。别名重写只作用于本批,保证每批结束 tsc 可绿:
+// 本批/往批来源 -> 最终位置;来批来源 -> 保持旧路径,该批运行时再重写。
+const BATCH_MOVES = planOnly
+  ? ALL_MOVES
+  : Object.fromEntries(
+      keys.flatMap((key) =>
+        key === "@tests" ? Object.entries(TEST_MOVES) : [[key, MOVES[key]]]
+      )
+    );
+
 // 别名重写规则:按旧路径长度降序,先匹配更长前缀(from/to 都去扩展名,specifier 无扩展名)
-const ALIAS_RULES = Object.entries(ALL_MOVES)
+const ALIAS_RULES = Object.entries(BATCH_MOVES)
   .map(([o, n]) => ({
     from: `@/${o.replace(/\.(ts|tsx)$/, "")}`,
     to: `@/${n.replace(/\.(ts|tsx)$/, "")}`,
@@ -204,13 +222,28 @@ function mapAlias(spec) {
   return null;
 }
 function mapOldTarget(oldTarget) {
-  for (const [o, n] of Object.entries(ALL_MOVES).sort(
+  // 第一级:本批来源 -> 直接映射到最终位置
+  for (const [o, n] of Object.entries(BATCH_MOVES).sort(
     (a, b) => b[0].length - a[0].length
   )) {
     const oNoExt = o.replace(/\.(ts|tsx)$/, "");
     if (oldTarget === oNoExt || oldTarget.startsWith(`${oNoExt}/`)) {
       const tail = oldTarget.slice(oNoExt.length);
       return n.replace(/\.(ts|tsx)$/, "") + tail;
+    }
+  }
+  // 第二级:其余批次来源。最终位置已在磁盘(往批已搬)则指过去,否则保持旧路径(来批未搬)
+  for (const [o, n] of Object.entries(ALL_MOVES).sort(
+    (a, b) => b[0].length - a[0].length
+  )) {
+    const oNoExt = o.replace(/\.(ts|tsx)$/, "");
+    if (oldTarget === oNoExt || oldTarget.startsWith(`${oNoExt}/`)) {
+      const tail = oldTarget.slice(oNoExt.length);
+      const finalNoExt = `${n.replace(/\.(ts|tsx)$/, "")}${tail}`;
+      const alreadyMoved = ["", ".ts", ".tsx"].some((ext) =>
+        existsSync(path.join(ROOT, finalNoExt + ext))
+      );
+      return alreadyMoved ? finalNoExt : oldTarget;
     }
   }
   return null;
@@ -231,10 +264,11 @@ function rewriteImports(fileAbs) {
       }
       return m;
     }
-    if (spec.startsWith(".") && oldRel) {
-      const oldDir = path.dirname(oldRel);
+    if (spec.startsWith(".")) {
+      // 导入者已搬则按旧位置解析,未搬则按当前位置解析(两者一致)
+      const baseDir = path.dirname(oldRel ?? rel);
       const oldTarget = path.posix
-        .normalize(path.posix.join(oldDir, spec))
+        .normalize(path.posix.join(baseDir, spec))
         .replace(/\.(ts|tsx)$/, "");
       const mapped = mapOldTarget(oldTarget);
       if (mapped) {
@@ -248,18 +282,6 @@ function rewriteImports(fileAbs) {
   if (changed) {
     writeFileSync(fileAbs, text);
   }
-}
-
-const args = process.argv.slice(2);
-const planOnly = args.includes("--plan");
-const batchFlag = args.find((a) => a.startsWith("--batch"));
-const batchName = batchFlag?.split("=")[1] ?? args[args.indexOf(batchFlag) + 1];
-const keys = planOnly
-  ? Object.keys(MOVES).concat("@tests")
-  : BATCHES[batchName];
-if (!keys) {
-  console.error("用法: --batch ui|core|domains|shared|deploy 或 --plan");
-  process.exit(1);
 }
 
 console.log(`== batch: ${planOnly ? "PLAN(all)" : batchName} ==`);
