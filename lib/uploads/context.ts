@@ -1,19 +1,19 @@
-import type { ChatMessage } from "../types";
-import { AttachmentRoundBudget } from "./document-budget";
+import type { ChatMessage } from "@/app/_lib/types";
+import { AttachmentRoundBudget } from "@/lib/uploads/document-budget";
 import {
   ATTACHMENT_MIMES,
   type DocumentExtraction,
   isImageMime,
   isReadableExtraction,
   MAX_DOCUMENT_BYTES,
-} from "./document-types";
-import { assetIdFromRef } from "./refs";
+} from "@/lib/uploads/document-types";
+import { assetIdFromRef } from "@/lib/uploads/refs";
 import {
   MAX_CONTEXT_BYTES,
   MAX_FILE_BYTES,
   MAX_IMAGES,
   UploadError,
-} from "./validation";
+} from "@/lib/uploads/validation";
 export type ResolvedAsset = {
   bytes?: Buffer;
   mime: string;

@@ -2,9 +2,9 @@ import { createHash } from "node:crypto";
 import { constants } from "node:fs";
 import { lstat, mkdir, open, realpath, unlink } from "node:fs/promises";
 import { isAbsolute, join, parse, resolve } from "node:path";
-import { MAX_DOCUMENT_BYTES } from "./document-types";
-import { UUID_PATTERN } from "./refs";
-import { MAX_FILE_BYTES, UploadError } from "./validation";
+import { MAX_DOCUMENT_BYTES } from "@/lib/uploads/document-types";
+import { UUID_PATTERN } from "@/lib/uploads/refs";
+import { MAX_FILE_BYTES, UploadError } from "@/lib/uploads/validation";
 
 type Env = Record<string, string | undefined>;
 export function storageDirectory(env: Env = process.env) {

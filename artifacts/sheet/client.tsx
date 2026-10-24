@@ -1,15 +1,15 @@
 import { parse, unparse } from "papaparse";
 import { toast } from "sonner";
-import { Artifact } from "@/components/chat/create-artifact";
+import { Artifact } from "@/app/_components/chat/create-artifact";
 import {
   CopyIcon,
   LineChartIcon,
   RedoIcon,
   SparklesIcon,
   UndoIcon,
-} from "@/components/chat/icons";
-import { ResultTableView } from "@/components/chat/result-table";
-import { SpreadsheetEditor } from "@/components/chat/sheet-editor";
+} from "@/app/_components/chat/icons";
+import { ResultTableView } from "@/app/_components/chat/result-table";
+import { SpreadsheetEditor } from "@/app/_components/chat/sheet-editor";
 import {
   isProtectedResultTable,
   parseResultTable,

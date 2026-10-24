@@ -1,9 +1,9 @@
 import { tool, type UIMessageStreamWriter } from "ai";
 import type { Session } from "next-auth";
 import { z } from "zod";
+import type { ChatMessage } from "@/app/_lib/types";
 import { isProtectedResultTable } from "@/lib/artifacts/result-table";
 import { getDocumentById, saveDocument } from "@/lib/db/queries";
-import type { ChatMessage } from "@/lib/types";
 
 type EditDocumentProps = {
   session: Session;

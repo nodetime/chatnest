@@ -12,6 +12,12 @@ import {
 import { checkBotId } from "botid/server";
 import { after } from "next/server";
 import { createResumableStreamContext } from "resumable-stream";
+import {
+  isProductionEnvironment,
+  isTestEnvironment,
+} from "@/app/_lib/constants";
+import type { ChatMessage, WaitingStatusData } from "@/app/_lib/types";
+import { convertToUIMessages, generateUUID } from "@/app/_lib/utils";
 import { auth, type UserType } from "@/app/(auth)/auth";
 import { applyToolApprovals } from "@/lib/agent/approvals";
 import { createBrowserTools } from "@/lib/agent/browser-tools";
@@ -42,7 +48,6 @@ import { createResultTable } from "@/lib/ai/tools/create-result-table";
 import { editDocument } from "@/lib/ai/tools/edit-document";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
 import { updateDocument } from "@/lib/ai/tools/update-document";
-import { isProductionEnvironment, isTestEnvironment } from "@/lib/constants";
 import {
   createStreamId,
   deleteChatById,
@@ -58,7 +63,6 @@ import {
 import type { DBMessage } from "@/lib/db/schema";
 import { ChatbotError } from "@/lib/errors";
 import { checkIpRateLimit } from "@/lib/ratelimit";
-import type { ChatMessage, WaitingStatusData } from "@/lib/types";
 import { prepareAttachmentContext } from "@/lib/uploads/context";
 import { AttachmentRoundBudget } from "@/lib/uploads/document-budget";
 import { readAttachmentTool } from "@/lib/uploads/read-attachment";
@@ -69,7 +73,6 @@ import {
   readAttachmentAsset,
 } from "@/lib/uploads/service";
 import { readBoundedBody, UploadError } from "@/lib/uploads/validation";
-import { convertToUIMessages, generateUUID } from "@/lib/utils";
 import { generateTitleFromUserMessage } from "../../actions";
 import { type PostRequestBody, postRequestBodySchema } from "./schema";
 

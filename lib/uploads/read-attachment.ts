@@ -1,12 +1,12 @@
 import { tool } from "ai";
 import { z } from "zod";
-import { AttachmentRoundBudget } from "./document-budget";
+import { AttachmentRoundBudget } from "@/lib/uploads/document-budget";
 import {
   type DocumentExtraction,
   type DocumentSegment,
   isReadableExtraction,
-} from "./document-types";
-import { UploadError } from "./validation";
+} from "@/lib/uploads/document-types";
+import { UploadError } from "@/lib/uploads/validation";
 export type ReadableAttachment = {
   name: string;
   mime: string;

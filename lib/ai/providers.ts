@@ -1,16 +1,16 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import { customProvider, gateway, wrapLanguageModel } from "ai";
-import { isTestEnvironment } from "../constants";
-import { openAIInlineImageMiddleware } from "./inline-image-middleware";
-import { getModelConnection } from "./model-connection";
-import { titleModel } from "./models";
+import { isTestEnvironment } from "@/app/_lib/constants";
+import { openAIInlineImageMiddleware } from "@/lib/ai/inline-image-middleware";
+import { getModelConnection } from "@/lib/ai/model-connection";
+import { titleModel } from "@/lib/ai/models";
 
 export const myProvider = isTestEnvironment
   ? (() => {
       const {
         chatModel,
         titleModel: mockTitleModel,
-      } = require("./models.mock");
+      } = require("@/lib/ai/models.mock");
       return customProvider({
         languageModels: {
           "chat-model": chatModel,

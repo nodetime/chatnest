@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { prepareRegeneration } from "../../lib/agent/message-turn";
-import type { ChatMessage } from "../../lib/types";
+import type { ChatMessage } from "@/app/_lib/types";
+import { prepareRegeneration } from "@/lib/agent/message-turn";
 
 const question: ChatMessage = {
   id: "question",
@@ -46,7 +46,7 @@ test("regeneration cannot discard a pending tool approval", () => {
   assert.equal(prepareRegeneration([question, pending], question.id), null);
 });
 test("editing uses stored file refs, replaces only text, and retains original history until commit", async () => {
-  const { prepareMessageEdit } = await import("../../lib/agent/message-turn");
+  const { prepareMessageEdit } = await import("@/lib/agent/message-turn");
   const file = {
     mediaType: "image/png",
     type: "file" as const,

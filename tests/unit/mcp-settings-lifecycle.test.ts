@@ -5,8 +5,8 @@ import type { MCPClient } from "@ai-sdk/mcp";
 import {
   abortable,
   closeManagedClient,
-} from "../../lib/agent/mcp-settings/lifecycle";
-import { listNativeTools } from "../../lib/agent/mcp-settings/native-tools";
+} from "@/lib/agent/mcp-settings/lifecycle";
+import { listNativeTools } from "@/lib/agent/mcp-settings/native-tools";
 
 test("complete RPC race releases abort listeners on success, failure and cancellation", async () => {
   const controller = new AbortController();

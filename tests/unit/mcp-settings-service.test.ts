@@ -3,12 +3,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { MCPClient } from "@ai-sdk/mcp";
-import { discoverConnection } from "../../lib/agent/mcp-settings/discovery";
+import { discoverConnection } from "@/lib/agent/mcp-settings/discovery";
 import type {
   SettingsRepository,
   SettingsRow,
-} from "../../lib/agent/mcp-settings/repository";
-import { createSettingsService } from "../../lib/agent/mcp-settings/service";
+} from "@/lib/agent/mcp-settings/repository";
+import { createSettingsService } from "@/lib/agent/mcp-settings/service";
 
 const env = {
   MCP_ALLOWED_ORIGINS: "https://fixture.example",

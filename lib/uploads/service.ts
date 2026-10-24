@@ -1,18 +1,22 @@
 import "server-only";
 import { createHash, randomUUID } from "node:crypto";
 import postgres from "postgres";
-import type { DBMessage } from "../db/schema";
-import { parseDocument } from "./document-parser";
+import type { DBMessage } from "@/lib/db/schema";
+import { parseDocument } from "@/lib/uploads/document-parser";
 import {
   ATTACHMENT_MIMES,
   type DocumentExtraction,
   isImageMime,
   isReadableExtraction,
   MAX_DOCUMENT_BYTES,
-} from "./document-types";
-import { LocalUploadStore, quotaLimits, storageDirectory } from "./local-store";
-import { assetIdFromRef, assetRef, UUID_PATTERN } from "./refs";
-import { mayReadAsset, requireFinalizedUpload } from "./security";
+} from "@/lib/uploads/document-types";
+import {
+  LocalUploadStore,
+  quotaLimits,
+  storageDirectory,
+} from "@/lib/uploads/local-store";
+import { assetIdFromRef, assetRef, UUID_PATTERN } from "@/lib/uploads/refs";
+import { mayReadAsset, requireFinalizedUpload } from "@/lib/uploads/security";
 import {
   MAX_CONTEXT_BYTES,
   MAX_FILE_BYTES,
@@ -20,7 +24,7 @@ import {
   safeDisplayName,
   UploadError,
   validateAttachment,
-} from "./validation";
+} from "@/lib/uploads/validation";
 
 const sql = postgres(process.env.POSTGRES_URL ?? "");
 // Shared lock serializes quota reservation, lifecycle pinning and safe deletion across processes.

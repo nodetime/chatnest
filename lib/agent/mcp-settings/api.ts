@@ -1,13 +1,13 @@
 import "server-only";
 import { ZodError } from "zod";
-import type { ServerConfig } from "../config";
-import { actionSchema, MAX_BODY_BYTES } from "./schema";
+import type { ServerConfig } from "@/lib/agent/config";
+import { actionSchema, MAX_BODY_BYTES } from "@/lib/agent/mcp-settings/schema";
 import {
   authorizeManagement,
   type Environment,
   SettingsError,
-} from "./security";
-import type { createSettingsService } from "./service";
+} from "@/lib/agent/mcp-settings/security";
+import type { createSettingsService } from "@/lib/agent/mcp-settings/service";
 
 async function readBody(request: Request) {
   if (Number(request.headers.get("content-length")) > MAX_BODY_BYTES) {

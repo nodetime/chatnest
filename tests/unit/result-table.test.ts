@@ -6,7 +6,7 @@ import {
   ResultEvidenceLedger,
   restoreResultEvidence,
   sourceModelOutput,
-} from "../../lib/agent/result-evidence";
+} from "@/lib/agent/result-evidence";
 import {
   buildResultTable,
   isProtectedResultTable,
@@ -15,7 +15,7 @@ import {
   resultCsv,
   resultRows,
   safeSourceUrl,
-} from "../../lib/artifacts/result-table";
+} from "@/lib/artifacts/result-table";
 
 const source = {
   completedAt: "2026-10-20T12:00:00.000Z",
@@ -229,11 +229,11 @@ test("view filters and numeric/null sort never mutate source and CSV blocks form
 });
 
 test("installed SDK projects current and persisted MCP results without replacing raw UI payloads", async () => {
-  const { createAgentRuntime } = await import("../../lib/agent/runtime");
-  const { agentConfigSchema } = await import("../../lib/agent/config");
+  const { createAgentRuntime } = await import("@/lib/agent/runtime");
+  const { agentConfigSchema } = await import("@/lib/agent/config");
   const { convertToModelMessages } = await import("ai");
   const { historyProjectionTools } = await import(
-    "../../lib/agent/result-evidence"
+    "@/lib/agent/result-evidence"
   );
   const value = new ResultEvidenceLedger();
   const events: unknown[] = [];
@@ -310,7 +310,7 @@ test("installed SDK projects current and persisted MCP results without replacing
 
 test("one result-table event replaces identity/kind/content atomically even after text-kind stream state", async () => {
   const { applyResultTableEvent } = await import(
-    "../../lib/artifacts/stream-state"
+    "@/lib/artifacts/stream-state"
   );
   const prior = {
     boundingBox: { height: 1, left: 0, top: 0, width: 1 },
@@ -409,7 +409,7 @@ test("table 500 row / 30 column / 1MiB UTF8 bounds explicitly reject complete en
 
 test("approval transport carries only decisions, not persisted raw MCP/table/file values", async () => {
   const { compactToolApprovals } = await import(
-    "../../lib/agent/approval-transport"
+    "@/lib/agent/approval-transport"
   );
   const input = [
     { id: "u", parts: [{ text: "private", type: "text" }], role: "user" },
@@ -501,7 +501,7 @@ test("model preview contains actual row values and non-JSON successes do not evi
   restoreResultEvidence(restored, messages);
   assert.ok(restored.get(source.toolCallId));
   const { historyProjectionTools, boundedMcpHistory } = await import(
-    "../../lib/agent/result-evidence"
+    "@/lib/agent/result-evidence"
   );
   const tools = historyProjectionTools(restored, messages);
   const bounded = boundedMcpHistory(messages, tools, restored);
@@ -523,9 +523,7 @@ test("model preview contains actual row values and non-JSON successes do not evi
   );
 });
 test("view/notes updates obey whole-envelope cap before persistence", async () => {
-  const { withResultTableView } = await import(
-    "../../lib/artifacts/result-table"
-  );
+  const { withResultTableView } = await import("@/lib/artifacts/result-table");
   const value = new ResultEvidenceLedger();
   value.record(source, {
     structuredContent: { items: [{ text: "a".repeat(1_040_000) }] },
@@ -542,7 +540,7 @@ test("view/notes updates obey whole-envelope cap before persistence", async () =
 
 test("combined latest history plus current MCP projections remain <=128KiB and adapter reinvocation is pure", async () => {
   const { historyProjectionTools, boundedMcpHistory } = await import(
-    "../../lib/agent/result-evidence"
+    "@/lib/agent/result-evidence"
   );
   const value = new ResultEvidenceLedger();
   const output = {
@@ -606,9 +604,7 @@ test("damaged escaped discriminator stays protected", () => {
 });
 
 test("reopening the same cached artifact preserves hydrated content; switching IDs clears stale content", async () => {
-  const { openArtifactPreview } = await import(
-    "../../lib/artifacts/stream-state"
-  );
+  const { openArtifactPreview } = await import("@/lib/artifacts/stream-state");
   const boundingBox = { height: 20, left: 1, top: 2, width: 100 };
   const prior = {
     boundingBox,
@@ -639,7 +635,7 @@ test("reopening the same cached artifact preserves hydrated content; switching I
 
 test("ambiguous duplicate source IDs never overwrite original provenance or multiply projected history", async () => {
   const { historyProjectionTools, boundedMcpHistory } = await import(
-    "../../lib/agent/result-evidence"
+    "@/lib/agent/result-evidence"
   );
   const messages = Array.from({ length: 200 }, (_, i) => ({
     createdAt: source.completedAt,
@@ -686,7 +682,7 @@ test("ambiguous duplicate source IDs never overwrite original provenance or mult
 });
 test("generic version deletion rejects any protected history, retaining immutability tombstone", async () => {
   const { assertGenericDocumentDeletionAllowed } = await import(
-    "../../lib/artifacts/result-table"
+    "@/lib/artifacts/result-table"
   );
   assert.throws(() =>
     assertGenericDocumentDeletionAllowed([

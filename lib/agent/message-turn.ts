@@ -1,5 +1,5 @@
-import type { ChatMessage } from "../types";
-import { MAX_MESSAGE_CHARACTERS } from "./input-limits";
+import type { ChatMessage } from "@/app/_lib/types";
+import { MAX_MESSAGE_CHARACTERS } from "@/lib/agent/input-limits";
 
 export function prepareRegeneration(
   stored: ChatMessage[],

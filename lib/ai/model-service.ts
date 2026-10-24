@@ -1,8 +1,11 @@
-import { getDirectCapabilities, getModelConnection } from "./model-connection";
+import {
+  getDirectCapabilities,
+  getModelConnection,
+} from "@/lib/ai/model-connection";
 import {
   getModelAvailability as getGatewayAvailability,
   getCapabilities as getGatewayCapabilities,
-} from "./models";
+} from "@/lib/ai/models";
 
 export function getCapabilities() {
   return getModelConnection().provider === "openai"

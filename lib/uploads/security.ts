@@ -1,7 +1,7 @@
-import { isPlatformAdmin } from "../admin/access";
-import { sameOriginBrowserControl } from "../agent/browser-policy";
-import { UploadCapacityError } from "./capacity";
-import { UploadError } from "./validation";
+import { isPlatformAdmin } from "@/lib/admin/access";
+import { sameOriginBrowserControl } from "@/lib/agent/browser-policy";
+import { UploadCapacityError } from "@/lib/uploads/capacity";
+import { UploadError } from "@/lib/uploads/validation";
 
 type User = { id?: string; type?: string } | null | undefined;
 export function authorizeUploadRequest(

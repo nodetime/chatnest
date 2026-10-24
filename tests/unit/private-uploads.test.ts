@@ -17,7 +17,7 @@ const png = Buffer.from(
 );
 test("only bounded valid image bytes are registered, MIME is sniffed and display names retain Unicode", async () => {
   const { validateImage, safeDisplayName, MAX_FILE_BYTES } = await import(
-    "../../lib/uploads/validation"
+    "@/lib/uploads/validation"
   );
   assert.equal(await validateImage(png, "image/png"), "image/png");
   for (const bytes of [
@@ -33,7 +33,7 @@ test("only bounded valid image bytes are registered, MIME is sniffed and display
   assert.equal(safeDisplayName("../../图片\r\n.png"), "图片.png");
 });
 test("canonical asset refs allow basePath only and never external/path/query/data URLs", async () => {
-  const { assetIdFromRef } = await import("../../lib/uploads/refs");
+  const { assetIdFromRef } = await import("@/lib/uploads/refs");
   const id = "11111111-1111-4111-8111-111111111111";
   assert.equal(assetIdFromRef(`/api/files/${id}`, ""), id);
   assert.equal(assetIdFromRef(`/demo/api/files/${id}`, "/demo"), id);
@@ -48,7 +48,7 @@ test("canonical asset refs allow basePath only and never external/path/query/dat
   }
 });
 test("private driver preserves bytes and rejects symlinks/path locators with private permissions", async () => {
-  const { LocalUploadStore } = await import("../../lib/uploads/local-store");
+  const { LocalUploadStore } = await import("@/lib/uploads/local-store");
   const root = await realpath(await mkdtemp(join(tmpdir(), "private-upload-")));
   try {
     const store = new LocalUploadStore(root);
@@ -68,7 +68,7 @@ test("private driver preserves bytes and rejects symlinks/path locators with pri
 });
 test("production requires explicit absolute persistent directory and quota bounds are finite", async () => {
   const { storageDirectory, quotaLimits } = await import(
-    "../../lib/uploads/local-store"
+    "@/lib/uploads/local-store"
   );
   assert.throws(() => storageDirectory({ NODE_ENV: "production" }));
   assert.throws(() =>
@@ -85,7 +85,7 @@ test("production requires explicit absolute persistent directory and quota bound
   assert.equal(quotaLimits({}).user, 100 * 1024 * 1024);
 });
 test("Vercel Functions cannot claim local upload durability even with a writable scratch directory", async () => {
-  const { storageDirectory } = await import("../../lib/uploads/local-store");
+  const { storageDirectory } = await import("@/lib/uploads/local-store");
   for (const directory of ["/tmp/private-uploads", "/srv/private"]) {
     assert.throws(
       () =>
@@ -112,7 +112,7 @@ test("Vercel Functions cannot claim local upload durability even with a writable
 });
 test("multipart input is stream bounded before parsing and rejects duplicate file/chat fields", async () => {
   const { readUploadForm, MAX_REQUEST_BYTES } = await import(
-    "../../lib/uploads/validation"
+    "@/lib/uploads/validation"
   );
   const form = new FormData();
   form.append("file", new File([png], "图片.png", { type: "image/png" }));
@@ -137,9 +137,7 @@ test("multipart input is stream bounded before parsing and rejects duplicate fil
   );
 });
 test("generation admission is synchronous, A B A invalidates stale completions and cancellation", async () => {
-  const { UploadAdmission } = await import(
-    "../../lib/uploads/client-admission"
-  );
+  const { UploadAdmission } = await import("@/lib/uploads/client-admission");
   const gate = new UploadAdmission("A");
   const first = gate.admit(14, 1);
   assert.ok(first);
@@ -157,9 +155,7 @@ test("generation admission is synchronous, A B A invalidates stale completions a
   assert.equal(gate.pending, 0);
 });
 test("attachment preparation rejects vision/count/history budget/external refs before reading bytes", async () => {
-  const { prepareAttachmentContext } = await import(
-    "../../lib/uploads/context"
-  );
+  const { prepareAttachmentContext } = await import("@/lib/uploads/context");
   const ref = "/api/files/11111111-1111-4111-8111-111111111111";
   let reads = 0;
   // biome-ignore lint/suspicious/useAwait: The injected asynchronous API deliberately resolves without real I/O in this offline test.
@@ -226,7 +222,7 @@ test("attachment preparation rejects vision/count/history budget/external refs b
 });
 test("drafts are owner-only and used public reads require real committed association", async () => {
   const { mayReadAsset, authorizeUploadRequest } = await import(
-    "../../lib/uploads/security"
+    "@/lib/uploads/security"
   );
   const asset = {
     associated: false,
@@ -304,7 +300,7 @@ test("upload routes and chat entry wire private lifecycle before persistence/tit
 });
 test("public guest readers are accepted but writes remain regular-only and used orphan owner reads fail closed", async () => {
   const { mayReadAsset, authorizeUploadRequest } = await import(
-    "../../lib/uploads/security"
+    "@/lib/uploads/security"
   );
   const request = new Request("http://localhost", {
     headers: { Origin: "http://localhost" },
@@ -345,7 +341,7 @@ test("public guest readers are accepted but writes remain regular-only and used 
 });
 test("SDK-swallowed send errors never clear draft, successful submissions clear only their own generation", async () => {
   const { completeDraftSubmission } = await import(
-    "../../lib/uploads/client-admission"
+    "@/lib/uploads/client-admission"
   );
   let clears = 0;
   const failed = new Error("vision rejected");
@@ -382,7 +378,7 @@ test("SDK-swallowed send errors never clear draft, successful submissions clear 
   assert.equal(clears, 1);
 });
 test("process upload admission rejects excess requests without reading their bodies and releases on failure", async () => {
-  const { UploadCapacity } = await import("../../lib/uploads/capacity");
+  const { UploadCapacity } = await import("@/lib/uploads/capacity");
   const gate = new UploadCapacity(1);
   let release!: () => void;
   const hold = new Promise<void>((resolve) => {
@@ -443,7 +439,7 @@ test("admin navigation marks only the actual storage route active and exposes re
   assert.match(ui, /<details/);
 });
 test("blank storage environment never writes UUID files into the repository", async () => {
-  const { storageDirectory } = await import("../../lib/uploads/local-store");
+  const { storageDirectory } = await import("@/lib/uploads/local-store");
   const { resolve } = await import("node:path");
   assert.equal(
     storageDirectory({ NODE_ENV: "development", UPLOAD_STORAGE_DIR: "" }),
@@ -458,7 +454,7 @@ test("blank storage environment never writes UUID files into the repository", as
   );
 });
 test("missing finalized pending reservation is a conflict rather than a successful orphan URL", async () => {
-  const { requireFinalizedUpload } = await import("../../lib/uploads/security");
+  const { requireFinalizedUpload } = await import("@/lib/uploads/security");
   assert.throws(() => requireFinalizedUpload([]), /失效/);
   assert.doesNotThrow(() => requireFinalizedUpload([{ id: "asset" }]));
 });
@@ -470,7 +466,7 @@ test("client editing never deletes persisted history and rolls back SDK-swallowe
   assert.match(composer, /原图片保留，编辑时只修改文字/);
   assert.match(composer, /disabled=\{Boolean\(editingMessage\)\}/);
   const { submitEditedMessage } = await import(
-    "../../components/chat/message-editor"
+    "@/app/_components/chat/message-editor"
   );
   const message = {
     id: "u",
@@ -509,9 +505,9 @@ test("chat authenticates and bounds the stream before parsing JSON, including ap
   assert.match(source, /MAX_CHAT_REQUEST_BYTES/);
 });
 test("decoder saturation reports busy rather than falsely labelling valid image bytes corrupt", async () => {
-  const { decodeCapacity } = await import("../../lib/uploads/capacity");
+  const { decodeCapacity } = await import("@/lib/uploads/capacity");
   const { validateImage, UploadError } = await import(
-    "../../lib/uploads/validation"
+    "@/lib/uploads/validation"
   );
   let release!: () => void;
   const hold = new Promise<void>((resolve) => {
@@ -542,7 +538,7 @@ test("completed user markdown renders statically instead of reusing streaming bl
 });
 test("successful pending edit clears only submitted text and preserves newly typed draft", async () => {
   const { submitEditedMessage } = await import(
-    "../../components/chat/message-editor"
+    "@/app/_components/chat/message-editor"
   );
   const message = {
     id: "u",
@@ -587,7 +583,7 @@ test("successful pending edit clears only submitted text and preserves newly typ
   assert.equal(draft, "");
 });
 test("valid APNG acTL chunks are rejected even when decoder metadata omits pages", async () => {
-  const { validateImage } = await import("../../lib/uploads/validation");
+  const { validateImage } = await import("@/lib/uploads/validation");
   const apng = Buffer.from(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACGFjVEwAAAACAAAAAPONk3AAAAAaZmNUTAAAAAAAAAABAAAAAQAAAAAAAAAAAAEAAQAAVirfMQAAAA1JREFUeJxj+M/A8B8ABQAB/4mZPR0AAAAaZmNUTAAAAAEAAAABAAAAAQAAAAAAAAAAAAEAAQAAzVk15QAAABFmZEFUAAAAAnicY2D4z/AfAAQBAf9i5+mcAAAAAElFTkSuQmCC",
     "base64"

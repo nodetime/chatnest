@@ -1,12 +1,12 @@
 import { useCallback } from "react";
 import { toast } from "sonner";
-import { CodeEditor } from "@/components/chat/code-editor";
+import { CodeEditor } from "@/app/_components/chat/code-editor";
 import {
   Console,
   type ConsoleOutput,
   type ConsoleOutputContent,
-} from "@/components/chat/console";
-import { Artifact } from "@/components/chat/create-artifact";
+} from "@/app/_components/chat/console";
+import { Artifact } from "@/app/_components/chat/create-artifact";
 import {
   CopyIcon,
   LogsIcon,
@@ -14,8 +14,8 @@ import {
   PlayIcon,
   RedoIcon,
   UndoIcon,
-} from "@/components/chat/icons";
-import { generateUUID } from "@/lib/utils";
+} from "@/app/_components/chat/icons";
+import { generateUUID } from "@/app/_lib/utils";
 
 const OUTPUT_HANDLERS = {
   basic: `

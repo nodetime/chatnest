@@ -6,8 +6,8 @@ import {
   groupActivityParts,
   initialActivityDisclosure,
   reconcileActivityDisclosure,
-} from "../../components/chat/activity-groups";
-import type { ChatMessage } from "../../lib/types";
+} from "@/app/_components/chat/activity-groups";
+import type { ChatMessage } from "@/app/_lib/types";
 
 const tool = (id: string, state = "output-available", extra = {}) =>
   ({

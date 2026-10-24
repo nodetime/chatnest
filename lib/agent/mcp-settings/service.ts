@@ -1,18 +1,32 @@
 import "server-only";
-import type { ServerConfig } from "../config";
-import { decryptSettings, encryptSettings, parseEncryptionKey } from "./crypto";
-import { discoverConnection } from "./discovery";
-import { validateConnection } from "./network";
-import { type SettingsRepository, settingsRepository } from "./repository";
-import { actionSchema, managedListSchema } from "./schema";
-import { type Environment, managementReady, SettingsError } from "./security";
+import type { ServerConfig } from "@/lib/agent/config";
+import {
+  decryptSettings,
+  encryptSettings,
+  parseEncryptionKey,
+} from "@/lib/agent/mcp-settings/crypto";
+import { discoverConnection } from "@/lib/agent/mcp-settings/discovery";
+import { validateConnection } from "@/lib/agent/mcp-settings/network";
+import {
+  type SettingsRepository,
+  settingsRepository,
+} from "@/lib/agent/mcp-settings/repository";
+import {
+  actionSchema,
+  managedListSchema,
+} from "@/lib/agent/mcp-settings/schema";
+import {
+  type Environment,
+  managementReady,
+  SettingsError,
+} from "@/lib/agent/mcp-settings/security";
 import type {
   Connection,
   ConnectionEdit,
   ManagedServer,
   ServerProjection,
   SettingsAction,
-} from "./types";
+} from "@/lib/agent/mcp-settings/types";
 export function publicServer(server: ManagedServer): ServerProjection {
   return {
     allowedTools: server.allowedTools,

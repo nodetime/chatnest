@@ -16,9 +16,14 @@ import {
 } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import type { ArtifactKind } from "@/components/chat/artifact";
-import type { VisibilityType } from "@/components/chat/visibility-selector";
-import { prepareMessageEdit, prepareRegeneration } from "../agent/message-turn";
+import type { ArtifactKind } from "@/app/_components/chat/artifact";
+import type { VisibilityType } from "@/app/_components/chat/visibility-selector";
+import type { ChatMessage } from "@/app/_lib/types";
+import { generateUUID } from "@/app/_lib/utils";
+import {
+  prepareMessageEdit,
+  prepareRegeneration,
+} from "@/lib/agent/message-turn";
 import {
   assertGenericDocumentDeletionAllowed,
   isProtectedResultTable,
@@ -29,11 +34,7 @@ import {
   resultViewSchema,
   validView,
   withResultTableView,
-} from "../artifacts/result-table";
-import { ChatbotError } from "../errors";
-import type { ChatMessage } from "../types";
-import { cleanupDeletedChatAssets } from "../uploads/service";
-import { generateUUID } from "../utils";
+} from "@/lib/artifacts/result-table";
 import {
   type Chat,
   chat,
@@ -46,8 +47,10 @@ import {
   type User,
   user,
   vote,
-} from "./schema";
-import { generateHashedPassword } from "./utils";
+} from "@/lib/db/schema";
+import { generateHashedPassword } from "@/lib/db/utils";
+import { ChatbotError } from "@/lib/errors";
+import { cleanupDeletedChatAssets } from "@/lib/uploads/service";
 
 const client = postgres(process.env.POSTGRES_URL ?? "");
 const db = drizzle(client);

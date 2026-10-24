@@ -1,12 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-const implementation = import("../../lib/agent/browser-policy").catch(
-  () => null
-);
+const implementation = import("@/lib/agent/browser-policy").catch(() => null);
 
 test("streamed browser arguments do not consume the later approval auto-open event", async () => {
-  const activity = await import("../../lib/agent/workspace-events").catch(
+  const activity = await import("@/lib/agent/workspace-events").catch(
     () => null
   );
   assert.ok(activity, "browser workspace event handling is missing");

@@ -1,4 +1,4 @@
-import type { ChatMessage } from "@/lib/types";
+import type { ChatMessage } from "@/app/_lib/types";
 
 /** Keep stored calls authoritative: clients may answer an approval, not rewrite a tool call. */
 export function applyToolApprovals(

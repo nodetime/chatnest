@@ -14,7 +14,7 @@ import {
   type UIMessageChunk,
 } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
-import { createAgentRuntime } from "../../lib/agent/runtime";
+import { createAgentRuntime } from "@/lib/agent/runtime";
 
 const serviceToken = "fixture-porta-service-token-32";
 const toolName = "porta__onebound_1688_item_search";
@@ -208,7 +208,7 @@ test("Porta error 4008 and BridgeError retain JSON bodies without headers, leake
 });
 
 test("real AI SDK stream exposes only branded Porta error text as tool-output-error, never tool success", async () => {
-  const implementation = await import("../../lib/agent/porta-error").catch(
+  const implementation = await import("@/lib/agent/porta-error").catch(
     () => null
   );
   assert.ok(

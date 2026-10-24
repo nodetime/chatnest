@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import test from "node:test";
-import { isActivityPart } from "../../components/chat/activity-groups";
+import { isActivityPart } from "@/app/_components/chat/activity-groups";
 
 function client(code: string) {
   return execFileSync(process.execPath, ["--import", "tsx", "-e", code], {

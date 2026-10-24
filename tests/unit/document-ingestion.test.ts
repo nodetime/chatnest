@@ -6,7 +6,7 @@ import { test } from "node:test";
 
 const id = "11111111-1111-4111-8111-111111111111";
 test("document parser extracts bounded UTF8 line refs and CSV row refs in isolated worker", async () => {
-  const { parseDocument } = await import("../../lib/uploads/document-parser");
+  const { parseDocument } = await import("@/lib/uploads/document-parser");
   const txt = await parseDocument(Buffer.from("第一行\n第二行"), "text/plain");
   assert.equal(txt.status, "ready");
   assert.deepEqual(
@@ -29,9 +29,7 @@ test("document parser extracts bounded UTF8 line refs and CSV row refs in isolat
   );
 });
 test("documents support nonvision model and preview is serialized untrusted bounded source not bytes", async () => {
-  const { prepareAttachmentContext } = await import(
-    "../../lib/uploads/context"
-  );
+  const { prepareAttachmentContext } = await import("@/lib/uploads/context");
   const source = {
     characters: 3004,
     segments: [{ ref: "paragraph:1", text: `文档正文${"x".repeat(3000)}` }],
@@ -67,7 +65,7 @@ test("documents support nonvision model and preview is serialized untrusted boun
 });
 test("readAttachment reauthorizes every call and enforces percall and round text limits", async () => {
   const { createAttachmentReader } = await import(
-    "../../lib/uploads/read-attachment"
+    "@/lib/uploads/read-attachment"
   );
   let checks = 0;
   const reader = createAttachmentReader(async (assetId) => {
@@ -208,7 +206,7 @@ function pdf(pages: string[]) {
   return Buffer.from(data);
 }
 test("PDF page refs and scan/locked states are explicit", async () => {
-  const { parseDocument } = await import("../../lib/uploads/document-parser");
+  const { parseDocument } = await import("@/lib/uploads/document-parser");
   const out = await parseDocument(
     pdf(["first", "second", ""]),
     "application/pdf"
@@ -226,7 +224,7 @@ test("PDF page refs and scan/locked states are explicit", async () => {
   assert.equal(locked.status, "locked");
 });
 test("DOCX keeps Chinese paragraph/table refs without fictional pages or external image fetch", async () => {
-  const { parseDocument } = await import("../../lib/uploads/document-parser");
+  const { parseDocument } = await import("@/lib/uploads/document-parser");
   const out = await parseDocument(
     docx(
       "<w:p><w:r><w:t>中文段落</w:t></w:r></w:p><w:tbl><w:tr><w:tc><w:p><w:r><w:t>表格内容</w:t></w:r></w:p></w:tc></w:tr></w:tbl>"
@@ -250,7 +248,7 @@ test("XLSX streaming retains sheet, sparse cell, date and cached formula values 
     formula: 'WEBSERVICE("http://never.example")',
   };
   book.addWorksheet("库存").getCell("B2").value = "仓库";
-  const { parseDocument } = await import("../../lib/uploads/document-parser");
+  const { parseDocument } = await import("@/lib/uploads/document-parser");
   const out = await parseDocument(
     Buffer.from(await book.xlsx.writeBuffer()),
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -271,7 +269,7 @@ test("XLSX streaming retains sheet, sparse cell, date and cached formula values 
   assert.ok(!out.segments.some((s) => s.text.includes("WEBSERVICE")));
 });
 test("ZIP preflight rejects traversal duplicate DTD macros corruption and declared inflate budgets", async () => {
-  const { parseDocument } = await import("../../lib/uploads/document-parser");
+  const { parseDocument } = await import("@/lib/uploads/document-parser");
   const mime =
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
   for (const bytes of [
@@ -293,7 +291,7 @@ test("ZIP preflight rejects traversal duplicate DTD macros corruption and declar
   await assert.rejects(() => parseDocument(large, mime));
 });
 test("text output truncation and busy parser admission are explicit", async () => {
-  const { parseDocument } = await import("../../lib/uploads/document-parser");
+  const { parseDocument } = await import("@/lib/uploads/document-parser");
   const running = parseDocument(
     Buffer.from("x".repeat(1_000_020)),
     "text/plain"
@@ -337,7 +335,7 @@ test("composer admits documents without vision and exposes truthful reading/erro
   assert.ok(!admin.includes("当前不支持\n            PDF"));
 });
 test("private originals above image limit are stream-verified and canonical actual images still require vision", async () => {
-  const { LocalUploadStore } = await import("../../lib/uploads/local-store");
+  const { LocalUploadStore } = await import("@/lib/uploads/local-store");
   const { mkdtemp, rm, realpath } = await import("node:fs/promises");
   const { tmpdir } = await import("node:os");
   const { join } = await import("node:path");
@@ -357,9 +355,7 @@ test("private originals above image limit are stream-verified and canonical actu
   } finally {
     await rm(dir, { force: true, recursive: true });
   }
-  const { prepareAttachmentContext } = await import(
-    "../../lib/uploads/context"
-  );
+  const { prepareAttachmentContext } = await import("@/lib/uploads/context");
   await assert.rejects(
     () =>
       prepareAttachmentContext(
@@ -386,7 +382,7 @@ test("private originals above image limit are stream-verified and canonical actu
   );
 });
 test("ZIP local headers cannot disagree with preflight central names or hide extra unindexed entries", async () => {
-  const { parseDocument } = await import("../../lib/uploads/document-parser");
+  const { parseDocument } = await import("@/lib/uploads/document-parser");
   const mime =
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
   const bad = zip([["innocent.txt", "<!DOCTYPE x>"]]);
@@ -425,7 +421,7 @@ test("cheap storage enabled/ownership/quota admission precedes expensive documen
   );
 });
 test("worker hard deadline terminates CPU work without blocking loop and cleans private temp on timeout/exit", async () => {
-  const { runParserWorker } = await import("../../lib/uploads/document-parser");
+  const { runParserWorker } = await import("@/lib/uploads/document-parser");
   const { mkdtemp, rm, writeFile, stat } = await import("node:fs/promises");
   const { tmpdir } = await import("node:os");
   const { join } = await import("node:path");
@@ -503,14 +499,12 @@ test("XLSX absolute OOXML worksheet relationship targets retain real sheet names
       '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="/xl/worksheets/sheet1.xml" Id="rId1"/></Relationships>',
     ],
   ]);
-  const { parseDocument } = await import("../../lib/uploads/document-parser");
+  const { parseDocument } = await import("@/lib/uploads/document-parser");
   const out = await parseDocument(bytes, mime);
   assert.equal(out.segments[0].ref, 'sheet:"中文工作表"!A1');
 });
 test("historical attachment reads keep canonical UI data but do not replay unbounded source text to model", async () => {
-  const { prepareAttachmentContext } = await import(
-    "../../lib/uploads/context"
-  );
+  const { prepareAttachmentContext } = await import("@/lib/uploads/context");
   const original = {
     parts: [
       {
@@ -542,9 +536,7 @@ test("Node worker construction bypasses browser-worker bundler rewriting; CJS st
   assert.ok(!source.includes("new Worker("));
 });
 test("repeated document references do not duplicate source preview budget", async () => {
-  const { prepareAttachmentContext } = await import(
-    "../../lib/uploads/context"
-  );
+  const { prepareAttachmentContext } = await import("@/lib/uploads/context");
   const message = {
     parts: [{ mediaType: "text/plain", type: "file", url: `/api/files/${id}` }],
   };
@@ -599,7 +591,7 @@ test("external DOCX image/hyperlink relationships are never fetched and source H
         ],
       ]
     );
-    const { parseDocument } = await import("../../lib/uploads/document-parser");
+    const { parseDocument } = await import("@/lib/uploads/document-parser");
     const out = await parseDocument(
       bytes,
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -615,7 +607,7 @@ test("external DOCX image/hyperlink relationships are never fetched and source H
   }
 });
 test("ZIP entries and actual inflated XML totals enforce independent hard budgets", async () => {
-  const { parseDocument } = await import("../../lib/uploads/document-parser");
+  const { parseDocument } = await import("@/lib/uploads/document-parser");
   const { deflateRawSync } = await import("node:zlib");
   const mime =
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
@@ -657,7 +649,7 @@ test("ZIP entries and actual inflated XML totals enforce independent hard budget
   await assert.rejects(() => parseDocument(falseSize, mime));
 });
 test("page count and XLSX sheet/cell count budgets reject before claiming ready", async () => {
-  const { parseDocument } = await import("../../lib/uploads/document-parser");
+  const { parseDocument } = await import("@/lib/uploads/document-parser");
   await assert.rejects(
     () =>
       parseDocument(
@@ -712,7 +704,7 @@ test("page count and XLSX sheet/cell count budgets reject before claiming ready"
   );
 });
 test("macro terminology in ordinary document text does not become package macro detection", async () => {
-  const { parseDocument } = await import("../../lib/uploads/document-parser");
+  const { parseDocument } = await import("@/lib/uploads/document-parser");
   const result = await parseDocument(
     docx(
       "<w:p><w:r><w:t>Explain vbaProject.bin and macroEnabled documents</w:t></w:r></w:p>"
@@ -723,7 +715,7 @@ test("macro terminology in ordinary document text does not become package macro 
   assert.match(result.segments[0].text, /vbaProject.bin/);
 });
 test("valid single-column/single-cell CSV defaults to comma instead of treating delimiter warning as failure", async () => {
-  const { parseDocument } = await import("../../lib/uploads/document-parser");
+  const { parseDocument } = await import("@/lib/uploads/document-parser");
   const rows = await parseDocument(Buffer.from("name\nalice\nbob"), "text/csv");
   assert.equal(rows.segments.length, 3);
   assert.equal(JSON.parse(rows.segments[1].text)[0], "alice");
@@ -756,7 +748,7 @@ test("all actual worksheet relationship targets are read or explicitly rejected,
         ] as [string, string]
     ),
   ];
-  const { parseDocument } = await import("../../lib/uploads/document-parser");
+  const { parseDocument } = await import("@/lib/uploads/document-parser");
   const mime =
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
   const result = await parseDocument(zip(entries), mime);
@@ -774,11 +766,9 @@ test("Next proxy buffers the bounded document multipart envelope without changin
   const config = await readFile("next.config.ts", "utf8");
   assert.match(config, /proxyClientMaxBodySize:\s*"65mb"/);
   const { MAX_REQUEST_BYTES, MAX_FILE_BYTES } = await import(
-    "../../lib/uploads/validation"
+    "@/lib/uploads/validation"
   );
-  const { MAX_DOCUMENT_BYTES } = await import(
-    "../../lib/uploads/document-types"
-  );
+  const { MAX_DOCUMENT_BYTES } = await import("@/lib/uploads/document-types");
   assert.equal(MAX_FILE_BYTES, 5 * 1024 * 1024);
   assert.equal(MAX_DOCUMENT_BYTES, 64 * 1024 * 1024);
   assert.ok(MAX_REQUEST_BYTES < 65 * 1024 * 1024);
@@ -792,14 +782,12 @@ test("production config traces standalone worker transitive runtime rather than 
 });
 test("round source budget is shared across assets and seeded by actual deduplicated preview characters", async () => {
   const { AttachmentRoundBudget } = await import(
-    "../../lib/uploads/document-budget"
+    "@/lib/uploads/document-budget"
   );
   const { createAttachmentReader } = await import(
-    "../../lib/uploads/read-attachment"
+    "@/lib/uploads/read-attachment"
   );
-  const { prepareAttachmentContext } = await import(
-    "../../lib/uploads/context"
-  );
+  const { prepareAttachmentContext } = await import("@/lib/uploads/context");
   const budget = new AttachmentRoundBudget();
   const id2 = "22222222-2222-4222-8222-222222222222";
   const metadata = async (assetId: string) => ({

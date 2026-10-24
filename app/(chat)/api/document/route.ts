@@ -1,6 +1,6 @@
 import { z } from "zod";
+import type { ArtifactKind } from "@/app/_components/chat/artifact";
 import { auth } from "@/app/(auth)/auth";
-import type { ArtifactKind } from "@/components/chat/artifact";
 import {
   isProtectedResultTable,
   parseResultTable,

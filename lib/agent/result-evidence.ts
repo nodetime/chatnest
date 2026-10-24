@@ -2,7 +2,7 @@ import { dynamicTool, jsonSchema, type ToolSet } from "ai";
 import {
   type ResultSource,
   resultSourceSchema,
-} from "../artifacts/result-table";
+} from "@/lib/artifacts/result-table";
 
 type Entry = { source: ResultSource; value: unknown; bytes: number };
 export type McpSourceMetadata = ResultSource & {

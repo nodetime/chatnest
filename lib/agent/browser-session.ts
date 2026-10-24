@@ -9,8 +9,8 @@ import {
   BrowserControl,
   type BrowserMode,
   publicBrowserUrl,
-} from "./browser-policy";
-import { createBrowserProxy } from "./browser-proxy";
+} from "@/lib/agent/browser-policy";
+import { createBrowserProxy } from "@/lib/agent/browser-proxy";
 
 const permitted: Record<string, string[]> = {
   browser_click: ["target", "element", "button", "doubleClick"],

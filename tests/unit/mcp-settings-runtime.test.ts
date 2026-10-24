@@ -3,13 +3,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { MCPClient } from "@ai-sdk/mcp";
-import { agentConfigSchema } from "../../lib/agent/config";
-import { capabilityServers } from "../../lib/agent/mcp-settings/projection";
+import { agentConfigSchema } from "@/lib/agent/config";
+import { capabilityServers } from "@/lib/agent/mcp-settings/projection";
 import {
   mergeManagedConfig,
   toolAlias,
-} from "../../lib/agent/mcp-settings/runtime-config";
-import { createAgentRuntime } from "../../lib/agent/runtime";
+} from "@/lib/agent/mcp-settings/runtime-config";
+import { createAgentRuntime } from "@/lib/agent/runtime";
 
 test("native dot/128 names have stable bounded aliases, legacy aliases preserved", () => {
   assert.equal(toolAlias("exa", "search"), "exa__search");

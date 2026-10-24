@@ -1,8 +1,8 @@
 import "server-only";
 import { isPlatformAdmin as isAdmin } from "@/lib/admin/access";
-import { sameOriginBrowserControl } from "../browser-policy";
-import { parseEncryptionKey } from "./crypto";
-import { allowedOrigins } from "./network";
+import { sameOriginBrowserControl } from "@/lib/agent/browser-policy";
+import { parseEncryptionKey } from "@/lib/agent/mcp-settings/crypto";
+import { allowedOrigins } from "@/lib/agent/mcp-settings/network";
 export type Environment = Record<string, string | undefined>;
 export class SettingsError extends Error {
   readonly status: number;

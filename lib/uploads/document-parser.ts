@@ -2,9 +2,12 @@ import { chmod, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Worker } from "node:worker_threads";
-import { UploadCapacity, UploadCapacityError } from "./capacity";
-import { type DocumentExtraction, MAX_DOCUMENT_BYTES } from "./document-types";
-import { UploadError } from "./validation";
+import { UploadCapacity, UploadCapacityError } from "@/lib/uploads/capacity";
+import {
+  type DocumentExtraction,
+  MAX_DOCUMENT_BYTES,
+} from "@/lib/uploads/document-types";
+import { UploadError } from "@/lib/uploads/validation";
 
 const capacity = new UploadCapacity(1);
 // Standalone JS is deliberately traced by Next, not a TS path presumed runnable in production.

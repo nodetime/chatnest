@@ -1,4 +1,4 @@
-import { UploadError } from "./validation";
+import { UploadError } from "@/lib/uploads/validation";
 // One trusted server-owned budget per model round. Source previews and reads share it.
 export class AttachmentRoundBudget {
   private remaining = 100_000;

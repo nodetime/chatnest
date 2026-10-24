@@ -4,9 +4,9 @@ import {
   type AgentConfig,
   readAgentConfig,
   type ServerConfig,
-} from "../config";
-import { createSettingsService } from "./service";
-import type { ManagedServer } from "./types";
+} from "@/lib/agent/config";
+import { createSettingsService } from "@/lib/agent/mcp-settings/service";
+import type { ManagedServer } from "@/lib/agent/mcp-settings/types";
 export type RuntimeServer = ServerConfig & { managed?: boolean };
 export type RuntimeConfig = Omit<AgentConfig, "servers"> & {
   servers: RuntimeServer[];

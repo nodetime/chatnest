@@ -1,5 +1,5 @@
 import type { UIMessage } from "ai";
-import { collectSourceLinks, type SourceLink } from "./sources";
+import { collectSourceLinks, type SourceLink } from "@/lib/agent/sources";
 
 export type ConversationSource = SourceLink & { origins: string[] };
 export function collectConversationSources(

@@ -3,8 +3,9 @@
 import { generateText, type UIMessage } from "ai";
 import { cookies } from "next/headers";
 import { z } from "zod";
+import type { VisibilityType } from "@/app/_components/chat/visibility-selector";
+import { getTextFromMessage } from "@/app/_lib/utils";
 import { auth } from "@/app/(auth)/auth";
-import type { VisibilityType } from "@/components/chat/visibility-selector";
 import { getModelConnection } from "@/lib/ai/model-connection";
 import { titleModel } from "@/lib/ai/models";
 import { titlePrompt } from "@/lib/ai/prompts";
@@ -17,7 +18,6 @@ import {
   updateChatTitleById,
   updateChatVisibilityById,
 } from "@/lib/db/queries";
-import { getTextFromMessage } from "@/lib/utils";
 
 export async function saveChatModelAsCookie(model: string) {
   const cookieStore = await cookies();

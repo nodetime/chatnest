@@ -1,6 +1,6 @@
 import { createClient } from "redis";
 
-import { isProductionEnvironment } from "@/lib/constants";
+import { isProductionEnvironment } from "@/app/_lib/constants";
 import { ChatbotError } from "@/lib/errors";
 
 const MAX_MESSAGES = 10;

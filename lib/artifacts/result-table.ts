@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { ResultEvidenceLedger } from "../agent/result-evidence";
+import type { ResultEvidenceLedger } from "@/lib/agent/result-evidence";
 
 const forbidden = new Set(["__proto__", "prototype", "constructor"]);
 export function pointerTokens(pointer: string): string[] {

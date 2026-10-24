@@ -12,11 +12,11 @@
   "files": {
     "includes": [
       "**/*",
-      "!components/ai-elements",
-      "!components/elements",
-      "!components/ui",
-      "!lib/utils.ts",
-      "!hooks/use-mobile.ts"
+      "!app/_components/ai-elements",
+      "!app/_components/elements",
+      "!app/_components/ui",
+      "!app/_lib/utils.ts",
+      "!app/_hooks/use-mobile.ts"
     ]
   },
   "linter": {

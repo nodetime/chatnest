@@ -1,4 +1,4 @@
-import { collectSourceLinks } from "./sources";
+import { collectSourceLinks } from "@/lib/agent/sources";
 
 export function normalizeMcpOutput(
   server: string,

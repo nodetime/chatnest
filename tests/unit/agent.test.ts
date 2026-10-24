@@ -5,24 +5,24 @@ import path from "node:path";
 import { test } from "node:test";
 import type { MCPClient } from "@ai-sdk/mcp";
 import { jsonSchema } from "ai";
-import { postRequestBodySchema } from "../../app/(chat)/api/chat/schema";
-import { applyToolApprovals } from "../../lib/agent/approvals";
-import { agentConfigSchema, resolveHeaders } from "../../lib/agent/config";
+import type { ChatMessage } from "@/app/_lib/types";
+import { applyToolApprovals } from "@/lib/agent/approvals";
+import { agentConfigSchema, resolveHeaders } from "@/lib/agent/config";
 import {
   collectConversationSources,
   conversationMarkdown,
   sourceListMarkdown,
-} from "../../lib/agent/conversation-sources";
-import { createAgentRuntime } from "../../lib/agent/runtime";
+} from "@/lib/agent/conversation-sources";
+import { createAgentRuntime } from "@/lib/agent/runtime";
 import {
   buildSkillsPrompt,
   createSkillTools,
   discoverSkills,
   readSkillFile,
-} from "../../lib/agent/skills";
-import { collectSourceLinks } from "../../lib/agent/sources";
-import { usesSecureAuthCookies } from "../../lib/auth-cookies";
-import type { ChatMessage } from "../../lib/types";
+} from "@/lib/agent/skills";
+import { collectSourceLinks } from "@/lib/agent/sources";
+import { usesSecureAuthCookies } from "@/lib/auth-cookies";
+import { postRequestBodySchema } from "../../app/(chat)/api/chat/schema";
 
 test("chat transport retains regeneration intent instead of silently treating it as a new question", () => {
   const body = postRequestBodySchema.parse({

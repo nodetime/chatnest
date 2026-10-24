@@ -1,5 +1,7 @@
 import { tool, type UIMessageStreamWriter } from "ai";
 import type { Session } from "next-auth";
+import type { ChatMessage } from "@/app/_lib/types";
+import { generateUUID } from "@/app/_lib/utils";
 import type { ResultEvidenceLedger } from "@/lib/agent/result-evidence";
 import {
   buildResultTable,
@@ -7,8 +9,6 @@ import {
   type ResultTable,
 } from "@/lib/artifacts/result-table";
 import { saveResultTableDocument } from "@/lib/db/queries";
-import type { ChatMessage } from "@/lib/types";
-import { generateUUID } from "@/lib/utils";
 
 export function createResultTable({
   ledger,

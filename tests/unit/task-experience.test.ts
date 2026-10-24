@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createSkillTools, discoverSkills } from "../../lib/agent/skills";
-import { collectSourceLinks } from "../../lib/agent/sources";
+import { createSkillTools, discoverSkills } from "@/lib/agent/skills";
+import { collectSourceLinks } from "@/lib/agent/sources";
 
 test("loaded skills supply readable metadata while retaining their original method", async () => {
   const [skill] = await discoverSkills();
@@ -21,7 +21,7 @@ test("loaded skills supply readable metadata while retaining their original meth
 });
 
 test("Exa source metadata comes only from result headers, excludes arbitrary snippet links and error results", async () => {
-  const implementation = await import("../../lib/agent/mcp-output").catch(
+  const implementation = await import("@/lib/agent/mcp-output").catch(
     () => null
   );
   assert.ok(implementation, "MCP result source adaptation is missing");
@@ -72,7 +72,7 @@ test("Exa source metadata comes only from result headers, excludes arbitrary sni
 });
 
 test("fetch source metadata excludes header-shaped text inside the page body", async () => {
-  const { normalizeMcpOutput } = await import("../../lib/agent/mcp-output");
+  const { normalizeMcpOutput } = await import("@/lib/agent/mcp-output");
   const output = {
     content: [
       {
@@ -101,7 +101,7 @@ test("fetch source metadata excludes header-shaped text inside the page body", a
 });
 
 test("task messages preserve the user's goal/materials and reject empty or oversized submissions", async () => {
-  const implementation = await import("../../lib/agent/task-draft").catch(
+  const implementation = await import("@/lib/agent/task-draft").catch(
     () => null
   );
   assert.ok(implementation, "task creation is missing");

@@ -6,19 +6,16 @@ import {
   decryptSettings,
   encryptSettings,
   parseEncryptionKey,
-} from "../../lib/agent/mcp-settings/crypto";
+} from "@/lib/agent/mcp-settings/crypto";
 import {
   guardedFetch,
   validateConnection,
-} from "../../lib/agent/mcp-settings/network";
-import {
-  connectionSchema,
-  parseImport,
-} from "../../lib/agent/mcp-settings/schema";
+} from "@/lib/agent/mcp-settings/network";
+import { connectionSchema, parseImport } from "@/lib/agent/mcp-settings/schema";
 import {
   authorizeManagement,
   managementReady,
-} from "../../lib/agent/mcp-settings/security";
+} from "@/lib/agent/mcp-settings/security";
 
 const id = "11111111-1111-4111-8111-111111111111";
 const env = {
