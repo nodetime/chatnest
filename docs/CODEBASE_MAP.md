@@ -104,3 +104,8 @@ Runtime interactions (2026-10-24):
 - `runtime-recovery.tsx` offers recovery only for the latest idle writable failed/incomplete assistant turn. It sends a normal conversation message through the existing Agent transport, never directly retries a tool, reuses approval or clears failed evidence.
 - `conversation-notice.tsx` separates a readable transport failure summary from exact collapsed error details; input restore remains authoritative. `message.tsx` hides only empty final assistant presentation without replacing its canonical keyed wrapper.
 - `tests/unit/runtime-interactions.test.ts` covers approval double/stale submission, state labels, recovery guards, transport notices and empty final presentation. Browser acceptance and the inherited cross-tab approval concurrency boundary are recorded in `docs/superpowers/plans/2026-10-24-runtime-interactions-verification.md`.
+
+Porta host integration:
+- `skills/porta/` is a byte-identical pinned Porta skill snapshot; `config/porta-skill.lock.json` records upstream revision/hash. `tests/unit/porta-skill.test.ts` checks provenance and the actual existing loader. No new shell runner/provider logic.
+- `lib/agent/run-failure.ts` supplies request-scoped once-only sanitized failure metadata. Chat stream reports terminal failures, persists via SDK onEnd, and explicitly guards failed edits/regenerations. Approval continuation updates the same status ID to resumed without altering tool evidence.
+- Chat message/recovery components display persisted run failure after reopening, without inventing assistant text; marker-only messages omit answer actions. Status events are excluded from artifact stream handling and SDK model-message conversion.

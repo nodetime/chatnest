@@ -30,3 +30,6 @@ tests/unit/vercel-workbench.test.ts
 tests/unit/tool-records.test.ts
 tests/unit/unified-tools.test.ts
 tests/unit/runtime-interactions.test.ts
+
+tests/unit/porta-skill.test.ts
+tests/unit/run-failure.test.ts

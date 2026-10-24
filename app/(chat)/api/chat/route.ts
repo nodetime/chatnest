@@ -26,6 +26,10 @@ import {
   ResultEvidenceLedger,
   restoreResultEvidence,
 } from "@/lib/agent/result-evidence";
+import {
+  createRunFailureReporter,
+  hasRunFailure,
+} from "@/lib/agent/run-failure";
 import { createAgentRuntime } from "@/lib/agent/runtime";
 import { entitlementsByUserType } from "@/lib/ai/entitlements";
 import {
@@ -285,8 +289,18 @@ export async function POST(request: Request) {
       }
     }
 
-    const stream = createUIMessageStream({
+    const runFailure = createRunFailureReporter();
+    const stream = createUIMessageStream<ChatMessage>({
       execute: async ({ writer: dataStream }) => {
+        // Approval continuation extends the same assistant: update only our status part.
+        const previous = uiMessages.at(-1);
+        if (isToolApprovalFlow && previous && hasRunFailure(previous)) {
+          dataStream.write({
+            data: { state: "resumed" },
+            id: "run-status",
+            type: "data-run-status",
+          });
+        }
         const modelName = modelConfig?.name ?? chatModel;
         let hasModelActivity = false;
         let healthCheckTimer: ReturnType<typeof setTimeout> | undefined;
@@ -412,6 +426,10 @@ export async function POST(request: Request) {
             messages: modelMessages,
             model: getLanguageModel(chatModel),
             onAbort() {
+              // A runtime/model deadline is a failed request, not an explicit user stop.
+              if (!request.signal.aborted) {
+                runFailure.report((part) => dataStream.write(part));
+              }
               stopWaitingStatus();
             },
             onChunk({ chunk }) {
@@ -423,6 +441,9 @@ export async function POST(request: Request) {
               stopWaitingStatus();
             },
             onError() {
+              if (!request.signal.aborted) {
+                runFailure.report((part) => dataStream.write(part));
+              }
               stopWaitingStatus();
             },
             providerOptions: {
@@ -455,6 +476,11 @@ export async function POST(request: Request) {
             })
           );
           await result.text;
+        } catch (error) {
+          if (!request.signal.aborted) {
+            runFailure.report((part) => dataStream.write(part));
+          }
+          throw error;
         } finally {
           stopWaitingStatus();
           await runtime?.close();
@@ -479,6 +505,7 @@ export async function POST(request: Request) {
       }) => {
         if (edit) {
           if (
+            runFailure.failed ||
             isAborted ||
             request.signal.aborted ||
             !finishReason ||
@@ -503,6 +530,7 @@ export async function POST(request: Request) {
           });
         } else if (regeneration) {
           if (
+            runFailure.failed ||
             isAborted ||
             request.signal.aborted ||
             !finishReason ||

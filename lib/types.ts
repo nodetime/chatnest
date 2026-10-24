@@ -38,6 +38,7 @@ export type WaitingStatusData = {
 };
 
 export type CustomUIDataTypes = {
+  "run-status": { state: "failed" | "resumed" };
   "mcp-source": McpSourceMetadata;
   resultTable: {
     id: string;
