@@ -92,9 +92,11 @@ const PurePreviewMessage = ({
         part.text?.trim().length > 0) ||
       part.type.startsWith("tool-") ||
       part.type === "dynamic-tool" ||
-      part.type === "source-url"
+      part.type === "source-url" ||
+      part.type === "file"
   );
   const isThinking = isAssistant && isLoading && !hasAnyContent;
+  const isEmptyAssistant = isAssistant && !isLoading && !hasAnyContent;
 
   const attachments = attachmentsFromMessage.length > 0 && (
     <div
@@ -330,17 +332,19 @@ const PurePreviewMessage = ({
     isAssistant &&
     groupedParts.length > 0 &&
     groupedParts.every((group) => group.kind === "activity");
-  const actions = !isReadonly && (!toolOnlyAssistant || onRegenerate) && (
-    <MessageActions
-      chatId={chatId}
-      isLoading={isLoading}
-      key={`action-${message.id}`}
-      message={message}
-      onEdit={onEdit ? () => onEdit(message) : undefined}
-      onRegenerate={onRegenerate}
-      vote={vote}
-    />
-  );
+  const actions = !isReadonly &&
+    !isEmptyAssistant &&
+    (!toolOnlyAssistant || onRegenerate) && (
+      <MessageActions
+        chatId={chatId}
+        isLoading={isLoading}
+        key={`action-${message.id}`}
+        message={message}
+        onEdit={onEdit ? () => onEdit(message) : undefined}
+        onRegenerate={onRegenerate}
+        vote={vote}
+      />
+    );
 
   const content = isThinking ? (
     <WaitingText />
@@ -360,6 +364,7 @@ const PurePreviewMessage = ({
       )}
       data-role={message.role}
       data-testid={`message-${message.role}`}
+      hidden={isEmptyAssistant}
     >
       <div
         className={cn(
@@ -368,7 +373,7 @@ const PurePreviewMessage = ({
       >
         {isAssistant ? (
           <div className="flex min-w-0 flex-1 flex-col gap-2">
-            {!!showSender && <SenderLabel />}
+            {!!showSender && !isEmptyAssistant && <SenderLabel />}
             {content}
           </div>
         ) : (

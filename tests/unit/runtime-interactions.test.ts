@@ -125,3 +125,28 @@ test("actual SDK resolved transport failure retains failed evidence and recovery
     })().then(()=>process.stdout.write('ASYNC_DONE')).catch(e=>{console.error(e);process.exitCode=1;});
   `);
 });
+
+test("empty terminal assistant keeps its canonical owner without sender or answer actions, then reveals real content", () => {
+  clientScript(`${harness}
+    const {PreviewMessage}=load('components/chat/message.tsx',{...base,react:{useCallback:fn=>fn},'@/lib/utils':{cn:()=>'',sanitizeText:t=>t},'../ai-elements/message':{MessageContent:'text',MessageResponse:'response'},'../ai-elements/shimmer':{Shimmer:'shimmer'},'./activity-group':{ActivityGroup:'activity'},'./data-stream-provider':{useDataStream:()=>({})},'./document':{},'./document-preview':{DocumentPreview:'artifact'},'./message-actions':{MessageActions:'actions'},'./message-reasoning':{MessageReasoning:'reasoning'},'./preview-attachment':{PreviewAttachment:'attachment'},'./tool-activity':{ToolActivity:'tool'},'./weather':{}});
+    const message={id:'empty-final',role:'assistant',parts:[{type:'step-start'},{type:'text',text:'  '},{type:'reasoning',text:''}]};
+    const props={message,isLoading:false,isReadonly:false,onRegenerate:()=>{}};
+    let tree=PreviewMessage(props);assert.equal(tree.type,'div');assert.equal(tree.props['data-testid'],'message-assistant');assert.equal(tree.props.hidden,true);
+    assert.equal(nodes(tree).filter(n=>n.type==='actions'||n.type?.name==='SenderLabel').length,0);
+    const active=PreviewMessage({...props,isLoading:true});assert.ok(!active.props.hidden);assert.ok(nodes(active).some(n=>n.type?.name==='WaitingText'));
+    for(const visible of [{type:'text',text:'Actual answer'},{...part,state:'output-error',errorText:'actual failure'},{type:'file',filename:'file.txt',mediaType:'text/plain',url:'/fixture'}]){
+      const revealed=PreviewMessage({...props,message:{...message,parts:[visible]}});assert.equal(revealed.type,tree.type);assert.equal(revealed.props['data-testid'],tree.props['data-testid']);assert.ok(!revealed.props.hidden);assert.ok(nodes(revealed).some(n=>n.type?.name==='SenderLabel'));
+    }
+  `);
+});
+
+test("conversation transport notice uses a friendly summary and preserves exact optional error details and existing actions", () => {
+  clientScript(`${harness}
+    const raw='An error occurred. '+ 'opaque diagnostic '.repeat(30);let restored=0,reloaded=0;let state={error:new Error(raw),clearError:()=>{},retryLoad:()=>reloaded++};
+    const {ConversationNotice}=load('components/chat/conversation-notice.tsx',{...base,react:{useCallback:fn=>fn},'@/hooks/use-active-chat':{useActiveChat:()=>state},'./agent-library':{AgentLibrary:'library'}});
+    let tree=ConversationNotice({onRestore:()=>restored++});const paragraphs=nodes(tree).filter(n=>n.type==='p');assert.ok(paragraphs.some(n=>String(n.props.children).includes('这次请求未能完成')));assert.ok(paragraphs.every(n=>!String(n.props.children).includes('An error occurred.')));
+    const details=nodes(tree).find(n=>n.type==='details');assert.ok(details);assert.ok(!details.props.open);assert.equal(nodes(details).find(n=>n.type==='pre').props.children,raw);
+    button(tree,'恢复刚才的输入').props.onClick();assert.equal(restored,1);
+    state={...state,error:undefined,loadError:new Error(raw)};tree=ConversationNotice({onRestore:()=>restored++});assert.equal(nodes(tree).find(n=>n.type==='pre').props.children,raw);const reload=nodes(tree).find(n=>n.type==='button'&&JSON.stringify(n.props.children).includes('重新加载'));reload.props.onClick();assert.equal(reloaded,1);
+  `);
+});
