@@ -98,3 +98,9 @@ Composition correction after second rejected visual acceptance (2026-10-23):
 - Visual acceptance must compare against the supplied Lessie reference, not merely old ChatNest screenshots. A passing regression suite does not establish aesthetic equivalence. Keep people/match/outreach semantics out of the generic table unless actual data/features support them.
 
 - Chat detail polish: consecutive assistant messages share one quiet ChatNest sender label. Expanded activity groups use a light timeline and aligned detail controls while preserving approval/error visibility, raw-data sheets and focus restoration.
+
+Runtime interactions (2026-10-24):
+- `tool-activity.tsx` guards the exact pending approval event against duplicate and stale callbacks; approval waiting, submission, active execution, failure and incomplete states remain distinct. Raw identities and errors stay in the existing call-details Sheet.
+- `runtime-recovery.tsx` offers recovery only for the latest idle writable failed/incomplete assistant turn. It sends a normal conversation message through the existing Agent transport, never directly retries a tool, reuses approval or clears failed evidence.
+- `conversation-notice.tsx` separates a readable transport failure summary from exact collapsed error details; input restore remains authoritative. `message.tsx` hides only empty final assistant presentation without replacing its canonical keyed wrapper.
+- `tests/unit/runtime-interactions.test.ts` covers approval double/stale submission, state labels, recovery guards, transport notices and empty final presentation. Browser acceptance and the inherited cross-tab approval concurrency boundary are recorded in `docs/superpowers/plans/2026-10-24-runtime-interactions-verification.md`.
