@@ -545,11 +545,22 @@ PLAYWRIGHT=True pnpm exec playwright test --reporter=line 2>&1 | tail -5   # 与
 ls -d */ | sort   # 可见一级目录应为: app/ deploy/ docs/ public/ scripts/ server/ tests/ (+node_modules)
 ```
 
-- [ ] **Step 2: dev 浏览器冒烟**
+- [ ] **Step 2: 产物 tracing 抽查(spec 验收项)**
+
+不跑 `pnpm build`(会迁移),单独跑 next build:
+
+```bash
+pnpm exec next build 2>&1 | tail -5
+grep -l "server/skills" .next/server/app/api/chat/*.nft.json && echo TRACING_OK
+grep -l "server/uploads/document-worker.cjs" .next/server/app/api/files/upload/*.nft.json && echo WORKER_TRACING_OK
+```
+Expected: 两个 TRACING_OK 都打印(证明 outputFileTracingIncludes 与 NFT 入参新路径生效)。若 build 因本机环境失败,记录原因,以 CI build job 绿 + Vercel preview 为准,但 grep 检查不得省略。
+
+- [ ] **Step 3: dev 浏览器冒烟**
 
 起 dev(3003),`/ping` pong;`/` 200 且标题 ChatNest;`/api/agent` 返回 JSON(modelConfigured 字段存在即可)。
 
-- [ ] **Step 3: 验证记录与最终提交**
+- [ ] **Step 4: 验证记录与最终提交**
 
 把每批 commit、tsc/单测/e2e 对比结果、一级目录 `ls` 输出追加到本计划文件"Verification"节,提交:
 
@@ -558,7 +569,7 @@ git add docs/superpowers/plans/2026-10-24-p0-directory-convergence.md
 git commit -m "docs: 记录P0目录收敛验收结果"
 ```
 
-- [ ] **Step 4: push 并开 PR**
+- [ ] **Step 5: push 并开 PR**
 
 ```bash
 git push -u origin feat/p0-directory-convergence
