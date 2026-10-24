@@ -6,12 +6,14 @@
 - 2026-10-24 决策:不再跟上游,允许深度重构(含目录收敛)。
 - 模块现状的权威地图是 [docs/CODEBASE_MAP.md](docs/CODEBASE_MAP.md),改结构后必须同步更新它。
 
-## 目录(收敛过渡态)
+## 目录(已收敛)
 
-目标一级目录:`app server public docs deploy tests scripts`(隐藏目录 `.github .claude .agents`)。
-当前仍是收敛前平铺结构(`components hooks lib artifacts config skills`),收敛方案见
+一级目录:`app server public docs deploy tests scripts`(隐藏目录 `.github .claude .agents`)。
+- `app/`:路由与页面;UI 组件在 `app/_components`,hooks 在 `app/_hooks`,前端工具在 `app/_lib`,产物客户端在 `app/_artifacts`。
+- `server/`:服务端代码(db/ai/agent/uploads/admin/artifacts/config/skills/shared),单元测试就近放在对应模块旁。
+- `deploy/`:部署模板与环境变量样例(vercel-template.json、.env.example)。
+收敛过程记录见
 [docs/superpowers/specs/2026-10-24-governance-and-convergence-design.md](docs/superpowers/specs/2026-10-24-governance-and-convergence-design.md)。
-方案执行前,按现状目录工作,不要提前往目标目录放新代码。
 
 ## 本地启动(Windows / Git Bash)
 

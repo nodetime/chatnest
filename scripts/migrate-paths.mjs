@@ -265,6 +265,17 @@ function rewriteImports(fileAbs) {
       return m;
     }
     if (spec.startsWith(".")) {
+      // 幂等保护:相对导入按当前位置已能解析到真实文件则保持原样
+      // (同树相对导入在搬运后依然有效,不应被改写成别名)
+      const currentTarget = path.posix.normalize(
+        path.posix.join(path.posix.dirname(rel), spec)
+      );
+      const alreadyResolves = ["", ".ts", ".tsx"].some((ext) =>
+        existsSync(path.join(ROOT, currentTarget + ext))
+      );
+      if (alreadyResolves) {
+        return m;
+      }
       // 导入者已搬则按旧位置解析,未搬则按当前位置解析(两者一致)
       const baseDir = path.dirname(oldRel ?? rel);
       const oldTarget = path.posix
