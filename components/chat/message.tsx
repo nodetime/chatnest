@@ -1,5 +1,6 @@
 "use client";
 import type { UseChatHelpers } from "@ai-sdk/react";
+import { hasRunFailure } from "@/lib/agent/run-failure";
 import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
 import { cn, sanitizeText } from "@/lib/utils";
@@ -95,8 +96,10 @@ const PurePreviewMessage = ({
       part.type === "source-url" ||
       part.type === "file"
   );
-  const isThinking = isAssistant && isLoading && !hasAnyContent;
-  const isEmptyAssistant = isAssistant && !isLoading && !hasAnyContent;
+  const failedRun = hasRunFailure(message);
+  const isThinking = isAssistant && isLoading && !hasAnyContent && !failedRun;
+  const isEmptyAssistant =
+    isAssistant && !isLoading && !hasAnyContent && !failedRun;
 
   const attachments = attachmentsFromMessage.length > 0 && (
     <div
@@ -129,6 +132,23 @@ const PurePreviewMessage = ({
           reasoning={part.text}
         />
       ) : null;
+    }
+
+    if (
+      type === "data-run-status" &&
+      isAssistant &&
+      part.data?.state === "failed"
+    ) {
+      return (
+        <p
+          className="text-sm leading-6 text-muted-foreground"
+          data-testid="run-failure"
+          key={key}
+          role="status"
+        >
+          本次执行未完成，已有资料已保留。检查连接后，可让 Agent 继续处理。
+        </p>
+      );
     }
 
     if (type === "text") {
@@ -331,8 +351,12 @@ const PurePreviewMessage = ({
   const toolOnlyAssistant =
     isAssistant &&
     groupedParts.length > 0 &&
-    groupedParts.every((group) => group.kind === "activity");
-  const actions = !isReadonly &&
+    groupedParts.every(
+      (group) =>
+        group.kind === "activity" || group.part.type === "data-run-status"
+    );
+  const actions = hasAnyContent &&
+    !isReadonly &&
     !isEmptyAssistant &&
     (!toolOnlyAssistant || onRegenerate) && (
       <MessageActions

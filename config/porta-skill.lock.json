@@ -1,0 +1,11 @@
+{
+  "repository": "https://github.com/nodetime/porta",
+  "revision": "54875f22c263c82e7f8e11d430758e87230e5f31",
+  "source": "skills/porta",
+  "version": "0.1.0",
+  "files": {
+    "SKILL.md": "cceccaf1ea001de037ba2900288a9c98b8da610c56387365a05b48f4ea25dd23",
+    "references/cli.md": "876e626bc3830dc08fda33448e69020f77c35828ca23d3fcf53dde8dfc6c4ef3",
+    "references/mcp.md": "d82aff2f9fa091487a0d64afae0fd0e0288bf16711116d897398e44424121e86"
+  }
+}

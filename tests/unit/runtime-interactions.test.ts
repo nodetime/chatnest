@@ -150,3 +150,17 @@ test("conversation transport notice uses a friendly summary and preserves exact 
     state={...state,error:undefined,loadError:new Error(raw)};tree=ConversationNotice({onRestore:()=>restored++});assert.equal(nodes(tree).find(n=>n.type==='pre').props.children,raw);const reload=nodes(tree).find(n=>n.type==='button'&&JSON.stringify(n.props.children).includes('重新加载'));reload.props.onClick();assert.equal(reloaded,1);
   `);
 });
+
+test("persisted run failures offer guarded Agent recovery without pretending to be a tool", () => {
+  clientScript(`${harness}
+    const h=hooks();const {RuntimeRecovery,hasRecoverableToolFailure}=load('components/chat/runtime-recovery.tsx',{...base,react:h.react});
+    const failed={id:'failed-run',role:'assistant',parts:[{type:'data-run-status',id:'run-status',data:{state:'failed'}}]};
+    assert.equal(hasRecoverableToolFailure(failed),true);
+    assert.equal(hasRecoverableToolFailure({...failed,role:'user'}),false);
+    assert.equal(hasRecoverableToolFailure({...failed,parts:[{...failed.parts[0],data:{state:'resumed'}}]}),false);
+    assert.equal(hasRecoverableToolFailure({...failed,parts:[...failed.parts,part]}),false);
+    const props={message:failed,status:'ready',isReadonly:false,isLatest:true,sendMessage:()=>{}};
+    assert.ok(button(h.render(RuntimeRecovery,props),'让 Agent 继续处理'));
+    for(const extra of [{isReadonly:true},{isLatest:false},{status:'streaming'},{status:'submitted'}])assert.equal(h.render(RuntimeRecovery,{...props,...extra}),null);
+  `);
+});
