@@ -513,3 +513,13 @@ test("actual SDK SSE pump preserves each model snapshot through a tool child and
     await new Promise<void>((r) => server.close(() => r()));
   }
 });
+
+test("anonymous admin APIs bypass guest-session bootstrap and reach guarded routes", async () => {
+  const { NextRequest } = await import("next/server");
+  const { proxy } = await import("../../proxy");
+  const response = await proxy(
+    new NextRequest("https://app.example/api/admin/models")
+  );
+  assert.equal(response.headers.get("x-middleware-next"), "1");
+  assert.equal(response.headers.has("location"), false);
+});
