@@ -541,7 +541,7 @@ git add -A && git commit -m "chore: deploy目录收敛文档同步并清理curso
 ```bash
 pnpm exec tsc --noEmit && echo TSC_PASS
 pnpm exec tsx --test --test-concurrency=1 --conditions=react-server $(grep -v '^#' scripts/ci/offline-tests.txt | tr '\n' ' ') 2>&1 | tail -3
-PLAYWRIGHT=True pnpm exec playwright test --reporter=line 2>&1 | tail -5   # 与基线对比,不得新增失败
+PLAYWRIGHT=True pnpm test -- --reporter=line 2>&1 | tail -5   # 与基线对比,不得新增失败(test 脚本已在 Task 2 修复为直呼 @playwright/test CLI)
 ls -d */ | sort   # 可见一级目录应为: app/ deploy/ docs/ public/ scripts/ server/ tests/ (+node_modules)
 ```
 
