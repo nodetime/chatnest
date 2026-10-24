@@ -142,8 +142,13 @@ test("SDK runtime timeout after a successful tool step is durable failure; expli
                     finishReason: { raw: "tool_calls", unified: "tool-calls" },
                     type: "finish",
                     usage: {
-                      inputTokens: { total: 1 },
-                      outputTokens: { total: 1 },
+                      inputTokens: {
+                        cacheRead: 0,
+                        cacheWrite: 0,
+                        noCache: 1,
+                        total: 1,
+                      },
+                      outputTokens: { reasoning: 0, text: 1, total: 1 },
                     },
                   });
                   controller.close();
