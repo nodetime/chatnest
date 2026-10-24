@@ -33,3 +33,5 @@ tests/unit/runtime-interactions.test.ts
 
 tests/unit/porta-skill.test.ts
 tests/unit/run-failure.test.ts
+
+tests/unit/model-settings.test.ts

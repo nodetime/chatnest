@@ -253,3 +253,25 @@ test("current breadcrumb location is text, not an unfocusable simulated link", (
   assert.match(html, /aria-current="page"/);
   assert.doesNotMatch(html, /role="link"|aria-disabled/);
 });
+
+test("model administration has masked credentials, real protocol controls and editable model catalog", () => {
+  const html = render(
+    "const {SWRConfig}=require('swr');const {AdminModels}=require('./components/admin/admin-models.tsx');const data={manageable:true,configured:true,hasKey:true,source:'managed',revision:1,config:{baseURL:'https://models.example/v1',apiMode:'chat',defaultModel:'model-b',models:[{id:'model-a',tools:true,vision:false},{id:'model-b',tools:true,vision:true}]}};process.stdout.write(renderToStaticMarkup(React.createElement(SWRConfig,{value:{fallback:{'/api/admin/models':data}}},React.createElement(AdminModels))));"
+  );
+  for (const label of [
+    "API 基础地址",
+    "API Key",
+    "接口协议",
+    "开放模型",
+    "获取模型目录",
+    "测试连接",
+    "保存配置",
+    "已保存 · 不回显",
+  ]) {
+    assert.ok(html.includes(label), label);
+  }
+  assert.match(html, /type="password"/);
+  assert.match(html, /https:\/\/models.example\/v1/);
+  assert.match(html, /aria-label="默认模型 2"[^>]*checked/);
+  assert.doesNotMatch(html, /sk-|Bearer /);
+});

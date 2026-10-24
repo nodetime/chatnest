@@ -2,7 +2,9 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { customProvider, gateway, wrapLanguageModel } from "ai";
 import { isTestEnvironment } from "../constants";
 import { openAIInlineImageMiddleware } from "./inline-image-middleware";
-import { getModelConnection } from "./model-connection";
+import { getModelConnection, resolveModelId } from "./model-connection";
+import { getModelEnvironment } from "./model-context";
+import { modelFetch } from "./model-settings/network";
 import { titleModel } from "./models";
 
 export const myProvider = isTestEnvironment
@@ -28,14 +30,17 @@ export function getLanguageModel(modelId: string) {
   const connection = getModelConnection();
   if (connection.provider === "openai") {
     const provider = createOpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
+      apiKey: getModelEnvironment().OPENAI_API_KEY,
+      ...(getModelEnvironment().OPENAI_MANAGED_CONNECTION === "1"
+        ? { fetch: modelFetch(connection.baseURL, getModelEnvironment()) }
+        : {}),
       baseURL: connection.baseURL,
     });
     return connection.apiMode === "responses"
-      ? provider.responses(connection.modelId)
+      ? provider.responses(resolveModelId(modelId))
       : wrapLanguageModel({
           middleware: openAIInlineImageMiddleware,
-          model: provider.chat(connection.modelId),
+          model: provider.chat(resolveModelId(modelId)),
         });
   }
   return gateway.languageModel(modelId);

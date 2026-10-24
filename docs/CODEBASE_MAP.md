@@ -9,7 +9,7 @@
 - `components/ui/`: existing shadcn/radix components/tokens; reuse instead of redesigning.
 - `tests/unit/`: tsx/node:test offline suites; existing tests inject fake MCP clients and temporary configs.
 - `config/agent.json`: default file-managed Exa/Tavily/Porta services. Preserve compatibility and environment secrets.
-- `lib/ai/telemetry.ts`: shared metadata-only AI tracing policy, explicitly applied to all nine model calls; input/output content recording stays off even with global OTel registration.
+- `lib/ai/telemetry.ts`: shared metadata-only AI tracing policy, explicitly applied to all ten model calls; input/output content recording stays off even with global OTel registration.
 - `lib/agent/browser-policy.ts`: existing browser policy, not a sufficient MCP egress policy by itself.
 - `.local-review/` is ignored; private probes/fixtures must stay out of tracked files.
 
@@ -109,3 +109,11 @@ Porta host integration:
 - `skills/porta/` is a byte-identical pinned Porta skill snapshot; `config/porta-skill.lock.json` records upstream revision/hash. `tests/unit/porta-skill.test.ts` checks provenance and the actual existing loader. No new shell runner/provider logic.
 - `lib/agent/run-failure.ts` supplies request-scoped once-only sanitized failure metadata. Chat stream reports terminal failures, persists via SDK onEnd, and explicitly guards failed edits/regenerations. Approval continuation updates the same status ID to resumed without altering tool evidence.
 - Chat message/recovery components display persisted run failure after reopening, without inventing assistant text; marker-only messages omit answer actions. Status events are excluded from artifact stream handling and SDK model-message conversion.
+
+
+Admin model settings (2026-10-24):
+- `/admin/models` and guarded `/api/admin/models`: one active OpenAI-compatible service, original model IDs/capabilities/default selection, masked Key keep/replace, explicit directory lookup and inference probe. Save does not imply successful connection.
+- `lib/ai/model-settings/`: independent encrypted ModelSettings row/AAD with CAS; precise endpoint binding for retained keys, no Anthropic credential inference, no browser-side persisted secrets. Environment configuration remains fallback only until an explicit save.
+- `network.ts`: public HTTPS, DNS pinned to validated IP, TLS validation and no redirects, response/request/deadline bounds. Reserved fake-IP proxy answers are rejected with a specific message; they are not interpreted as invalid credentials. Loopback is a deployment opt-in for development tests only.
+- `model-context.ts`, `model-settings/runtime.ts`: immutable per-request AsyncLocalStorage snapshot shared across chat, title and artifact model children; no process.env mutation. Public model discovery/default and admin readiness use the same snapshot. Config corruption fails closed.
+- `tests/unit/model-settings.test.ts`: encryption/domain isolation, endpoint binding, CAS, authorization/CSRF/bounds, local HTTP SDK probes, null-body statuses, concurrent real SDK SSE/tool-child snapshot isolation. Local protocol fixtures are not live model acceptance.

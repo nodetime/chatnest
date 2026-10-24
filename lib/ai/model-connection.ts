@@ -1,4 +1,6 @@
 // Server consumers only. Never return credentials in API metadata.
+
+import { getModelEnvironment } from "./model-context";
 import {
   type ChatModel,
   chatModels,
@@ -8,7 +10,7 @@ import {
 
 type Environment = Record<string, string | undefined>;
 
-export function getModelConnection(env: Environment = process.env) {
+export function getModelConnection(env: Environment = getModelEnvironment()) {
   const provider =
     env.MODEL_PROVIDER ??
     (env.OPENAI_API_KEY || env.OPENAI_BASE_URL || env.OPENAI_MODEL
@@ -57,41 +59,54 @@ export function getModelConnection(env: Environment = process.env) {
   };
 }
 
-export function getRuntimeModels(env: Environment = process.env): ChatModel[] {
-  const connection = getModelConnection(env);
-  return connection.provider === "gateway"
-    ? chatModels
+function directModels(env: Environment) {
+  const { modelId } = getModelConnection(env);
+  return env.OPENAI_MANAGED_MODELS
+    ? (JSON.parse(env.OPENAI_MANAGED_MODELS) as {
+        id: string;
+        tools: boolean;
+        vision: boolean;
+      }[])
     : [
         {
-          description: "服务端配置的 OpenAI / 兼容接口模型",
-          id: connection.modelId,
-          name: connection.modelId,
-          provider: "openai",
+          id: modelId,
+          tools: env.OPENAI_MODEL_TOOLS !== "0",
+          vision: env.OPENAI_MODEL_VISION === "1",
         },
       ];
+}
+export function getRuntimeModels(
+  env: Environment = getModelEnvironment()
+): ChatModel[] {
+  return getModelConnection(env).provider === "gateway"
+    ? chatModels
+    : directModels(env).map(({ id }) => ({
+        description: "平台配置的 OpenAI / 兼容接口模型",
+        id,
+        name: id,
+        provider: "openai",
+      }));
 }
 
 export function resolveModelId(
   selected: string,
-  env: Environment = process.env
+  env: Environment = getModelEnvironment()
 ) {
   const models = getRuntimeModels(env);
   return models.some((model) => model.id === selected)
     ? selected
     : getModelConnection(env).provider === "openai"
-      ? models[0].id
+      ? getModelConnection(env).modelId
       : DEFAULT_CHAT_MODEL;
 }
 
 export function getDirectCapabilities(
-  env: Environment = process.env
+  env: Environment = getModelEnvironment()
 ): Record<string, ModelCapabilities> {
-  const { modelId } = getModelConnection(env);
-  return {
-    [modelId]: {
-      reasoning: false,
-      tools: env.OPENAI_MODEL_TOOLS !== "0",
-      vision: env.OPENAI_MODEL_VISION === "1",
-    },
-  };
+  return Object.fromEntries(
+    directModels(env).map(({ id, tools, vision }) => [
+      id,
+      { reasoning: false, tools, vision },
+    ])
+  );
 }

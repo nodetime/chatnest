@@ -38,6 +38,7 @@ import {
   resolveModelId,
 } from "@/lib/ai/model-connection";
 import { getCapabilities, getModelAvailability } from "@/lib/ai/model-service";
+import { withModelSettings } from "@/lib/ai/model-settings/runtime";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
 import { getLanguageModel } from "@/lib/ai/providers";
 import { metadataOnlyTelemetry } from "@/lib/ai/telemetry";
@@ -98,6 +99,17 @@ function getStreamContext() {
 }
 
 export async function POST(request: Request) {
+  const session = await auth();
+  if (!session?.user) {
+    return new ChatbotError("unauthorized:chat").toResponse();
+  }
+  try {
+    return await withModelSettings(() => postWithModelSettings(request));
+  } catch {
+    return new ChatbotError("offline:configuration").toResponse();
+  }
+}
+async function postWithModelSettings(request: Request) {
   let requestBody: PostRequestBody;
   const session = await auth();
   if (!session?.user) {

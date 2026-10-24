@@ -10,12 +10,17 @@ export function parseEncryptionKey(value: string | undefined) {
   }
   return key;
 }
-const aad = (revision: number) =>
-  Buffer.from(`chatnest:mcp-settings:workspace:1:revision:${revision}`);
-export function encryptSettings(value: unknown, revision: number, key: Buffer) {
+const aad = (revision: number, domain: string) =>
+  Buffer.from(`chatnest:${domain}:workspace:1:revision:${revision}`);
+export function encryptSettings(
+  value: unknown,
+  revision: number,
+  key: Buffer,
+  domain = "mcp-settings"
+) {
   const nonce = randomBytes(12),
     cipher = createCipheriv("aes-256-gcm", key, nonce);
-  cipher.setAAD(aad(revision));
+  cipher.setAAD(aad(revision, domain));
   const data = Buffer.concat([
     cipher.update(JSON.stringify(value), "utf8"),
     cipher.final(),
@@ -30,7 +35,8 @@ export function encryptSettings(value: unknown, revision: number, key: Buffer) {
 export function decryptSettings(
   encrypted: string,
   revision: number,
-  key: Buffer
+  key: Buffer,
+  domain = "mcp-settings"
 ): unknown {
   try {
     const envelope = JSON.parse(encrypted);
@@ -43,7 +49,7 @@ export function decryptSettings(
       throw new Error("Invalid encrypted settings envelope");
     }
     const cipher = createDecipheriv("aes-256-gcm", key, nonce);
-    cipher.setAAD(aad(revision));
+    cipher.setAAD(aad(revision, domain));
     cipher.setAuthTag(tag);
     return JSON.parse(
       Buffer.concat([

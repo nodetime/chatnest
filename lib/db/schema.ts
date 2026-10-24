@@ -218,3 +218,20 @@ export const uploadAssetMessage = pgTable(
   },
   (table) => [primaryKey({ columns: [table.assetId, table.messageId] })]
 );
+
+export const modelSettings = pgTable(
+  "ModelSettings",
+  {
+    encrypted: text("encrypted").notNull(),
+    id: text("id").primaryKey().notNull(),
+    revision: integer("revision").notNull(),
+    updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+    updatedBy: uuid("updatedBy")
+      .notNull()
+      .references(() => user.id),
+  },
+  (table) => [
+    check("model_settings_singleton", sql`${table.id} = 'workspace'`),
+    check("model_settings_revision", sql`${table.revision} > 0`),
+  ]
+);
