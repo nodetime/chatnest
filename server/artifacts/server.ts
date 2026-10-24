@@ -2,9 +2,9 @@ import type { UIMessageStreamWriter } from "ai";
 import type { Session } from "next-auth";
 import type { ArtifactKind } from "@/app/_components/chat/artifact";
 import type { ChatMessage } from "@/app/_lib/types";
-import { codeDocumentHandler } from "@/artifacts/code/server";
-import { sheetDocumentHandler } from "@/artifacts/sheet/server";
-import { textDocumentHandler } from "@/artifacts/text/server";
+import { codeDocumentHandler } from "@/server/artifacts/code/server";
+import { sheetDocumentHandler } from "@/server/artifacts/sheet/server";
+import { textDocumentHandler } from "@/server/artifacts/text/server";
 import { saveDocument } from "@/server/db/queries";
 import type { Document } from "@/server/db/schema";
 

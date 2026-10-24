@@ -20,6 +20,11 @@ import type { ArtifactKind } from "@/app/_components/chat/artifact";
 import type { VisibilityType } from "@/app/_components/chat/visibility-selector";
 import type { ChatMessage } from "@/app/_lib/types";
 import { generateUUID } from "@/app/_lib/utils";
+import { ChatbotError } from "@/lib/errors";
+import {
+  prepareMessageEdit,
+  prepareRegeneration,
+} from "@/server/agent/message-turn";
 import {
   assertGenericDocumentDeletionAllowed,
   isProtectedResultTable,
@@ -30,13 +35,7 @@ import {
   resultViewSchema,
   validView,
   withResultTableView,
-} from "@/lib/artifacts/result-table";
-import { ChatbotError } from "@/lib/errors";
-import { cleanupDeletedChatAssets } from "@/lib/uploads/service";
-import {
-  prepareMessageEdit,
-  prepareRegeneration,
-} from "@/server/agent/message-turn";
+} from "@/server/artifacts/result-table";
 import {
   type Chat,
   chat,
@@ -51,6 +50,7 @@ import {
   vote,
 } from "@/server/db/schema";
 import { generateHashedPassword } from "@/server/db/utils";
+import { cleanupDeletedChatAssets } from "@/server/uploads/service";
 
 const client = postgres(process.env.POSTGRES_URL ?? "");
 const db = drizzle(client);

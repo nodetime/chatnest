@@ -19,7 +19,7 @@ import {
 } from "@/app/_components/ui/dropdown-menu";
 import { useArtifact } from "@/app/_hooks/use-artifact";
 import { useWorkspace } from "@/app/_hooks/use-workspace";
-import { openArtifactPreview } from "@/lib/artifacts/stream-state";
+import { openArtifactPreview } from "@/server/artifacts/stream-state";
 
 export function ArtifactPicker({
   entries,

@@ -5,7 +5,7 @@ import type {
   Readiness,
   StorageReadiness,
   ToolsReadiness,
-} from "@/lib/admin/overview-types";
+} from "@/server/admin/overview-types";
 import {
   resolveServerConnection,
   type ServerConfig,

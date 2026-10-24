@@ -7,7 +7,7 @@ import { artifactDefinitions } from "@/app/_components/chat/artifact";
 import { useDataStream } from "@/app/_components/chat/data-stream-provider";
 import { getChatHistoryPaginationKey } from "@/app/_components/chat/sidebar-history";
 import { initialArtifactData, useArtifact } from "@/app/_hooks/use-artifact";
-import { applyResultTableEvent } from "@/lib/artifacts/stream-state";
+import { applyResultTableEvent } from "@/server/artifacts/stream-state";
 
 export function DataStreamHandler() {
   const { dataStream, setDataStream } = useDataStream();

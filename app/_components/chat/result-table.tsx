@@ -39,7 +39,7 @@ import {
   resultCsv,
   resultRows,
   safeSourceUrl,
-} from "@/lib/artifacts/result-table";
+} from "@/server/artifacts/result-table";
 import "react-data-grid/lib/styles.css";
 
 type Props = {

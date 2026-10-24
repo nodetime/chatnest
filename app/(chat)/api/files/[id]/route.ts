@@ -2,8 +2,8 @@ import { auth } from "@/app/(auth)/auth";
 import {
   authorizeUploadRequest,
   uploadErrorResponse,
-} from "@/lib/uploads/security";
-import { deleteDraft, readAsset } from "@/lib/uploads/service";
+} from "@/server/uploads/security";
+import { deleteDraft, readAsset } from "@/server/uploads/service";
 
 type Context = { params: Promise<{ id: string }> };
 export async function GET(request: Request, context: Context) {

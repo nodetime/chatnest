@@ -74,7 +74,7 @@ export type Attachment = {
   contentType: string;
   size?: number;
   extraction?: {
-    status: import("@/lib/uploads/document-types").DocumentExtraction["status"];
+    status: import("@/server/uploads/document-types").DocumentExtraction["status"];
     characters: number;
     segments: number;
     warnings: string[];

@@ -21,16 +21,6 @@ import { convertToUIMessages, generateUUID } from "@/app/_lib/utils";
 import { auth, type UserType } from "@/app/(auth)/auth";
 import { ChatbotError } from "@/lib/errors";
 import { checkIpRateLimit } from "@/lib/ratelimit";
-import { prepareAttachmentContext } from "@/lib/uploads/context";
-import { AttachmentRoundBudget } from "@/lib/uploads/document-budget";
-import { readAttachmentTool } from "@/lib/uploads/read-attachment";
-import { uploadErrorResponse } from "@/lib/uploads/security";
-import {
-  commitUserMessage,
-  readAssetForContext,
-  readAttachmentAsset,
-} from "@/lib/uploads/service";
-import { readBoundedBody, UploadError } from "@/lib/uploads/validation";
 import { applyToolApprovals } from "@/server/agent/approvals";
 import { createBrowserTools } from "@/server/agent/browser-tools";
 import {
@@ -76,6 +66,16 @@ import {
   updateMessage,
 } from "@/server/db/queries";
 import type { DBMessage } from "@/server/db/schema";
+import { prepareAttachmentContext } from "@/server/uploads/context";
+import { AttachmentRoundBudget } from "@/server/uploads/document-budget";
+import { readAttachmentTool } from "@/server/uploads/read-attachment";
+import { uploadErrorResponse } from "@/server/uploads/security";
+import {
+  commitUserMessage,
+  readAssetForContext,
+  readAttachmentAsset,
+} from "@/server/uploads/service";
+import { readBoundedBody, UploadError } from "@/server/uploads/validation";
 import { generateTitleFromUserMessage } from "../../actions";
 import { type PostRequestBody, postRequestBodySchema } from "./schema";
 

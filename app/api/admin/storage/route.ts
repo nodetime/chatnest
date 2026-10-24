@@ -2,14 +2,14 @@ import { auth } from "@/app/(auth)/auth";
 import {
   authorizeUploadRequest,
   uploadErrorResponse,
-} from "@/lib/uploads/security";
+} from "@/server/uploads/security";
 import {
   configureStorage,
   purgeExpiredDrafts,
   storageStatus,
   testStorage,
-} from "@/lib/uploads/service";
-import { readBoundedBody, UploadError } from "@/lib/uploads/validation";
+} from "@/server/uploads/service";
+import { readBoundedBody, UploadError } from "@/server/uploads/validation";
 export async function GET(request: Request) {
   try {
     authorizeUploadRequest((await auth())?.user, request, false, true);

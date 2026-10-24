@@ -59,15 +59,6 @@ import { useActiveChat } from "@/app/_hooks/use-active-chat";
 import { useAgentInfo } from "@/app/_hooks/use-agent-info";
 import type { Attachment, ChatMessage } from "@/app/_lib/types";
 import { cn, fetcher } from "@/app/_lib/utils";
-import {
-  completeDraftSubmission,
-  UploadAdmission,
-} from "@/lib/uploads/client-admission";
-import {
-  ATTACHMENT_ACCEPT,
-  isImageMime,
-  MAX_DOCUMENT_BYTES,
-} from "@/lib/uploads/document-types";
 import { MAX_MESSAGE_CHARACTERS } from "@/server/agent/input-limits";
 import {
   type ChatModel,
@@ -75,6 +66,15 @@ import {
   DEFAULT_CHAT_MODEL,
   type ModelCapabilities,
 } from "@/server/ai/models";
+import {
+  completeDraftSubmission,
+  UploadAdmission,
+} from "@/server/uploads/client-admission";
+import {
+  ATTACHMENT_ACCEPT,
+  isImageMime,
+  MAX_DOCUMENT_BYTES,
+} from "@/server/uploads/document-types";
 
 function setCookie(name: string, value: string) {
   const maxAge = 60 * 60 * 24 * 365;

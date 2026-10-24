@@ -1,10 +1,10 @@
 import { auth } from "@/app/(auth)/auth";
-import { uploadsAvailable } from "@/lib/uploads/service";
 import { capabilityServers } from "@/server/agent/mcp-settings/projection";
 import { readRuntimeConfig } from "@/server/agent/mcp-settings/runtime-config";
 import { isAdmin, managementReady } from "@/server/agent/mcp-settings/security";
 import { discoverSkills } from "@/server/agent/skills";
 import { getModelConnection } from "@/server/ai/model-connection";
+import { uploadsAvailable } from "@/server/uploads/service";
 
 export async function GET() {
   const user = (await auth())?.user;

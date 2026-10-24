@@ -11,7 +11,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/app/_components/ui/sheet";
-import type { ResultSource } from "@/lib/artifacts/result-table";
+import type { ResultSource } from "@/server/artifacts/result-table";
 
 // The same pure content is used in the Sheet and offline rendering tests. Raw
 // names and values are evidence, not translated display labels.

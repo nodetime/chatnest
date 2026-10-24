@@ -179,7 +179,7 @@ export const uploadAsset = pgTable(
     derivedBytes: integer("derivedBytes").notNull().default(0),
     extraction:
       json("extraction").$type<
-        import("@/lib/uploads/document-types").DocumentExtraction
+        import("@/server/uploads/document-types").DocumentExtraction
       >(),
     id: uuid("id").primaryKey().notNull(),
     mime: text("mime").notNull(),

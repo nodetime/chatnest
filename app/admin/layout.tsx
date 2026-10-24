@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { AdminShell } from "@/app/_components/admin/admin-shell";
 import { auth } from "@/app/(auth)/auth";
-import { requirePlatformAdmin } from "@/lib/admin/access";
+import { requirePlatformAdmin } from "@/server/admin/access";
 
 export const metadata: Metadata = {
   title: "ChatNest Admin",

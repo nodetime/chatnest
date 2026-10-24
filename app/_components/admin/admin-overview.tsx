@@ -12,7 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/app/_components/ui/card";
-import type { AdminOverviewData } from "@/lib/admin/overview-types";
+import type { AdminOverviewData } from "@/server/admin/overview-types";
 
 const endpoint = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/admin/overview`;
 async function load(url: string): Promise<AdminOverviewData> {

@@ -57,7 +57,7 @@ const nextConfig: NextConfig = {
     "/api/agent/mcp": ["./server/config/agent.json"],
     "/api/chat": ["./server/config/agent.json", "./server/skills/**/*"],
     "/api/files/upload": [
-      "./lib/uploads/document-worker.cjs",
+      "./server/uploads/document-worker.cjs",
       "./node_modules/pdfjs-dist/**/*",
       "./node_modules/mammoth/**/*",
       "./node_modules/exceljs/**/*",
@@ -93,7 +93,10 @@ export default withBotId(async (phase) => {
   const pdfManifest = nodeRequire.resolve("pdfjs-dist/package.json");
   const pdfRequire = createRequire(pdfManifest);
   const { fileList } = await nodeFileTrace(
-    ["lib/uploads/document-worker.cjs", pdfRequire.resolve("@napi-rs/canvas")],
+    [
+      "server/uploads/document-worker.cjs",
+      pdfRequire.resolve("@napi-rs/canvas"),
+    ],
     { base: root, fileIOConcurrency: 64, processCwd: root }
   );
   const files = [...fileList].map((path) => `./${path}`);

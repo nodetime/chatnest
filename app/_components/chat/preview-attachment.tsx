@@ -4,7 +4,7 @@ import { CrossSmallIcon } from "@/app/_components/chat/icons";
 import { Spinner } from "@/app/_components/ui/spinner";
 import type { Attachment } from "@/app/_lib/types";
 import { cn } from "@/app/_lib/utils";
-import { extractionLabels } from "@/lib/uploads/document-types";
+import { extractionLabels } from "@/server/uploads/document-types";
 
 export const PreviewAttachment = ({
   attachment,

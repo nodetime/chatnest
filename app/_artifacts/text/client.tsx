@@ -1,4 +1,5 @@
 import { toast } from "sonner";
+import { getSuggestions } from "@/app/_artifacts/actions";
 import { Artifact } from "@/app/_components/chat/create-artifact";
 import { DiffView } from "@/app/_components/chat/diffview";
 import { DocumentSkeleton } from "@/app/_components/chat/document-skeleton";
@@ -11,7 +12,6 @@ import {
   UndoIcon,
 } from "@/app/_components/chat/icons";
 import { Editor } from "@/app/_components/chat/text-editor";
-import { getSuggestions } from "@/artifacts/actions";
 import type { Suggestion } from "@/server/db/schema";
 
 type TextArtifactMetadata = {

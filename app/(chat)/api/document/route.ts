@@ -1,11 +1,11 @@
 import { z } from "zod";
 import type { ArtifactKind } from "@/app/_components/chat/artifact";
 import { auth } from "@/app/(auth)/auth";
+import { ChatbotError } from "@/lib/errors";
 import {
   isProtectedResultTable,
   parseResultTable,
-} from "@/lib/artifacts/result-table";
-import { ChatbotError } from "@/lib/errors";
+} from "@/server/artifacts/result-table";
 import {
   deleteDocumentsByIdAfterTimestamp,
   getChatById,

@@ -122,7 +122,7 @@ test("overview independently authorizes, isolates failures and never projects cr
     existsSync("lib/admin/overview.ts"),
     "guarded overview boundary exists"
   );
-  const { createOverviewHandler } = await import("@/lib/admin/overview");
+  const { createOverviewHandler } = await import("@/server/admin/overview");
   const id = "11111111-1111-4111-8111-111111111111";
   let user: { id: string; type: string } | null = null,
     calls = 0;
@@ -174,7 +174,7 @@ test("overview readiness uses existing services and attributed upstream assets, 
 });
 
 test("readiness counts missing file credentials and disabled managed connections without network probes", async () => {
-  const overview = await import("@/lib/admin/overview");
+  const overview = await import("@/server/admin/overview");
   assert.equal(
     typeof overview.summarizeTools,
     "function",

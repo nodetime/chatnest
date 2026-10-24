@@ -1,18 +1,23 @@
-import { smoothStream, streamText } from "ai";
-import { createDocumentHandler } from "@/lib/artifacts/server";
-import { updateDocumentPrompt } from "@/server/ai/prompts";
+import { streamText } from "ai";
+import { codePrompt, updateDocumentPrompt } from "@/server/ai/prompts";
 import { getLanguageModel } from "@/server/ai/providers";
 import { metadataOnlyTelemetry } from "@/server/ai/telemetry";
+import { createDocumentHandler } from "@/server/artifacts/server";
 
-export const textDocumentHandler = createDocumentHandler<"text">({
-  kind: "text",
+function stripFences(code: string): string {
+  return code
+    .replace(/^```[\w]*\n?/, "")
+    .replace(/\n?```\s*$/, "")
+    .trim();
+}
+
+export const codeDocumentHandler = createDocumentHandler<"code">({
+  kind: "code",
   onCreateDocument: async ({ title, dataStream, modelId }) => {
     let draftContent = "";
 
     const { stream } = streamText({
-      experimental_transform: smoothStream({ chunking: "word" }),
-      instructions:
-        "Write about the given topic. Markdown is supported. Use headings wherever appropriate.",
+      instructions: `${codePrompt}\n\nOutput ONLY the code. No explanations, no markdown fences, no wrapping.`,
       model: getLanguageModel(modelId),
       prompt: title,
       telemetry: metadataOnlyTelemetry,
@@ -22,21 +27,20 @@ export const textDocumentHandler = createDocumentHandler<"text">({
       if (delta.type === "text-delta") {
         draftContent += delta.text;
         dataStream.write({
-          data: delta.text,
+          data: stripFences(draftContent),
           transient: true,
-          type: "data-textDelta",
+          type: "data-codeDelta",
         });
       }
     }
 
-    return draftContent;
+    return stripFences(draftContent);
   },
   onUpdateDocument: async ({ document, description, dataStream, modelId }) => {
     let draftContent = "";
 
     const { stream } = streamText({
-      experimental_transform: smoothStream({ chunking: "word" }),
-      instructions: updateDocumentPrompt(document.content, "text"),
+      instructions: `${updateDocumentPrompt(document.content, "code")}\n\nOutput ONLY the complete updated code. No explanations, no markdown fences, no wrapping.`,
       model: getLanguageModel(modelId),
       prompt: description,
       telemetry: metadataOnlyTelemetry,
@@ -46,13 +50,13 @@ export const textDocumentHandler = createDocumentHandler<"text">({
       if (delta.type === "text-delta") {
         draftContent += delta.text;
         dataStream.write({
-          data: delta.text,
+          data: stripFences(draftContent),
           transient: true,
-          type: "data-textDelta",
+          type: "data-codeDelta",
         });
       }
     }
 
-    return draftContent;
+    return stripFences(draftContent);
   },
 });

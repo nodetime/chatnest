@@ -16,6 +16,10 @@ import {
 } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import { useWindowSize } from "usehooks-ts";
+import { codeArtifact } from "@/app/_artifacts/code/client";
+import { imageArtifact } from "@/app/_artifacts/image/client";
+import { sheetArtifact } from "@/app/_artifacts/sheet/client";
+import { textArtifact } from "@/app/_artifacts/text/client";
 import { Artifact as ArtifactFrame } from "@/app/_components/ai-elements/artifact";
 import { ArtifactActions } from "@/app/_components/chat/artifact-actions";
 import { artifactCatalog } from "@/app/_components/chat/artifact-catalog";
@@ -30,14 +34,10 @@ import { WorkspaceHeader } from "@/app/_components/chat/workspace-header";
 import { useArtifact } from "@/app/_hooks/use-artifact";
 import type { Attachment, ChatMessage } from "@/app/_lib/types";
 import { cn, fetcher } from "@/app/_lib/utils";
-import { codeArtifact } from "@/artifacts/code/client";
-import { imageArtifact } from "@/artifacts/image/client";
-import { sheetArtifact } from "@/artifacts/sheet/client";
-import { textArtifact } from "@/artifacts/text/client";
 import {
   isProtectedResultTable,
   parseResultTable,
-} from "@/lib/artifacts/result-table";
+} from "@/server/artifacts/result-table";
 import type { Document, Vote } from "@/server/db/schema";
 
 export const artifactDefinitions = [

@@ -6,7 +6,7 @@ import { generateUUID } from "@/app/_lib/utils";
 import {
   artifactKinds,
   documentHandlersByArtifactKind,
-} from "@/lib/artifacts/server";
+} from "@/server/artifacts/server";
 
 type CreateDocumentProps = {
   session: Session;

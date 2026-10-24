@@ -1,12 +1,12 @@
 import { z } from "zod";
 import { auth } from "@/app/(auth)/auth";
+import { sameOriginBrowserControl } from "@/server/agent/browser-policy";
 import {
   ResultTableMutationError,
   resultViewSchema,
-} from "@/lib/artifacts/result-table";
-import { readBoundedBody, UploadError } from "@/lib/uploads/validation";
-import { sameOriginBrowserControl } from "@/server/agent/browser-policy";
+} from "@/server/artifacts/result-table";
 import { saveResultTableView } from "@/server/db/queries";
+import { readBoundedBody, UploadError } from "@/server/uploads/validation";
 
 const bodySchema = z
   .object({

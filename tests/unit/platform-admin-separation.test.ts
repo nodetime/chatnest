@@ -29,7 +29,7 @@ test("platform access preserves legacy exact regular UUIDs and only explicitly o
     "shared server-side platform access exists"
   );
   const { isPlatformAdmin, requirePlatformAdmin } = await import(
-    "@/lib/admin/access"
+    "@/server/admin/access"
   );
   const user = { id: adminId, type: "regular" };
   const deny = () => {

@@ -2,12 +2,12 @@ import { tool, type UIMessageStreamWriter } from "ai";
 import type { Session } from "next-auth";
 import type { ChatMessage } from "@/app/_lib/types";
 import { generateUUID } from "@/app/_lib/utils";
+import type { ResultEvidenceLedger } from "@/server/agent/result-evidence";
 import {
   buildResultTable,
   createResultTableSchema,
   type ResultTable,
-} from "@/lib/artifacts/result-table";
-import type { ResultEvidenceLedger } from "@/server/agent/result-evidence";
+} from "@/server/artifacts/result-table";
 import { saveResultTableDocument } from "@/server/db/queries";
 
 export function createResultTable({

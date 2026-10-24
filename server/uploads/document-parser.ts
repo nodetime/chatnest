@@ -2,12 +2,12 @@ import { chmod, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Worker } from "node:worker_threads";
-import { UploadCapacity, UploadCapacityError } from "@/lib/uploads/capacity";
+import { UploadCapacity, UploadCapacityError } from "@/server/uploads/capacity";
 import {
   type DocumentExtraction,
   MAX_DOCUMENT_BYTES,
-} from "@/lib/uploads/document-types";
-import { UploadError } from "@/lib/uploads/validation";
+} from "@/server/uploads/document-types";
+import { UploadError } from "@/server/uploads/validation";
 
 const capacity = new UploadCapacity(1);
 // Standalone JS is deliberately traced by Next, not a TS path presumed runnable in production.
@@ -43,7 +43,7 @@ export async function runParserWorker(
       // Native Node constructor: avoid Turbopack treating this as a browser worker entry.
       worker = Reflect.construct(Worker, [
         options.workerFile ??
-          join(process.cwd(), "lib/uploads/document-worker.cjs"),
+          join(process.cwd(), "server/uploads/document-worker.cjs"),
         {
           env: { NODE_ENV: "production", TEMP: dir, TMP: dir, TMPDIR: dir },
           execArgv: [],
