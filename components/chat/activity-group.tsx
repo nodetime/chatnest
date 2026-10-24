@@ -20,12 +20,14 @@ export function ActivityGroup({
   approve,
   isReadonly,
   isRunning = false,
+  canApprove = true,
   children,
 }: {
   parts: ToolPart[];
   approve: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
   isReadonly: boolean;
   isRunning?: boolean;
+  canApprove?: boolean;
   children?: ReactNode;
 }) {
   const summary = activitySummary(parts, isRunning);
@@ -127,6 +129,7 @@ export function ActivityGroup({
             <li className="min-w-0" key={part.toolCallId}>
               <ToolActivity
                 approve={approve}
+                canApprove={canApprove}
                 isReadonly={isReadonly}
                 isRunning={isRunning}
                 key={part.toolCallId}

@@ -1,6 +1,5 @@
 "use client";
 import type { UseChatHelpers } from "@ai-sdk/react";
-import { useCallback } from "react";
 import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
 import { cn, sanitizeText } from "@/lib/utils";
@@ -30,7 +29,10 @@ function WaitingText() {
   const waitingText = waitingStatus?.message ?? "正在准备…";
 
   return (
-    <div className="flex min-h-[calc(13px*1.65)] min-w-0 items-center text-[15px] leading-[1.75]">
+    <div
+      className="flex min-h-[calc(13px*1.65)] min-w-0 items-center text-[15px] leading-[1.75]"
+      role="status"
+    >
       <Shimmer
         as="span"
         className="font-medium whitespace-normal break-words"
@@ -38,48 +40,6 @@ function WaitingText() {
       >
         {waitingText}
       </Shimmer>
-    </div>
-  );
-}
-
-function ToolApprovalActions({
-  addToolApprovalResponse,
-  approvalId,
-}: {
-  addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
-  approvalId: string;
-}) {
-  const handleDeny = useCallback(() => {
-    addToolApprovalResponse({
-      approved: false,
-      id: approvalId,
-      reason: "用户拒绝执行",
-    });
-  }, [addToolApprovalResponse, approvalId]);
-
-  const handleAllow = useCallback(() => {
-    addToolApprovalResponse({
-      approved: true,
-      id: approvalId,
-    });
-  }, [addToolApprovalResponse, approvalId]);
-
-  return (
-    <div className="flex items-center justify-end gap-2 border-t px-4 py-3">
-      <button
-        className="rounded-md px-3 py-1.5 text-muted-foreground text-sm transition-colors hover:bg-muted hover:text-foreground"
-        onClick={handleDeny}
-        type="button"
-      >
-        拒绝
-      </button>
-      <button
-        className="rounded-md bg-primary px-3 py-1.5 text-primary-foreground text-sm transition-colors hover:bg-primary/90"
-        onClick={handleAllow}
-        type="button"
-      >
-        允许执行
-      </button>
     </div>
   );
 }
@@ -93,6 +53,7 @@ const PurePreviewMessage = ({
   setMessages: _setMessages,
   regenerate: _regenerate,
   isReadonly,
+  canApprove = true,
   requiresScrollPadding: _requiresScrollPadding,
   onEdit,
   onRegenerate,
@@ -107,6 +68,7 @@ const PurePreviewMessage = ({
   setMessages: UseChatHelpers<ChatMessage>["setMessages"];
   regenerate: UseChatHelpers<ChatMessage>["regenerate"];
   isReadonly: boolean;
+  canApprove?: boolean;
   requiresScrollPadding: boolean;
   onEdit?: (message: ChatMessage) => void;
   onRegenerate?: () => void;
@@ -186,68 +148,19 @@ const PurePreviewMessage = ({
 
     if (type === "tool-getWeather") {
       const { toolCallId, state } = part;
-      const approvalId = (part as { approval?: { id: string } }).approval?.id;
-      const isDenied =
-        state === "output-denied" ||
-        (state === "approval-responded" &&
-          (part as { approval?: { approved?: boolean } }).approval?.approved ===
-            false);
-      const widthClass = "w-[min(100%,450px)]";
-
-      if (state === "output-available") {
-        return (
-          <div className={widthClass} key={toolCallId}>
-            <Weather weatherAtLocation={part.output} />
-          </div>
-        );
-      }
-
-      if (isDenied) {
-        return (
-          <div className={widthClass} key={toolCallId}>
-            <Tool className="w-full" defaultOpen={true}>
-              <ToolHeader state="output-denied" type="tool-getWeather" />
-              <ToolContent>
-                <div className="px-4 py-3 text-muted-foreground text-sm">
-                  Weather lookup was denied.
-                </div>
-              </ToolContent>
-            </Tool>
-          </div>
-        );
-      }
-
-      if (state === "approval-responded") {
-        return (
-          <div className={widthClass} key={toolCallId}>
-            <Tool className="w-full" defaultOpen={true}>
-              <ToolHeader state={state} type="tool-getWeather" />
-              <ToolContent>
-                <ToolInput input={part.input} />
-              </ToolContent>
-            </Tool>
-          </div>
-        );
-      }
-
-      return (
-        <div className={widthClass} key={toolCallId}>
-          <Tool className="w-full" defaultOpen={true}>
-            <ToolHeader state={state} type="tool-getWeather" />
-            <ToolContent>
-              {(state === "input-available" ||
-                state === "approval-requested") && (
-                <ToolInput input={part.input} />
-              )}
-              {state === "approval-requested" && approvalId && (
-                <ToolApprovalActions
-                  addToolApprovalResponse={addToolApprovalResponse}
-                  approvalId={approvalId}
-                />
-              )}
-            </ToolContent>
-          </Tool>
+      return state === "output-available" ? (
+        <div className="w-[min(100%,450px)]" key={toolCallId}>
+          <Weather weatherAtLocation={part.output} />
         </div>
+      ) : (
+        <ToolActivity
+          approve={addToolApprovalResponse}
+          canApprove={canApprove}
+          isReadonly={isReadonly}
+          isRunning={isLoading}
+          key={toolCallId}
+          part={part}
+        />
       );
     }
 
@@ -256,6 +169,7 @@ const PurePreviewMessage = ({
         return (
           <ToolActivity
             approve={addToolApprovalResponse}
+            canApprove={canApprove}
             isReadonly={isReadonly}
             isRunning={isLoading}
             key={part.toolCallId}
@@ -384,6 +298,7 @@ const PurePreviewMessage = ({
       return (
         <ToolActivity
           approve={addToolApprovalResponse}
+          canApprove={canApprove}
           isReadonly={isReadonly}
           isRunning={isLoading}
           key={key}
@@ -399,6 +314,7 @@ const PurePreviewMessage = ({
       hideActivities ? null : (
         <ActivityGroup
           approve={addToolApprovalResponse}
+          canApprove={canApprove}
           isReadonly={isReadonly}
           isRunning={isLoading}
           key={group.key}

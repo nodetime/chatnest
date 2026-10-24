@@ -223,6 +223,7 @@ export function ChatShell() {
                 onRegenerateAnswer={regenerateAnswer}
                 regenerate={regenerate}
                 selectedModelId={currentModelId}
+                sendMessage={sendMessage}
                 setMessages={setMessages}
                 status={status}
                 votes={votes}

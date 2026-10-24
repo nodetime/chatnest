@@ -75,7 +75,7 @@ const hookHarness = `
   const hooks = () => {
     const slots=[]; let cursor=0; let dirty=false;
     return {
-      react:{useCallback:fn=>fn,useId:()=> 'source-list',useState:initial=>{
+      react:{useCallback:fn=>fn,useId:()=> 'source-list',useRef:initial=>{const index=cursor++;return slots[index]??(slots[index]={current:initial});},useState:initial=>{
         const index=cursor++; if (!(index in slots)) slots[index]=typeof initial==='function'?initial():initial;
         return [slots[index],value=>{slots[index]=typeof value==='function'?value(slots[index]):value;dirty=true;}];
       }},
@@ -99,6 +99,7 @@ const hookHarness = `
     '../ai-elements/tool':{Tool:'tool',ToolHeader:'header',ToolContent:'content',ToolInput:'input',ToolOutput:'output'},
     '@/components/ai-elements/task':{Task:'task',TaskTrigger:'task-trigger',TaskContent:'task-content'},
     './tool-activity':{ToolActivity:'step'},
+    './runtime-recovery':{RuntimeRecovery:'recovery'},
     './tool-call-details':{ToolCallDetails:'call-details'},
     './attachment-read-result':require('./components/chat/attachment-read-result.tsx'),
     './activity-groups':require('./components/chat/activity-groups.ts'),
@@ -165,11 +166,11 @@ test("actual ToolActivity disclosure, canonical approval identity, callbacks and
     assert.equal(nodes(tree).find(n=>n.type==='tool').props.open,true);
     const text=JSON.stringify(tree);assert.ok(text.includes('billing__perform_operation'));assert.ok(text.includes('查看调用详情'));assert.ok(!text.includes('只读操作'));
     const buttons=nodes(tree).filter(n=>n.type==='button');buttons.find(n=>n.props.children==='允许执行').props.onClick();buttons.find(n=>n.props.children==='拒绝').props.onClick();
-    assert.equal(JSON.stringify(decisions),JSON.stringify([{approved:true,id:'exact-id'},{approved:false,id:'exact-id',reason:'用户拒绝执行'}]));
+    assert.equal(JSON.stringify(decisions),JSON.stringify([{approved:true,id:'exact-id'}]),'same approval accepts only one decision');
     nodes(tree).find(n=>n.type==='tool').props.onOpenChange(false);
     assert.equal(nodes(scheduler.render(ToolActivity,props)).find(n=>n.type==='tool').props.open,false);
     props={...props,part:{...part,approval:{id:'new-id'}}};
-    assert.equal(nodes(scheduler.render(ToolActivity,props)).find(n=>n.type==='tool').props.open,true);
+    tree=scheduler.render(ToolActivity,props);assert.equal(nodes(tree).find(n=>n.type==='tool').props.open,true);nodes(tree).find(n=>n.type==='button'&&n.props.children==='拒绝').props.onClick();assert.equal(JSON.stringify(decisions[1]),JSON.stringify({approved:false,id:'new-id',reason:'用户拒绝执行'}));
     tree=scheduler.render(ToolActivity,{...props,isReadonly:true});assert.equal(nodes(tree).filter(n=>n.type==='button').length,0);
     tree=scheduler.render(ToolActivity,{...props,part:{...part,state:'output-error',errorText:'raw failure'}});assert.ok(JSON.stringify(tree).includes('raw failure'));
   `
@@ -346,7 +347,7 @@ test("removed inspections and stale Sheet close events cannot pin or dismiss a d
 test("actual Messages preserves the inspected tool subtree when the same assistant message gains answer text", () => {
   clientScript(`${hookHarness}
     let currentHooks;
-    const react={useCallback:fn=>fn,useId:()=> 'source-list',useState:initial=>currentHooks.react.useState(initial)};
+    const react={useCallback:fn=>fn,useId:()=> 'source-list',useRef:initial=>currentHooks.react.useRef(initial),useState:initial=>currentHooks.react.useState(initial)};
     const FixtureSheet=props=>{
       const [open,setOpen]=react.useState(false);
       const part=nodes(props.children).find(n=>n.props?.part)?.props.part;

@@ -10,6 +10,7 @@ import type { ChatMessage } from "@/lib/types";
 import { useDataStream } from "./data-stream-provider";
 import { Greeting } from "./greeting";
 import { PreviewMessage, ThinkingMessage } from "./message";
+import { RuntimeRecovery } from "./runtime-recovery";
 
 type MessagesProps = {
   addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
@@ -25,6 +26,7 @@ type MessagesProps = {
   selectedModelId: string;
   onEditMessage?: (message: ChatMessage) => void;
   onRegenerateAnswer?: () => void;
+  sendMessage?: UseChatHelpers<ChatMessage>["sendMessage"];
 };
 
 function PureMessages({
@@ -41,16 +43,19 @@ function PureMessages({
   selectedModelId: _selectedModelId,
   onEditMessage,
   onRegenerateAnswer,
+  sendMessage,
 }: MessagesProps) {
   useDataStream();
 
   // Approval continuations are active while the SDK submits the next request,
   // before streaming begins. Keep this scoped to the latest message.
   const isActive = status === "submitted" || status === "streaming";
+  const latestMessage = messages.at(-1);
 
   const renderMessage = (message: ChatMessage, index: number) => (
     <PreviewMessage
       addToolApprovalResponse={addToolApprovalResponse}
+      canApprove={!isReadonly && !isActive && index === messages.length - 1}
       chatId={chatId}
       isLoading={isActive && messages.length - 1 === index}
       isReadonly={isReadonly}
@@ -87,6 +92,16 @@ function PureMessages({
           {/* A canonical message always owns its tool subtree. Appending answer
               text must not reparent an open details dialog or its focus target. */}
           {messages.map(renderMessage)}
+          {sendMessage && latestMessage?.role === "assistant" && (
+            <RuntimeRecovery
+              isLatest
+              isReadonly={isReadonly}
+              key={`${chatId}:${latestMessage.id}:recovery`}
+              message={latestMessage}
+              sendMessage={sendMessage}
+              status={status}
+            />
+          )}
 
           {status === "submitted" && messages.at(-1)?.role !== "assistant" && (
             <ThinkingMessage />

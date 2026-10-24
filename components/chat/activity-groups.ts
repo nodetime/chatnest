@@ -178,6 +178,7 @@ export function activitySummary(parts: ToolPart[], isRunning = false) {
   return {
     active:
       isRunning &&
+      state !== "approval-requested" &&
       states.some((item) =>
         ["input-streaming", "input-available", "approval-responded"].includes(
           item

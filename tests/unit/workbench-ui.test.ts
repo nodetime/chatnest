@@ -31,6 +31,15 @@ function renderActivity(
   `);
 }
 
+function renderCallDetails(part: Record<string, unknown>) {
+  return clientScript(`
+    const React = require('react');
+    const { renderToStaticMarkup } = require('react-dom/server');
+    const { ToolCallDetailsContent } = require('./components/chat/tool-call-details.tsx');
+    process.stdout.write(renderToStaticMarkup(React.createElement(ToolCallDetailsContent, { part: ${JSON.stringify(part)} })));
+  `);
+}
+
 const success = {
   input: {},
   output: { result: "fixture" },
@@ -126,11 +135,10 @@ test("readonly approval shows its state but not mutation controls; approval IDs 
   assert.match(html, /等待确认/);
   assert.doesNotMatch(html, /允许执行|>拒绝</);
   const source = readFileSync("components/chat/tool-activity.tsx", "utf8");
-  assert.match(source, /approve\(\{ approved: true, id: approval\.id \}\)/);
-  assert.match(
-    source,
-    /approve\(\{ approved: false, id: approval\.id, reason: "用户拒绝执行" \}\)/
-  );
+  assert.match(source, /await approve\(\{\s*approved,\s*id: approval\.id/);
+  assert.match(source, /submitDecision\(true\)/);
+  assert.match(source, /submitDecision\(false\)/);
+  assert.match(source, /approved \? \{\} : \{ reason: "用户拒绝执行" \}/);
 });
 
 test("generic SDK error has a Chinese visible explanation without inlining its raw evidence", () => {
@@ -139,14 +147,31 @@ test("generic SDK error has a Chinese visible explanation without inlining its r
     errorText: "An error occurred.",
     state: "output-error",
   });
-  assert.match(html, /role="alert">工具暂时未能返回结果，请稍后重试。/);
+  assert.match(html, /role="alert">这一步未能完成。错误原文保留在调用详情中。/);
   assert.doesNotMatch(html, /An error occurred\./);
   const custom = renderActivity({
     ...success,
     errorText: "Provider fixture error",
     state: "output-error",
   });
-  assert.match(custom, /role="alert">Provider fixture error/);
+  assert.match(custom, /role="alert">这一步未能完成/);
+  assert.doesNotMatch(custom, /Provider fixture error/);
+  assert.match(
+    renderCallDetails({
+      ...success,
+      errorText: "Provider fixture error",
+      state: "output-error",
+    }),
+    /Provider fixture error/
+  );
+  assert.match(
+    renderCallDetails({
+      ...success,
+      errorText: "An error occurred.",
+      state: "output-error",
+    }),
+    /An error occurred\./
+  );
 });
 
 test("disclosure transitions collapse success, open new attention states, and preserve manual choices on same-state rerenders", () => {
@@ -778,7 +803,7 @@ test("mixed reasoning and tools render in their original SDK order rather than m
   `);
 });
 
-test("native createResultTable validation errors are failed open activities with the returned error", () => {
+test("native createResultTable validation errors are failed open activities with exact error in call details", () => {
   const part = {
     input: {},
     output: { error: "Source fixture is unavailable" },
@@ -791,7 +816,9 @@ test("native createResultTable validation errors are failed open activities with
   assert.match(html, /生成表格产物/);
   assert.match(html, /失败/);
   assert.match(html, /aria-expanded="true"/);
-  assert.match(html, /role="alert">Source fixture is unavailable/);
+  assert.match(html, /role="alert">这一步未能完成/);
+  assert.doesNotMatch(html, /Source fixture is unavailable/);
+  assert.match(renderCallDetails(part), /Source fixture is unavailable/);
   assert.doesNotMatch(html, /未完成|本轮没有收到执行结果/);
   assert.equal(JSON.stringify(part), before);
 });
@@ -874,7 +901,15 @@ test("approval presents a human action summary while raw arguments are reachable
   assert.match(html, /precise fixture query/);
   assert.match(html, /查看调用详情/);
   assert.doesNotMatch(html, /技术详情|调用参数/);
-  assert.match(html, /fixture__search/);
+  assert.doesNotMatch(html, /fixture__search/);
+  const details = renderCallDetails({
+    ...success,
+    approval: { id: "fixture-approval" },
+    input: { query: "precise fixture query" },
+    state: "approval-requested",
+  });
+  assert.match(details, /fixture__search/);
+  assert.match(details, /precise fixture query/);
   assert.match(html, /请确认这次操作/);
   const unknown = renderActivity({
     ...success,

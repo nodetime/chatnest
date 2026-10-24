@@ -8,7 +8,7 @@ import {
   Monitor,
   Search,
 } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useAgentInfo } from "@/hooks/use-agent-info";
 import type { ChatMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -42,6 +42,7 @@ export function ToolActivity({
   approve,
   isReadonly,
   isRunning,
+  canApprove = true,
   timeline = false,
   onDetailsOpenChange,
 }: {
@@ -49,6 +50,7 @@ export function ToolActivity({
   approve: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
   isReadonly: boolean;
   isRunning: boolean;
+  canApprove?: boolean;
   timeline?: boolean;
   onDetailsOpenChange?: (toolCallId: string, open: boolean) => void;
 }) {
@@ -118,16 +120,65 @@ export function ToolActivity({
     (value: boolean) => onDetailsOpenChange?.(part.toolCallId, value),
     [onDetailsOpenChange, part.toolCallId]
   );
-  const handleDeny = useCallback(() => {
-    if (approval) {
-      approve({ approved: false, id: approval.id, reason: "用户拒绝执行" });
-    }
-  }, [approve, approval]);
-  const handleAllow = useCallback(() => {
-    if (approval) {
-      approve({ approved: true, id: approval.id });
-    }
-  }, [approve, approval]);
+  const decisionIdentity = JSON.stringify([
+    part.toolCallId,
+    approval?.id,
+    part.state,
+  ]);
+  const decisionLock = useRef<{ identity: string; pending: boolean }>({
+    identity: decisionIdentity,
+    pending: false,
+  });
+  if (decisionLock.current.identity !== decisionIdentity) {
+    decisionLock.current = { identity: decisionIdentity, pending: false };
+  }
+  const [decision, setDecision] = useState({
+    error: false,
+    identity: decisionIdentity,
+    pending: false,
+  });
+  const pendingDecision =
+    decision.identity === decisionIdentity && decision.pending;
+  const decisionError =
+    decision.identity === decisionIdentity && decision.error;
+  const submitDecision = useCallback(
+    async (approved: boolean) => {
+      if (
+        !approval ||
+        part.state !== "approval-requested" ||
+        isReadonly ||
+        !canApprove ||
+        decisionLock.current.identity !== decisionIdentity ||
+        decisionLock.current.pending
+      ) {
+        return;
+      }
+      const request = decisionLock.current;
+      request.pending = true;
+      setDecision({ error: false, identity: decisionIdentity, pending: true });
+      try {
+        await approve({
+          approved,
+          id: approval.id,
+          ...(approved ? {} : { reason: "用户拒绝执行" }),
+        });
+        // Keep the decision locked until the canonical approval event changes.
+        // Resolving the callback alone must not re-enable a second decision.
+      } catch {
+        if (decisionLock.current === request) {
+          request.pending = false;
+          setDecision({
+            error: true,
+            identity: decisionIdentity,
+            pending: false,
+          });
+        }
+      }
+    },
+    [approval, approve, canApprove, decisionIdentity, isReadonly, part.state]
+  );
+  const handleDeny = useCallback(() => submitDecision(false), [submitDecision]);
+  const handleAllow = useCallback(() => submitDecision(true), [submitDecision]);
   return (
     <div
       className={timeline ? "max-w-full" : "my-1 max-w-full"}
@@ -171,15 +222,17 @@ export function ToolActivity({
             }
             state={displayState}
             statusLabel={
-              incomplete
-                ? "未完成"
-                : part.type === "tool-readAttachment" &&
-                    part.state === "output-available" &&
-                    !attachment
-                  ? "已返回"
-                  : skillLoaded
-                    ? "技能已加载"
-                    : undefined
+              displayState === "approval-responded" && isRunning
+                ? "执行中"
+                : incomplete
+                  ? "未完成"
+                  : part.type === "tool-readAttachment" &&
+                      part.state === "output-available" &&
+                      !attachment
+                    ? "已返回"
+                    : skillLoaded
+                      ? "技能已加载"
+                      : undefined
             }
             title={title}
             {...(part.type === "dynamic-tool"
@@ -211,9 +264,7 @@ export function ToolActivity({
             <p className="text-sm text-destructive" role="alert">
               {incomplete
                 ? "本轮没有收到执行结果，该步骤尚未完成。"
-                : errorText === "An error occurred."
-                  ? "工具暂时未能返回结果，请稍后重试。"
-                  : errorText}
+                : "这一步未能完成。错误原文保留在调用详情中。"}
             </p>
           )}
           {part.type === "tool-readAttachment" &&
@@ -240,9 +291,6 @@ export function ToolActivity({
               data-testid="tool-approval-summary"
             >
               <p className="font-medium">请确认这次操作：{title}</p>
-              <p className="break-all font-mono text-xs text-muted-foreground">
-                {name}
-              </p>
               {!!origin && (
                 <p className="text-xs text-muted-foreground">{origin}</p>
               )}
@@ -255,27 +303,40 @@ export function ToolActivity({
               </p>
             </div>
           )}
-          {part.state === "approval-requested" && approval && !isReadonly && (
-            <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border/60 pt-3">
-              <span className="mr-auto text-xs text-muted-foreground">
-                执行前需要你的确认
-              </span>
-              <button
-                className="min-h-9 rounded-md border px-3 text-sm transition-colors hover:bg-accent"
-                onClick={handleDeny}
-                type="button"
-              >
-                拒绝
-              </button>
-              <button
-                className="min-h-9 rounded-md bg-foreground px-3 text-sm text-background transition-opacity hover:opacity-85"
-                onClick={handleAllow}
-                type="button"
-              >
-                允许执行
-              </button>
-            </div>
-          )}
+          {part.state === "approval-requested" &&
+            approval &&
+            !isReadonly &&
+            canApprove && (
+              <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border/60 pt-3">
+                <span
+                  className="mr-auto text-xs text-muted-foreground"
+                  role="status"
+                >
+                  {pendingDecision ? "正在提交你的确认…" : "执行前需要你的确认"}
+                </span>
+                {!!decisionError && (
+                  <p className="w-full text-xs text-destructive" role="alert">
+                    确认未能提交，请再试一次。尚未确认执行结果。
+                  </p>
+                )}
+                <button
+                  className="min-h-9 rounded-md border px-3 text-sm transition-colors hover:bg-accent disabled:cursor-wait disabled:opacity-50"
+                  disabled={pendingDecision}
+                  onClick={handleDeny}
+                  type="button"
+                >
+                  拒绝
+                </button>
+                <button
+                  className="min-h-9 rounded-md bg-foreground px-3 text-sm text-background transition-opacity hover:opacity-85 disabled:cursor-wait disabled:opacity-50"
+                  disabled={pendingDecision}
+                  onClick={handleAllow}
+                  type="button"
+                >
+                  允许执行
+                </button>
+              </div>
+            )}
         </ToolContent>
       </Tool>
     </div>
