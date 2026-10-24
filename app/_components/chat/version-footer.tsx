@@ -10,7 +10,7 @@ import { LoaderIcon } from "@/app/_components/chat/icons";
 import { useArtifact } from "@/app/_hooks/use-artifact";
 import { cn, getDocumentTimestampByIndex } from "@/app/_lib/utils";
 import { isProtectedResultTable } from "@/lib/artifacts/result-table";
-import type { Document } from "@/lib/db/schema";
+import type { Document } from "@/server/db/schema";
 
 type VersionFooterProps = {
   chatId?: string;

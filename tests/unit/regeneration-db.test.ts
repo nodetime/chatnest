@@ -4,12 +4,12 @@ import { randomUUID } from "node:crypto";
 import { test } from "node:test";
 import dotenv from "dotenv";
 import postgres from "postgres";
-import type { DBMessage } from "@/lib/db/schema";
+import type { DBMessage } from "@/server/db/schema";
 
 dotenv.config({ path: ".env.local", quiet: true });
 
 test("regeneration replaces only the unchanged latest answer, clears its feedback and rolls back failures", async () => {
-  const queries = await import("@/lib/db/queries");
+  const queries = await import("@/server/db/queries");
   const replace = (
     queries as unknown as {
       replaceRegeneratedAnswer?: (input: {

@@ -15,7 +15,7 @@ import {
   ThumbUpIcon,
 } from "@/app/_components/chat/icons";
 import type { ChatMessage } from "@/app/_lib/types";
-import type { Vote } from "@/lib/db/schema";
+import type { Vote } from "@/server/db/schema";
 
 export function PureMessageActions({
   chatId,

@@ -1,13 +1,13 @@
 import { auth } from "@/app/(auth)/auth";
 import { createOverviewHandler, summarizeTools } from "@/lib/admin/overview";
-import { readAgentConfig } from "@/lib/agent/config";
-import { createSettingsService } from "@/lib/agent/mcp-settings/service";
+import { storageStatus } from "@/lib/uploads/service";
+import { readAgentConfig } from "@/server/agent/config";
+import { createSettingsService } from "@/server/agent/mcp-settings/service";
 import {
   getModelConnection,
   getRuntimeModels,
-} from "@/lib/ai/model-connection";
-import { DEFAULT_CHAT_MODEL } from "@/lib/ai/models";
-import { storageStatus } from "@/lib/uploads/service";
+} from "@/server/ai/model-connection";
+import { DEFAULT_CHAT_MODEL } from "@/server/ai/models";
 
 export const GET = createOverviewHandler({
   // biome-ignore lint/suspicious/useAwait: Match the isolated async readiness-reader contract; this service is synchronous and performs no model calls.

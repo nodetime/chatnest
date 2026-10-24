@@ -6,18 +6,18 @@ import { z } from "zod";
 import type { VisibilityType } from "@/app/_components/chat/visibility-selector";
 import { getTextFromMessage } from "@/app/_lib/utils";
 import { auth } from "@/app/(auth)/auth";
-import { getModelConnection } from "@/lib/ai/model-connection";
-import { titleModel } from "@/lib/ai/models";
-import { titlePrompt } from "@/lib/ai/prompts";
-import { getTitleModel } from "@/lib/ai/providers";
-import { metadataOnlyTelemetry } from "@/lib/ai/telemetry";
+import { getModelConnection } from "@/server/ai/model-connection";
+import { titleModel } from "@/server/ai/models";
+import { titlePrompt } from "@/server/ai/prompts";
+import { getTitleModel } from "@/server/ai/providers";
+import { metadataOnlyTelemetry } from "@/server/ai/telemetry";
 import {
   deleteMessagesByChatIdAfterTimestamp,
   getChatById,
   getMessageById,
   updateChatTitleById,
   updateChatVisibilityById,
-} from "@/lib/db/queries";
+} from "@/server/db/queries";
 
 export async function saveChatModelAsCookie(model: string) {
   const cookieStore = await cookies();

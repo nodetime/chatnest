@@ -1,8 +1,8 @@
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 import { auth } from "@/app/(auth)/auth";
-import { deleteAllChatsByUserId, getChatsByUserId } from "@/lib/db/queries";
 import { ChatbotError } from "@/lib/errors";
+import { deleteAllChatsByUserId, getChatsByUserId } from "@/server/db/queries";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;

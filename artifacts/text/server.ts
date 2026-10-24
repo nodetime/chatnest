@@ -1,8 +1,8 @@
 import { smoothStream, streamText } from "ai";
-import { updateDocumentPrompt } from "@/lib/ai/prompts";
-import { getLanguageModel } from "@/lib/ai/providers";
-import { metadataOnlyTelemetry } from "@/lib/ai/telemetry";
 import { createDocumentHandler } from "@/lib/artifacts/server";
+import { updateDocumentPrompt } from "@/server/ai/prompts";
+import { getLanguageModel } from "@/server/ai/providers";
+import { metadataOnlyTelemetry } from "@/server/ai/telemetry";
 
 export const textDocumentHandler = createDocumentHandler<"text">({
   kind: "text",

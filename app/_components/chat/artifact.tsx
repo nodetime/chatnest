@@ -38,7 +38,7 @@ import {
   isProtectedResultTable,
   parseResultTable,
 } from "@/lib/artifacts/result-table";
-import type { Document, Vote } from "@/lib/db/schema";
+import type { Document, Vote } from "@/server/db/schema";
 
 export const artifactDefinitions = [
   textArtifact,

@@ -4,7 +4,7 @@ import test from "node:test";
 import type { ModelMessage } from "ai";
 
 test("real MCP browser preserves page across agent/manual control and rejects unsafe tools", async () => {
-  const implementation = await import("@/lib/agent/browser-session").catch(
+  const implementation = await import("@/server/agent/browser-session").catch(
     () => null
   );
   assert.ok(implementation, "shared browser session is missing");
@@ -107,9 +107,9 @@ test("real MCP browser preserves page across agent/manual control and rejects un
 });
 
 test("a stored browser approval cannot regain authority in a freshly constructed agent run", async () => {
-  const { createBrowserTools } = await import("@/lib/agent/browser-tools");
+  const { createBrowserTools } = await import("@/server/agent/browser-tools");
   const { getBrowserSession, closeBrowserSession } = await import(
-    "@/lib/agent/browser-session"
+    "@/server/agent/browser-session"
   );
   const previous = process.env.BROWSER_RUNTIME;
   process.env.BROWSER_RUNTIME = "local";

@@ -3,7 +3,7 @@ import type { DataUIPart } from "ai";
 import type { ComponentType, Dispatch, ReactNode, SetStateAction } from "react";
 import type { UIArtifact } from "@/app/_components/chat/artifact";
 import type { ChatMessage, CustomUIDataTypes } from "@/app/_lib/types";
-import type { Suggestion } from "@/lib/db/schema";
+import type { Suggestion } from "@/server/db/schema";
 
 export type ArtifactActionContext<M = any> = {
   content: string;

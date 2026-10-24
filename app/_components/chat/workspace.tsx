@@ -11,7 +11,7 @@ import { useActiveChat } from "@/app/_hooks/use-active-chat";
 import { useArtifact } from "@/app/_hooks/use-artifact";
 import { useWorkspace } from "@/app/_hooks/use-workspace";
 import { cn } from "@/app/_lib/utils";
-import { browserWorkspaceEvents } from "@/lib/agent/workspace-events";
+import { browserWorkspaceEvents } from "@/server/agent/workspace-events";
 
 export function Workspace({ children }: { children: ReactNode }) {
   const workspace = useWorkspace();

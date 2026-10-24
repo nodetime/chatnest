@@ -25,7 +25,7 @@ import { ToolActivity } from "@/app/_components/chat/tool-activity";
 import { Weather } from "@/app/_components/chat/weather";
 import type { ChatMessage } from "@/app/_lib/types";
 import { cn, sanitizeText } from "@/app/_lib/utils";
-import type { Vote } from "@/lib/db/schema";
+import type { Vote } from "@/server/db/schema";
 
 function WaitingText() {
   const { waitingStatus } = useDataStream();

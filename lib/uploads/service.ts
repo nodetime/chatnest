@@ -1,7 +1,6 @@
 import "server-only";
 import { createHash, randomUUID } from "node:crypto";
 import postgres from "postgres";
-import type { DBMessage } from "@/lib/db/schema";
 import { parseDocument } from "@/lib/uploads/document-parser";
 import {
   ATTACHMENT_MIMES,
@@ -25,6 +24,7 @@ import {
   UploadError,
   validateAttachment,
 } from "@/lib/uploads/validation";
+import type { DBMessage } from "@/server/db/schema";
 
 const sql = postgres(process.env.POSTGRES_URL ?? "");
 // Shared lock serializes quota reservation, lifecycle pinning and safe deletion across processes.

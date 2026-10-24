@@ -28,7 +28,7 @@ import {
   useSidebar,
 } from "@/app/_components/ui/sidebar";
 import { fetcher } from "@/app/_lib/utils";
-import type { Chat } from "@/lib/db/schema";
+import type { Chat } from "@/server/db/schema";
 
 type GroupedChats = {
   today: Chat[];

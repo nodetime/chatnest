@@ -6,7 +6,7 @@ import {
   connectionFingerprint,
   parseHeaderInput,
   refreshConflictMessage,
-} from "@/lib/agent/mcp-settings/editor";
+} from "@/server/agent/mcp-settings/editor";
 
 test("editor verification is only valid for the exact current opaque/replace connection; explicit empty headers clears", () => {
   const a = connectionFingerprint("x", { mode: "keep" });
@@ -55,7 +55,7 @@ test("failed conflict refresh preserves original conflict message rather than re
 });
 test("friendly authentication preserves all custom headers and never silently drops non-Bearer authorization", async () => {
   const { authenticationKind, bearerValue, withBearer, suggestServerId } =
-    await import("@/lib/agent/mcp-settings/editor");
+    await import("@/server/agent/mcp-settings/editor");
   assert.equal(authenticationKind("{}"), "none");
   assert.equal(
     authenticationKind('{"Authorization":"Bearer secret"}'),
@@ -78,7 +78,7 @@ test("friendly authentication preserves all custom headers and never silently dr
 });
 test("new JSON-import IDs cannot replace existing managed or file connections, including after refreshed IDs", async () => {
   const { newConnectionIdConflict } = await import(
-    "@/lib/agent/mcp-settings/editor"
+    "@/server/agent/mcp-settings/editor"
   );
   assert.equal(
     newConnectionIdConflict("fixture", ["fixture", "file_server"], false),
@@ -94,7 +94,7 @@ test("new JSON-import IDs cannot replace existing managed or file connections, i
 });
 
 test("editor lifetime rejects duplicate work and suppresses late probe/save/conflict callbacks after disposal", async () => {
-  const editor = await import("@/lib/agent/mcp-settings/editor");
+  const editor = await import("@/server/agent/mcp-settings/editor");
   assert.equal(
     typeof editor.createEditorLifetime,
     "function",

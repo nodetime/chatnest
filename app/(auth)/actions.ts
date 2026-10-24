@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 
-import { createUser, getUser } from "@/lib/db/queries";
+import { createUser, getUser } from "@/server/db/queries";
 
 import { signIn } from "./auth";
 

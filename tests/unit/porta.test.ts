@@ -5,9 +5,12 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import type { createMCPClient, MCPClient } from "@ai-sdk/mcp";
 import { jsonSchema } from "ai";
-import { agentConfigSchema, resolveServerConnection } from "@/lib/agent/config";
-import { createAgentRuntime } from "@/lib/agent/runtime";
-import { discoverSkills, readSkillFile } from "@/lib/agent/skills";
+import {
+  agentConfigSchema,
+  resolveServerConnection,
+} from "@/server/agent/config";
+import { createAgentRuntime } from "@/server/agent/runtime";
+import { discoverSkills, readSkillFile } from "@/server/agent/skills";
 
 const toolNames = [
   "item_search",

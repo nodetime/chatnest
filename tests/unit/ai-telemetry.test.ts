@@ -81,7 +81,9 @@ test("all nine application model calls explicitly use metadata-only telemetry", 
 });
 
 test("installed AI SDK and OTel retain usage but omit private prompt, tool and output content", async () => {
-  const implementation = await import("@/lib/ai/telemetry").catch(() => null);
+  const implementation = await import("@/server/ai/telemetry").catch(
+    () => null
+  );
   assert.ok(
     implementation,
     "shared private-content telemetry policy is missing"

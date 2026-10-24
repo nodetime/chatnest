@@ -6,13 +6,16 @@ import type {
   StorageReadiness,
   ToolsReadiness,
 } from "@/lib/admin/overview-types";
-import { resolveServerConnection, type ServerConfig } from "@/lib/agent/config";
+import {
+  resolveServerConnection,
+  type ServerConfig,
+} from "@/server/agent/config";
 import {
   authorizeManagement,
   type Environment,
   SettingsError,
-} from "@/lib/agent/mcp-settings/security";
-import type { SettingsProjection } from "@/lib/agent/mcp-settings/types";
+} from "@/server/agent/mcp-settings/security";
+import type { SettingsProjection } from "@/server/agent/mcp-settings/types";
 
 export function summarizeTools(
   file: ServerConfig[],

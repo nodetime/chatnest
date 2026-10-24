@@ -26,7 +26,7 @@ import {
   collectConversationSources,
   conversationMarkdown,
   sourceListMarkdown,
-} from "@/lib/agent/conversation-sources";
+} from "@/server/agent/conversation-sources";
 
 export function ConversationSources({
   open: controlledOpen,

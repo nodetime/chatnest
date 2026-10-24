@@ -2,9 +2,9 @@ import { connection } from "next/server";
 import {
   getModelConnection,
   getRuntimeModels,
-} from "@/lib/ai/model-connection";
-import { getCapabilities } from "@/lib/ai/model-service";
-import { getAllGatewayModels, isDemo } from "@/lib/ai/models";
+} from "@/server/ai/model-connection";
+import { getCapabilities } from "@/server/ai/model-service";
+import { getAllGatewayModels, isDemo } from "@/server/ai/models";
 
 export async function GET() {
   await connection();

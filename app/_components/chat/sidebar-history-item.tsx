@@ -44,7 +44,7 @@ import {
 } from "@/app/_components/ui/sidebar";
 import { useChatVisibility } from "@/app/_hooks/use-chat-visibility";
 import { renameChat } from "@/app/(chat)/actions";
-import type { Chat } from "@/lib/db/schema";
+import type { Chat } from "@/server/db/schema";
 
 const PureChatItem = ({
   chat,

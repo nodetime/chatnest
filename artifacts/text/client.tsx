@@ -12,7 +12,7 @@ import {
 } from "@/app/_components/chat/icons";
 import { Editor } from "@/app/_components/chat/text-editor";
 import { getSuggestions } from "@/artifacts/actions";
-import type { Suggestion } from "@/lib/db/schema";
+import type { Suggestion } from "@/server/db/schema";
 
 type TextArtifactMetadata = {
   suggestions: Suggestion[];

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { conversationMarkdown } from "@/lib/agent/conversation-sources";
+import { conversationMarkdown } from "@/server/agent/conversation-sources";
 
 test("root page metadata uses the ChatNest product title", () => {
   const layout = readFileSync("app/layout.tsx", "utf8");

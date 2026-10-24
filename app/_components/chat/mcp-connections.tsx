@@ -45,11 +45,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/app/_components/ui/table";
-import { refreshConflictMessage } from "@/lib/agent/mcp-settings/editor";
+import { refreshConflictMessage } from "@/server/agent/mcp-settings/editor";
 import type {
   ServerProjection,
   SettingsProjection,
-} from "@/lib/agent/mcp-settings/types";
+} from "@/server/agent/mcp-settings/types";
 
 async function readSettings(url: string): Promise<SettingsProjection> {
   const response = await fetch(url);

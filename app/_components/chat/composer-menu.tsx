@@ -17,7 +17,7 @@ import {
 import { useActiveChat } from "@/app/_hooks/use-active-chat";
 import { useAgentInfo } from "@/app/_hooks/use-agent-info";
 import { fetcher } from "@/app/_lib/utils";
-import type { ModelCapabilities } from "@/lib/ai/models";
+import type { ModelCapabilities } from "@/server/ai/models";
 
 export function ComposerMenu({
   fileInputRef,

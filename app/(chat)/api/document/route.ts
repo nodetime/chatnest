@@ -5,14 +5,14 @@ import {
   isProtectedResultTable,
   parseResultTable,
 } from "@/lib/artifacts/result-table";
+import { ChatbotError } from "@/lib/errors";
 import {
   deleteDocumentsByIdAfterTimestamp,
   getChatById,
   getDocumentsById,
   saveDocument,
   updateDocumentContent,
-} from "@/lib/db/queries";
-import { ChatbotError } from "@/lib/errors";
+} from "@/server/db/queries";
 
 const documentSchema = z.object({
   content: z.string(),

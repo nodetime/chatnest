@@ -1,8 +1,8 @@
 import { streamText } from "ai";
-import { sheetPrompt, updateDocumentPrompt } from "@/lib/ai/prompts";
-import { getLanguageModel } from "@/lib/ai/providers";
-import { metadataOnlyTelemetry } from "@/lib/ai/telemetry";
 import { createDocumentHandler } from "@/lib/artifacts/server";
+import { sheetPrompt, updateDocumentPrompt } from "@/server/ai/prompts";
+import { getLanguageModel } from "@/server/ai/providers";
+import { metadataOnlyTelemetry } from "@/server/ai/telemetry";
 
 export const sheetDocumentHandler = createDocumentHandler<"sheet">({
   kind: "sheet",

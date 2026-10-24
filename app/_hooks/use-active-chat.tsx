@@ -36,11 +36,11 @@ import {
   fetchWithErrorHandlers,
   generateUUID,
 } from "@/app/_lib/utils";
-import { compactToolApprovals } from "@/lib/agent/approval-transport";
-import { buildTaskMessage, type TaskDraft } from "@/lib/agent/task-draft";
-import { DEFAULT_CHAT_MODEL } from "@/lib/ai/models";
-import type { Vote } from "@/lib/db/schema";
 import { ChatbotError } from "@/lib/errors";
+import { compactToolApprovals } from "@/server/agent/approval-transport";
+import { buildTaskMessage, type TaskDraft } from "@/server/agent/task-draft";
+import { DEFAULT_CHAT_MODEL } from "@/server/ai/models";
+import type { Vote } from "@/server/db/schema";
 
 type ActiveChatContextValue = {
   chatId: string;

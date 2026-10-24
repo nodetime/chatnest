@@ -2,7 +2,7 @@
 // biome-ignore-all lint/style/noNonNullAssertion: Assertions establish fixture values before use.
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createManagementHandler } from "@/lib/agent/mcp-settings/api";
+import { createManagementHandler } from "@/server/agent/mcp-settings/api";
 
 const id = "11111111-1111-4111-8111-111111111111",
   env = { MCP_ADMIN_USER_IDS: id };

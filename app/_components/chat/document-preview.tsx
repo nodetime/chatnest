@@ -19,7 +19,7 @@ import { useArtifact } from "@/app/_hooks/use-artifact";
 import { useWorkspace } from "@/app/_hooks/use-workspace";
 import { fetcher } from "@/app/_lib/utils";
 import { openArtifactPreview } from "@/lib/artifacts/stream-state";
-import type { Document } from "@/lib/db/schema";
+import type { Document } from "@/server/db/schema";
 
 type DocumentToolOutput = {
   id: string;

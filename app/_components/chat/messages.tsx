@@ -12,8 +12,8 @@ import {
 } from "@/app/_components/chat/message";
 import { RuntimeRecovery } from "@/app/_components/chat/runtime-recovery";
 import type { ChatMessage } from "@/app/_lib/types";
-import { prepareRegeneration } from "@/lib/agent/message-turn";
-import type { Vote } from "@/lib/db/schema";
+import { prepareRegeneration } from "@/server/agent/message-turn";
+import type { Vote } from "@/server/db/schema";
 
 type MessagesProps = {
   addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];

@@ -3,7 +3,7 @@ import NextAuth, { type DefaultSession } from "next-auth";
 import type { DefaultJWT } from "next-auth/jwt";
 import Credentials from "next-auth/providers/credentials";
 import { DUMMY_PASSWORD } from "@/app/_lib/constants";
-import { createGuestUser, getUser } from "@/lib/db/queries";
+import { createGuestUser, getUser } from "@/server/db/queries";
 import { authConfig } from "./auth.config";
 
 export type UserType = "guest" | "regular";

@@ -14,14 +14,14 @@ import {
   refreshConflictMessage,
   suggestServerId,
   withBearer,
-} from "@/lib/agent/mcp-settings/editor";
-import { actionSchema, parseImport } from "@/lib/agent/mcp-settings/schema";
+} from "@/server/agent/mcp-settings/editor";
+import { actionSchema, parseImport } from "@/server/agent/mcp-settings/schema";
 import type {
   ConnectionEdit,
   ServerProjection,
   SettingsAction,
   ToolMetadata,
-} from "@/lib/agent/mcp-settings/types";
+} from "@/server/agent/mcp-settings/types";
 export async function requestMcp(action: SettingsAction, signal?: AbortSignal) {
   const response = await fetch(
     `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/agent/mcp`,

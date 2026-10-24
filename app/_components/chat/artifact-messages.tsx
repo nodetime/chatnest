@@ -9,7 +9,7 @@ import {
 } from "@/app/_components/chat/message";
 import { useMessages } from "@/app/_hooks/use-messages";
 import type { ChatMessage } from "@/app/_lib/types";
-import type { Vote } from "@/lib/db/schema";
+import type { Vote } from "@/server/db/schema";
 
 type ArtifactMessagesProps = {
   addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];

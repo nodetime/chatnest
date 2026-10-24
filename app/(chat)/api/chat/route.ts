@@ -19,48 +19,6 @@ import {
 import type { ChatMessage, WaitingStatusData } from "@/app/_lib/types";
 import { convertToUIMessages, generateUUID } from "@/app/_lib/utils";
 import { auth, type UserType } from "@/app/(auth)/auth";
-import { applyToolApprovals } from "@/lib/agent/approvals";
-import { createBrowserTools } from "@/lib/agent/browser-tools";
-import {
-  prepareMessageEdit,
-  prepareRegeneration,
-} from "@/lib/agent/message-turn";
-import { agentStreamErrorText } from "@/lib/agent/porta-error";
-import {
-  boundedMcpHistory,
-  historyProjectionTools,
-  ResultEvidenceLedger,
-  restoreResultEvidence,
-} from "@/lib/agent/result-evidence";
-import { createAgentRuntime } from "@/lib/agent/runtime";
-import { entitlementsByUserType } from "@/lib/ai/entitlements";
-import {
-  getModelConnection,
-  getRuntimeModels,
-  resolveModelId,
-} from "@/lib/ai/model-connection";
-import { getCapabilities, getModelAvailability } from "@/lib/ai/model-service";
-import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
-import { getLanguageModel } from "@/lib/ai/providers";
-import { metadataOnlyTelemetry } from "@/lib/ai/telemetry";
-import { createDocument } from "@/lib/ai/tools/create-document";
-import { createResultTable } from "@/lib/ai/tools/create-result-table";
-import { editDocument } from "@/lib/ai/tools/edit-document";
-import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
-import { updateDocument } from "@/lib/ai/tools/update-document";
-import {
-  createStreamId,
-  deleteChatById,
-  getChatById,
-  getMessageCountByUserId,
-  getMessagesByChatId,
-  replaceEditedTurn,
-  replaceRegeneratedAnswer,
-  saveMessages,
-  updateChatTitleById,
-  updateMessage,
-} from "@/lib/db/queries";
-import type { DBMessage } from "@/lib/db/schema";
 import { ChatbotError } from "@/lib/errors";
 import { checkIpRateLimit } from "@/lib/ratelimit";
 import { prepareAttachmentContext } from "@/lib/uploads/context";
@@ -73,6 +31,51 @@ import {
   readAttachmentAsset,
 } from "@/lib/uploads/service";
 import { readBoundedBody, UploadError } from "@/lib/uploads/validation";
+import { applyToolApprovals } from "@/server/agent/approvals";
+import { createBrowserTools } from "@/server/agent/browser-tools";
+import {
+  prepareMessageEdit,
+  prepareRegeneration,
+} from "@/server/agent/message-turn";
+import { agentStreamErrorText } from "@/server/agent/porta-error";
+import {
+  boundedMcpHistory,
+  historyProjectionTools,
+  ResultEvidenceLedger,
+  restoreResultEvidence,
+} from "@/server/agent/result-evidence";
+import { createAgentRuntime } from "@/server/agent/runtime";
+import { entitlementsByUserType } from "@/server/ai/entitlements";
+import {
+  getModelConnection,
+  getRuntimeModels,
+  resolveModelId,
+} from "@/server/ai/model-connection";
+import {
+  getCapabilities,
+  getModelAvailability,
+} from "@/server/ai/model-service";
+import { type RequestHints, systemPrompt } from "@/server/ai/prompts";
+import { getLanguageModel } from "@/server/ai/providers";
+import { metadataOnlyTelemetry } from "@/server/ai/telemetry";
+import { createDocument } from "@/server/ai/tools/create-document";
+import { createResultTable } from "@/server/ai/tools/create-result-table";
+import { editDocument } from "@/server/ai/tools/edit-document";
+import { requestSuggestions } from "@/server/ai/tools/request-suggestions";
+import { updateDocument } from "@/server/ai/tools/update-document";
+import {
+  createStreamId,
+  deleteChatById,
+  getChatById,
+  getMessageCountByUserId,
+  getMessagesByChatId,
+  replaceEditedTurn,
+  replaceRegeneratedAnswer,
+  saveMessages,
+  updateChatTitleById,
+  updateMessage,
+} from "@/server/db/queries";
+import type { DBMessage } from "@/server/db/schema";
 import { generateTitleFromUserMessage } from "../../actions";
 import { type PostRequestBody, postRequestBodySchema } from "./schema";
 

@@ -1,7 +1,7 @@
 import { auth } from "@/app/(auth)/auth";
-import { readAgentConfig } from "@/lib/agent/config";
-import { createManagementHandler } from "@/lib/agent/mcp-settings/api";
-import { createSettingsService } from "@/lib/agent/mcp-settings/service";
+import { readAgentConfig } from "@/server/agent/config";
+import { createManagementHandler } from "@/server/agent/mcp-settings/api";
+import { createSettingsService } from "@/server/agent/mcp-settings/service";
 
 const handle = createManagementHandler({
   file: async () => (await readAgentConfig()).servers,

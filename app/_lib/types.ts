@@ -1,13 +1,13 @@
 import type { InferUITool, UIMessage } from "ai";
 import { z } from "zod";
 import type { ArtifactKind } from "@/app/_components/chat/artifact";
-import type { McpSourceMetadata } from "@/lib/agent/result-evidence";
-import type { createDocument } from "@/lib/ai/tools/create-document";
-import type { createResultTable } from "@/lib/ai/tools/create-result-table";
-import type { getWeather } from "@/lib/ai/tools/get-weather";
-import type { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
-import type { updateDocument } from "@/lib/ai/tools/update-document";
-import type { Suggestion } from "@/lib/db/schema";
+import type { McpSourceMetadata } from "@/server/agent/result-evidence";
+import type { createDocument } from "@/server/ai/tools/create-document";
+import type { createResultTable } from "@/server/ai/tools/create-result-table";
+import type { getWeather } from "@/server/ai/tools/get-weather";
+import type { requestSuggestions } from "@/server/ai/tools/request-suggestions";
+import type { updateDocument } from "@/server/ai/tools/update-document";
+import type { Suggestion } from "@/server/db/schema";
 
 export const messageMetadataSchema = z.object({
   createdAt: z.string(),
