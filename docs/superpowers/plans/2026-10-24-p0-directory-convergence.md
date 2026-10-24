@@ -580,6 +580,40 @@ PR 标题:`refactor: P0 一级目录收敛(app/server 双顶层)`;描述链接 s
 
 ## Verification(执行时回填)
 
-- 基线:tsc PASS / 离线单测 __ 项 / e2e __
-- Task 3-7 各批:tsc PASS / 单测 31 套件
-- 终验收:tsc / 单测 / e2e 对比 / ls 一级目录 / dev 冒烟
+### 基线(对照 .local-review/p0-baseline.md)
+
+- tsc PASS;离线单测 288 项 / 285 过 / 3 败(3 败均为 Windows 环境性: agent EPERM symlink、
+  private-uploads 与 document-ingestion 的 NTFS 无 POSIX 权限位);e2e 23 项 / 14 过 / 9 败。
+- 对比口径: 失败集合不得增长。
+
+### Task 3-7 各批(每批后 tsc PASS,单测 31 套件与基线一致)
+
+| 批次 | commit | 主题 |
+|---|---|---|
+| 前置 | f611773 / e490146 / 49aab38 / f7ade1f / 0563c41 / 73b901a | 钉 playwright 版本、迁移脚本、test 脚本与计划对齐 |
+| UI 目录 | 460f627 | 收敛UI目录到app/_components与_app_hooks_lib |
+| server 核心 | 7d0c63b | 收敛服务端核心到server并更新配置路径 |
+| uploads/admin/artifacts | 05556ca | 收敛uploads_admin_artifacts到server并拆分产物客户端 |
+| shared+单测就近 | 85da995 | shared入server并就近搬迁单元测试 |
+| deploy/文档 | ba5cec1 | deploy目录收敛文档同步并清理cursor规则 |
+| 评审遗留 | 8787e0e | docs: 修正评审发现的陈旧路径表述 |
+
+### 终验收(2026-10-25,worktree HEAD 8787e0e)
+
+- tsc: `pnpm exec tsc --noEmit` => TSC_PASS(与基线一致)。
+- 单测: `# tests 288; # pass 285; # fail 3`,3 败与基线逐一对应(路径按预期就近搬迁:
+  server/agent/agent.test.ts:203 EPERM symlink、server/uploads/document-ingestion.test.ts
+  POSIX 权限位、server/uploads/private-uploads.test.ts:58 POSIX 权限位)=> 失败集合一致。
+- e2e: 23 项 / 14 过 / 9 败,9 败与基线逐项一致(api 2 + chat 2 + model-selector 5)
+  => 失败集合一致、零新增。注: `pnpm test` 脚本含 POSIX `export` 在本机 cmd.exe 下不可执行,
+  按基线同口径直呼 @playwright/test@1.61.1 CLI(PLAYWRIGHT=True 前缀)。
+- ls 一级目录: `app/ deploy/ docs/ node_modules/ public/ scripts/ server/ tests/`,
+  无 shared/ components/ lib/ hooks/ 等残留;全库无 `@/(components|lib|hooks|shared)/` 旧别名引用。
+- 产物 tracing: `pnpm exec next build` 成功;`server/skills` 命中
+  `.next/server/app/(chat)/api/chat/route.js.nft.json`(及 [id]/stream),加测 /api/agent 亦命中;
+  `server/uploads/document-worker.cjs` 命中 `.next/server/app/(chat)/api/files/upload/route.js.nft.json`
+  => TRACING_OK / WORKER_TRACING_OK(路由在 `(chat)` 路由组下,与 brief 的 glob 同对象)。
+- dev 冒烟(3003): `/ping` => pong;`/` 经访客鉴权重定向后 HTTP 200 且 `<title>ChatNest</title>`;
+  `/api/agent` => JSON 含 `modelConfigured` 字段。
+
+结论: 全部验收项与基线一致或通过,失败集合未增长。
