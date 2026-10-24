@@ -92,7 +92,8 @@ test("standalone admin shell has only real navigation and return-to-workspace li
   assert.match(html, /href="\/admin\/connections"/);
   assert.match(html, /href="\/admin\/storage"/);
   assert.match(html, /href="\/"[^>]*>[\s\S]*?返回工作台<\/a>/);
-  assert.doesNotMatch(html, /\/admin\/(?:models|billing|logs)/);
+  assert.match(html, /\/admin\/models/);
+  assert.doesNotMatch(html, /\/admin\/(?:billing|logs)/);
   const layout = readFileSync("app/admin/layout.tsx", "utf8");
   assert.match(layout, /Suspense/);
   assert.match(layout, /await auth\(/);

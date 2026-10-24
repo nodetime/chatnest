@@ -13,7 +13,7 @@
 
 ## 本地运行
 
-复制 `.env.example` 为本地 `.env.local`，设置 `AUTH_SECRET`、`POSTGRES_URL` 和模型连接。OpenAI 兼容接口使用 `MODEL_PROVIDER=openai`、`OPENAI_API_KEY`、`OPENAI_BASE_URL`、`OPENAI_MODEL`；不需要 Gateway Key。要启用内置浏览器，设置 `BROWSER_RUNTIME=local`，并安装匹配版本的 Chromium。
+复制 `.env.example` 为本地 `.env.local`，设置 `AUTH_SECRET`、`POSTGRES_URL`。完成迁移与管理员/加密主密钥配置后，可在 `/admin/models` 管理模型地址、Key、默认/开放模型并测试连接，无需反复改环境变量；详见 [模型配置](docs/integrations/model-settings.md)。首次启动也支持环境变量配置模型连接。OpenAI 兼容接口使用 `MODEL_PROVIDER=openai`、`OPENAI_API_KEY`、`OPENAI_BASE_URL`、`OPENAI_MODEL`；不需要 Gateway Key。要启用内置浏览器，设置 `BROWSER_RUNTIME=local`，并安装匹配版本的 Chromium。
 
 ```sh
 corepack pnpm install --frozen-lockfile

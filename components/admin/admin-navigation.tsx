@@ -1,6 +1,6 @@
 "use client";
 // Adapted upstream NavMain/NavLinkItem composition; see THIRD_PARTY_NOTICES.md.
-import { HardDrive, LayoutDashboard, Plug } from "lucide-react";
+import { BrainCircuit, HardDrive, LayoutDashboard, Plug } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback } from "react";
@@ -16,6 +16,7 @@ import {
 
 export const adminLinks = [
   { href: "/admin", icon: LayoutDashboard, label: "概览" },
+  { href: "/admin/models", icon: BrainCircuit, label: "模型" },
   { href: "/admin/connections", icon: Plug, label: "工具连接" },
   { href: "/admin/storage", icon: HardDrive, label: "文件存储" },
 ];
