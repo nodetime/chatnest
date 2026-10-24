@@ -43,9 +43,11 @@ function PureEditor({
   onSaveContent,
   suggestions,
   status,
+  isCurrentVersion,
 }: EditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<EditorView | null>(null);
+  const initialContentRef = useRef(content);
   const [activeSuggestion, setActiveSuggestion] = useState<UISuggestion | null>(
     null
   );
@@ -54,7 +56,7 @@ function PureEditor({
   useEffect(() => {
     if (containerRef.current && !editorRef.current) {
       const state = EditorState.create({
-        doc: buildDocumentFromContent(content),
+        doc: buildDocumentFromContent(initialContentRef.current),
         plugins: [
           ...exampleSetup({ menuBar: false, schema: documentSchema }),
           inputRules({
@@ -97,24 +99,32 @@ function PureEditor({
         editorRef.current = null;
       }
     };
-  }, [content]);
+  }, []);
 
   useEffect(() => {
     if (editorRef.current) {
       editorRef.current.setProps({
         dispatchTransaction: (transaction) => {
+          if (
+            transaction.docChanged &&
+            !transaction.getMeta("no-save") &&
+            (!isCurrentVersion || status === "streaming")
+          ) {
+            return;
+          }
           handleTransaction({
             editorRef,
             onSaveContent,
             transaction,
           });
         },
+        editable: () => isCurrentVersion && status !== "streaming",
       });
     }
-  }, [onSaveContent]);
+  }, [onSaveContent, isCurrentVersion, status]);
 
   useEffect(() => {
-    if (editorRef.current && content) {
+    if (editorRef.current) {
       const currentContent = buildContentFromDocument(
         editorRef.current.state.doc
       );
@@ -129,6 +139,7 @@ function PureEditor({
         );
 
         transaction.setMeta("no-save", true);
+        transaction.setMeta("addToHistory", false);
         editorRef.current.dispatch(transaction);
         return;
       }
@@ -143,6 +154,7 @@ function PureEditor({
         );
 
         transaction.setMeta("no-save", true);
+        transaction.setMeta("addToHistory", false);
         editorRef.current.dispatch(transaction);
       }
     }
@@ -216,7 +228,7 @@ function PureEditor({
   return (
     <>
       <div
-        className="prose dark:prose-invert prose-neutral relative max-w-none"
+        className="prose dark:prose-invert prose-neutral relative min-w-0 w-full max-w-none"
         ref={containerRef}
       />
       {activeSuggestion &&
@@ -240,6 +252,7 @@ function areEqual(prevProps: EditorProps, nextProps: EditorProps) {
     prevProps.suggestions === nextProps.suggestions &&
     prevProps.currentVersionIndex === nextProps.currentVersionIndex &&
     prevProps.isCurrentVersion === nextProps.isCurrentVersion &&
+    prevProps.status === nextProps.status &&
     !(prevProps.status === "streaming" && nextProps.status === "streaming") &&
     prevProps.content === nextProps.content &&
     prevProps.onSaveContent === nextProps.onSaveContent

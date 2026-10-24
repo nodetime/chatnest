@@ -1,14 +1,16 @@
 import type { UseChatHelpers } from "@ai-sdk/react";
-import { ArrowDownIcon } from "lucide-react";
-import { useCallback, useEffect, useRef } from "react";
-import { useMessages } from "@/hooks/use-messages";
+import {
+  Conversation,
+  ConversationContent,
+  ConversationScrollButton,
+} from "@/components/ai-elements/conversation";
 import { prepareRegeneration } from "@/lib/agent/message-turn";
 import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
-import { cn } from "@/lib/utils";
 import { useDataStream } from "./data-stream-provider";
 import { Greeting } from "./greeting";
 import { PreviewMessage, ThinkingMessage } from "./message";
+import { RuntimeRecovery } from "./runtime-recovery";
 
 type MessagesProps = {
   addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
@@ -24,6 +26,7 @@ type MessagesProps = {
   selectedModelId: string;
   onEditMessage?: (message: ChatMessage) => void;
   onRegenerateAnswer?: () => void;
+  sendMessage?: UseChatHelpers<ChatMessage>["sendMessage"];
 };
 
 function PureMessages({
@@ -35,36 +38,47 @@ function PureMessages({
   setMessages,
   regenerate,
   isReadonly,
-  isArtifactVisible,
+  isArtifactVisible: _isArtifactVisible,
   isLoading,
   selectedModelId: _selectedModelId,
   onEditMessage,
   onRegenerateAnswer,
+  sendMessage,
 }: MessagesProps) {
-  const {
-    containerRef: messagesContainerRef,
-    endRef: messagesEndRef,
-    isAtBottom,
-    scrollToBottom,
-    hasSentMessage,
-    reset,
-  } = useMessages({
-    status,
-  });
-
   useDataStream();
 
-  const prevChatIdRef = useRef(chatId);
-  useEffect(() => {
-    if (prevChatIdRef.current !== chatId) {
-      prevChatIdRef.current = chatId;
-      reset();
-    }
-  }, [chatId, reset]);
+  // Approval continuations are active while the SDK submits the next request,
+  // before streaming begins. Keep this scoped to the latest message.
+  const isActive = status === "submitted" || status === "streaming";
+  const latestMessage = messages.at(-1);
 
-  const handleScrollToBottom = useCallback(() => {
-    scrollToBottom("smooth");
-  }, [scrollToBottom]);
+  const renderMessage = (message: ChatMessage, index: number) => (
+    <PreviewMessage
+      addToolApprovalResponse={addToolApprovalResponse}
+      canApprove={!isReadonly && !isActive && index === messages.length - 1}
+      chatId={chatId}
+      isLoading={isActive && messages.length - 1 === index}
+      isReadonly={isReadonly}
+      key={message.id}
+      message={message}
+      onEdit={onEditMessage}
+      onRegenerate={
+        index === messages.length - 1 &&
+        status !== "submitted" &&
+        status !== "streaming" &&
+        prepareRegeneration(messages, messages.at(-2)?.id ?? "")
+          ? onRegenerateAnswer
+          : undefined
+      }
+      regenerate={regenerate}
+      requiresScrollPadding={false}
+      setMessages={setMessages}
+      showSender={index === 0 || messages[index - 1]?.role !== "assistant"}
+      vote={
+        votes ? votes.find((vote) => vote.messageId === message.id) : undefined
+      }
+    />
+  );
 
   return (
     <div className="relative flex-1 bg-background">
@@ -73,70 +87,33 @@ function PureMessages({
           <Greeting />
         </div>
       )}
-      <div
-        className={cn(
-          "absolute inset-0 touch-pan-y overflow-y-auto",
-          messages.length > 0 ? "bg-background" : "bg-transparent"
-        )}
-        ref={messagesContainerRef}
-        style={isArtifactVisible ? { scrollbarWidth: "none" } : undefined}
-      >
-        <div className="mx-auto flex min-h-full min-w-0 max-w-[800px] flex-col gap-7 px-4 py-6 sm:px-6 md:gap-9">
-          {messages.map((message, index) => (
-            <PreviewMessage
-              addToolApprovalResponse={addToolApprovalResponse}
-              chatId={chatId}
-              isLoading={
-                status === "streaming" && messages.length - 1 === index
-              }
+      <Conversation className="absolute inset-0 min-h-0" key={chatId}>
+        <ConversationContent className="mx-auto min-h-full w-full min-w-0 max-w-[720px] gap-5 px-4 py-6 sm:px-6 md:gap-6">
+          {/* A canonical message always owns its tool subtree. Appending answer
+              text must not reparent an open details dialog or its focus target. */}
+          {messages.map(renderMessage)}
+          {sendMessage && latestMessage?.role === "assistant" && (
+            <RuntimeRecovery
+              isLatest
               isReadonly={isReadonly}
-              key={message.id}
-              message={message}
-              onEdit={onEditMessage}
-              onRegenerate={
-                index === messages.length - 1 &&
-                status !== "submitted" &&
-                status !== "streaming" &&
-                prepareRegeneration(messages, messages.at(-2)?.id ?? "")
-                  ? onRegenerateAnswer
-                  : undefined
-              }
-              regenerate={regenerate}
-              requiresScrollPadding={
-                hasSentMessage && index === messages.length - 1
-              }
-              setMessages={setMessages}
-              vote={
-                votes
-                  ? votes.find((vote) => vote.messageId === message.id)
-                  : undefined
-              }
+              key={`${chatId}:${latestMessage.id}:recovery`}
+              message={latestMessage}
+              sendMessage={sendMessage}
+              status={status}
             />
-          ))}
+          )}
 
           {status === "submitted" && messages.at(-1)?.role !== "assistant" && (
             <ThinkingMessage />
           )}
 
-          <div
-            className="min-h-[24px] min-w-[24px] shrink-0"
-            ref={messagesEndRef}
-          />
-        </div>
-      </div>
-
-      <button
-        aria-label="滚动到底部"
-        className={`absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center rounded-full border border-border/50 bg-card/90 px-3.5 shadow-[var(--shadow-float)] backdrop-blur-lg transition-all duration-200 h-7 text-[10px] ${
-          isAtBottom
-            ? "pointer-events-none scale-90 opacity-0"
-            : "pointer-events-auto scale-100 opacity-100"
-        }`}
-        onClick={handleScrollToBottom}
-        type="button"
-      >
-        <ArrowDownIcon className="size-3 text-muted-foreground" />
-      </button>
+          <div className="h-2 shrink-0" />
+        </ConversationContent>
+        <ConversationScrollButton
+          aria-label="滚动到底部"
+          className="z-10 size-9 shadow-sm"
+        />
+      </Conversation>
     </div>
   );
 }

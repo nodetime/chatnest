@@ -1,33 +1,23 @@
 // biome-ignore-all lint/performance/noJsxPropsBind: React Compiler memoizes workspace event closures.
 "use client";
-import {
-  FileText,
-  Globe,
-  Maximize2,
-  Minimize2,
-  Monitor,
-  X,
-} from "lucide-react";
+import { FileText } from "lucide-react";
 import { type ReactNode, useEffect, useRef } from "react";
-import { Button } from "@/components/ui/button";
 import { useActiveChat } from "@/hooks/use-active-chat";
 import { useArtifact } from "@/hooks/use-artifact";
-import { useWorkspace, type WorkspaceTab } from "@/hooks/use-workspace";
+import { useWorkspace } from "@/hooks/use-workspace";
 import { browserWorkspaceEvents } from "@/lib/agent/workspace-events";
 import { cn } from "@/lib/utils";
+import { artifactCatalog } from "./artifact-catalog";
+import { ArtifactPicker } from "./artifact-picker";
 import { BrowserWorkspace } from "./browser-workspace";
 import { ConversationSources } from "./conversation-sources";
-
-const tabs = [
-  { icon: Monitor, id: "browser", title: "浏览器" },
-  { icon: FileText, id: "document", title: "文档" },
-  { icon: Globe, id: "sources", title: "来源" },
-] as const;
+import { WorkspaceHeader } from "./workspace-header";
 
 export function Workspace({ children }: { children: ReactNode }) {
   const workspace = useWorkspace();
   const { artifact } = useArtifact();
   const { chatId, messages, status } = useActiveChat();
+  const entries = artifactCatalog(messages);
   const pane = useRef<HTMLElement>(null);
   const previousArtifact = useRef({ id: "init", visible: false });
   const previousChat = useRef(chatId);
@@ -95,23 +85,43 @@ export function Workspace({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("keydown", close);
   }, [workspace.open, workspace.close]);
 
-  const select = (tab: WorkspaceTab) => workspace.update({ tab });
   return (
     <>
       {workspace.open && !workspace.expanded && (
         <hr
           aria-label="调整工作区宽度"
           aria-orientation="vertical"
-          aria-valuemax={70}
+          aria-valuemax={80}
           aria-valuemin={35}
-          aria-valuenow={workspace.width}
-          className="relative z-10 hidden w-1 shrink-0 cursor-col-resize bg-border/50 hover:bg-muted-foreground/30 md:block"
+          aria-valuenow={workspace.manualWidth ? workspace.width : undefined}
+          aria-valuetext={
+            workspace.manualWidth ? undefined : "自适应宽度，对话约 400 像素"
+          }
+          className="relative z-10 -mx-1 hidden h-auto w-2 shrink-0 self-stretch cursor-col-resize border-0 bg-transparent before:absolute before:inset-y-0 before:left-1/2 before:w-px before:bg-border/70 hover:before:bg-ring focus-visible:outline-2 focus-visible:outline-ring focus-visible:before:bg-ring md:block"
           onKeyDown={(event) => {
             if (event.key === "ArrowLeft") {
-              workspace.update({ width: Math.min(70, workspace.width + 5) });
+              workspace.update({
+                width: Math.min(
+                  80,
+                  (pane.current?.parentElement
+                    ? (pane.current.offsetWidth /
+                        pane.current.parentElement.clientWidth) *
+                      100
+                    : workspace.width) + 5
+                ),
+              });
             }
             if (event.key === "ArrowRight") {
-              workspace.update({ width: Math.max(35, workspace.width - 5) });
+              workspace.update({
+                width: Math.max(
+                  35,
+                  (pane.current?.parentElement
+                    ? (pane.current.offsetWidth /
+                        pane.current.parentElement.clientWidth) *
+                      100
+                    : workspace.width) - 5
+                ),
+              });
             }
           }}
           onPointerDown={(event) => {
@@ -129,7 +139,7 @@ export function Workspace({ children }: { children: ReactNode }) {
                 width: Math.max(
                   35,
                   Math.min(
-                    70,
+                    80,
                     ((parent.right - event.clientX) / parent.width) * 100
                   )
                 ),
@@ -147,136 +157,73 @@ export function Workspace({ children }: { children: ReactNode }) {
       <aside
         aria-label="工作区"
         className={cn(
-          "flex min-h-0 min-w-0 shrink-0 flex-col overflow-hidden bg-background",
+          "chat-workbench-surface flex min-h-0 min-w-0 shrink-0 flex-col overflow-hidden bg-background",
           !workspace.open && "hidden",
           workspace.expanded
-            ? "fixed inset-0 z-50 h-dvh w-full"
-            : "fixed inset-0 z-40 h-dvh w-full md:relative md:inset-auto md:z-auto md:w-[var(--workspace-width)]"
+            ? "fixed inset-0 z-50 h-dvh w-full md:h-dvh"
+            : "fixed inset-0 z-40 h-dvh w-full md:relative md:inset-auto md:z-auto md:h-dvh md:w-[var(--workspace-width)]"
         )}
         data-testid="workspace"
         ref={pane}
         style={
-          { "--workspace-width": `${workspace.width}%` } as React.CSSProperties
+          {
+            "--workspace-width": workspace.manualWidth
+              ? `${workspace.width}%`
+              : "calc(100% - min(400px, 42%))",
+          } as React.CSSProperties
         }
       >
-        <div className="flex h-14 shrink-0 items-center gap-1 border-b px-3">
-          <div
-            aria-label="工作区内容"
-            className="flex min-w-0 flex-1 items-center gap-1"
-            role="tablist"
-          >
-            {tabs.map(({ id, title, icon: Icon }) => (
-              <button
-                aria-controls={`workspace-${id}`}
-                aria-selected={workspace.tab === id}
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs transition-colors",
-                  workspace.tab === id
-                    ? "bg-secondary font-medium text-foreground"
-                    : "text-muted-foreground hover:bg-secondary/60"
-                )}
-                id={`workspace-tab-${id}`}
-                key={id}
-                onClick={() => select(id)}
-                onKeyDown={(event) => {
-                  const index = tabs.findIndex((item) => item.id === id);
-                  if (
-                    ["ArrowRight", "ArrowLeft", "Home", "End"].includes(
-                      event.key
-                    )
-                  ) {
-                    event.preventDefault();
-                    const next =
-                      tabs[
-                        event.key === "Home"
-                          ? 0
-                          : event.key === "End"
-                            ? tabs.length - 1
-                            : (index + (event.key === "ArrowRight" ? 1 : 2)) %
-                              tabs.length
-                      ].id;
-                    select(next);
-                    document.getElementById(`workspace-tab-${next}`)?.focus();
-                  }
-                }}
-                role="tab"
-                tabIndex={workspace.tab === id ? 0 : -1}
-                type="button"
-              >
-                <Icon className="size-3.5" />
-                {title}
-              </button>
-            ))}
-          </div>
-          <Button
-            aria-label={workspace.expanded ? "收起工作区" : "展开工作区"}
-            className="hidden size-8 md:inline-flex"
-            onClick={() => workspace.update({ expanded: !workspace.expanded })}
-            size="icon"
-            variant="ghost"
-          >
-            {workspace.expanded ? (
-              <Minimize2 className="size-4" />
-            ) : (
-              <Maximize2 className="size-4" />
-            )}
-          </Button>
-          <Button
-            aria-label="关闭工作区"
-            className="size-8"
-            onClick={workspace.close}
-            size="icon"
-            variant="ghost"
-          >
-            <X className="size-4" />
-          </Button>
-        </div>
-        <div
-          aria-labelledby="workspace-tab-browser"
+        {(workspace.tab !== "document" || artifact.documentId === "init") && (
+          <WorkspaceHeader />
+        )}
+        <section
+          aria-label="浏览器"
           className={cn(
-            "min-h-0 flex-1",
+            "min-h-0 min-w-0 flex-1",
             workspace.tab !== "browser" && "hidden"
           )}
           id="workspace-browser"
-          role="tabpanel"
         >
           <BrowserWorkspace
             active={workspace.open && workspace.tab === "browser"}
             key={chatId}
           />
-        </div>
-        <div
-          aria-labelledby="workspace-tab-document"
+        </section>
+        <section
+          aria-label="产物"
           className={cn(
-            "min-h-0 flex-1",
+            "min-h-0 min-w-0 flex-1",
             workspace.tab !== "document" && "hidden"
           )}
           id="workspace-document"
-          role="tabpanel"
         >
           {artifact.documentId === "init" ? (
-            <div className="flex h-full flex-col items-center justify-center px-8 text-center">
-              <FileText className="mb-4 size-8 text-muted-foreground/50" />
-              <h2 className="text-sm font-medium">还没有打开文档</h2>
-              <p className="mt-3 max-w-xs text-sm leading-7 text-muted-foreground">
-                让 Agent 创建文档，或点击对话里的文档卡片，在这里查看和编辑。
+            <div className="flex h-full flex-col items-center justify-center gap-4 overflow-y-auto px-6 py-8 text-center">
+              <FileText className="size-7 text-muted-foreground/60" />
+              <h2 className="text-base font-medium">
+                {entries.length ? "本次对话的产物" : "为想法留一个工作空间"}
+              </h2>
+              <p className="max-w-xs text-sm leading-6 text-muted-foreground">
+                {entries.length
+                  ? "选择一个文件继续查看，无需返回对话查找。"
+                  : "Agent 创建的文本、代码、图片和表格会收集在这里。"}
               </p>
+              <ArtifactPicker entries={entries} list />
             </div>
           ) : (
             children
           )}
-        </div>
-        <div
-          aria-labelledby="workspace-tab-sources"
+        </section>
+        <section
+          aria-label="来源"
           className={cn(
-            "min-h-0 flex-1",
+            "min-h-0 min-w-0 flex-1",
             workspace.tab !== "sources" && "hidden"
           )}
           id="workspace-sources"
-          role="tabpanel"
         >
           <ConversationSources embedded key={chatId} />
-        </div>
+        </section>
       </aside>
     </>
   );

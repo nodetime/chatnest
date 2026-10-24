@@ -1,25 +1,35 @@
 name: Lint
 on:
   push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+permissions:
+  contents: read
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
-    strategy:
-      matrix:
-        node-version: [20]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 10.32.1
-      - name: Use Node.js ${{ matrix.node-version }}
+          run_install: false
+      - name: Use pinned Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 24.20.0
           cache: "pnpm"
       - name: Install dependencies
-        run: pnpm install
-      - name: Run check
-        run: pnpm check
+        run: pnpm install --frozen-lockfile
+        env:
+          HUSKY: "0"
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+      - name: Full repository lint in isolated environment
+        run: bash scripts/ci/linux-isolated-check.sh lint

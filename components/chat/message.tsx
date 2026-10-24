@@ -1,6 +1,5 @@
 "use client";
 import type { UseChatHelpers } from "@ai-sdk/react";
-import { useCallback } from "react";
 import type { Vote } from "@/lib/db/schema";
 import type { ChatMessage } from "@/lib/types";
 import { cn, sanitizeText } from "@/lib/utils";
@@ -14,10 +13,11 @@ import {
   ToolInput,
   ToolOutput,
 } from "../ai-elements/tool";
+import { ActivityGroup } from "./activity-group";
+import { groupActivityParts } from "./activity-groups";
 import { useDataStream } from "./data-stream-provider";
 import { DocumentToolResult } from "./document";
 import { DocumentPreview } from "./document-preview";
-import { SparklesIcon } from "./icons";
 import { MessageActions } from "./message-actions";
 import { MessageReasoning } from "./message-reasoning";
 import { PreviewAttachment } from "./preview-attachment";
@@ -29,7 +29,10 @@ function WaitingText() {
   const waitingText = waitingStatus?.message ?? "正在准备…";
 
   return (
-    <div className="flex min-h-[calc(13px*1.65)] min-w-0 items-center text-[15px] leading-[1.8]">
+    <div
+      className="flex min-h-[calc(13px*1.65)] min-w-0 items-center text-[15px] leading-[1.75]"
+      role="status"
+    >
       <Shimmer
         as="span"
         className="font-medium whitespace-normal break-words"
@@ -37,48 +40,6 @@ function WaitingText() {
       >
         {waitingText}
       </Shimmer>
-    </div>
-  );
-}
-
-function ToolApprovalActions({
-  addToolApprovalResponse,
-  approvalId,
-}: {
-  addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
-  approvalId: string;
-}) {
-  const handleDeny = useCallback(() => {
-    addToolApprovalResponse({
-      approved: false,
-      id: approvalId,
-      reason: "用户拒绝执行",
-    });
-  }, [addToolApprovalResponse, approvalId]);
-
-  const handleAllow = useCallback(() => {
-    addToolApprovalResponse({
-      approved: true,
-      id: approvalId,
-    });
-  }, [addToolApprovalResponse, approvalId]);
-
-  return (
-    <div className="flex items-center justify-end gap-2 border-t px-4 py-3">
-      <button
-        className="rounded-md px-3 py-1.5 text-muted-foreground text-sm transition-colors hover:bg-muted hover:text-foreground"
-        onClick={handleDeny}
-        type="button"
-      >
-        拒绝
-      </button>
-      <button
-        className="rounded-md bg-primary px-3 py-1.5 text-primary-foreground text-sm transition-colors hover:bg-primary/90"
-        onClick={handleAllow}
-        type="button"
-      >
-        允许执行
-      </button>
     </div>
   );
 }
@@ -92,9 +53,12 @@ const PurePreviewMessage = ({
   setMessages: _setMessages,
   regenerate: _regenerate,
   isReadonly,
+  canApprove = true,
   requiresScrollPadding: _requiresScrollPadding,
   onEdit,
   onRegenerate,
+  hideActivities = false,
+  showSender = true,
 }: {
   addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
   chatId: string;
@@ -104,9 +68,12 @@ const PurePreviewMessage = ({
   setMessages: UseChatHelpers<ChatMessage>["setMessages"];
   regenerate: UseChatHelpers<ChatMessage>["regenerate"];
   isReadonly: boolean;
+  canApprove?: boolean;
   requiresScrollPadding: boolean;
   onEdit?: (message: ChatMessage) => void;
   onRegenerate?: () => void;
+  hideActivities?: boolean;
+  showSender?: boolean;
 }) => {
   const attachmentsFromMessage = message.parts.filter(
     (part) => part.type === "file"
@@ -125,13 +92,15 @@ const PurePreviewMessage = ({
         part.text?.trim().length > 0) ||
       part.type.startsWith("tool-") ||
       part.type === "dynamic-tool" ||
-      part.type === "source-url"
+      part.type === "source-url" ||
+      part.type === "file"
   );
   const isThinking = isAssistant && isLoading && !hasAnyContent;
+  const isEmptyAssistant = isAssistant && !isLoading && !hasAnyContent;
 
   const attachments = attachmentsFromMessage.length > 0 && (
     <div
-      className="flex flex-row justify-end gap-2"
+      className="flex min-w-0 max-w-full flex-row flex-wrap justify-end gap-2"
       data-testid={"message-attachments"}
     >
       {attachmentsFromMessage.map((attachment) => (
@@ -141,123 +110,81 @@ const PurePreviewMessage = ({
             name: attachment.filename ?? "file",
             url: attachment.url,
           }}
+          compact
           key={attachment.url}
         />
       ))}
     </div>
   );
 
-  const mergedReasoning = message.parts?.reduce(
-    (acc, part) => {
-      if (part.type === "reasoning" && part.text?.trim().length > 0) {
-        return {
-          isStreaming: "state" in part ? part.state === "streaming" : false,
-          rendered: false,
-          text: acc.text ? `${acc.text}\n\n${part.text}` : part.text,
-        };
-      }
-      return acc;
-    },
-    { isStreaming: false, rendered: false, text: "" }
-  ) ?? { isStreaming: false, rendered: false, text: "" };
-
-  const parts = message.parts?.map((part, index) => {
+  const renderPart = (part: ChatMessage["parts"][number], index: number) => {
     const { type } = part;
     const key = `message-${message.id}-part-${index}`;
 
     if (type === "reasoning") {
-      if (!mergedReasoning.rendered && mergedReasoning.text) {
-        mergedReasoning.rendered = true;
-        return (
-          <MessageReasoning
-            isLoading={isLoading || mergedReasoning.isStreaming}
-            key={key}
-            reasoning={mergedReasoning.text}
-          />
-        );
-      }
-      return null;
+      return part.text?.trim().length > 0 ? (
+        <MessageReasoning
+          isLoading={isLoading || part.state === "streaming"}
+          key={key}
+          reasoning={part.text}
+        />
+      ) : null;
     }
 
     if (type === "text") {
       return (
         <MessageContent
-          className={cn("text-[15px] leading-[1.8]", {
-            "w-fit max-w-[min(85%,60ch)] overflow-hidden break-words rounded-[22px] bg-secondary px-5 py-3":
+          className={cn("text-[15px] leading-[1.75]", {
+            "w-fit max-w-[min(85%,60ch)] overflow-hidden break-words rounded-2xl bg-secondary px-4 py-2.5":
               message.role === "user",
           })}
           data-testid="message-content"
           key={key}
         >
-          <MessageResponse>{sanitizeText(part.text)}</MessageResponse>
+          <MessageResponse mode={isUser ? "static" : "streaming"}>
+            {sanitizeText(part.text)}
+          </MessageResponse>
         </MessageContent>
       );
     }
 
     if (type === "tool-getWeather") {
       const { toolCallId, state } = part;
-      const approvalId = (part as { approval?: { id: string } }).approval?.id;
-      const isDenied =
-        state === "output-denied" ||
-        (state === "approval-responded" &&
-          (part as { approval?: { approved?: boolean } }).approval?.approved ===
-            false);
-      const widthClass = "w-[min(100%,450px)]";
-
-      if (state === "output-available") {
-        return (
-          <div className={widthClass} key={toolCallId}>
-            <Weather weatherAtLocation={part.output} />
-          </div>
-        );
-      }
-
-      if (isDenied) {
-        return (
-          <div className={widthClass} key={toolCallId}>
-            <Tool className="w-full" defaultOpen={true}>
-              <ToolHeader state="output-denied" type="tool-getWeather" />
-              <ToolContent>
-                <div className="px-4 py-3 text-muted-foreground text-sm">
-                  Weather lookup was denied.
-                </div>
-              </ToolContent>
-            </Tool>
-          </div>
-        );
-      }
-
-      if (state === "approval-responded") {
-        return (
-          <div className={widthClass} key={toolCallId}>
-            <Tool className="w-full" defaultOpen={true}>
-              <ToolHeader state={state} type="tool-getWeather" />
-              <ToolContent>
-                <ToolInput input={part.input} />
-              </ToolContent>
-            </Tool>
-          </div>
-        );
-      }
-
-      return (
-        <div className={widthClass} key={toolCallId}>
-          <Tool className="w-full" defaultOpen={true}>
-            <ToolHeader state={state} type="tool-getWeather" />
-            <ToolContent>
-              {(state === "input-available" ||
-                state === "approval-requested") && (
-                <ToolInput input={part.input} />
-              )}
-              {state === "approval-requested" && approvalId && (
-                <ToolApprovalActions
-                  addToolApprovalResponse={addToolApprovalResponse}
-                  approvalId={approvalId}
-                />
-              )}
-            </ToolContent>
-          </Tool>
+      return state === "output-available" ? (
+        <div className="w-[min(100%,450px)]" key={toolCallId}>
+          <Weather weatherAtLocation={part.output} />
         </div>
+      ) : (
+        <ToolActivity
+          approve={addToolApprovalResponse}
+          canApprove={canApprove}
+          isReadonly={isReadonly}
+          isRunning={isLoading}
+          key={toolCallId}
+          part={part}
+        />
+      );
+    }
+
+    if (type === "tool-createResultTable") {
+      if (!part.output || "error" in part.output) {
+        return (
+          <ToolActivity
+            approve={addToolApprovalResponse}
+            canApprove={canApprove}
+            isReadonly={isReadonly}
+            isRunning={isLoading}
+            key={part.toolCallId}
+            part={part}
+          />
+        );
+      }
+      return (
+        <DocumentPreview
+          isReadonly={isReadonly}
+          key={part.toolCallId}
+          result={part.output}
+        />
       );
     }
 
@@ -373,6 +300,7 @@ const PurePreviewMessage = ({
       return (
         <ToolActivity
           approve={addToolApprovalResponse}
+          canApprove={canApprove}
           isReadonly={isReadonly}
           isRunning={isLoading}
           key={key}
@@ -381,19 +309,42 @@ const PurePreviewMessage = ({
       );
     }
     return null;
-  });
-
-  const actions = !isReadonly && (
-    <MessageActions
-      chatId={chatId}
-      isLoading={isLoading}
-      key={`action-${message.id}`}
-      message={message}
-      onEdit={onEdit ? () => onEdit(message) : undefined}
-      onRegenerate={onRegenerate}
-      vote={vote}
-    />
+  };
+  const groupedParts = groupActivityParts(message.parts);
+  const parts = groupedParts.map((group) =>
+    group.kind === "activity" ? (
+      hideActivities ? null : (
+        <ActivityGroup
+          approve={addToolApprovalResponse}
+          canApprove={canApprove}
+          isReadonly={isReadonly}
+          isRunning={isLoading}
+          key={group.key}
+          parts={group.parts}
+        />
+      )
+    ) : (
+      renderPart(group.part, group.index)
+    )
   );
+
+  const toolOnlyAssistant =
+    isAssistant &&
+    groupedParts.length > 0 &&
+    groupedParts.every((group) => group.kind === "activity");
+  const actions = !isReadonly &&
+    !isEmptyAssistant &&
+    (!toolOnlyAssistant || onRegenerate) && (
+      <MessageActions
+        chatId={chatId}
+        isLoading={isLoading}
+        key={`action-${message.id}`}
+        message={message}
+        onEdit={onEdit ? () => onEdit(message) : undefined}
+        onRegenerate={onRegenerate}
+        vote={vote}
+      />
+    );
 
   const content = isThinking ? (
     <WaitingText />
@@ -413,6 +364,7 @@ const PurePreviewMessage = ({
       )}
       data-role={message.role}
       data-testid={`message-${message.role}`}
+      hidden={isEmptyAssistant}
     >
       <div
         className={cn(
@@ -420,7 +372,10 @@ const PurePreviewMessage = ({
         )}
       >
         {isAssistant ? (
-          <div className="flex min-w-0 flex-1 flex-col gap-2">{content}</div>
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
+            {!!showSender && !isEmptyAssistant && <SenderLabel />}
+            {content}
+          </div>
         ) : (
           content
         )}
@@ -431,19 +386,25 @@ const PurePreviewMessage = ({
 
 export const PreviewMessage = PurePreviewMessage;
 
+function SenderLabel() {
+  return (
+    <div
+      className="mb-1 text-xs font-medium text-muted-foreground"
+      data-testid="assistant-sender"
+    >
+      ChatNest
+    </div>
+  );
+}
+
 export const ThinkingMessage = () => (
   <div
     className="group/message w-full"
     data-role="assistant"
     data-testid="message-assistant-loading"
   >
-    <div className="flex items-start gap-3">
-      <div className="flex h-[calc(13px*1.65)] shrink-0 items-center">
-        <div className="flex size-7 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground ring-1 ring-border/50">
-          <SparklesIcon size={13} />
-        </div>
-      </div>
-
+    <div className="flex min-w-0 flex-col gap-2">
+      <SenderLabel />
       <WaitingText />
     </div>
   </div>

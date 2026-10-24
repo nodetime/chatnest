@@ -52,6 +52,7 @@ export function ChatShell() {
     showCreditCardAlert,
     setShowCreditCardAlert,
     clearError,
+    getSendError,
     loadError,
   } = useActiveChat();
 
@@ -59,6 +60,28 @@ export function ChatShell() {
     null
   );
   const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const editGenerationRef = useRef({ chatId, generation: 0 });
+  if (editGenerationRef.current.chatId !== chatId) {
+    editGenerationRef.current = {
+      chatId,
+      generation: editGenerationRef.current.generation + 1,
+    };
+  }
+  const draftAssetsRef = useRef(attachments);
+  draftAssetsRef.current = attachments;
+  useEffect(
+    () => () => {
+      if (!chatId) {
+        return;
+      }
+      // This component owns the shared draft. Removing a composer surface alone
+      // must never delete it; used assets are independently protected by the API.
+      for (const attachment of draftAssetsRef.current) {
+        fetch(attachment.url, { method: "DELETE" }).catch(() => undefined);
+      }
+    },
+    [chatId]
+  );
   const isEmpty = messages.length === 0 && !isLoading && !loadError;
   const isArtifactVisible = useArtifactSelector((state) => state.isVisible);
   const { setArtifact } = useArtifact();
@@ -127,19 +150,37 @@ export function ChatShell() {
     }
 
     const msg = editingMessage;
+    const { generation } = editGenerationRef.current;
     try {
-      await submitEditedMessage({
+      const committed = await submitEditedMessage({
+        getSendError,
+        isCurrent: () => generation === editGenerationRef.current.generation,
         message: msg,
         regenerate,
+        setInput,
         setMessages,
+        snapshot: messages,
         text: input,
       });
+      if (!committed) {
+        return;
+      }
       setEditingMessage(null);
-      setInput("");
     } catch {
+      if (generation !== editGenerationRef.current.generation) {
+        return;
+      }
       toast.error("修改没有提交，草稿已保留。请稍后重试，或取消修改。");
     }
-  }, [editingMessage, input, regenerate, setInput, setMessages]);
+  }, [
+    editingMessage,
+    getSendError,
+    input,
+    messages,
+    regenerate,
+    setInput,
+    setMessages,
+  ]);
 
   const handleActivateGateway = useCallback(() => {
     window.open(
@@ -151,8 +192,12 @@ export function ChatShell() {
 
   return (
     <>
-      <div className="flex h-dvh w-full flex-row overflow-hidden">
-        <div className={cn("flex min-w-0 flex-1 flex-col bg-background")}>
+      <div className="chat-workbench-shell flex h-dvh w-full min-w-0 flex-row overflow-hidden">
+        <div
+          className={cn(
+            "chat-workbench-surface flex min-w-0 flex-1 flex-col overflow-hidden bg-background"
+          )}
+        >
           <ChatHeader
             chatId={chatId}
             isReadonly={isReadonly}
@@ -162,7 +207,7 @@ export function ChatShell() {
           <div
             className={cn(
               "relative flex min-h-0 flex-1 flex-col overflow-hidden bg-background",
-              isEmpty && "justify-center pb-24 sm:pb-20"
+              isEmpty && "justify-center pb-20 sm:pb-24"
             )}
           >
             {isEmpty ? <Greeting /> : null}
@@ -178,6 +223,7 @@ export function ChatShell() {
                 onRegenerateAnswer={regenerateAnswer}
                 regenerate={regenerate}
                 selectedModelId={currentModelId}
+                sendMessage={sendMessage}
                 setMessages={setMessages}
                 status={status}
                 votes={votes}
@@ -186,8 +232,8 @@ export function ChatShell() {
 
             <div
               className={cn(
-                "z-1 mx-auto flex w-full max-w-[800px] flex-col gap-2 bg-background px-4 sm:px-6",
-                !isEmpty && "sticky bottom-0 pb-10 pt-3"
+                "z-1 mx-auto flex w-full max-w-[720px] flex-col gap-2 bg-background px-4 sm:px-6",
+                !isEmpty && "sticky bottom-0 pb-4 pt-2 sm:pb-4"
               )}
             >
               <ConversationNotice onRestore={handleRestore} />

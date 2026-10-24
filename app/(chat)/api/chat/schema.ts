@@ -3,6 +3,8 @@ import {
   MAX_MESSAGE_CHARACTERS,
   MAX_MESSAGE_PARTS,
 } from "@/lib/agent/input-limits";
+import { ATTACHMENT_MIMES } from "@/lib/uploads/document-types";
+import { assetIdFromRef } from "@/lib/uploads/refs";
 
 const textPartSchema = z.object({
   text: z
@@ -15,10 +17,20 @@ const textPartSchema = z.object({
 
 const filePartSchema = z.object({
   filename: z.string().min(1).max(250).optional(),
-  mediaType: z.enum(["image/jpeg", "image/png"]),
+  mediaType: z.enum(ATTACHMENT_MIMES),
   name: z.string().min(1).max(250).optional(),
   type: z.enum(["file"]),
-  url: z.url(),
+  url: z
+    .string()
+    .max(100)
+    .refine((value) => {
+      try {
+        assetIdFromRef(value);
+        return true;
+      } catch {
+        return false;
+      }
+    }, "仅支持本平台上传的图片，请重新上传旧版外部附件。"),
 });
 
 const partSchema = z.union([textPartSchema, filePartSchema]);
@@ -55,7 +67,7 @@ export const postRequestBodySchema = z
     selectedChatModel: z.string(),
     selectedVisibilityType: z.enum(["public", "private"]),
     trigger: z
-      .enum(["submit-message", "regenerate-message"])
+      .enum(["submit-message", "regenerate-message", "edit-message"])
       .default("submit-message"),
   })
   .refine((body) => Boolean(body.message) !== Boolean(body.messages), {

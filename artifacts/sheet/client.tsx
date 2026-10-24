@@ -8,15 +8,22 @@ import {
   SparklesIcon,
   UndoIcon,
 } from "@/components/chat/icons";
+import { ResultTableView } from "@/components/chat/result-table";
 import { SpreadsheetEditor } from "@/components/chat/sheet-editor";
+import {
+  isProtectedResultTable,
+  parseResultTable,
+  resultCsv,
+} from "@/lib/artifacts/result-table";
 
 type Metadata = Record<string, never>;
 
 export const sheetArtifact = new Artifact<"sheet", Metadata>({
   actions: [
     {
-      description: "View Previous version",
+      description: "上一版本",
       icon: <UndoIcon size={18} />,
+      id: "previous-version",
       isDisabled: ({ currentVersionIndex }) => {
         if (currentVersionIndex === 0) {
           return true;
@@ -29,8 +36,9 @@ export const sheetArtifact = new Artifact<"sheet", Metadata>({
       },
     },
     {
-      description: "View Next version",
+      description: "下一版本",
       icon: <RedoIcon size={18} />,
+      id: "next-version",
       isDisabled: ({ isCurrentVersion }) => {
         if (isCurrentVersion) {
           return true;
@@ -43,9 +51,19 @@ export const sheetArtifact = new Artifact<"sheet", Metadata>({
       },
     },
     {
-      description: "Copy as .csv",
+      description: "复制 CSV",
       icon: <CopyIcon />,
-      onClick: ({ content }) => {
+      onClick: async ({ content }) => {
+        const table = parseResultTable(content);
+        if (table) {
+          await navigator.clipboard.writeText(resultCsv(table));
+          toast.success("已复制 CSV");
+          return;
+        }
+        if (isProtectedResultTable(content)) {
+          toast.error("结果表格格式无效，请重新打开。");
+          return;
+        }
         const parsed = parse<string[]>(content, { skipEmptyLines: true });
 
         const nonEmptyRows = parsed.data.filter((row) =>
@@ -55,20 +73,56 @@ export const sheetArtifact = new Artifact<"sheet", Metadata>({
         const cleanedCsv = unparse(nonEmptyRows);
 
         navigator.clipboard.writeText(cleanedCsv);
-        toast.success("Copied csv to clipboard!");
+        toast.success("已复制 CSV");
       },
     },
   ],
-  content: ({ content, currentVersionIndex, onSaveContent, status }) => (
-    <SpreadsheetEditor
-      content={content}
-      currentVersionIndex={currentVersionIndex}
-      isCurrentVersion={true}
-      saveContent={onSaveContent}
-      status={status}
-    />
-  ),
-  description: "Useful for working with spreadsheets",
+  content: ({
+    content,
+    currentVersionIndex,
+    onSaveContent,
+    status,
+    isCurrentVersion,
+    isReadonly,
+    documentId,
+    expectedVersion,
+    onResultTableSaved,
+    onResultTablePendingChange,
+    renderHeader,
+  }) => {
+    const table = parseResultTable(content);
+    if (table) {
+      return (
+        <ResultTableView
+          documentId={documentId}
+          expectedVersion={expectedVersion}
+          key={`${documentId}:${expectedVersion}`}
+          onPendingChange={onResultTablePendingChange}
+          onSaved={onResultTableSaved}
+          readOnly={isReadonly || !isCurrentVersion}
+          renderHeader={renderHeader}
+          table={table}
+        />
+      );
+    }
+    if (isProtectedResultTable(content)) {
+      return (
+        <div className="p-6 text-sm text-destructive" role="alert">
+          结果表格格式无效或版本暂不支持；原始数据保持只读。
+        </div>
+      );
+    }
+    return (
+      <SpreadsheetEditor
+        content={content}
+        currentVersionIndex={currentVersionIndex}
+        isCurrentVersion={isCurrentVersion && !isReadonly}
+        saveContent={onSaveContent}
+        status={status}
+      />
+    );
+  },
+  description: "查看与编辑电子表格",
   initialize: () => null,
   kind: "sheet",
   onStreamPart: ({ setArtifact, streamPart }) => {
@@ -83,7 +137,7 @@ export const sheetArtifact = new Artifact<"sheet", Metadata>({
   },
   toolbar: [
     {
-      description: "Format and clean data",
+      description: "整理数据格式",
       icon: <SparklesIcon />,
       onClick: ({ sendMessage }) => {
         sendMessage({
@@ -95,7 +149,7 @@ export const sheetArtifact = new Artifact<"sheet", Metadata>({
       },
     },
     {
-      description: "Analyze and visualize data",
+      description: "分析与可视化数据",
       icon: <LineChartIcon />,
       onClick: ({ sendMessage }) => {
         sendMessage({

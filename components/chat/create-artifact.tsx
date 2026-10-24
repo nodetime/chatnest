@@ -15,13 +15,22 @@ export type ArtifactActionContext<M = any> = {
   setMetadata: Dispatch<SetStateAction<M>>;
 };
 
-type ArtifactAction<M = any> = {
+export type ArtifactAction<M = any> = {
+  id?: string;
   icon: ReactNode;
   label?: string;
   description: string;
   onClick: (context: ArtifactActionContext<M>) => Promise<void> | void;
   isDisabled?: (context: ArtifactActionContext<M>) => boolean;
 };
+
+// Display descriptions are localized; selection must follow action identity.
+export function isArtifactActionActive(
+  action: Pick<ArtifactAction, "id">,
+  mode: ArtifactActionContext["mode"]
+) {
+  return mode === "diff" && action.id === "view-changes";
+}
 
 export type ArtifactToolbarContext = {
   sendMessage: UseChatHelpers<ChatMessage>["sendMessage"];
@@ -34,6 +43,12 @@ export type ArtifactToolbarItem = {
 };
 
 type ArtifactContent<M = any> = {
+  renderHeader?: (controls: ReactNode) => ReactNode;
+  isReadonly?: boolean;
+  documentId?: string;
+  expectedVersion?: string;
+  onResultTableSaved?: (content: string) => Promise<void> | void;
+  onResultTablePendingChange?: (pending: boolean) => void;
   title: string;
   content: string;
   mode: "edit" | "diff";

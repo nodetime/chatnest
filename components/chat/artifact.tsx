@@ -1,10 +1,13 @@
+// biome-ignore-all lint/performance/noJsxPropsBind: Header slot renders in place without owning or remounting editor state.
 import type { UseChatHelpers } from "@ai-sdk/react";
 import { formatDistance } from "date-fns";
+import { zhCN } from "date-fns/locale";
 import equal from "fast-deep-equal";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   type Dispatch,
   memo,
+  type ReactNode,
   type SetStateAction,
   useCallback,
   useEffect,
@@ -17,16 +20,26 @@ import { codeArtifact } from "@/artifacts/code/client";
 import { imageArtifact } from "@/artifacts/image/client";
 import { sheetArtifact } from "@/artifacts/sheet/client";
 import { textArtifact } from "@/artifacts/text/client";
+
+import { Artifact as ArtifactFrame } from "@/components/ai-elements/artifact";
 import { useArtifact } from "@/hooks/use-artifact";
+import {
+  isProtectedResultTable,
+  parseResultTable,
+} from "@/lib/artifacts/result-table";
 import type { Document, Vote } from "@/lib/db/schema";
 import type { Attachment, ChatMessage } from "@/lib/types";
-import { fetcher } from "@/lib/utils";
+import { cn, fetcher } from "@/lib/utils";
 import { ArtifactActions } from "./artifact-actions";
+import { artifactCatalog } from "./artifact-catalog";
 import { ArtifactCloseButton } from "./artifact-close-button";
+import { ArtifactPicker } from "./artifact-picker";
+import { ArtifactTypeLabel } from "./artifact-type-label";
 import { LoaderIcon } from "./icons";
 import { Toolbar } from "./toolbar";
 import { VersionFooter } from "./version-footer";
 import type { VisibilityType } from "./visibility-selector";
+import { WorkspaceHeader } from "./workspace-header";
 
 export const artifactDefinitions = [
   textArtifact,
@@ -53,7 +66,7 @@ export type UIArtifact = {
 
 function PureArtifact({
   addToolApprovalResponse: _addToolApprovalResponse,
-  chatId: _chatId,
+  chatId,
   input: _input,
   setInput: _setInput,
   status,
@@ -61,11 +74,11 @@ function PureArtifact({
   attachments: _attachments,
   setAttachments: _setAttachments,
   sendMessage,
-  messages: _messages,
+  messages,
   setMessages,
   regenerate: _regenerate,
   votes: _votes,
-  isReadonly: _isReadonly,
+  isReadonly,
   selectedVisibilityType: _selectedVisibilityType,
   selectedModelId: _selectedModelId,
   embedded = false,
@@ -96,7 +109,7 @@ function PureArtifact({
     mutate: mutateDocuments,
   } = useSWR<Document[]>(
     artifact.documentId !== "init" && artifact.status !== "streaming"
-      ? `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/document?id=${artifact.documentId}`
+      ? `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/document?id=${artifact.documentId}&chatId=${chatId}`
       : null,
     fetcher
   );
@@ -108,6 +121,24 @@ function PureArtifact({
   const artifactContentRef = useRef<HTMLDivElement>(null);
   const userScrolledArtifact = useRef(false);
   const [isContentDirty, setIsContentDirty] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const activeIdRef = useRef(artifact.documentId);
+  activeIdRef.current = artifact.documentId;
+  const loadedIdRef = useRef("");
+  const editRevisionRef = useRef(0);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    activeIdRef.current = artifact.documentId;
+    setIsContentDirty(false);
+    setSaveError("");
+    setDocument(null);
+    setCurrentVersionIndex(-1);
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+      }
+    };
+  }, [artifact.documentId]);
 
   useEffect(() => {
     if (artifact.status !== "streaming") {
@@ -125,103 +156,166 @@ function PureArtifact({
   }, [artifact.status]);
 
   useEffect(() => {
-    if (documents && documents.length > 0) {
-      const mostRecentDocument = documents.at(-1);
-
-      if (mostRecentDocument) {
-        setDocument(mostRecentDocument);
-        setCurrentVersionIndex(documents.length - 1);
-        if (artifact.status === "streaming" || !isContentDirty) {
-          setArtifact((currentArtifact) => ({
-            ...currentArtifact,
-            content: mostRecentDocument.content ?? "",
-          }));
-        }
-      }
+    const latest = documents?.at(-1);
+    if (!documents || !latest || latest.id !== artifact.documentId) {
+      return;
     }
-  }, [documents, setArtifact, artifact.status, isContentDirty]);
-
-  useEffect(() => {
-    mutateDocuments();
-  }, [mutateDocuments]);
+    const changed = loadedIdRef.current !== artifact.documentId;
+    loadedIdRef.current = artifact.documentId;
+    setDocument(latest);
+    if (changed || currentVersionIndex === -1) {
+      setCurrentVersionIndex(documents.length - 1);
+    }
+    if (
+      !isContentDirty &&
+      (changed ||
+        currentVersionIndex === -1 ||
+        currentVersionIndex === documents.length - 1)
+    ) {
+      setArtifact((current) =>
+        current.documentId === latest.id
+          ? { ...current, content: latest.content ?? "" }
+          : current
+      );
+    }
+  }, [
+    documents,
+    artifact.documentId,
+    currentVersionIndex,
+    isContentDirty,
+    setArtifact,
+  ]);
 
   const { mutate } = useSWRConfig();
-
   const handleContentChange = useCallback(
-    (updatedContent: string) => {
-      if (!artifact) {
-        return;
-      }
-
-      mutate<Document[]>(
-        `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/document?id=${artifact.documentId}`,
-        async (currentDocuments) => {
-          if (!currentDocuments) {
-            return [];
-          }
-
-          const currentDocument = currentDocuments.at(-1);
-
-          if (!currentDocument?.content) {
-            setIsContentDirty(false);
-            return currentDocuments;
-          }
-
-          if (currentDocument.content === updatedContent) {
-            setIsContentDirty(false);
-            return currentDocuments;
-          }
-
-          await fetch(
-            `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/document?id=${artifact.documentId}`,
-            {
-              body: JSON.stringify({
-                content: updatedContent,
-                isManualEdit: true,
-                kind: artifact.kind,
-                title: artifact.title,
-              }),
-              method: "POST",
-            }
-          );
-
+    async (
+      updatedContent: string,
+      snapshot: {
+        id: string;
+        kind: ArtifactKind;
+        title: string;
+        chatId: string;
+      },
+      revision: number
+    ) => {
+      const key = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/document?id=${snapshot.id}&chatId=${snapshot.chatId}`;
+      try {
+        const response = await fetch(key, {
+          body: JSON.stringify({
+            content: updatedContent,
+            isManualEdit: true,
+            kind: snapshot.kind,
+            title: snapshot.title,
+          }),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+        });
+        if (!response.ok) {
+          throw new Error("保存失败，修改尚未保存，请重试。");
+        }
+        await mutate<Document[]>(
+          key,
+          (current) =>
+            current?.map((doc, index) =>
+              index === current.length - 1
+                ? { ...doc, content: updatedContent }
+                : doc
+            ),
+          { revalidate: false }
+        );
+        if (
+          activeIdRef.current === snapshot.id &&
+          editRevisionRef.current === revision
+        ) {
           setIsContentDirty(false);
-
-          return currentDocuments.map((doc, i) =>
-            i === currentDocuments.length - 1
-              ? { ...doc, content: updatedContent }
-              : doc
+          setSaveError("");
+        }
+      } catch (error) {
+        if (
+          activeIdRef.current === snapshot.id &&
+          editRevisionRef.current === revision
+        ) {
+          setIsContentDirty(true);
+          setSaveError(
+            error instanceof Error ? error.message : "保存失败，请重试。"
           );
-        },
-        { revalidate: false }
-      );
+        }
+      }
     },
-    [artifact, mutate]
+    [mutate]
   );
-
-  const latestContentRef = useRef<string>("");
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   const saveContent = useCallback(
     (updatedContent: string, debounce: boolean) => {
-      latestContentRef.current = updatedContent;
+      if (
+        isReadonly ||
+        (documents?.length && currentVersionIndex !== documents.length - 1) ||
+        isProtectedResultTable(artifact.content)
+      ) {
+        return;
+      }
+      setArtifact((current) =>
+        current.documentId === artifact.documentId
+          ? { ...current, content: updatedContent }
+          : current
+      );
       setIsContentDirty(true);
-
+      setSaveError("");
+      editRevisionRef.current += 1;
+      const revision = editRevisionRef.current;
+      const snapshot = {
+        chatId,
+        id: artifact.documentId,
+        kind: artifact.kind,
+        title: artifact.title,
+      };
       if (saveTimerRef.current) {
         clearTimeout(saveTimerRef.current);
-        saveTimerRef.current = null;
       }
-
       if (debounce) {
         saveTimerRef.current = setTimeout(() => {
-          handleContentChange(latestContentRef.current);
+          handleContentChange(updatedContent, snapshot, revision);
           saveTimerRef.current = null;
         }, 2000);
       } else {
-        handleContentChange(updatedContent);
+        handleContentChange(updatedContent, snapshot, revision);
       }
     },
-    [handleContentChange]
+    [
+      artifact,
+      chatId,
+      currentVersionIndex,
+      documents,
+      handleContentChange,
+      isReadonly,
+      setArtifact,
+    ]
+  );
+  const handleResultTablePendingChange = useCallback(
+    (pending: boolean) => {
+      // A previous table can finish/clean up after a different file is opened.
+      // setMetadata is already scoped to this callback's original document ID.
+      if (activeIdRef.current !== artifact.documentId) {
+        return;
+      }
+      setMetadata((current: Record<string, unknown> | null) => ({
+        ...current,
+        resultTablePendingChanges: pending,
+      }));
+    },
+    [artifact.documentId, setMetadata]
+  );
+  const handleResultTableSaved = useCallback(
+    async (content: string) => {
+      const id = artifact.documentId;
+      await mutateDocuments();
+      if (activeIdRef.current === id) {
+        setArtifact((current) =>
+          current.documentId === id ? { ...current, content } : current
+        );
+        setCurrentVersionIndex(-1);
+      }
+    },
+    [artifact.documentId, mutateDocuments, setArtifact]
   );
 
   const getDocumentContentById = useCallback(
@@ -275,12 +369,6 @@ function PureArtifact({
     userScrolledArtifact.current = !atBottom;
   }, []);
 
-  const handleClose = useCallback(() => {
-    setArtifact((prev) => ({ ...prev, isVisible: false }));
-  }, [setArtifact]);
-
-  const [isToolbarVisible, setIsToolbarVisible] = useState(true);
-
   const isCurrentVersion =
     documents && documents.length > 0
       ? currentVersionIndex === documents.length - 1
@@ -319,6 +407,12 @@ function PureArtifact({
     return null;
   }
 
+  const hasPendingResultTableChanges =
+    isCurrentVersion &&
+    !isReadonly &&
+    isProtectedResultTable(artifact.content) &&
+    metadata?.resultTablePendingChanges === true;
+
   const consoleError =
     metadata?.outputs
       ?.filter((o: { status: string }) => o.status === "failed")
@@ -327,46 +421,95 @@ function PureArtifact({
       )
       .join("\n") || undefined;
 
-  const artifactPanel = (
-    <>
-      <div className="flex h-[calc(3.5rem+1px)] shrink-0 items-center justify-between border-b border-border/50 px-4">
-        <div className="flex items-center gap-3">
-          <ArtifactCloseButton />
-          <div className="flex flex-col gap-0.5">
-            <div className="text-sm font-semibold leading-tight tracking-tight">
-              {artifact.title}
-            </div>
-            <div className="flex items-center gap-2">
-              {isContentDirty ? (
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <div className="size-1.5 animate-pulse rounded-full bg-amber-500" />
-                  Saving...
-                </div>
-              ) : document ? (
-                <div className="text-xs text-muted-foreground">
-                  {`Updated ${formatDistance(new Date(document.createdAt), new Date(), { addSuffix: true })}`}
-                </div>
-              ) : artifact.status === "streaming" ? (
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <div className="animate-spin">
-                    <LoaderIcon size={12} />
-                  </div>
-                  Generating...
-                </div>
-              ) : (
-                <div className="h-3 w-24 animate-pulse rounded bg-muted-foreground/10" />
-              )}
-              {documents && documents.length > 1 && (
-                <div className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-muted-foreground">
-                  v{currentVersionIndex + 1}/{documents.length}
-                </div>
-              )}
-            </div>
+  const displayedContent = isCurrentVersion
+    ? artifact.content
+    : getDocumentContentById(currentVersionIndex);
+  const tableOwnsHeader =
+    artifact.kind === "sheet" && !!parseResultTable(displayedContent);
+  const renderHeader = (controls?: ReactNode) => (
+    <WorkspaceHeader
+      actions={
+        isCurrentVersion &&
+        !isReadonly &&
+        !isProtectedResultTable(artifact.content) && (
+          <div className="flex shrink-0 items-center gap-0.5">
+            <ArtifactActions
+              artifact={artifact}
+              currentVersionIndex={currentVersionIndex}
+              handleVersionChange={handleVersionChange}
+              isCurrentVersion={isCurrentVersion}
+              layout="header"
+              metadata={metadata}
+              mode={mode}
+              setMetadata={setMetadata}
+            />
+            <Toolbar
+              artifactKind={artifact.kind}
+              consoleError={consoleError}
+              documentId={artifact.documentId}
+              sendMessage={sendMessage}
+              setMessages={setMessages}
+              status={status}
+              stop={stop}
+            />
           </div>
+        )
+      }
+      controls={controls}
+    >
+      <div className="flex min-w-0 flex-col items-start gap-y-0.5">
+        {!embedded && <ArtifactCloseButton />}
+        <div
+          className="flex min-w-0 items-center gap-2"
+          title={
+            document
+              ? `更新于${formatDistance(new Date(document.createdAt), new Date(), { addSuffix: true, locale: zhCN })}`
+              : undefined
+          }
+        >
+          <ArtifactPicker
+            activeId={artifact.documentId}
+            entries={artifactCatalog(messages)}
+            isContentDirty={isContentDirty}
+            resultTablePendingChanges={hasPendingResultTableChanges}
+            status={artifact.status}
+            title={artifact.title}
+          />
+          {!tableOwnsHeader && <ArtifactTypeLabel kind={artifact.kind} />}
+        </div>
+        <div className="flex min-w-0 items-center gap-2 px-2">
+          {saveError ? (
+            <span className="truncate text-xs text-destructive" role="alert">
+              {saveError}
+            </span>
+          ) : hasPendingResultTableChanges ? (
+            <span className="truncate text-xs text-muted-foreground">
+              表格视图或备注尚未保存 · 暂不能切换
+            </span>
+          ) : isContentDirty ? (
+            <span className="text-xs text-muted-foreground">
+              正在保存… · 暂不能切换
+            </span>
+          ) : artifact.status === "streaming" ? (
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <LoaderIcon size={12} />
+              正在生成… · 暂不能切换
+            </span>
+          ) : null}
         </div>
       </div>
+    </WorkspaceHeader>
+  );
+  const artifactPanel = (
+    <>
+      {!tableOwnsHeader && renderHeader()}
       <div
-        className="relative flex-1 overflow-y-auto bg-background"
+        className={cn(
+          "relative min-h-0 min-w-0 flex-1 bg-background",
+          isProtectedResultTable(artifact.content)
+            ? "flex overflow-hidden"
+            : "overflow-y-auto"
+        )}
         data-slot="artifact-content"
         onScroll={handleArtifactScroll}
         ref={artifactContentRef}
@@ -378,52 +521,37 @@ function PureArtifact({
               : getDocumentContentById(currentVersionIndex)
           }
           currentVersionIndex={currentVersionIndex}
+          documentId={artifact.documentId}
+          expectedVersion={
+            documents?.[currentVersionIndex]?.createdAt
+              ? new Date(documents[currentVersionIndex].createdAt).toISOString()
+              : undefined
+          }
           getDocumentContentById={getDocumentContentById}
           isCurrentVersion={isCurrentVersion}
           isInline={false}
           isLoading={isDocumentsFetching && !artifact.content}
+          isReadonly={isReadonly}
           metadata={metadata}
           mode={mode}
+          onResultTablePendingChange={handleResultTablePendingChange}
+          onResultTableSaved={handleResultTableSaved}
           onSaveContent={saveContent}
+          renderHeader={renderHeader}
           setMetadata={setMetadata}
           status={artifact.status}
           suggestions={[]}
           title={artifact.title}
         />
-        <AnimatePresence>
-          {isCurrentVersion ? (
-            <Toolbar
-              artifactActions={
-                <ArtifactActions
-                  artifact={artifact}
-                  currentVersionIndex={currentVersionIndex}
-                  handleVersionChange={handleVersionChange}
-                  isCurrentVersion={isCurrentVersion}
-                  metadata={metadata}
-                  mode={mode}
-                  setMetadata={setMetadata}
-                />
-              }
-              artifactKind={artifact.kind}
-              consoleError={consoleError}
-              documentId={artifact.documentId}
-              isToolbarVisible={isToolbarVisible}
-              onClose={handleClose}
-              sendMessage={sendMessage}
-              setIsToolbarVisible={setIsToolbarVisible}
-              setMessages={setMessages}
-              status={status}
-              stop={stop}
-            />
-          ) : null}
-        </AnimatePresence>
       </div>
       <AnimatePresence>
-        {!isCurrentVersion && (
+        {documents && documents.length > 1 && (
           <VersionFooter
+            chatId={chatId}
             currentVersionIndex={currentVersionIndex}
             documents={documents}
             handleVersionChange={handleVersionChange}
+            isReadonly={isReadonly}
             mode={mode}
             setMode={setMode}
           />
@@ -462,20 +590,26 @@ function PureArtifact({
   }
 
   return (
-    <div
+    <ArtifactFrame
       className={
         embedded
-          ? "flex h-full w-full min-h-0 flex-col overflow-hidden bg-sidebar"
+          ? "flex h-full w-full min-h-0 min-w-0 flex-col overflow-hidden rounded-none border-0 bg-background shadow-none"
           : "flex h-dvh w-[60%] shrink-0 flex-col overflow-hidden border-l border-border/50 bg-sidebar transition-[width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]"
       }
       data-testid="artifact"
     >
       {artifactPanel}
-    </div>
+    </ArtifactFrame>
   );
 }
 
 export const Artifact = memo(PureArtifact, (prevProps, nextProps) => {
+  if (
+    prevProps.isReadonly !== nextProps.isReadonly ||
+    prevProps.chatId !== nextProps.chatId
+  ) {
+    return false;
+  }
   if (prevProps.status !== nextProps.status) {
     return false;
   }
@@ -485,7 +619,7 @@ export const Artifact = memo(PureArtifact, (prevProps, nextProps) => {
   if (prevProps.input !== nextProps.input) {
     return false;
   }
-  if (prevProps.messages.length !== nextProps.messages.length) {
+  if (prevProps.messages !== nextProps.messages) {
     return false;
   }
   if (prevProps.selectedVisibilityType !== nextProps.selectedVisibilityType) {

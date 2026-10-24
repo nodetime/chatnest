@@ -74,5 +74,5 @@ export function conversationMarkdown(messages: UIMessage[]) {
     .filter(Boolean)
     .join("\n\n---\n\n");
   const sources = collectConversationSources(messages);
-  return `# Research 对话记录\n\n> AI 辅助记录，不是法律认定。来源链接需要核对原文；导出不包含隐藏推理、图片文件或完整工具日志。\n\n${content}\n\n## 已返回的来源\n\n${sources.length ? sourceListMarkdown(sources) : "当前对话没有可汇总的来源。"}\n`;
+  return `# ChatNest 对话记录\n\n> AI 辅助记录，不是法律认定。来源链接需要核对原文；导出不包含隐藏推理、图片文件或完整工具日志。\n\n${content}\n\n## 已返回的来源\n\n${sources.length ? sourceListMarkdown(sources) : "当前对话没有可汇总的来源。"}\n`;
 }

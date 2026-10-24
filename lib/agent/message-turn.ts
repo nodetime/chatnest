@@ -1,4 +1,5 @@
 import type { ChatMessage } from "../types";
+import { MAX_MESSAGE_CHARACTERS } from "./input-limits";
 
 export function prepareRegeneration(
   stored: ChatMessage[],
@@ -24,4 +25,26 @@ export function prepareRegeneration(
     return null;
   }
   return { answerId: answer.id, context: stored.slice(0, -1) };
+}
+
+export function prepareMessageEdit(
+  stored: ChatMessage[],
+  incomingUserId: string,
+  text: string
+): { context: ChatMessage[]; edited: ChatMessage; index: number } | null {
+  const index = stored.findIndex(
+    (item) => item.id === incomingUserId && item.role === "user"
+  );
+  if (index < 0 || !text.trim() || text.length > MAX_MESSAGE_CHARACTERS) {
+    return null;
+  }
+  const original = stored[index];
+  const edited: ChatMessage = {
+    ...original,
+    parts: [
+      ...original.parts.filter((part) => part.type === "file"),
+      { text, type: "text" },
+    ],
+  };
+  return { context: [...stored.slice(0, index), edited], edited, index };
 }

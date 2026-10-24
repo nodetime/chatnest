@@ -1,6 +1,7 @@
 import { createOpenAI } from "@ai-sdk/openai";
-import { customProvider, gateway } from "ai";
+import { customProvider, gateway, wrapLanguageModel } from "ai";
 import { isTestEnvironment } from "../constants";
+import { openAIInlineImageMiddleware } from "./inline-image-middleware";
 import { getModelConnection } from "./model-connection";
 import { titleModel } from "./models";
 
@@ -32,7 +33,10 @@ export function getLanguageModel(modelId: string) {
     });
     return connection.apiMode === "responses"
       ? provider.responses(connection.modelId)
-      : provider.chat(connection.modelId);
+      : wrapLanguageModel({
+          middleware: openAIInlineImageMiddleware,
+          model: provider.chat(connection.modelId),
+        });
   }
   return gateway.languageModel(modelId);
 }

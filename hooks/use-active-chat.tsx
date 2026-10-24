@@ -23,12 +23,14 @@ import {
 } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
+import { projectChatTitle } from "@/components/chat/chat-title";
 import { useDataStream } from "@/components/chat/data-stream-provider";
 import { getChatHistoryPaginationKey } from "@/components/chat/sidebar-history";
 import { toast } from "@/components/chat/toast";
 import type { VisibilityType } from "@/components/chat/visibility-selector";
 import { useAutoResume } from "@/hooks/use-auto-resume";
 import { useChatDraft } from "@/hooks/use-chat-draft";
+import { compactToolApprovals } from "@/lib/agent/approval-transport";
 import { buildTaskMessage, type TaskDraft } from "@/lib/agent/task-draft";
 import { DEFAULT_CHAT_MODEL } from "@/lib/ai/models";
 import type { Vote } from "@/lib/db/schema";
@@ -38,9 +40,11 @@ import { fetcher, fetchWithErrorHandlers, generateUUID } from "@/lib/utils";
 
 type ActiveChatContextValue = {
   chatId: string;
+  chatTitle: string;
   messages: ChatMessage[];
   setMessages: UseChatHelpers<ChatMessage>["setMessages"];
   sendMessage: UseChatHelpers<ChatMessage>["sendMessage"];
+  getSendError: () => Error | undefined;
   status: UseChatHelpers<ChatMessage>["status"];
   stop: UseChatHelpers<ChatMessage>["stop"];
   regenerate: UseChatHelpers<ChatMessage>["regenerate"];
@@ -105,11 +109,16 @@ export function ActiveChatProvider({
   const [searchMode, setSearchMode] = useState<"auto" | "web">("auto");
   const searchModeRef = useRef(searchMode);
   searchModeRef.current = searchMode;
+  const lastSendFailure = useRef<Error | undefined>(undefined);
   const regenerationSnapshot = useRef<{
     chatId: string;
     messages: ChatMessage[];
   } | null>(null);
 
+  const [liveTitle, setLiveTitle] = useState<{
+    chatId: string;
+    title: string;
+  } | null>(null);
   const [currentModelId, setCurrentModelId] = useState(DEFAULT_CHAT_MODEL);
   const { data: modelCatalog } = useSWR(
     `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/models`,
@@ -159,6 +168,9 @@ export function ActiveChatProvider({
     id: chatId,
     messages: initialMessages,
     onData: (dataPart) => {
+      if (dataPart.type === "data-chat-title") {
+        setLiveTitle({ chatId, title: dataPart.data });
+      }
       if (dataPart.type === "data-waiting-status") {
         setWaitingStatus(dataPart.data);
         return;
@@ -186,6 +198,14 @@ export function ActiveChatProvider({
       finishReason,
       messages: finishedMessages,
     }) => {
+      lastSendFailure.current =
+        isAbort ||
+        isError ||
+        isDisconnect ||
+        !finishReason ||
+        finishReason === "error"
+          ? new Error("本轮未完成，草稿已保留。")
+          : undefined;
       const snapshot = regenerationSnapshot.current;
       // useChat forwards old-instance callbacks through its latest callback refs.
       // The stored question UUID identifies the originating turn, not just the current URL.
@@ -239,7 +259,7 @@ export function ActiveChatProvider({
           body: {
             id: request.id,
             ...(isToolApprovalContinuation
-              ? { messages: request.messages }
+              ? { messages: compactToolApprovals(request.messages) }
               : { message: lastMessage }),
             searchMode: searchModeRef.current,
             selectedChatModel: currentModelIdRef.current,
@@ -300,6 +320,11 @@ export function ActiveChatProvider({
     error,
     clearError,
   } = useChat<ChatMessage>({ chat: chatInstanceRef.current });
+
+  const getSendError = useCallback(
+    () => chatInstanceRef.current?.error ?? lastSendFailure.current,
+    []
+  );
 
   const regenerateAnswer = useCallback(async () => {
     if (
@@ -466,13 +491,20 @@ export function ActiveChatProvider({
     { revalidateOnFocus: false }
   );
 
+  const chatTitle = projectChatTitle({
+    liveTitle: liveTitle?.chatId === chatId ? liveTitle.title : undefined,
+    messages,
+    persistedTitle: chatData?.title,
+  });
   const value = useMemo<ActiveChatContextValue>(
     () => ({
       addToolApprovalResponse,
       chatId,
+      chatTitle,
       clearError,
       currentModelId,
       error,
+      getSendError,
       input,
       isLoading: !isNewChat && isLoading,
       isReadonly,
@@ -498,6 +530,7 @@ export function ActiveChatProvider({
     }),
     [
       chatId,
+      chatTitle,
       error,
       clearError,
       loadError,
@@ -509,6 +542,7 @@ export function ActiveChatProvider({
       messages,
       setMessages,
       sendMessage,
+      getSendError,
       status,
       stop,
       regenerate,

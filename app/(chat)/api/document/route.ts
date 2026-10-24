@@ -2,7 +2,12 @@ import { z } from "zod";
 import { auth } from "@/app/(auth)/auth";
 import type { ArtifactKind } from "@/components/chat/artifact";
 import {
+  isProtectedResultTable,
+  parseResultTable,
+} from "@/lib/artifacts/result-table";
+import {
   deleteDocumentsByIdAfterTimestamp,
+  getChatById,
   getDocumentsById,
   saveDocument,
   updateDocumentContent,
@@ -45,7 +50,21 @@ export async function GET(request: Request) {
     return new ChatbotError("forbidden:document").toResponse();
   }
 
-  return Response.json(documents, { status: 200 });
+  if (documents.some((doc) => isProtectedResultTable(doc.content))) {
+    const table = parseResultTable(documents.at(-1)?.content);
+    const chatId = searchParams.get("chatId");
+    const chat =
+      table && chatId === table.chatId
+        ? await getChatById({ id: chatId })
+        : null;
+    if (!chat || chat.userId !== session.user.id) {
+      return new ChatbotError("forbidden:document").toResponse();
+    }
+  }
+  return Response.json(documents, {
+    headers: { "Cache-Control": "private, no-store" },
+    status: 200,
+  });
 }
 
 export async function POST(request: Request) {
@@ -89,6 +108,13 @@ export async function POST(request: Request) {
     if (doc.userId !== session.user.id) {
       return new ChatbotError("forbidden:document").toResponse();
     }
+  }
+
+  if (
+    isProtectedResultTable(content) ||
+    documents.some((doc) => isProtectedResultTable(doc.content))
+  ) {
+    return new ChatbotError("forbidden:document").toResponse();
   }
 
   if (isManualEdit && documents.length > 0) {
@@ -136,10 +162,17 @@ export async function DELETE(request: Request) {
 
   const [document] = documents;
 
+  if (!document) {
+    return new ChatbotError("not_found:document").toResponse();
+  }
+
   if (document.userId !== session.user.id) {
     return new ChatbotError("forbidden:document").toResponse();
   }
 
+  if (documents.some((doc) => isProtectedResultTable(doc.content))) {
+    return new ChatbotError("forbidden:document").toResponse();
+  }
   const parsedTimestamp = new Date(timestamp);
 
   if (Number.isNaN(parsedTimestamp.getTime())) {

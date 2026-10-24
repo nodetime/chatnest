@@ -12,14 +12,27 @@ import {
   inArray,
   lt,
   type SQL,
+  sql,
 } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import type { ArtifactKind } from "@/components/chat/artifact";
 import type { VisibilityType } from "@/components/chat/visibility-selector";
-import { prepareRegeneration } from "../agent/message-turn";
+import { prepareMessageEdit, prepareRegeneration } from "../agent/message-turn";
+import {
+  assertGenericDocumentDeletionAllowed,
+  isProtectedResultTable,
+  parseResultTable,
+  type ResultTable,
+  ResultTableMutationError,
+  type ResultView,
+  resultViewSchema,
+  validView,
+  withResultTableView,
+} from "../artifacts/result-table";
 import { ChatbotError } from "../errors";
 import type { ChatMessage } from "../types";
+import { cleanupDeletedChatAssets } from "../uploads/service";
 import { generateUUID } from "../utils";
 import {
   type Chat,
@@ -109,6 +122,7 @@ export async function deleteChatById({ id }: { id: string }) {
       .delete(chat)
       .where(eq(chat.id, id))
       .returning();
+    await cleanupDeletedChatAssets(id).catch(() => undefined);
     return chatsDeleted;
   } catch (error) {
     throw new ChatbotError("bad_request:database", { cause: error });
@@ -137,6 +151,9 @@ export async function deleteAllChatsByUserId({ userId }: { userId: string }) {
       .where(eq(chat.userId, userId))
       .returning();
 
+    await Promise.all(
+      chatIds.map((id) => cleanupDeletedChatAssets(id).catch(() => undefined))
+    );
     return { deletedCount: deletedChats.length };
   } catch (error) {
     throw new ChatbotError("bad_request:database", { cause: error });
@@ -316,6 +333,79 @@ export async function replaceRegeneratedAnswer({
   });
 }
 
+export async function replaceEditedTurn({
+  chatId,
+  userId,
+  snapshot,
+  edited,
+  answer,
+}: {
+  chatId: string;
+  userId: string;
+  snapshot: DBMessage[];
+  edited: ChatMessage;
+  answer: DBMessage;
+}) {
+  await db.transaction(async (tx) => {
+    const [owner] = await tx
+      .select()
+      .from(chat)
+      .where(eq(chat.id, chatId))
+      .for("update");
+    if (!owner || owner.userId !== userId) {
+      throw new ChatbotError("forbidden:chat");
+    }
+    const current = await tx
+      .select()
+      .from(message)
+      .where(eq(message.chatId, chatId))
+      .orderBy(asc(message.createdAt));
+    const unchanged =
+      current.length === snapshot.length &&
+      current.every(
+        (item, index) =>
+          item.id === snapshot[index].id &&
+          item.role === snapshot[index].role &&
+          JSON.stringify(item.parts) === JSON.stringify(snapshot[index].parts)
+      );
+    const text = edited.parts
+      .filter((part) => part.type === "text")
+      .map((part) => part.text)
+      .join("");
+    const prepared = prepareMessageEdit(
+      current as ChatMessage[],
+      edited.id,
+      text
+    );
+    if (
+      !unchanged ||
+      !prepared ||
+      JSON.stringify(prepared.edited.parts) !== JSON.stringify(edited.parts) ||
+      answer.chatId !== chatId ||
+      answer.role !== "assistant" ||
+      !Array.isArray(answer.parts) ||
+      !answer.parts.length
+    ) {
+      throw new ChatbotError("bad_request:api");
+    }
+    const trailing = current.slice(prepared.index + 1).map((item) => item.id);
+    if (trailing.length) {
+      await tx
+        .delete(vote)
+        .where(and(eq(vote.chatId, chatId), inArray(vote.messageId, trailing)));
+      await tx
+        .delete(message)
+        .where(and(eq(message.chatId, chatId), inArray(message.id, trailing)));
+    }
+    // Preserve the edited user row and its committed attachment associations.
+    await tx
+      .update(message)
+      .set({ parts: prepared.edited.parts })
+      .where(and(eq(message.chatId, chatId), eq(message.id, edited.id)));
+    await tx.insert(message).values(answer);
+  });
+}
+
 export async function updateMessage({
   id,
   parts,
@@ -399,21 +489,43 @@ export async function saveDocument({
   userId: string;
 }) {
   try {
-    return await db
-      .insert(document)
-      .values({
-        content,
-        createdAt: new Date(),
-        id,
-        kind,
-        title,
-        userId,
-      })
-      .returning();
-  } catch (error) {
-    throw new ChatbotError("bad_request:database", {
-      cause: error,
+    return await db.transaction(async (tx) => {
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(hashtextextended(${id}, 0))`
+      );
+      const docs = await tx
+        .select()
+        .from(document)
+        .where(eq(document.id, id))
+        .orderBy(desc(document.createdAt));
+      if (
+        isProtectedResultTable(content) ||
+        docs.some((doc) => isProtectedResultTable(doc.content))
+      ) {
+        throw new ChatbotError("forbidden:document");
+      }
+      if (docs.some((doc) => doc.userId !== userId)) {
+        throw new ChatbotError("forbidden:document");
+      }
+      return tx
+        .insert(document)
+        .values({
+          content,
+          createdAt: new Date(
+            Math.max(Date.now(), (docs[0]?.createdAt.getTime() ?? 0) + 1)
+          ),
+          id,
+          kind,
+          title,
+          userId,
+        })
+        .returning();
     });
+  } catch (error) {
+    if (error instanceof ChatbotError) {
+      throw error;
+    }
+    throw new ChatbotError("bad_request:database", { cause: error });
   }
 }
 
@@ -425,31 +537,159 @@ export async function updateDocumentContent({
   content: string;
 }) {
   try {
-    const docs = await db
-      .select()
-      .from(document)
-      .where(eq(document.id, id))
-      .orderBy(desc(document.createdAt))
-      .limit(1);
-
-    const [latest] = docs;
-    if (!latest) {
-      throw new ChatbotError("not_found:database", "Document not found");
-    }
-
-    return await db
-      .update(document)
-      .set({ content })
-      .where(and(eq(document.id, id), eq(document.createdAt, latest.createdAt)))
-      .returning();
+    return await db.transaction(async (tx) => {
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(hashtextextended(${id}, 0))`
+      );
+      const docs = await tx
+        .select()
+        .from(document)
+        .where(eq(document.id, id))
+        .orderBy(desc(document.createdAt));
+      const [latest] = docs;
+      if (!latest) {
+        throw new ChatbotError("not_found:document");
+      }
+      if (
+        isProtectedResultTable(content) ||
+        docs.some((doc) => isProtectedResultTable(doc.content))
+      ) {
+        throw new ChatbotError("forbidden:document");
+      }
+      return tx
+        .update(document)
+        .set({ content })
+        .where(
+          and(eq(document.id, id), eq(document.createdAt, latest.createdAt))
+        )
+        .returning();
+    });
   } catch (error) {
     if (error instanceof ChatbotError) {
       throw error;
     }
-    throw new ChatbotError("bad_request:database", {
-      cause: error,
-    });
+    throw new ChatbotError("bad_request:database", { cause: error });
   }
+}
+
+export async function saveResultTableDocument({
+  id,
+  title,
+  table,
+  userId,
+}: {
+  id: string;
+  title: string;
+  table: ResultTable;
+  userId: string;
+}) {
+  if (!parseResultTable(JSON.stringify(table))) {
+    throw new ResultTableMutationError(400, "Invalid result table");
+  }
+  return await db.transaction(async (tx) => {
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtextextended(${id}, 0))`
+    );
+    const [ownerChat] = await tx
+      .select()
+      .from(chat)
+      .where(and(eq(chat.id, table.chatId), eq(chat.userId, userId)))
+      .for("share");
+    if (!ownerChat) {
+      throw new ResultTableMutationError(403, "Result table chat mismatch");
+    }
+    const [existing] = await tx
+      .select()
+      .from(document)
+      .where(eq(document.id, id))
+      .limit(1);
+    if (existing) {
+      throw new ResultTableMutationError(409, "Document already exists");
+    }
+    return tx
+      .insert(document)
+      .values({
+        content: JSON.stringify(table),
+        createdAt: new Date(),
+        id,
+        kind: "sheet",
+        title,
+        userId,
+      })
+      .returning();
+  });
+}
+
+export async function saveResultTableView({
+  id,
+  chatId,
+  userId,
+  expectedVersion,
+  view,
+  notes,
+}: {
+  id: string;
+  chatId: string;
+  userId: string;
+  expectedVersion: string;
+  view: ResultView;
+  notes: string;
+}) {
+  return await db.transaction(async (tx) => {
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtextextended(${id}, 0))`
+    );
+    const [latest] = await tx
+      .select()
+      .from(document)
+      .where(eq(document.id, id))
+      .orderBy(desc(document.createdAt))
+      .limit(1)
+      .for("update");
+    if (!latest) {
+      throw new ResultTableMutationError(404, "Document not found");
+    }
+    const table = parseResultTable(latest.content);
+    if (latest.userId !== userId || !table || table.chatId !== chatId) {
+      throw new ResultTableMutationError(
+        403,
+        "Result table ownership or chat mismatch"
+      );
+    }
+    const [ownerChat] = await tx
+      .select()
+      .from(chat)
+      .where(and(eq(chat.id, chatId), eq(chat.userId, userId)))
+      .for("share");
+    if (!ownerChat) {
+      throw new ResultTableMutationError(403, "Result table chat mismatch");
+    }
+    if (latest.createdAt.toISOString() !== expectedVersion) {
+      throw new ResultTableMutationError(
+        409,
+        "Version changed; reopen the latest table before saving."
+      );
+    }
+    const parsed = resultViewSchema.safeParse(view);
+    if (
+      !parsed.success ||
+      !validView(table, parsed.data) ||
+      typeof notes !== "string" ||
+      notes.length > 10_000
+    ) {
+      throw new ResultTableMutationError(400, "Invalid view or notes");
+    }
+    return tx
+      .insert(document)
+      .values({
+        ...latest,
+        content: JSON.stringify(withResultTableView(table, parsed.data, notes)),
+        createdAt: new Date(
+          Math.max(Date.now(), latest.createdAt.getTime() + 1)
+        ),
+      })
+      .returning();
+  });
 }
 
 export async function getDocumentsById({ id }: { id: string }) {
@@ -488,20 +728,29 @@ export async function deleteDocumentsByIdAfterTimestamp({
   timestamp: Date;
 }) {
   try {
-    await db
-      .delete(suggestion)
-      .where(
-        and(
-          eq(suggestion.documentId, id),
-          gt(suggestion.documentCreatedAt, timestamp)
-        )
+    return await db.transaction(async (tx) => {
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(hashtextextended(${id}, 0))`
       );
-
-    return await db
-      .delete(document)
-      .where(and(eq(document.id, id), gt(document.createdAt, timestamp)))
-      .returning();
+      const docs = await tx.select().from(document).where(eq(document.id, id));
+      assertGenericDocumentDeletionAllowed(docs.map((doc) => doc.content));
+      await tx
+        .delete(suggestion)
+        .where(
+          and(
+            eq(suggestion.documentId, id),
+            gt(suggestion.documentCreatedAt, timestamp)
+          )
+        );
+      return tx
+        .delete(document)
+        .where(and(eq(document.id, id), gt(document.createdAt, timestamp)))
+        .returning();
+    });
   } catch (error) {
+    if (error instanceof ResultTableMutationError) {
+      throw error;
+    }
     throw new ChatbotError("bad_request:database", { cause: error });
   }
 }

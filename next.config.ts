@@ -1,5 +1,8 @@
+import { createRequire } from "node:module";
+import { dirname, join, relative } from "node:path";
 import { withBotId } from "botid/next/config";
 import type { NextConfig } from "next";
+import { PHASE_PRODUCTION_BUILD } from "next/constants";
 
 const basePath = process.env.IS_DEMO === "1" ? "/demo" : "";
 
@@ -28,6 +31,8 @@ const nextConfig: NextConfig = {
     cachedNavigations: true,
     inlineCss: true,
     prefetchInlining: true,
+    // Next proxy clones bodies before route admission. Keep the envelope bounded, not truncated at its 10mb default.
+    proxyClientMaxBodySize: "65mb",
     turbopackFileSystemCacheForDev: true,
   },
   images: {
@@ -49,11 +54,26 @@ const nextConfig: NextConfig = {
   },
   outputFileTracingIncludes: {
     "/api/agent": ["./config/agent.json", "./skills/**/*"],
+    "/api/agent/mcp": ["./config/agent.json"],
     "/api/chat": ["./config/agent.json", "./skills/**/*"],
+    "/api/files/upload": [
+      "./lib/uploads/document-worker.cjs",
+      "./node_modules/pdfjs-dist/**/*",
+      "./node_modules/mammoth/**/*",
+      "./node_modules/exceljs/**/*",
+      "./node_modules/yauzl/**/*",
+      "./node_modules/saxes/**/*",
+      "./node_modules/papaparse/**/*",
+    ],
   },
   poweredByHeader: false,
   reactCompiler: true,
   serverExternalPackages: [
+    "mammoth",
+    "exceljs",
+    "yauzl",
+    "saxes",
+    "papaparse",
     "@playwright/mcp",
     "playwright",
     "playwright-core",
@@ -61,4 +81,34 @@ const nextConfig: NextConfig = {
   ],
 };
 
-export default withBotId(nextConfig);
+export default withBotId(async (phase) => {
+  if (phase !== PHASE_PRODUCTION_BUILD) {
+    return nextConfig;
+  }
+  // Tracing includes are not entry points: trace the external worker's entire require
+  // graph explicitly. This runs only at build time, never per upload or on next start.
+  const { nodeFileTrace } = await import("@vercel/nft");
+  const root = process.cwd();
+  const nodeRequire = createRequire(join(root, "package.json"));
+  const pdfManifest = nodeRequire.resolve("pdfjs-dist/package.json");
+  const pdfRequire = createRequire(pdfManifest);
+  const { fileList } = await nodeFileTrace(
+    ["lib/uploads/document-worker.cjs", pdfRequire.resolve("@napi-rs/canvas")],
+    { base: root, fileIOConcurrency: 64, processCwd: root }
+  );
+  const files = [...fileList].map((path) => `./${path}`);
+  // PDF.js uses a computed fake-worker import and newer syntax beyond NFT's parser.
+  // Preserve its official worker/maps/fonts/assets independently of static analysis.
+  const pdfAssets = `./${relative(root, dirname(pdfManifest)).replaceAll("\\", "/")}/**/*`;
+  return {
+    ...nextConfig,
+    outputFileTracingIncludes: {
+      ...nextConfig.outputFileTracingIncludes,
+      "/api/files/upload": [
+        ...(nextConfig.outputFileTracingIncludes?.["/api/files/upload"] ?? []),
+        ...files,
+        pdfAssets,
+      ],
+    },
+  };
+});

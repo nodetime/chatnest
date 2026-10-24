@@ -1,6 +1,7 @@
 import { streamText } from "ai";
 import { sheetPrompt, updateDocumentPrompt } from "@/lib/ai/prompts";
 import { getLanguageModel } from "@/lib/ai/providers";
+import { metadataOnlyTelemetry } from "@/lib/ai/telemetry";
 import { createDocumentHandler } from "@/lib/artifacts/server";
 
 export const sheetDocumentHandler = createDocumentHandler<"sheet">({
@@ -12,6 +13,7 @@ export const sheetDocumentHandler = createDocumentHandler<"sheet">({
       instructions: `${sheetPrompt}\n\nOutput ONLY the raw CSV data. No explanations, no markdown fences.`,
       model: getLanguageModel(modelId),
       prompt: title,
+      telemetry: metadataOnlyTelemetry,
     });
 
     for await (const delta of stream) {
@@ -34,6 +36,7 @@ export const sheetDocumentHandler = createDocumentHandler<"sheet">({
       instructions: `${updateDocumentPrompt(document.content, "sheet")}\n\nOutput ONLY the raw CSV data. No explanations, no markdown fences.`,
       model: getLanguageModel(modelId),
       prompt: description,
+      telemetry: metadataOnlyTelemetry,
     });
 
     for await (const delta of stream) {

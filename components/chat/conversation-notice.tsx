@@ -23,8 +23,18 @@ export function ConversationNotice({ onRestore }: { onRestore: () => void }) {
           {loadError ? "暂时无法打开这段对话" : "这一轮还没有完成"}
         </p>
         <p className="mt-1 break-words text-xs leading-5 text-muted-foreground">
-          {(loadError ?? error)?.message.slice(0, 280)}
+          {loadError
+            ? "对话暂时未能加载，请重试。"
+            : "这次请求未能完成。你可以恢复刚才的输入，检查连接后再继续。"}
         </p>
+        <details className="mt-2 text-xs text-muted-foreground">
+          <summary className="w-fit cursor-pointer rounded-sm focus-visible:outline-2 focus-visible:outline-ring">
+            查看错误详情
+          </summary>
+          <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words font-mono text-[11px]">
+            {(loadError ?? error)?.message}
+          </pre>
+        </details>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {loadError ? (
             <button
@@ -44,7 +54,7 @@ export function ConversationNotice({ onRestore }: { onRestore: () => void }) {
               恢复刚才的输入
             </button>
           )}
-          <AgentLibrary compact label="检查连接" tab="settings" />
+          <AgentLibrary compact label="检查连接" tab="tools" />
         </div>
       </div>
       {!loadError && (

@@ -518,3 +518,132 @@ textarea:focus-visible {
 [data-testid="artifact"] {
   isolation: isolate;
 }
+
+/* The workbench palette is local to chat; admin and global fonts stay unchanged. */
+.chat-workbench {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.29 0.009 260);
+  --card: oklch(1 0 0);
+  --card-foreground: var(--foreground);
+  --popover: var(--card);
+  --popover-foreground: var(--foreground);
+  --primary: var(--foreground);
+  --primary-foreground: var(--card);
+  --secondary: oklch(0.97 0.002 250);
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.965 0.002 250);
+  --muted-foreground: oklch(0.51 0.012 260);
+  --accent: oklch(0.95 0.003 250);
+  --accent-foreground: var(--foreground);
+  --border: oklch(0.922 0.004 250);
+  --input: var(--border);
+  --ring: oklch(0.52 0.075 165);
+  --sidebar: oklch(0.985 0.002 250);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--workbench-selection);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+  --workbench-selection: oklch(0.94 0.035 165);
+  --workbench-shell: var(--sidebar);
+  --workbench-surface: var(--background);
+  --shadow-composer: 0 2px 8px -3px oklch(0.3 0.005 250 / 0.06);
+  color: var(--foreground);
+  background: var(--workbench-shell);
+}
+
+.chat-workbench[data-slot="sidebar-wrapper"] {
+  --sidebar-width: 13rem !important;
+}
+
+.dark .chat-workbench {
+  --background: oklch(0.205 0.006 260);
+  --foreground: oklch(0.925 0.004 250);
+  --card: oklch(0.235 0.007 260);
+  --secondary: oklch(0.265 0.007 260);
+  --muted: oklch(0.25 0.007 260);
+  --muted-foreground: oklch(0.72 0.01 250);
+  --accent: oklch(0.29 0.008 260);
+  --border: oklch(0.34 0.008 260);
+  --ring: oklch(0.75 0.08 165);
+  --sidebar: oklch(0.185 0.006 260);
+  --workbench-selection: oklch(0.32 0.045 165);
+  --shadow-composer: 0 2px 8px -3px oklch(0 0 0 / 0.3);
+}
+
+.chat-workbench [data-slot="sidebar-inner"] {
+  background: var(--sidebar);
+}
+
+.chat-workbench [data-slot="sidebar-inset"],
+.chat-workbench .chat-workbench-shell,
+.chat-workbench .chat-workbench-surface {
+  background: var(--workbench-surface);
+}
+
+/* The subtle inset ring is consistent across native buttons and disclosures. */
+.chat-workbench :where(button, a, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Artifact file cards clip previews, so keep their focus ring inside. */
+.chat-workbench [data-testid="document-preview"]:focus-visible {
+  outline-offset: -3px;
+}
+
+/* Keep result-table density and palette local, including inline chat previews.
+ * The chat + grid selector outranks the library's later theme-class defaults. */
+.chat-workbench .chatnest-result-grid {
+  --rdg-color: var(--foreground);
+  --rdg-background-color: var(--card);
+  --rdg-header-background-color: var(--card);
+  --rdg-header-draggable-background-color: var(--muted);
+  --rdg-row-hover-background-color: var(--accent);
+  --rdg-row-selected-background-color: var(--workbench-selection);
+  --rdg-row-selected-hover-background-color: var(--workbench-selection);
+  --rdg-border-color: color-mix(in oklab, var(--border) 65%, transparent);
+  --rdg-summary-border-color: var(--border);
+  --rdg-selection-color: var(--ring);
+  --rdg-checkbox-focus-color: var(--ring);
+  --rdg-font-size: 13px;
+  --rdg-cell-frozen-box-shadow: 2px 0 4px -2px var(--border);
+}
+
+.chat-workbench .chatnest-result-grid [role="gridcell"] {
+  border-inline-end-color: var(--rdg-border-color);
+}
+
+.chat-workbench .chatnest-result-grid [role="columnheader"] {
+  font-weight: 500;
+  border-block-end: 1px solid var(--rdg-border-color);
+  border-inline-end-color: var(--rdg-border-color);
+}
+
+.chat-workbench
+  .chatnest-result-grid
+  :is([role="gridcell"], [role="columnheader"]) {
+  padding-inline: 14px;
+}
+
+.chat-workbench [data-slot="sidebar-menu-button"][data-active="true"] {
+  color: var(--foreground);
+  background: var(--workbench-selection);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-workbench *,
+  .chat-workbench *::before,
+  .chat-workbench *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Continue the worksheet surface below its real rows; never imply extra data. */
+.chat-workbench .chatnest-result-grid {
+  background-color: var(--card);
+}

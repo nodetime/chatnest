@@ -6,8 +6,9 @@ import { ImageEditor } from "@/components/chat/image-editor";
 export const imageArtifact = new Artifact({
   actions: [
     {
-      description: "View Previous version",
+      description: "上一版本",
       icon: <UndoIcon size={18} />,
+      id: "previous-version",
       isDisabled: ({ currentVersionIndex }) => {
         if (currentVersionIndex === 0) {
           return true;
@@ -20,8 +21,9 @@ export const imageArtifact = new Artifact({
       },
     },
     {
-      description: "View Next version",
+      description: "下一版本",
       icon: <RedoIcon size={18} />,
+      id: "next-version",
       isDisabled: ({ isCurrentVersion }) => {
         if (isCurrentVersion) {
           return true;
@@ -34,7 +36,7 @@ export const imageArtifact = new Artifact({
       },
     },
     {
-      description: "Copy image to clipboard",
+      description: "复制图片",
       icon: <CopyIcon size={18} />,
       onClick: ({ content }) => {
         const img = new Image();
@@ -55,12 +57,12 @@ export const imageArtifact = new Artifact({
           }, "image/png");
         };
 
-        toast.success("Copied image to clipboard!");
+        toast.success("已复制图片");
       },
     },
   ],
   content: ImageEditor,
-  description: "Useful for image generation",
+  description: "生成图片",
   kind: "image",
   onStreamPart: ({ streamPart, setArtifact }) => {
     if (streamPart.type === "data-imageDelta") {

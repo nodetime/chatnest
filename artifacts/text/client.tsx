@@ -21,8 +21,9 @@ type TextArtifactMetadata = {
 export const textArtifact = new Artifact<"text", TextArtifactMetadata>({
   actions: [
     {
-      description: "View changes",
+      description: "查看更改",
       icon: <ClockRewind size={18} />,
+      id: "view-changes",
       isDisabled: ({ currentVersionIndex }) => {
         if (currentVersionIndex === 0) {
           return true;
@@ -35,8 +36,9 @@ export const textArtifact = new Artifact<"text", TextArtifactMetadata>({
       },
     },
     {
-      description: "View Previous version",
+      description: "上一版本",
       icon: <UndoIcon size={18} />,
+      id: "previous-version",
       isDisabled: ({ currentVersionIndex }) => {
         if (currentVersionIndex === 0) {
           return true;
@@ -49,8 +51,9 @@ export const textArtifact = new Artifact<"text", TextArtifactMetadata>({
       },
     },
     {
-      description: "View Next version",
+      description: "下一版本",
       icon: <RedoIcon size={18} />,
+      id: "next-version",
       isDisabled: ({ isCurrentVersion }) => {
         if (isCurrentVersion) {
           return true;
@@ -63,19 +66,21 @@ export const textArtifact = new Artifact<"text", TextArtifactMetadata>({
       },
     },
     {
-      description: "Copy to clipboard",
+      description: "复制文本",
       icon: <CopyIcon size={18} />,
       onClick: ({ content }) => {
         navigator.clipboard.writeText(content);
-        toast.success("Copied to clipboard!");
+        toast.success("已复制到剪贴板");
       },
     },
   ],
   content: ({
+    documentId,
     mode,
     status,
     content,
     isCurrentVersion,
+    isReadonly,
     currentVersionIndex,
     onSaveContent,
     getDocumentContentById,
@@ -105,7 +110,8 @@ export const textArtifact = new Artifact<"text", TextArtifactMetadata>({
         <Editor
           content={content}
           currentVersionIndex={currentVersionIndex}
-          isCurrentVersion={isCurrentVersion}
+          isCurrentVersion={isCurrentVersion && !isReadonly}
+          key={`${documentId ?? "init"}:${currentVersionIndex}`}
           onSaveContent={onSaveContent}
           status={status}
           suggestions={isCurrentVersion && metadata ? metadata.suggestions : []}
@@ -117,7 +123,7 @@ export const textArtifact = new Artifact<"text", TextArtifactMetadata>({
       </div>
     );
   },
-  description: "Useful for text content, like drafting essays and emails.",
+  description: "撰写与编辑文本，例如文章和邮件。",
   initialize: async ({ documentId, setMetadata }) => {
     const suggestions = await getSuggestions({ documentId });
 
@@ -149,7 +155,7 @@ export const textArtifact = new Artifact<"text", TextArtifactMetadata>({
   },
   toolbar: [
     {
-      description: "Add final polish",
+      description: "润色文本",
       icon: <PenIcon />,
       onClick: ({ sendMessage }) => {
         sendMessage({
@@ -164,7 +170,7 @@ export const textArtifact = new Artifact<"text", TextArtifactMetadata>({
       },
     },
     {
-      description: "Request suggestions",
+      description: "请求修改建议",
       icon: <MessageIcon />,
       onClick: ({ sendMessage }) => {
         sendMessage({

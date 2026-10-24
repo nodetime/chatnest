@@ -1,0 +1,45 @@
+name: Offline checks
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: offline-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: ${{ matrix.check }}
+    timeout-minutes: 30
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        check: [tests, typecheck, build]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.1
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.20.0
+          cache: pnpm
+      - name: Install locked dependencies (network permitted only for setup)
+        run: pnpm install --frozen-lockfile
+        env:
+          HUSKY: "0"
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+      - name: Check CI safety contracts
+        run: node --test scripts/ci/offline-checks.test.mjs
+      - name: Run check with loopback only and no inherited credentials
+        run: bash scripts/ci/linux-isolated-check.sh "${{ matrix.check }}"

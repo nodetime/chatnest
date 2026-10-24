@@ -8,6 +8,27 @@
       "when": 1710000000000,
       "tag": "0000_initial",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792537200000,
+      "tag": "0001_mcp_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792623600000,
+      "tag": "0002_private_uploads",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792627200000,
+      "tag": "0003_document_ingestion",
+      "breakpoints": true
     }
   ]
 }

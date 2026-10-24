@@ -1,6 +1,7 @@
 import { streamText } from "ai";
 import { codePrompt, updateDocumentPrompt } from "@/lib/ai/prompts";
 import { getLanguageModel } from "@/lib/ai/providers";
+import { metadataOnlyTelemetry } from "@/lib/ai/telemetry";
 import { createDocumentHandler } from "@/lib/artifacts/server";
 
 function stripFences(code: string): string {
@@ -19,6 +20,7 @@ export const codeDocumentHandler = createDocumentHandler<"code">({
       instructions: `${codePrompt}\n\nOutput ONLY the code. No explanations, no markdown fences, no wrapping.`,
       model: getLanguageModel(modelId),
       prompt: title,
+      telemetry: metadataOnlyTelemetry,
     });
 
     for await (const delta of stream) {
@@ -41,6 +43,7 @@ export const codeDocumentHandler = createDocumentHandler<"code">({
       instructions: `${updateDocumentPrompt(document.content, "code")}\n\nOutput ONLY the complete updated code. No explanations, no markdown fences, no wrapping.`,
       model: getLanguageModel(modelId),
       prompt: description,
+      telemetry: metadataOnlyTelemetry,
     });
 
     for await (const delta of stream) {

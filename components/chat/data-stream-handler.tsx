@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useSWRConfig } from "swr";
 import { unstable_serialize } from "swr/infinite";
 import { initialArtifactData, useArtifact } from "@/hooks/use-artifact";
+import { applyResultTableEvent } from "@/lib/artifacts/stream-state";
 import { artifactDefinitions } from "./artifact";
 import { useDataStream } from "./data-stream-provider";
 import { getChatHistoryPaginationKey } from "./sidebar-history";
@@ -22,14 +23,26 @@ export function DataStreamHandler() {
     const newDeltas = dataStream.slice();
     setDataStream([]);
 
+    let streamKind = artifact.kind;
     for (const delta of newDeltas) {
+      if (delta.type === "data-resultTable") {
+        streamKind = "sheet";
+        setArtifact((current) => applyResultTableEvent(current, delta.data));
+        continue;
+      }
+      if (delta.type === "data-mcp-source") {
+        continue;
+      }
+      if (delta.type === "data-kind") {
+        streamKind = delta.data;
+      }
       if (delta.type === "data-chat-title") {
         mutate(unstable_serialize(getChatHistoryPaginationKey));
         continue;
       }
       const artifactDefinition = artifactDefinitions.find(
         (currentArtifactDefinition) =>
-          currentArtifactDefinition.kind === artifact.kind
+          currentArtifactDefinition.kind === streamKind
       );
 
       if (artifactDefinition?.onStreamPart) {

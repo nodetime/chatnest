@@ -1,32 +1,28 @@
 import { auth } from "@/app/(auth)/auth";
-import { readAgentConfig, resolveHeaders } from "@/lib/agent/config";
+import { capabilityServers } from "@/lib/agent/mcp-settings/projection";
+import { readRuntimeConfig } from "@/lib/agent/mcp-settings/runtime-config";
+import { isAdmin, managementReady } from "@/lib/agent/mcp-settings/security";
 import { discoverSkills } from "@/lib/agent/skills";
 import { getModelConnection } from "@/lib/ai/model-connection";
+import { uploadsAvailable } from "@/lib/uploads/service";
 
 export async function GET() {
-  if (!(await auth())?.user) {
+  const user = (await auth())?.user;
+  if (!user) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
   try {
     const [config, skills] = await Promise.all([
-      readAgentConfig(),
+      readRuntimeConfig(),
       discoverSkills(),
     ]);
     return Response.json(
       {
         limits: { maxSteps: config.maxSteps, timeoutMs: config.timeoutMs },
+        mcpManagement: { admin: isAdmin(user), configured: managementReady() },
         modelConfigured: getModelConnection().configured,
         modelProvider: getModelConnection().provider,
-        servers: config.servers.map((server) => ({
-          id: server.id,
-          keyless: !Object.keys(server.headers).length,
-          missingEnvironment: resolveHeaders(server).missing,
-          name: server.name,
-          status: resolveHeaders(server).missing.length
-            ? "not_configured"
-            : "configured",
-          tools: server.allowedTools,
-        })),
+        servers: capabilityServers(config.servers),
         skills: skills.map(
           ({ name, description, displayName, shortDescription }) => ({
             description,
@@ -35,7 +31,7 @@ export async function GET() {
             shortDescription,
           })
         ),
-        uploadsConfigured: Boolean(process.env.BLOB_READ_WRITE_TOKEN),
+        uploadsConfigured: await uploadsAvailable(),
       },
       { headers: { "Cache-Control": "private, no-store" } }
     );
