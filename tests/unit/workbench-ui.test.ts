@@ -772,6 +772,7 @@ test("mixed reasoning and tools render in their original SDK order rather than m
       'react': {useCallback: fn => fn},
       'react/jsx-runtime': {jsx, jsxs:jsx, Fragment:'fragment'},
       '@/lib/utils': {cn:()=>'', sanitizeText: text=>text},
+      '@/lib/agent/run-failure': require('./lib/agent/run-failure.ts'),
       '../ai-elements/message': {MessageContent:'text', MessageResponse:'response'},
       '../ai-elements/shimmer': {Shimmer:'shimmer'},
       '../ai-elements/tool': {},
