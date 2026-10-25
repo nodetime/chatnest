@@ -17,7 +17,7 @@
 
 ## 本地运行
 
-一键闭环(AI 会话内):让 Claude 执行 `/dev-env` skill(依赖体检与安装指引 -> 开发库 -> 迁移 -> 启动,Windows/macOS/Linux 均适配)。
+一键闭环:`pnpm dev:up`(脚本自适配 Windows/macOS/Linux;AI 会话内也可让 Claude 执行 `/dev-env` skill)。收尾:`pnpm dev:down`(数据保留),`pnpm dev:down --purge` 彻底清库。
 
 手动等价命令:
 
