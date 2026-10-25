@@ -26,7 +26,7 @@
 - `server/`:服务端代码(db/ai/agent/uploads/admin/artifacts/config/skills/shared),单元测试就近放在对应模块旁。
 - `deploy/`:部署模板与环境变量样例(vercel-template.json、.env.example)。
 收敛过程记录见
-[docs/superpowers/specs/2026-10-24-governance-and-convergence-design.md](docs/superpowers/specs/2026-10-24-governance-and-convergence-design.md)。
+[docs/01_架构决策/2026-10-24-governance-and-convergence-design.md](docs/01_架构决策/2026-10-24-governance-and-convergence-design.md)。
 
 ## 验证
 

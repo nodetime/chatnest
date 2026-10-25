@@ -8,7 +8,7 @@
 
 **Tech Stack:** Node ESM 迁移脚本(零依赖)+ git mv + tsc --noEmit + node:test(经 tsx)。
 
-**Spec:** docs/superpowers/specs/2026-10-24-governance-and-convergence-design.md(第三节 P0 v2 映射)
+**Spec:** docs/01_架构决策/2026-10-24-governance-and-convergence-design.md(第三节 P0 v2 映射)
 
 ## Global Constraints(每个任务隐含遵守)
 
