@@ -1,19 +1,11 @@
 # skills/ - 跨工具共享技能
 
-真实文件在 `.claude/skills/<name>/`;本目录通过链接映射,供 Codex 等工具的协作者访问。真源唯一,不复制文件。
+真实文件在 `.claude/skills/<name>/`;本目录以 git 符号链接条目映射(真源唯一,不复制文件),供 Codex 等工具的协作者访问。
 
-各平台建立映射(每人本机执行一次,链接不入库):
+各平台 clone 后的表现:
 
-```bash
-# macOS / Linux(真符号链接)
-ln -s ../../.claude/skills/dev-env .agents/skills/dev-env
-
-# Windows Git Bash(免管理员的目录联接 junction)
-cmd //c "mklink /J .agents\\skills\\dev-env .claude\\skills\\dev-env"
-
-# Windows 开启开发者模式后也可用真符号链接
-```
-
-注意:Windows 下 junction 不能提交进 git(会被当成实体目录造成双份文件),`.gitignore` 已忽略 `.agents/skills/dev-env/`。
+- macOS / Linux:直接就是可用的软链接,无需任何操作
+- Windows(未开开发者模式):得到一个含目标路径的文本占位;需要真实映射时执行
+  `cmd //c "mklink /J .agents\\skills\\dev-env .claude\\skills\\dev-env"`(免管理员;git status 会显示 typechange,属预期)或开启开发者模式后重新 checkout
 
 当前映射:dev-env(开发基座闭环,用法见 `.claude/skills/dev-env/SKILL.md`,或直接 `pnpm dev:up`)。
