@@ -1,12 +1,11 @@
 import { generateDummyPassword } from "@/server/db/utils";
 
-export const isProductionEnvironment = process.env.NODE_ENV === "production";
-export const isDevelopmentEnvironment = process.env.NODE_ENV === "development";
-export const isTestEnvironment = Boolean(
-  process.env.PLAYWRIGHT_TEST_BASE_URL ||
-    process.env.PLAYWRIGHT ||
-    process.env.CI_PLAYWRIGHT
-);
+// 环境判定已收敛 server/shared/runtime(P2),此处转发保持单一来源
+export {
+  isDevelopmentEnvironment,
+  isProductionEnvironment,
+  isTestEnvironment,
+} from "@/server/shared/runtime";
 
 export const guestRegex = /^guest-\d+$/;
 

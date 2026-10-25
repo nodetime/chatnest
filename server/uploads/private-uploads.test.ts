@@ -267,7 +267,11 @@ test("drafts are owner-only and used public reads require real committed associa
 });
 test("upload routes and chat entry wire private lifecycle before persistence/title/model, without optimizing previews", async () => {
   const { readFile: readSource } = await import("node:fs/promises");
-  const route = await readSource("app/(chat)/api/chat/route.ts", "utf8");
+  // P2 后聊天编排迁 application,源码顺序断言跟随迁移
+  const route = await readSource(
+    "server/application/chat/send-message.ts",
+    "utf8"
+  );
   assert.ok(
     route.includes("prepareAttachmentContext"),
     "chat resolves registered private assets"
@@ -506,12 +510,16 @@ test("client editing never deletes persisted history and rolls back SDK-swallowe
 });
 test("chat authenticates and bounds the stream before parsing JSON, including approval payloads", async () => {
   const { readFileSync } = await import("node:fs");
-  const source = readFileSync("app/(chat)/api/chat/route.ts", "utf8");
-  assert.ok(!source.includes("request.json()"));
+  // P2:鉴权留在路由,有界读体随解析下沉平台层 request.ts
+  const route = readFileSync("app/(chat)/api/chat/route.ts", "utf8");
+  const helper = readFileSync("app/(chat)/api/chat/request.ts", "utf8");
+  assert.ok(!route.includes("request.json()"));
+  assert.ok(!helper.includes("request.json()"));
   assert.ok(
-    source.indexOf("await auth()") < source.indexOf("await readBoundedBody")
+    route.indexOf("await auth()") < route.indexOf("await parseChatRequestBody")
   );
-  assert.match(source, /MAX_CHAT_REQUEST_BYTES/);
+  assert.match(helper, /MAX_CHAT_REQUEST_BYTES/);
+  assert.match(helper, /readBoundedBody/);
 });
 test("decoder saturation reports busy rather than falsely labelling valid image bytes corrupt", async () => {
   const { decodeCapacity } = await import("@/server/uploads/capacity");

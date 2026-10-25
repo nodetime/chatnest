@@ -37,3 +37,5 @@ server/ai/model-settings/model-settings.test.ts
 server/shared/request-context.test.ts
 server/shared/logger.test.ts
 server/shared/env.test.ts
+server/domain/chat/types.test.ts
+server/application/chat/send-message.test.ts

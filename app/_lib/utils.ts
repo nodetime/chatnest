@@ -1,13 +1,15 @@
-import type {
-  UIMessage,
-  UIMessagePart,
-} from 'ai';
 import { type ClassValue, clsx } from 'clsx';
-import { formatISO } from 'date-fns';
 import { twMerge } from 'tailwind-merge';
-import type { DBMessage, Document } from '@/server/db/schema';
+import type { Document } from '@/server/db/schema';
 import { ChatbotError, type ErrorCode } from '@/server/shared/errors';
-import type { ChatMessage, ChatTools, CustomUIDataTypes } from './types';
+
+// convertToUIMessages / getTextFromMessage / generateUUID 已迁 server/domain/message(P2),
+// 此处保留转发,既有 UI 引用点零改动
+export {
+  convertToUIMessages,
+  getTextFromMessage,
+} from '@/server/domain/message/convert';
+export { generateUUID } from '@/server/domain/message/ids';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -46,14 +48,6 @@ export async function fetchWithErrorHandlers(
   }
 }
 
-export function generateUUID(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
-
 export function getDocumentTimestampByIndex(
   documents: Document[],
   index: number,
@@ -66,22 +60,4 @@ export function getDocumentTimestampByIndex(
 
 export function sanitizeText(text: string) {
   return text.replace('<has_function_call>', '');
-}
-
-export function convertToUIMessages(messages: DBMessage[]): ChatMessage[] {
-  return messages.map((message) => ({
-    id: message.id,
-    role: message.role as 'user' | 'assistant' | 'system',
-    parts: message.parts as UIMessagePart<CustomUIDataTypes, ChatTools>[],
-    metadata: {
-      createdAt: formatISO(message.createdAt),
-    },
-  }));
-}
-
-export function getTextFromMessage(message: ChatMessage | UIMessage): string {
-  return message.parts
-    .filter((part) => part.type === 'text')
-    .map((part) => (part as { type: 'text'; text: string}).text)
-    .join('');
 }

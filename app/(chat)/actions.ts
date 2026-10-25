@@ -1,16 +1,9 @@
 "use server";
 
-import { generateText, type UIMessage } from "ai";
 import { cookies } from "next/headers";
 import { z } from "zod";
 import type { VisibilityType } from "@/app/_components/chat/visibility-selector";
-import { getTextFromMessage } from "@/app/_lib/utils";
 import { auth } from "@/app/(auth)/auth";
-import { getModelConnection } from "@/server/ai/model-connection";
-import { titleModel } from "@/server/ai/models";
-import { titlePrompt } from "@/server/ai/prompts";
-import { getTitleModel } from "@/server/ai/providers";
-import { metadataOnlyTelemetry } from "@/server/ai/telemetry";
 import {
   deleteMessagesByChatIdAfterTimestamp,
   getChatById,
@@ -22,28 +15,6 @@ import {
 export async function saveChatModelAsCookie(model: string) {
   const cookieStore = await cookies();
   cookieStore.set("chat-model", model);
-}
-
-export async function generateTitleFromUserMessage({
-  message,
-}: {
-  message: UIMessage;
-}) {
-  const { text } = await generateText({
-    instructions: titlePrompt,
-    model: getTitleModel(),
-    prompt: getTextFromMessage(message),
-    providerOptions: {
-      ...(getModelConnection().provider === "gateway" && {
-        gateway: { order: titleModel.gatewayOrder },
-      }),
-    },
-    telemetry: metadataOnlyTelemetry,
-  });
-  return text
-    .replace(/^[#*"\s]+/, "")
-    .replace(/["]+$/, "")
-    .trim();
 }
 
 export async function deleteTrailingMessages({ id }: { id: string }) {

@@ -1,73 +1,12 @@
-import type { InferUITool, UIMessage } from "ai";
-import { z } from "zod";
-import type { ArtifactKind } from "@/app/_components/chat/artifact";
-import type { McpSourceMetadata } from "@/server/agent/result-evidence";
-import type { createDocument } from "@/server/ai/tools/create-document";
-import type { createResultTable } from "@/server/ai/tools/create-result-table";
-import type { getWeather } from "@/server/ai/tools/get-weather";
-import type { requestSuggestions } from "@/server/ai/tools/request-suggestions";
-import type { updateDocument } from "@/server/ai/tools/update-document";
-import type { Suggestion } from "@/server/db/schema";
-
-export const messageMetadataSchema = z.object({
-  createdAt: z.string(),
-});
-
-export type MessageMetadata = z.infer<typeof messageMetadataSchema>;
-
-type weatherTool = InferUITool<typeof getWeather>;
-type createDocumentTool = InferUITool<ReturnType<typeof createDocument>>;
-type updateDocumentTool = InferUITool<ReturnType<typeof updateDocument>>;
-type requestSuggestionsTool = InferUITool<
-  ReturnType<typeof requestSuggestions>
->;
-
-export type ChatTools = {
-  createResultTable: InferUITool<ReturnType<typeof createResultTable>>;
-  getWeather: weatherTool;
-  createDocument: createDocumentTool;
-  updateDocument: updateDocumentTool;
-  requestSuggestions: requestSuggestionsTool;
-};
-
-export type WaitingStatusData = {
-  phase: "waiting" | "still-waiting" | "health" | "thinking";
-  message: string;
-  modelId: string;
-  modelName: string;
-};
-
-export type CustomUIDataTypes = {
-  "run-status": { state: "failed" | "resumed" };
-  "mcp-source": McpSourceMetadata;
-  resultTable: {
-    id: string;
-    title: string;
-    kind: "sheet";
-    content: string;
-    version: string;
-    chatId: string;
-  };
-  textDelta: string;
-  imageDelta: string;
-  sheetDelta: string;
-  codeDelta: string;
-  suggestion: Suggestion;
-  appendMessage: string;
-  id: string;
-  title: string;
-  kind: ArtifactKind;
-  clear: null;
-  finish: null;
-  "chat-title": string;
-  "waiting-status": WaitingStatusData;
-};
-
-export type ChatMessage = UIMessage<
-  MessageMetadata,
+// P2 起聊天域核心类型迁至 server/domain/message/types.ts;此处保留转发,UI 引用点零改动(R4 方向:UI 只 import domain)
+export type {
+  ChatMessage,
+  ChatTools,
   CustomUIDataTypes,
-  ChatTools
->;
+  MessageMetadata,
+  WaitingStatusData,
+} from "@/server/domain/message/types";
+export { messageMetadataSchema } from "@/server/domain/message/types";
 
 export type Attachment = {
   name: string;

@@ -308,13 +308,17 @@ test("text output truncation and busy parser admission are explicit", async () =
 test("documents persist quota-accounted extraction and read tool checks actual committed association", async () => {
   const service = await readFile("server/uploads/service.ts", "utf8");
   const schema = await readFile("server/db/schema.ts", "utf8");
-  const route = await readFile("app/(chat)/api/chat/route.ts", "utf8");
+  // P2:chat 编排迁 application/chat/send-message.ts
+  const useCase = await readFile(
+    "server/application/chat/send-message.ts",
+    "utf8"
+  );
   assert.match(service, /derivedBytes/);
   assert.match(service, /readAttachmentAsset/);
   assert.match(service, /asset\.associated/);
   assert.match(schema, /derivedBytes/);
-  assert.match(route, /readAttachmentTool/);
-  assert.match(route, /supportsTools\s*,/);
+  assert.match(useCase, /readAttachmentTool/);
+  assert.match(useCase, /supportsTools\s*,/);
 });
 test("composer admits documents without vision and exposes truthful reading/error/retry states", async () => {
   const composer = await readFile(

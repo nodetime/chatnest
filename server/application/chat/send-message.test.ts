@@ -1,0 +1,120 @@
+import assert from "node:assert/strict";
+import { after, test } from "node:test";
+import type { ChatRepository } from "@/server/domain/chat/repository";
+import type { Chat } from "@/server/domain/chat/types";
+import type { MessageRepository } from "@/server/domain/message/repository";
+import { ChatbotError } from "@/server/shared/errors";
+
+// 用例单测(mock 仓储,不起 HTTP、不碰模型):只钉业务失败分支;
+// 流式成功路径靠离线套件 + 浏览器验收兜底(待办文档 P2 约定)。
+
+// 模型配置检查:离线环境设 OPENAI_API_KEY 使 configured=true 通过前置检查。
+// 不用 PLAYWRIGHT 开关——同进程串行跑套件时会泄漏污染其他文件的 isTestEnvironment。
+const savedApiKey = process.env.OPENAI_API_KEY;
+process.env.OPENAI_API_KEY = savedApiKey ?? "offline-unit-test-key";
+after(() => {
+  if (savedApiKey === undefined) {
+    delete process.env.OPENAI_API_KEY;
+  } else {
+    process.env.OPENAI_API_KEY = savedApiKey;
+  }
+});
+
+const chat = (userId: string): Chat => ({
+  createdAt: new Date(),
+  id: "c1",
+  title: "t",
+  userId,
+  visibility: "private",
+});
+
+function makeDeps(overrides?: { chat?: Chat | null; messageCount?: number }) {
+  const chats: ChatRepository = {
+    createStreamId: async () => null,
+    deleteById: async () => null,
+    findById: async () =>
+      overrides?.chat === undefined ? null : overrides.chat,
+    updateTitle: async () => null,
+  };
+  const messages: MessageRepository = {
+    countByUserSince: async () => overrides?.messageCount ?? 0,
+    listByChatId: async () => [],
+    replaceEditedTurn: async () => null,
+    replaceRegeneratedAnswer: async () => null,
+    saveMany: async () => null,
+    updateParts: async () => null,
+  };
+  return { chats, messages };
+}
+
+type Trigger = "submit-message" | "regenerate-message" | "edit-message";
+
+async function run(
+  trigger: Trigger,
+  deps: ReturnType<typeof makeDeps>,
+  message?: { id: string; role: string; parts: unknown[] }
+) {
+  const { sendMessage } = await import("./send-message");
+  return sendMessage(
+    {
+      body: {
+        id: "c1",
+        ...(message ? { message } : {}),
+        searchMode: "auto",
+        selectedChatModel: "test-model",
+        selectedVisibilityType: "private",
+        trigger,
+      },
+      ip: undefined,
+      requestHints: { city: "", country: "", latitude: "0", longitude: "0" },
+      session: { expires: "", user: { id: "u1", type: "regular" } },
+      signal: new AbortController().signal,
+    },
+    deps
+  );
+}
+
+async function expectCode(
+  promise: Promise<unknown>,
+  code: string
+): Promise<void> {
+  await promise.then(
+    () => assert.fail("应当抛出 ChatbotError"),
+    (error: unknown) => {
+      assert.ok(
+        error instanceof ChatbotError,
+        `应为 ChatbotError,实为 ${error}`
+      );
+      assert.equal((error as ChatbotError).type, code);
+    }
+  );
+}
+
+test("消息数超过配额时拒绝 rate_limit:chat", async () => {
+  await expectCode(
+    run("submit-message", makeDeps({ messageCount: 999 })),
+    "rate_limit"
+  );
+});
+
+test("非属主会话拒绝 forbidden:chat", async () => {
+  await expectCode(
+    run("submit-message", makeDeps({ chat: chat("u2") })),
+    "forbidden"
+  );
+});
+
+test("重新生成缺消息锚点时拒绝 bad_request:api", async () => {
+  await expectCode(run("regenerate-message", makeDeps()), "bad_request");
+});
+
+test("会话不存在时重新生成拒绝 bad_request:api", async () => {
+  await expectCode(
+    run("regenerate-message", makeDeps({ chat: null })),
+    "bad_request"
+  );
+});
+
+test("编辑消息缺锚点时拒绝 bad_request:api", async () => {
+  await expectCode(run("edit-message", makeDeps()), "bad_request");
+});

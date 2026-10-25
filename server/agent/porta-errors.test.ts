@@ -221,8 +221,12 @@ test("real AI SDK stream exposes only branded Porta error text as tool-output-er
     ),
     "An error occurred."
   );
-  const chatRoute = await readFile("app/(chat)/api/chat/route.ts", "utf8");
-  assert.match(chatRoute, /onError: agentStreamErrorText/);
+  // P2:流编排迁 application/chat/send-message.ts
+  const chatUseCase = await readFile(
+    "server/application/chat/send-message.ts",
+    "utf8"
+  );
+  assert.match(chatUseCase, /onError: agentStreamErrorText/);
   await withErrorRuntime(async (runtime, setOutput, count) => {
     setOutput(
       result(
