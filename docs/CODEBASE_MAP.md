@@ -119,7 +119,7 @@ Admin model settings (2026-10-24):
 - `server/ai/model-settings/model-settings.test.ts`: encryption/domain isolation, endpoint binding, CAS, authorization/CSRF/bounds, local HTTP SDK probes, null-body statuses, concurrent real SDK SSE/tool-child snapshot isolation. Local protocol fixtures are not live model acceptance.
 
 开发基座编排(2026-10-25):
-- `.claude/skills/dev-env/SKILL.md`: 开发基座自闭环编排大脑(依赖体检与安装指引 -> .env.local 生成 -> compose 拉库 -> 迁移 -> 启动/收尾),按步骤驱动各工具。
+- `.claude/skills/dev-env/`: 开发基座 skill;自带闭环支撑脚本 `scripts/dev-env-loop.mjs`(体检安装指引[OS 分支] -> .env.local -> compose 拉库 -> 迁移 -> 委托进程工具启动),npm 入口 `pnpm dev:up`/`dev:down [--purge]`。
 - `scripts/governance/dev-env-loop.mjs`: 闭环支撑脚本(体检安装指引[Windows/macOS/Linux 分支] -> .env.local -> compose 拉库 -> 迁移 -> 委托进程工具启动);npm 入口 `pnpm dev:up`/`dev:down [--purge]`,skill 仅作调用入口。
 - `scripts/governance/dev-env.mjs`: 纯进程工具,仅三个能力:列网卡 / 绑 0.0.0.0:3003 启动 dev(Ctrl+C 优雅停止)/ 杀残留 dev(端口定位进程树,跨平台)。npm 入口 `pnpm dev:nics|start|stop`。
 - `deploy/docker-compose.dev.yml`: 开发 PostgreSQL(127.0.0.1:55432),复用命名卷 `chatnest-postgres-data`(external,删容器不丢数据;遗留同名容器按 SKILL 步骤接管)。

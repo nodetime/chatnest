@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbo",
-    "dev:up": "node scripts/governance/dev-env-loop.mjs up",
-    "dev:down": "node scripts/governance/dev-env-loop.mjs down",
+    "dev:up": "node .claude/skills/dev-env/scripts/dev-env-loop.mjs up",
+    "dev:down": "node .claude/skills/dev-env/scripts/dev-env-loop.mjs down",
     "dev:nics": "node scripts/governance/dev-env.mjs nics",
     "dev:start": "node scripts/governance/dev-env.mjs start",
     "dev:stop": "node scripts/governance/dev-env.mjs stop",

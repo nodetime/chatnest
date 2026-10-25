@@ -2,9 +2,9 @@
 // 开发基座自闭环脚本:依赖体检与安装指引 -> .env.local -> 开发库(docker compose) -> 迁移 -> 委托 dev-env.mjs 启动。
 // 进程级能力(查网卡/绑定启动/杀死)由同目录 dev-env.mjs 承担;本脚本只做编排闭环。
 // 用法:
-//   node scripts/governance/dev-env-loop.mjs up            一键拉起(Windows/macOS/Linux 自适配)
-//   node scripts/governance/dev-env-loop.mjs down          收尾:杀 dev + 停库(数据保留)
-//   node scripts/governance/dev-env-loop.mjs down --purge  彻底清库(删数据卷,不可恢复)
+//   node .claude/skills/dev-env/scripts/dev-env-loop.mjs up            一键拉起(Windows/macOS/Linux 自适配)
+//   node .claude/skills/dev-env/scripts/dev-env-loop.mjs down          收尾:杀 dev + 停库(数据保留)
+//   node .claude/skills/dev-env/scripts/dev-env-loop.mjs down --purge  彻底清库(删数据卷,不可恢复)
 // 仅用 Node 内置模块,不引第三方依赖。
 
 import { spawn, spawnSync } from "node:child_process";
@@ -13,7 +13,8 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+// 本脚本位于 .claude/skills/dev-env/scripts/,仓库根需上跳四级
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const GOVERNANCE = path.join(ROOT, "scripts", "governance");
 const COMPOSE_FILE = path.join("deploy", "docker-compose.dev.yml");
 const ENV_LOCAL = path.join(ROOT, ".env.local");
