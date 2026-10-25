@@ -28,22 +28,6 @@
 收敛过程记录见
 [docs/superpowers/specs/2026-10-24-governance-and-convergence-design.md](docs/superpowers/specs/2026-10-24-governance-and-convergence-design.md)。
 
-## 本地启动
-
-一键闭环(AI 会话内):让 Claude 执行 `/dev-env` skill(体检/装指引 -> 库 -> 迁移 -> 启动)。
-
-手动等价命令:
-
-```
-pnpm install --frozen-lockfile                                # 新机器
-docker compose -f deploy/docker-compose.dev.yml up -d         # 开发库 127.0.0.1:55432(数据卷 chatnest-postgres-data)
-pnpm db:migrate                                               # 幂等
-pnpm dev:start                                                # 绑 0.0.0.0:3003(先列全部网卡地址,局域网可达)
-pnpm dev:stop                                                 # 杀 dev;停库: docker compose -f deploy/docker-compose.dev.yml stop
-```
-
-`.env.local` 缺失时参考 `deploy/.env.example` 创建(AUTH_SECRET 随机、POSTGRES_URL 指本地库)。探活:`GET /ping` 返回 pong。模型未配置时聊天不可用(`/api/agent` 的 modelConfigured=false)。
-
 ## 验证
 
 - 类型:`tsc --noEmit`

@@ -17,13 +17,20 @@
 
 ## 本地运行
 
+一键闭环(AI 会话内):让 Claude 执行 `/dev-env` skill(依赖体检与安装指引 -> 开发库 -> 迁移 -> 启动,Windows/macOS/Linux 均适配)。
+
+手动等价命令:
+
 ```sh
-corepack pnpm install --frozen-lockfile
-corepack pnpm db:migrate
-corepack pnpm dev --hostname 127.0.0.1 --port 3000
+pnpm install --frozen-lockfile                                # 新机器
+docker compose -f deploy/docker-compose.dev.yml up -d         # 开发库 127.0.0.1:55432(数据卷 chatnest-postgres-data)
+pnpm db:migrate                                               # 幂等
+pnpm dev:nics                                                 # 列出全部网卡与可访问地址
+pnpm dev:start                                                # 绑 0.0.0.0:3003(本机与局域网均可访问)
+pnpm dev:stop                                                 # 杀 dev;停库: docker compose -f deploy/docker-compose.dev.yml stop
 ```
 
-先在 `.env.local` 配置 `AUTH_SECRET`、`POSTGRES_URL`。本次已建立仅绑定本机 `127.0.0.1:55432` 的独立 PostgreSQL 容器 `ip-agent-postgres`，数据在 `ip-agent-postgres-data` 卷中；没有使用或修改其他容器。已创建的 `.env.local` 被 Git 忽略，不应提交或发到聊天中。
+先在 `.env.local` 配置 `AUTH_SECRET`、`POSTGRES_URL`(缺失时参考 `deploy/.env.example`;数据库默认 `postgres://chatnest:chatnest@127.0.0.1:55432/chatnest`)。开发库容器 `chatnest-postgres` 由 compose 托管,数据在命名卷 `chatnest-postgres-data`,删容器不丢数据;彻底清库用 `docker compose -f deploy/docker-compose.dev.yml down -v && docker volume rm chatnest-postgres-data`。探活:`GET /ping` 返回 pong;模型未配置时聊天不可用。`.env.local` 被 Git 忽略,不应提交或发到聊天中。
 
 模型支持两种接法：直连 OpenAI / 兼容接口时，在现有 `.env.local` 填 `MODEL_PROVIDER=openai`、`OPENAI_API_KEY`、`OPENAI_BASE_URL`、`OPENAI_MODEL`；地址是 API 根地址，例如 `https://api.openai.com/v1`，不包括 `/chat/completions` 或 `/responses`，模型名使用服务商提供的原始 ID。默认 `OPENAI_API_MODE=chat` 使用 Chat Completions；服务支持 Responses 时可设 `responses`。聊天、流式回复、标题、文档生成均复用同一连接，不需要 Vercel Gateway Key。直连模式只列出配置的模型，工具能力默认开启、图片能力默认关闭；按模型实际能力设置 `OPENAI_MODEL_TOOLS=0` 或 `OPENAI_MODEL_VISION=1`，这些是能力声明，不是连接验证。
 
