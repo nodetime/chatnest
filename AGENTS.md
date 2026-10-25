@@ -4,15 +4,14 @@
 
 > 本节是全项目最高优先级要求,对 Codex、Claude 与所有协作者生效,任何任务开始前首先遵守;与其他文档、口头习惯、历史做法冲突时,以本节为准。全部条文以中文书写、中文执行。
 
-1. **语言与署名**:对话、代码注释、提交信息一律中文;Git 遵循 Conventional Commits,作者 codeYang,禁止任何 AI 署名或 Co-Author 标记。
-2. **数据库建模必须中文注释**:每张表、每个字段、每个索引/约束,都要在 `server/db/schema.ts` 写中文注释,并通过迁移的 `COMMENT ON` 语句落入数据库目录(psql `\d+`、DataGrip、ER 工具可见);新增表/列/索引同样适用,无例外。
-3. **禁止 `pnpm build`**(它会先执行数据库迁移);类型检查只用 `pnpm exec tsc --noEmit`。
-4. **离线测试白名单 `scripts/ci/offline-tests.txt` 只能显式追加**,不做全目录通配;禁止绕过 CI 无网隔离机制。
-5. **不做付费模型/供应商调用**;mock 不进生产代码;mock 验收不冒充真实供应商验收。
-6. **敏感物一律不入库**:`.env*`、密钥、`.local-review/`、日志、截图。
-7. **改代码结构必须同步更新 `docs/CODEBASE_MAP.md`**(它是模块现状的权威地图)。
-8. **验收纪律**:测试全绿不等于用户认可;以真实浏览器与真库实测为准;教训沉淀于 `docs/lesson.md`,不重犯。
-9. **项目内永不创建 `CLAUDE.md`**:Claude Code 对 CLAUDE.md 与本文件二选一加载,创建即遮蔽本文件。
+1. **数据库建模必须中文注释**:每张表、每个字段、每个索引/约束,都要在 `server/db/schema.ts` 写中文注释,并通过迁移的 `COMMENT ON` 语句落入数据库目录(psql `\d+`、DataGrip、ER 工具可见);新增表/列/索引同样适用,无例外。
+2. **禁止 `pnpm build`**(它会先执行数据库迁移);类型检查只用 `pnpm exec tsc --noEmit`。
+3. **离线测试白名单 `scripts/ci/offline-tests.txt` 只能显式追加**,不做全目录通配;禁止绕过 CI 无网隔离机制。
+4. **不做付费模型/供应商调用**;mock 不进生产代码;mock 验收不冒充真实供应商验收。
+5. **敏感物一律不入库**:`.env*`、密钥、`.local-review/`、日志、截图。
+6. **改代码结构必须同步更新 `docs/CODEBASE_MAP.md`**(它是模块现状的权威地图)。
+7. **验收纪律**:测试全绿不等于用户认可;以真实浏览器与真库实测为准;教训沉淀于 `docs/lesson.md`,不重犯。
+8. **项目内永不创建 `CLAUDE.md`**:Claude Code 对 CLAUDE.md 与本文件二选一加载,创建即遮蔽本文件。
 
 ## 项目定性
 
@@ -31,14 +30,19 @@
 
 ## 本地启动
 
+一键闭环(AI 会话内):让 Claude 执行 `/dev-env` skill(体检/装指引 -> 库 -> 迁移 -> 启动)。
+
+手动等价命令:
+
 ```
-pnpm dev:up      # 一键:依赖体检(Node/Docker/compose,缺失自动装或给指引)
-                 #     -> PostgreSQL(deploy/docker-compose.dev.yml,127.0.0.1:55432,数据卷 chatnest-postgres-data)
-                 #     -> db:migrate -> dev 绑 0.0.0.0:3003(横幅列出全部网卡访问地址,局域网可达)
-pnpm dev:down    # 优雅收尾(数据保留);--purge 连数据卷删(彻底清库)
+pnpm install --frozen-lockfile                                # 新机器
+docker compose -f deploy/docker-compose.dev.yml up -d         # 开发库 127.0.0.1:55432(数据卷 chatnest-postgres-data)
+pnpm db:migrate                                               # 幂等
+pnpm dev:start                                                # 绑 0.0.0.0:3003(先列全部网卡地址,局域网可达)
+pnpm dev:stop                                                 # 杀 dev;停库: docker compose -f deploy/docker-compose.dev.yml stop
 ```
 
-新机器还需 `pnpm install --frozen-lockfile`;`.env.local` 缺失时 dev:up 会自动生成并提示补模型三件套。探活:`GET /ping` 返回 pong。模型未配置时聊天不可用(`/api/agent` 的 modelConfigured=false)。
+`.env.local` 缺失时参考 `deploy/.env.example` 创建(AUTH_SECRET 随机、POSTGRES_URL 指本地库)。探活:`GET /ping` 返回 pong。模型未配置时聊天不可用(`/api/agent` 的 modelConfigured=false)。
 
 ## 验证
 
