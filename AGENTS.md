@@ -1,5 +1,19 @@
 # ChatNest
 
+## 工程纪律约束(最高顶级要求)
+
+> 本节是全项目最高优先级要求,对 Codex、Claude 与所有协作者生效,任何任务开始前首先遵守;与其他文档、口头习惯、历史做法冲突时,以本节为准。全部条文以中文书写、中文执行。
+
+1. **语言与署名**:对话、代码注释、提交信息一律中文;Git 遵循 Conventional Commits,作者 codeYang,禁止任何 AI 署名或 Co-Author 标记。
+2. **数据库建模必须中文注释**:每张表、每个字段、每个索引/约束,都要在 `server/db/schema.ts` 写中文注释,并通过迁移的 `COMMENT ON` 语句落入数据库目录(psql `\d+`、DataGrip、ER 工具可见);新增表/列/索引同样适用,无例外。
+3. **禁止 `pnpm build`**(它会先执行数据库迁移);类型检查只用 `pnpm exec tsc --noEmit`。
+4. **离线测试白名单 `scripts/ci/offline-tests.txt` 只能显式追加**,不做全目录通配;禁止绕过 CI 无网隔离机制。
+5. **不做付费模型/供应商调用**;mock 不进生产代码;mock 验收不冒充真实供应商验收。
+6. **敏感物一律不入库**:`.env*`、密钥、`.local-review/`、日志、截图。
+7. **改代码结构必须同步更新 `docs/CODEBASE_MAP.md`**(它是模块现状的权威地图)。
+8. **验收纪律**:测试全绿不等于用户认可;以真实浏览器与真库实测为准;教训沉淀于 `docs/lesson.md`,不重犯。
+9. **项目内永不创建 `CLAUDE.md`**:Claude Code 对 CLAUDE.md 与本文件二选一加载,创建即遮蔽本文件。
+
 ## 项目定性
 
 - vercel/chatbot 模板的业务化分叉,Next.js 16 App Router 全栈单体(前端 / API / 业务编排同进程)。
@@ -26,14 +40,6 @@ pnpm dev --hostname 127.0.0.1 --port 3003
 
 探活:`GET /ping` 返回 pong。模型未配置时聊天不可用(`/api/agent` 的 modelConfigured=false)。
 
-## 硬约束
-
-- 禁止 `pnpm build`(会先执行数据库迁移);类型检查用 `tsc --noEmit`。
-- 离线测试白名单 `scripts/ci/offline-tests.txt` 只能显式追加,不做全目录通配(套件已就近搬迁,条目为当前实际路径)。
-- 不做付费模型/供应商调用;mock 不进生产代码。
-- `.env*`、密钥、`.local-review/`、日志截图不提交。
-- Git:Conventional Commits,作者 codeYang,不加任何 AI 署名标记。
-
 ## 验证
 
 - 类型:`tsc --noEmit`
@@ -43,7 +49,6 @@ pnpm dev --hostname 127.0.0.1 --port 3003
 ## 文档导航
 
 - [docs/CODEBASE_MAP.md](docs/CODEBASE_MAP.md) 模块现状(改结构必看、必更)
-- [docs/task.md](docs/task.md) 任务台账;[docs/lesson.md](docs/lesson.md) 验收教训(测试通过不等于用户认可)
+- [docs/task.md](docs/task.md) 任务台账;[docs/lesson.md](docs/lesson.md) 验收教训
 - [docs/integrations/](docs/integrations/) 各集成细节;[docs/superpowers/](docs/superpowers/) 逐轮 spec 与 plan
 - 跨工具共享的 agent 资产放 `.agents/`(规则见 .agents/README.md);Claude 专属配置放 `.claude/`
-- 项目内不建 CLAUDE.md:Claude Code 与 CLAUDE.md 是二选一加载,建了会遮蔽本文件
