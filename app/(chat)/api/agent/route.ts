@@ -6,8 +6,8 @@ import { isAdmin, managementReady } from "@/server/agent/mcp-settings/security";
 import { discoverSkills } from "@/server/agent/skills";
 import { getModelConnection } from "@/server/ai/model-connection";
 import { withModelSettings } from "@/server/ai/model-settings/runtime";
-import { runWithTraceId } from "@/server/shared/request-context";
 import { getLogger } from "@/server/shared/logger";
+import { runWithTraceId } from "@/server/shared/request-context";
 import { uploadsAvailable } from "@/server/uploads/service";
 
 export async function GET() {
