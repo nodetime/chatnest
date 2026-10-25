@@ -27,3 +27,6 @@ tsconfig.tsbuildinfo
 
 # Claude Code worktrees
 .claude/worktrees/
+
+# Windows junction 本机映射(勿提交实体)
+.agents/skills/dev-env/

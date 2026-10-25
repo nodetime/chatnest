@@ -7,9 +7,8 @@ Claude Code 专属配置。跨工具(Codex/Claude)共享的资产不放这里,�
 | 槽位 | 用途 |
 | --- | --- |
 | `settings.json` | 权限模式:全量放权(`defaultMode: bypassPermissions`,2026-10-25 用户明确确认),所有工具调用免确认 |
-| `skills/` | Claude 专属技能(SKILL.md 带 Claude 语法);双工具通用的放 `.agents/skills/` + 此处薄包装 |
+| `skills/` | 技能真源所在地;`.agents/skills/` 通过链接映射给 Codex 等协作者(见 .agents/skills/README.md) |
 | `commands/` | 项目级斜杠命令,出现高频固定操作时再建 |
-| `agents/` | Claude 子代理定义,出现明确委派场景时再建 |
 
 ## 约定
 
