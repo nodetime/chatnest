@@ -14,25 +14,25 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-export const user = pgTable("User", {
-  createdAt: timestamp("createdAt").notNull().defaultNow(),
+export const user = pgTable("users", {
+  createdAt: timestamp("created_at").notNull().defaultNow(),
   email: varchar("email", { length: 64 }).notNull(),
-  emailVerified: boolean("emailVerified").notNull().default(false),
+  emailVerified: boolean("email_verified").notNull().default(false),
   id: uuid("id").primaryKey().notNull().defaultRandom(),
   image: text("image"),
-  isAnonymous: boolean("isAnonymous").notNull().default(false),
+  isAnonymous: boolean("is_anonymous").notNull().default(false),
   name: text("name"),
   password: varchar("password", { length: 64 }),
-  updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 export type User = InferSelectModel<typeof user>;
 
-export const chat = pgTable("Chat", {
-  createdAt: timestamp("createdAt").notNull(),
+export const chat = pgTable("chats", {
+  createdAt: timestamp("created_at").notNull(),
   id: uuid("id").primaryKey().notNull().defaultRandom(),
   title: text("title").notNull(),
-  userId: uuid("userId")
+  userId: uuid("user_id")
     .notNull()
     .references(() => user.id),
   visibility: varchar("visibility", { enum: ["public", "private"] })
@@ -42,12 +42,12 @@ export const chat = pgTable("Chat", {
 
 export type Chat = InferSelectModel<typeof chat>;
 
-export const message = pgTable("Message_v2", {
+export const message = pgTable("messages", {
   attachments: json("attachments").notNull(),
-  chatId: uuid("chatId")
+  chatId: uuid("chat_id")
     .notNull()
     .references(() => chat.id),
-  createdAt: timestamp("createdAt").notNull(),
+  createdAt: timestamp("created_at").notNull(),
   id: uuid("id").primaryKey().notNull().defaultRandom(),
   parts: json("parts").notNull(),
   role: varchar("role").notNull(),
@@ -56,13 +56,13 @@ export const message = pgTable("Message_v2", {
 export type DBMessage = InferSelectModel<typeof message>;
 
 export const vote = pgTable(
-  "Vote_v2",
+  "votes",
   {
-    chatId: uuid("chatId")
+    chatId: uuid("chat_id")
       .notNull()
       .references(() => chat.id),
-    isUpvoted: boolean("isUpvoted").notNull(),
-    messageId: uuid("messageId")
+    isUpvoted: boolean("is_upvoted").notNull(),
+    messageId: uuid("message_id")
       .notNull()
       .references(() => message.id),
   },
@@ -74,16 +74,16 @@ export const vote = pgTable(
 export type Vote = InferSelectModel<typeof vote>;
 
 export const document = pgTable(
-  "Document",
+  "documents",
   {
     content: text("content"),
-    createdAt: timestamp("createdAt").notNull(),
+    createdAt: timestamp("created_at").notNull(),
     id: uuid("id").notNull().defaultRandom(),
     kind: varchar("text", { enum: ["text", "code", "image", "sheet"] })
       .notNull()
       .default("text"),
     title: text("title").notNull(),
-    userId: uuid("userId")
+    userId: uuid("user_id")
       .notNull()
       .references(() => user.id),
   },
@@ -95,17 +95,17 @@ export const document = pgTable(
 export type Document = InferSelectModel<typeof document>;
 
 export const suggestion = pgTable(
-  "Suggestion",
+  "suggestions",
   {
-    createdAt: timestamp("createdAt").notNull(),
+    createdAt: timestamp("created_at").notNull(),
     description: text("description"),
-    documentCreatedAt: timestamp("documentCreatedAt").notNull(),
-    documentId: uuid("documentId").notNull(),
+    documentCreatedAt: timestamp("document_created_at").notNull(),
+    documentId: uuid("document_id").notNull(),
     id: uuid("id").notNull().defaultRandom(),
-    isResolved: boolean("isResolved").notNull().default(false),
-    originalText: text("originalText").notNull(),
-    suggestedText: text("suggestedText").notNull(),
-    userId: uuid("userId")
+    isResolved: boolean("is_resolved").notNull().default(false),
+    originalText: text("original_text").notNull(),
+    suggestedText: text("suggested_text").notNull(),
+    userId: uuid("user_id")
       .notNull()
       .references(() => user.id),
   },
@@ -121,10 +121,10 @@ export const suggestion = pgTable(
 export type Suggestion = InferSelectModel<typeof suggestion>;
 
 export const stream = pgTable(
-  "Stream",
+  "streams",
   {
-    chatId: uuid("chatId").notNull(),
-    createdAt: timestamp("createdAt").notNull(),
+    chatId: uuid("chat_id").notNull(),
+    createdAt: timestamp("created_at").notNull(),
     id: uuid("id").notNull().defaultRandom(),
   },
   (table) => ({
@@ -140,13 +140,13 @@ export type Stream = InferSelectModel<typeof stream>;
 
 // One deployment is one shared workspace. All connection data lives in the encrypted list.
 export const mcpSettings = pgTable(
-  "McpSettings",
+  "mcp_settings",
   {
     encrypted: text("encrypted").notNull(),
     id: text("id").primaryKey().notNull(),
     revision: integer("revision").notNull(),
-    updatedAt: timestamp("updatedAt").notNull().defaultNow(),
-    updatedBy: uuid("updatedBy")
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedBy: uuid("updated_by")
       .notNull()
       .references(() => user.id),
   },
@@ -158,13 +158,13 @@ export const mcpSettings = pgTable(
 
 // Private attachment bytes live only in the operator's persistent directory.
 export const uploadSettings = pgTable(
-  "UploadSettings",
+  "upload_settings",
   {
     enabled: boolean("enabled").notNull().default(false),
     id: text("id").primaryKey().notNull().default("workspace"),
     revision: integer("revision").notNull().default(1),
-    updatedAt: timestamp("updatedAt").notNull().defaultNow(),
-    updatedBy: uuid("updatedBy").references(() => user.id),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedBy: uuid("updated_by").references(() => user.id),
   },
   (table) => [
     check("upload_settings_singleton", sql`${table.id} = 'workspace'`),
@@ -172,11 +172,11 @@ export const uploadSettings = pgTable(
   ]
 );
 export const uploadAsset = pgTable(
-  "UploadAsset",
+  "upload_assets",
   {
-    chatId: uuid("chatId").notNull(),
-    createdAt: timestamp("createdAt").notNull().defaultNow(),
-    derivedBytes: integer("derivedBytes").notNull().default(0),
+    chatId: uuid("chat_id").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    derivedBytes: integer("derived_bytes").notNull().default(0),
     extraction:
       json("extraction").$type<
         import("../uploads/document-types").DocumentExtraction
@@ -184,7 +184,7 @@ export const uploadAsset = pgTable(
     id: uuid("id").primaryKey().notNull(),
     mime: text("mime").notNull(),
     name: text("name").notNull(),
-    ownerId: uuid("ownerId")
+    ownerId: uuid("owner_id")
       .notNull()
       .references(() => user.id),
     sha256: text("sha256").notNull(),
@@ -207,12 +207,12 @@ export const uploadAsset = pgTable(
   ]
 );
 export const uploadAssetMessage = pgTable(
-  "UploadAssetMessage",
+  "upload_asset_messages",
   {
-    assetId: uuid("assetId")
+    assetId: uuid("asset_id")
       .notNull()
       .references(() => uploadAsset.id, { onDelete: "cascade" }),
-    messageId: uuid("messageId")
+    messageId: uuid("message_id")
       .notNull()
       .references(() => message.id, { onDelete: "cascade" }),
   },
@@ -220,13 +220,13 @@ export const uploadAssetMessage = pgTable(
 );
 
 export const modelSettings = pgTable(
-  "ModelSettings",
+  "model_settings",
   {
     encrypted: text("encrypted").notNull(),
     id: text("id").primaryKey().notNull(),
     revision: integer("revision").notNull(),
-    updatedAt: timestamp("updatedAt").notNull().defaultNow(),
-    updatedBy: uuid("updatedBy")
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedBy: uuid("updated_by")
       .notNull()
       .references(() => user.id),
   },
