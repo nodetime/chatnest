@@ -24,3 +24,6 @@ tsconfig.tsbuildinfo
 .local-review/
 
 .data/
+
+# Claude Code worktrees
+.claude/worktrees/
