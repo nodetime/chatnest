@@ -12,7 +12,11 @@ import { networkInterfaces } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+const ROOT = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+  ".."
+);
 const DEV_PORT = 3003;
 const DEV_HOST = "0.0.0.0"; // 绑定全部网卡:本机与局域网均可访问
 const isWindows = process.platform === "win32";
@@ -36,14 +40,19 @@ function nics() {
         continue;
       }
       seen.add(address.address);
-      rows.push({ name, address: address.address, internal: address.internal });
+      rows.push({ address: address.address, internal: address.internal, name });
     }
   }
   rows.sort((a, b) => Number(a.internal) - Number(b.internal));
-  log("网卡", `共 ${rows.length} 个 IPv4 地址;服务绑定 ${DEV_HOST} 时以下均可访问(端口 ${DEV_PORT}):`);
+  log(
+    "网卡",
+    `共 ${rows.length} 个 IPv4 地址;服务绑定 ${DEV_HOST} 时以下均可访问(端口 ${DEV_PORT}):`
+  );
   for (const row of rows) {
     const scope = row.internal ? "本机回环" : "局域网/本机";
-    console.log(`         http://${row.address}:${DEV_PORT}   (${row.name}, ${scope})`);
+    console.log(
+      `         http://${row.address}:${DEV_PORT}   (${row.name}, ${scope})`
+    );
   }
   if (!rows.some((row) => !row.internal)) {
     console.log("         (未发现局域网 IPv4 网卡,仅本机可访问)");
@@ -78,14 +87,17 @@ function start() {
   const child = spawn(
     "corepack",
     ["pnpm", "dev", "--hostname", DEV_HOST, "--port", String(DEV_PORT)],
-    { cwd: ROOT, stdio: "inherit", shell: isWindows }
+    { cwd: ROOT, shell: isWindows, stdio: "inherit" }
   );
 
   probePing(120_000).then((ready) => {
     if (ready) {
       log("启动", `/ping 探活通过: http://127.0.0.1:${DEV_PORT}`);
     } else {
-      log("启动", "[警告] 120 秒内 /ping 未就绪,dev 进程仍在运行,请查看上方日志");
+      log(
+        "启动",
+        "[警告] 120 秒内 /ping 未就绪,dev 进程仍在运行,请查看上方日志"
+      );
     }
   });
 
@@ -116,7 +128,10 @@ function start() {
   process.on("SIGTERM", () => shutdown("SIGTERM"));
   child.on("exit", (code) => {
     if (!stopping) {
-      log("停止", `dev 进程已退出(code ${code});残留监听可用 pnpm dev:stop 清理`);
+      log(
+        "停止",
+        `dev 进程已退出(code ${code});残留监听可用 pnpm dev:stop 清理`
+      );
       process.exit(code ?? 0);
     }
   });
@@ -161,7 +176,10 @@ function stop() {
         run("kill", ["-KILL", String(pid)]);
       }
     }
-    log("停止", `已结束占用 ${DEV_PORT} 的进程${isWindows ? "树" : ""} (PID ${pid})`);
+    log(
+      "停止",
+      `已结束占用 ${DEV_PORT} 的进程${isWindows ? "树" : ""} (PID ${pid})`
+    );
   }
 }
 
