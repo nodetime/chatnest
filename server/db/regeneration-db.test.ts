@@ -53,7 +53,7 @@ test("regeneration replaces only the unchanged latest answer, clears its feedbac
     },
   ];
   try {
-    await sql`insert into "User" ("id", "email", "isAnonymous") values (${ownerId}, ${email}, true)`;
+    await sql`insert into users ("id", "email", is_anonymous) values (${ownerId}, ${email}, true)`;
     await queries.saveChat({
       id: chatId,
       title: "Explicit regeneration fixture",
@@ -117,10 +117,10 @@ test("regeneration replaces only the unchanged latest answer, clears its feedbac
     assert.equal((await queries.getMessagesByChatId({ id: chatId })).length, 3);
   } finally {
     await sql.begin(async (tx) => {
-      await tx`delete from "Vote_v2" where "chatId" = ${chatId}`;
-      await tx`delete from "Message_v2" where "chatId" = ${chatId}`;
-      await tx`delete from "Chat" where "id" = ${chatId} and "userId" = ${ownerId}`;
-      await tx`delete from "User" where "id" = ${ownerId} and "email" = ${email}`;
+      await tx`delete from votes where chat_id = ${chatId}`;
+      await tx`delete from messages where chat_id = ${chatId}`;
+      await tx`delete from chats where "id" = ${chatId} and user_id = ${ownerId}`;
+      await tx`delete from users where "id" = ${ownerId} and "email" = ${email}`;
     });
     await sql.end();
   }

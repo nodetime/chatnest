@@ -16,30 +16,30 @@ try {
   await sql.begin(async (tx) => {
     if (input.mode === "seed") {
       const owner =
-        await tx`select "id" from "User" where "id" = ${input.ownerId}`;
+        await tx`select "id" from users where "id" = ${input.ownerId}`;
       assert.equal(owner.length, 1);
-      await tx`insert into "User" ("id", "email", "isAnonymous") values (${input.foreignId}, ${`${input.prefix}@fixture.test`}, true)`;
+      await tx`insert into users ("id", "email", is_anonymous) values (${input.foreignId}, ${`${input.prefix}@fixture.test`}, true)`;
       for (let index = 0; index < 31; index += 1) {
         const title =
           input.prefix +
           (index >= 29 ? " oldneedle特殊%_线索" : ` 对话 ${index}`);
         const ownerId = index === 30 ? input.foreignId : input.ownerId;
         // biome-ignore lint/performance/noAwaitInLoops: deterministic local fixture inserts in one transaction
-        await tx`insert into "Chat" ("id", "createdAt", "title", "userId", "visibility") values (${input.ids[index]}, ${new Date(Date.now() - index * 1000)}, ${title}, ${ownerId}, 'private')`;
+        await tx`insert into chats ("id", created_at, "title", user_id, "visibility") values (${input.ids[index]}, ${new Date(Date.now() - index * 1000)}, ${title}, ${ownerId}, 'private')`;
       }
       for (const index of [0, 29]) {
         // biome-ignore lint/performance/noAwaitInLoops: deterministic local fixture inserts in one transaction
-        await tx`insert into "Message_v2" ("chatId", "role", "parts", "attachments", "createdAt") values (
+        await tx`insert into messages (chat_id, "role", "parts", "attachments", created_at) values (
           ${input.ids[index]}, 'assistant', ${tx.json([{ text: `真实数据库测试正文${index}`, type: "text" }])}, ${tx.json([])}, ${new Date()})`;
       }
     } else {
       assert.equal(input.mode, "cleanup");
       // Only these explicit, random fixture IDs; no broad history/user deletion.
-      await tx`delete from "Vote_v2" where "chatId" in ${tx(input.ids)}`;
-      await tx`delete from "Message_v2" where "chatId" in ${tx(input.ids)}`;
-      await tx`delete from "Stream" where "chatId" in ${tx(input.ids)}`;
-      await tx`delete from "Chat" where "id" in ${tx(input.ids)} and "userId" in ${tx([input.ownerId, input.foreignId])}`;
-      await tx`delete from "User" where "id" = ${input.foreignId} and "email" = ${`${input.prefix}@fixture.test`}`;
+      await tx`delete from votes where chat_id in ${tx(input.ids)}`;
+      await tx`delete from messages where chat_id in ${tx(input.ids)}`;
+      await tx`delete from streams where chat_id in ${tx(input.ids)}`;
+      await tx`delete from chats where "id" in ${tx(input.ids)} and user_id in ${tx([input.ownerId, input.foreignId])}`;
+      await tx`delete from users where "id" = ${input.foreignId} and "email" = ${`${input.prefix}@fixture.test`}`;
     }
   });
   console.log(JSON.stringify({ fixtureOnly: true, mode: input.mode }));

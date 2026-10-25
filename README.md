@@ -22,7 +22,7 @@ corepack pnpm db:migrate
 corepack pnpm dev --hostname 127.0.0.1 --port 3003
 ```
 
-`.env.local`、实际密钥、日志与本地截图不提交。完整配置、验证记录、上游更新方式及功能边界见 [DEVELOPMENT.md](DEVELOPMENT.md)。当前任务在会话内运行，没有后台持久任务保证；知识产权调查交付的是待核验线索。
+`.env.local`、实际密钥、日志与本地截图不提交。完整配置、验证记录、上游更新方式及功能边界见 [DEVELOPMENT.md](docs/DEVELOPMENT.md)。当前任务在会话内运行，没有后台持久任务保证；知识产权调查交付的是待核验线索。
 
 <details>
 <summary>上游 Vercel Chatbot 模板说明</summary>

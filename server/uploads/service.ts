@@ -50,7 +50,7 @@ export async function storageStatus() {
     configured = false;
   }
   const [row] =
-    await sql`SELECT "enabled","revision" FROM "UploadSettings" WHERE "id"='workspace'`;
+    await sql`SELECT "enabled","revision" FROM upload_settings WHERE "id"='workspace'`;
   if (!row) {
     throw new UploadError(503, "请先运行数据库迁移。");
   }
@@ -105,7 +105,7 @@ export async function configureStorage(
   }
   const result = await sql.begin(async (tx) => {
     await tx`SELECT pg_advisory_xact_lock(${LOCK})`;
-    return tx`UPDATE "UploadSettings" SET "enabled"=${enabled},"revision"="revision"+1,"updatedAt"=now(),"updatedBy"=${userId} WHERE "id"='workspace' AND "revision"=${revision} RETURNING "revision"`;
+    return tx`UPDATE upload_settings SET "enabled"=${enabled},"revision"="revision"+1,updated_at=now(),updated_by=${userId} WHERE "id"='workspace' AND "revision"=${revision} RETURNING "revision"`;
   });
   if (!result.length) {
     throw new UploadError(409, "存储设置已更新，请刷新后重试。");
@@ -121,16 +121,16 @@ async function preflightUpload(ownerId: string, chatId: string, size: number) {
     throw new UploadError(400, "附件必须非空且不超过 64 MiB。");
   }
   const [settings] =
-    await sql`SELECT "enabled" FROM "UploadSettings" WHERE "id"='workspace'`;
+    await sql`SELECT "enabled" FROM upload_settings WHERE "id"='workspace'`;
   if (!settings?.enabled) {
     throw new UploadError(503, "附件上传尚未开启，请联系平台管理员配置存储。");
   }
-  const [chat] = await sql`SELECT "userId" FROM "Chat" WHERE "id"=${chatId}`;
+  const [chat] = await sql`SELECT user_id FROM chats WHERE "id"=${chatId}`;
   if (chat && chat.userId !== ownerId) {
     throw new UploadError(403, "会话不属于当前账号。");
   }
   const [quota] =
-    await sql`SELECT COALESCE(SUM("size" + "derivedBytes"),0)::bigint AS total,COALESCE(SUM("size" + "derivedBytes") FILTER (WHERE "ownerId"=${ownerId}),0)::bigint AS own,COUNT(*) FILTER (WHERE "ownerId"=${ownerId} AND "chatId"=${chatId} AND "state" IN ('pending','draft'))::integer AS drafts FROM "UploadAsset"`;
+    await sql`SELECT COALESCE(SUM("size" + derived_bytes),0)::bigint AS total,COALESCE(SUM("size" + derived_bytes) FILTER (WHERE owner_id=${ownerId}),0)::bigint AS own,COUNT(*) FILTER (WHERE owner_id=${ownerId} AND chat_id=${chatId} AND "state" IN ('pending','draft'))::integer AS drafts FROM upload_assets`;
   if (
     Number(quota.total) + size > limits.deployment ||
     Number(quota.own) + size > limits.user
@@ -170,19 +170,19 @@ export async function registerUpload(
   await sql.begin(async (tx) => {
     await tx`SELECT pg_advisory_xact_lock(${LOCK})`;
     const [settings] =
-      await tx`SELECT "enabled" FROM "UploadSettings" WHERE "id"='workspace'`;
+      await tx`SELECT "enabled" FROM upload_settings WHERE "id"='workspace'`;
     if (!settings?.enabled) {
       throw new UploadError(
         503,
         "附件上传尚未开启，请联系平台管理员配置存储。"
       );
     }
-    const [chat] = await tx`SELECT "userId" FROM "Chat" WHERE "id"=${chatId}`;
+    const [chat] = await tx`SELECT user_id FROM chats WHERE "id"=${chatId}`;
     if (chat && chat.userId !== ownerId) {
       throw new UploadError(403, "会话不属于当前账号。");
     }
     const [quota] =
-      await tx`SELECT COALESCE(SUM("size" + "derivedBytes"),0)::bigint AS total, COALESCE(SUM("size" + "derivedBytes") FILTER (WHERE "ownerId"=${ownerId}),0)::bigint AS own, COUNT(*) FILTER (WHERE "ownerId"=${ownerId} AND "chatId"=${chatId} AND "state" IN ('pending','draft'))::integer AS drafts FROM "UploadAsset"`;
+      await tx`SELECT COALESCE(SUM("size" + derived_bytes),0)::bigint AS total, COALESCE(SUM("size" + derived_bytes) FILTER (WHERE owner_id=${ownerId}),0)::bigint AS own, COUNT(*) FILTER (WHERE owner_id=${ownerId} AND chat_id=${chatId} AND "state" IN ('pending','draft'))::integer AS drafts FROM upload_assets`;
     if (
       Number(quota.total) + bytes.length + derivedBytes > limits.deployment ||
       Number(quota.own) + bytes.length + derivedBytes > limits.user
@@ -198,23 +198,23 @@ export async function registerUpload(
         "本会话已有 15 个未发送附件，请先移除或发送。"
       );
     }
-    await tx`INSERT INTO "UploadAsset" ("id","ownerId","chatId","name","mime","size","sha256","state","extraction","derivedBytes") VALUES (${id},${ownerId},${chatId},${name},${mime},${bytes.length},${sha256},'pending',${extraction ? tx.json(extraction as never) : null},${derivedBytes})`;
+    await tx`INSERT INTO upload_assets ("id",owner_id,chat_id,"name","mime","size","sha256","state","extraction",derived_bytes) VALUES (${id},${ownerId},${chatId},${name},${mime},${bytes.length},${sha256},'pending',${extraction ? tx.json(extraction as never) : null},${derivedBytes})`;
   });
   try {
     await local.write(id, bytes);
     await sql.begin(async (tx) => {
       await tx`SELECT pg_advisory_xact_lock(${LOCK})`;
-      const [chat] = await tx`SELECT "userId" FROM "Chat" WHERE "id"=${chatId}`;
+      const [chat] = await tx`SELECT user_id FROM chats WHERE "id"=${chatId}`;
       if (chat && chat.userId !== ownerId) {
         throw new UploadError(403, "会话不属于当前账号。");
       }
       const finalized = await tx<
         { id: string }[]
-      >`UPDATE "UploadAsset" SET "state"='draft' WHERE "id"=${id} AND "state"='pending' RETURNING "id"`;
+      >`UPDATE upload_assets SET "state"='draft' WHERE "id"=${id} AND "state"='pending' RETURNING "id"`;
       requireFinalizedUpload(finalized);
     });
   } catch (error) {
-    await sql`UPDATE "UploadAsset" SET "state"='deleting' WHERE "id"=${id}`;
+    await sql`UPDATE upload_assets SET "state"='deleting' WHERE "id"=${id}`;
     await finishDeletion(id).catch(() => undefined);
     throw error;
   }
@@ -245,7 +245,7 @@ async function authorizedAsset(id: string, userId: string, chatId?: string) {
       visibility: string | null;
       associated: boolean;
     })[]
-  >`SELECT a.*,c."userId" AS "chatOwnerId",c."visibility",EXISTS(SELECT 1 FROM "UploadAssetMessage" am JOIN "Message_v2" m ON m."id"=am."messageId" WHERE am."assetId"=a."id" AND m."chatId"=a."chatId" AND m."parts"::jsonb @> ${sql.json([{ type: "file", url: assetRef(id) }])}::jsonb) AS associated FROM "UploadAsset" a LEFT JOIN "Chat" c ON c."id"=a."chatId" WHERE a."id"=${id}`;
+  >`SELECT a.*,c.user_id AS "chatOwnerId",c."visibility",EXISTS(SELECT 1 FROM upload_asset_messages am JOIN messages m ON m."id"=am.message_id WHERE am.asset_id=a."id" AND m.chat_id=a.chat_id AND m."parts"::jsonb @> ${sql.json([{ type: "file", url: assetRef(id) }])}::jsonb) AS associated FROM upload_assets a LEFT JOIN chats c ON c."id"=a.chat_id WHERE a."id"=${id}`;
   if (
     !asset ||
     !mayReadAsset(asset, userId) ||
@@ -312,7 +312,7 @@ export async function readAsset(id: string, userId: string, chatId?: string) {
 }
 async function finishDeletion(id: string) {
   await store().delete(id);
-  await sql`DELETE FROM "UploadAsset" WHERE "id"=${id} AND "state"='deleting'`;
+  await sql`DELETE FROM upload_assets WHERE "id"=${id} AND "state"='deleting'`;
 }
 export async function deleteDraft(id: string, ownerId: string) {
   if (!UUID_PATTERN.test(id)) {
@@ -321,14 +321,14 @@ export async function deleteDraft(id: string, ownerId: string) {
   await sql.begin(async (tx) => {
     await tx`SELECT pg_advisory_xact_lock(${LOCK})`;
     const [asset] =
-      await tx`SELECT * FROM "UploadAsset" WHERE "id"=${id} FOR UPDATE`;
+      await tx`SELECT * FROM upload_assets WHERE "id"=${id} FOR UPDATE`;
     if (!asset || asset.ownerId !== ownerId) {
       throw new UploadError(404, "附件不存在。");
     }
     if (!["draft", "deleting"].includes(asset.state)) {
       throw new UploadError(409, "已发送或正在处理的附件不支持草稿删除。");
     }
-    await tx`UPDATE "UploadAsset" SET "state"='deleting' WHERE "id"=${id}`;
+    await tx`UPDATE upload_assets SET "state"='deleting' WHERE "id"=${id}`;
   });
   await finishDeletion(id);
   return { ok: true };
@@ -336,7 +336,7 @@ export async function deleteDraft(id: string, ownerId: string) {
 export async function purgeExpiredDrafts(limit = 25) {
   const ids = await sql.begin(async (tx) => {
     await tx`SELECT pg_advisory_xact_lock(${LOCK})`;
-    return tx`UPDATE "UploadAsset" SET "state"='deleting' WHERE "id" IN (SELECT "id" FROM "UploadAsset" WHERE ("state" IN ('draft','pending') AND "createdAt"<now()-interval '24 hours') OR "state"='deleting' ORDER BY "createdAt" LIMIT ${Math.min(100, Math.max(1, limit))}) RETURNING "id"`;
+    return tx`UPDATE upload_assets SET "state"='deleting' WHERE "id" IN (SELECT "id" FROM upload_assets WHERE ("state" IN ('draft','pending') AND created_at<now()-interval '24 hours') OR "state"='deleting' ORDER BY created_at LIMIT ${Math.min(100, Math.max(1, limit))}) RETURNING "id"`;
   });
   for (const item of ids) {
     // biome-ignore lint/performance/noAwaitInLoops: Bounded sequential I/O prevents concurrent memory and transaction pressure.
@@ -362,13 +362,13 @@ export async function commitUserMessage(input: {
   await sql.begin(async (tx) => {
     await tx`SELECT pg_advisory_xact_lock(${LOCK})`;
     const [existing] =
-      await tx`SELECT "userId" FROM "Chat" WHERE "id"=${input.chatId} FOR UPDATE`;
+      await tx`SELECT user_id FROM chats WHERE "id"=${input.chatId} FOR UPDATE`;
     if (existing && existing.userId !== input.ownerId) {
       throw new UploadError(403, "会话不属于当前账号。");
     }
     if (assets.length) {
       const rows =
-        await tx`SELECT * FROM "UploadAsset" WHERE "id" IN ${tx(assets)} FOR UPDATE`;
+        await tx`SELECT * FROM upload_assets WHERE "id" IN ${tx(assets)} FOR UPDATE`;
       if (
         rows.length !== assets.length ||
         rows.some(
@@ -383,24 +383,24 @@ export async function commitUserMessage(input: {
       }
     }
     if (!existing) {
-      await tx`INSERT INTO "Chat" ("id","createdAt","title","userId","visibility") VALUES (${input.chatId},now(),'New chat',${input.ownerId},${input.visibility})`;
+      await tx`INSERT INTO chats ("id",created_at,"title",user_id,"visibility") VALUES (${input.chatId},now(),'New chat',${input.ownerId},${input.visibility})`;
     }
-    await tx`INSERT INTO "Message_v2" ("id","chatId","role","parts","attachments","createdAt") VALUES (${input.message.id},${input.chatId},'user',${tx.json(input.message.parts as never)},'[]'::json,${input.message.createdAt})`;
+    await tx`INSERT INTO messages ("id",chat_id,"role","parts","attachments",created_at) VALUES (${input.message.id},${input.chatId},'user',${tx.json(input.message.parts as never)},'[]'::json,${input.message.createdAt})`;
     for (const id of assets) {
       // biome-ignore lint/performance/noAwaitInLoops: Bounded sequential I/O prevents concurrent memory and transaction pressure.
-      await tx`UPDATE "UploadAsset" SET "state"='used' WHERE "id"=${id}`;
-      await tx`INSERT INTO "UploadAssetMessage" ("assetId","messageId") VALUES (${id},${input.message.id})`;
+      await tx`UPDATE upload_assets SET "state"='used' WHERE "id"=${id}`;
+      await tx`INSERT INTO upload_asset_messages (asset_id,message_id) VALUES (${id},${input.message.id})`;
     }
   });
 }
 export async function cleanupDeletedChatAssets(chatId: string) {
   const rows = await sql.begin(async (tx) => {
     await tx`SELECT pg_advisory_xact_lock(${LOCK})`;
-    const [chat] = await tx`SELECT "id" FROM "Chat" WHERE "id"=${chatId}`;
+    const [chat] = await tx`SELECT "id" FROM chats WHERE "id"=${chatId}`;
     if (chat) {
       return [];
     }
-    return tx`UPDATE "UploadAsset" SET "state"='deleting' WHERE "chatId"=${chatId} RETURNING "id"`;
+    return tx`UPDATE upload_assets SET "state"='deleting' WHERE chat_id=${chatId} RETURNING "id"`;
   });
   for (const row of rows as { id: string }[]) {
     // biome-ignore lint/performance/noAwaitInLoops: Bounded sequential I/O prevents concurrent memory and transaction pressure.
@@ -420,7 +420,7 @@ export async function readAttachmentAsset(
   }
   const [asset] = await sql<
     (Asset & { chatOwnerId: string; associated: boolean })[]
-  >`SELECT a.*,c."userId" AS "chatOwnerId",EXISTS(SELECT 1 FROM "UploadAssetMessage" am JOIN "Message_v2" m ON m."id"=am."messageId" WHERE am."assetId"=a."id" AND m."chatId"=a."chatId" AND m."parts"::jsonb @> ${sql.json([{ type: "file", url: assetRef(id) }])}::jsonb) AS associated FROM "UploadAsset" a JOIN "Chat" c ON c."id"=a."chatId" WHERE a."id"=${id}`;
+  >`SELECT a.*,c.user_id AS "chatOwnerId",EXISTS(SELECT 1 FROM upload_asset_messages am JOIN messages m ON m."id"=am.message_id WHERE am.asset_id=a."id" AND m.chat_id=a.chat_id AND m."parts"::jsonb @> ${sql.json([{ type: "file", url: assetRef(id) }])}::jsonb) AS associated FROM upload_assets a JOIN chats c ON c."id"=a.chat_id WHERE a."id"=${id}`;
   if (
     !asset ||
     asset.ownerId !== userId ||
