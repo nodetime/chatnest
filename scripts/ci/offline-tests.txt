@@ -16,6 +16,7 @@ server/agent/porta.test.ts
 server/agent/porta-errors.test.ts
 server/agent/agent.test.ts
 server/agent/message-turn.test.ts
+server/agent/porta-skill.test.ts
 server/ai/model-connection.test.ts
 server/agent/browser.test.ts
 app/_components/chat/task-experience.test.ts
@@ -31,6 +32,5 @@ app/_components/chat/tool-records.test.ts
 app/_components/chat/unified-tools.test.ts
 app/_components/chat/runtime-interactions.test.ts
 
-server/skills/porta-skill.test.ts
 server/agent/run-failure.test.ts
 server/ai/model-settings/model-settings.test.ts
