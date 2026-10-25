@@ -1,0 +1,35 @@
+# 开发环境数据库(PostgreSQL),由 scripts/governance/dev-env.mjs 编排拉起。
+# 数据复用命名卷 chatnest-postgres-data:删除/重建容器不丢数据;
+# 彻底清库需 pnpm dev:down --purge(删卷)。
+# 端口仅绑定回环,不对局域网暴露;应用层由 dev 进程绑定 0.0.0.0 提供局域网访问。
+name: chatnest-dev
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: chatnest-postgres
+    restart: unless-stopped
+    environment:
+      # 仅在数据卷首次初始化时生效;已初始化的卷沿用原有账号密码
+      POSTGRES_USER: chatnest
+      POSTGRES_PASSWORD: chatnest
+      POSTGRES_DB: chatnest
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - chatnest-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chatnest -d chatnest"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  chatnest-postgres-data:
+    external: true
+    name: chatnest-postgres-data
+
+# 可选:将来需要 resumable-stream/限流时取消注释
+# redis:
+#   image: redis:7-alpine
+#   ports: ["127.0.0.1:55433:6379"]

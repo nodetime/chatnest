@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbo",
+    "dev:up": "node scripts/governance/dev-env.mjs up",
+    "dev:down": "node scripts/governance/dev-env.mjs down",
     "build": "tsx server/db/migrate && next build",
     "start": "next start",
     "check": "ultracite check",

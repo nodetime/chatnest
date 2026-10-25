@@ -29,16 +29,16 @@
 收敛过程记录见
 [docs/superpowers/specs/2026-10-24-governance-and-convergence-design.md](docs/superpowers/specs/2026-10-24-governance-and-convergence-design.md)。
 
-## 本地启动(Windows / Git Bash)
+## 本地启动
 
 ```
-docker start chatnest-postgres        # 数据库 127.0.0.1:55432
-pnpm install --frozen-lockfile        # 新环境必跑,仓库自带 node_modules 可能是旧快照
-pnpm db:migrate                       # 幂等
-pnpm dev --hostname 127.0.0.1 --port 3003
+pnpm dev:up      # 一键:依赖体检(Node/Docker/compose,缺失自动装或给指引)
+                 #     -> PostgreSQL(deploy/docker-compose.dev.yml,127.0.0.1:55432,数据卷 chatnest-postgres-data)
+                 #     -> db:migrate -> dev 绑 0.0.0.0:3003(横幅列出全部网卡访问地址,局域网可达)
+pnpm dev:down    # 优雅收尾(数据保留);--purge 连数据卷删(彻底清库)
 ```
 
-探活:`GET /ping` 返回 pong。模型未配置时聊天不可用(`/api/agent` 的 modelConfigured=false)。
+新机器还需 `pnpm install --frozen-lockfile`;`.env.local` 缺失时 dev:up 会自动生成并提示补模型三件套。探活:`GET /ping` 返回 pong。模型未配置时聊天不可用(`/api/agent` 的 modelConfigured=false)。
 
 ## 验证
 

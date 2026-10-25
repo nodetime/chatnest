@@ -117,3 +117,7 @@ Admin model settings (2026-10-24):
 - `network.ts`: public HTTPS, DNS pinned to validated IP, TLS validation and no redirects, response/request/deadline bounds. Reserved fake-IP proxy answers are rejected with a specific message; they are not interpreted as invalid credentials. Loopback is a deployment opt-in for development tests only.
 - `model-context.ts`, `model-settings/runtime.ts`: immutable per-request AsyncLocalStorage snapshot shared across chat, title and artifact model children; no process.env mutation. Public model discovery/default and admin readiness use the same snapshot. Config corruption fails closed.
 - `server/ai/model-settings/model-settings.test.ts`: encryption/domain isolation, endpoint binding, CAS, authorization/CSRF/bounds, local HTTP SDK probes, null-body statuses, concurrent real SDK SSE/tool-child snapshot isolation. Local protocol fixtures are not live model acceptance.
+
+开发基座编排(2026-10-25):
+- `scripts/governance/dev-env.mjs`: 一键开发基座(工具中立)。`up` = 依赖体检(Node>=22.13/docker/compose,缺失自动 winget 安装并给指引)-> .env.local 自动生成 -> docker compose 拉起 PG -> db:migrate -> dev 绑 0.0.0.0:3003(横幅列全部网卡访问地址);`down` 优雅收尾,`--purge` 删卷。npm 入口 `pnpm dev:up`/`dev:down`;Claude 侧 skill `.claude/skills/dev-env`。
+- `deploy/docker-compose.dev.yml`: 开发 PostgreSQL(127.0.0.1:55432),复用命名卷 `chatnest-postgres-data`(external,删容器不丢数据;遗留同名容器由脚本接管)。
