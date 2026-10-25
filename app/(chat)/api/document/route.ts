@@ -5,13 +5,7 @@ import {
   isProtectedResultTable,
   parseResultTable,
 } from "@/server/artifacts/result-table";
-import {
-  deleteDocumentsByIdAfterTimestamp,
-  getChatById,
-  getDocumentsById,
-  saveDocument,
-  updateDocumentContent,
-} from "@/server/db/queries";
+import { getUseCases } from "@/server/composition";
 import { ChatbotError } from "@/server/shared/errors";
 
 const documentSchema = z.object({
@@ -38,7 +32,7 @@ export async function GET(request: Request) {
     return new ChatbotError("unauthorized:document").toResponse();
   }
 
-  const documents = await getDocumentsById({ id });
+  const documents = await getUseCases().documents.listById(id);
 
   const [document] = documents;
 
@@ -55,7 +49,7 @@ export async function GET(request: Request) {
     const chatId = searchParams.get("chatId");
     const chat =
       table && chatId === table.chatId
-        ? await getChatById({ id: chatId })
+        ? await getUseCases().chats.findById(chatId)
         : null;
     if (!chat || chat.userId !== session.user.id) {
       return new ChatbotError("forbidden:document").toResponse();
@@ -100,7 +94,7 @@ export async function POST(request: Request) {
     ).toResponse();
   }
 
-  const documents = await getDocumentsById({ id });
+  const documents = await getUseCases().documents.listById(id);
 
   if (documents.length > 0) {
     const [doc] = documents;
@@ -118,11 +112,11 @@ export async function POST(request: Request) {
   }
 
   if (isManualEdit && documents.length > 0) {
-    const result = await updateDocumentContent({ content, id });
+    const result = await getUseCases().documents.updateContent({ content, id });
     return Response.json(result, { status: 200 });
   }
 
-  const document = await saveDocument({
+  const document = await getUseCases().documents.save({
     content,
     id,
     kind,
@@ -158,7 +152,7 @@ export async function DELETE(request: Request) {
     return new ChatbotError("unauthorized:document").toResponse();
   }
 
-  const documents = await getDocumentsById({ id });
+  const documents = await getUseCases().documents.listById(id);
 
   const [document] = documents;
 
@@ -182,7 +176,7 @@ export async function DELETE(request: Request) {
     ).toResponse();
   }
 
-  const documentsDeleted = await deleteDocumentsByIdAfterTimestamp({
+  const documentsDeleted = await getUseCases().documents.deleteAfterTimestamp({
     id,
     timestamp: parsedTimestamp,
   });

@@ -4,7 +4,7 @@ import { z } from "zod";
 import type { ChatMessage } from "@/app/_lib/types";
 import { isProtectedResultTable } from "@/server/artifacts/result-table";
 import { documentHandlersByArtifactKind } from "@/server/artifacts/server";
-import { getDocumentById } from "@/server/db/queries";
+import { documentRepository } from "@/server/infrastructure/persistence/drizzle/document-repository";
 
 type UpdateDocumentProps = {
   session: Session;
@@ -21,7 +21,7 @@ export const updateDocument = ({
     description:
       "Full rewrite of an existing artifact. Only use for major changes where most content needs replacing. Prefer editDocument for targeted changes.",
     execute: async ({ id, description }) => {
-      const document = await getDocumentById({ id });
+      const document = await documentRepository.findLatestById(id);
 
       if (!document) {
         return {

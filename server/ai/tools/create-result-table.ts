@@ -8,7 +8,7 @@ import {
   createResultTableSchema,
   type ResultTable,
 } from "@/server/artifacts/result-table";
-import { saveResultTableDocument } from "@/server/db/queries";
+import { documentRepository } from "@/server/infrastructure/persistence/drizzle/document-repository";
 
 export function createResultTable({
   ledger,
@@ -37,7 +37,7 @@ export function createResultTable({
         };
       }
       const id = generateUUID();
-      const [document] = await saveResultTableDocument({
+      const [document] = await documentRepository.saveResultTable({
         id,
         table,
         title: input.title,

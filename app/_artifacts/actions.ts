@@ -1,8 +1,9 @@
 "use server";
 
-import { getSuggestionsByDocumentId } from "@/server/db/queries";
+import { getUseCases } from "@/server/composition";
 
 export async function getSuggestions({ documentId }: { documentId: string }) {
-  const suggestions = await getSuggestionsByDocumentId({ documentId });
+  const suggestions =
+    await getUseCases().suggestions.listByDocumentId(documentId);
   return suggestions ?? [];
 }

@@ -3,7 +3,7 @@ import type { Session } from "next-auth";
 import { z } from "zod";
 import type { ChatMessage } from "@/app/_lib/types";
 import { isProtectedResultTable } from "@/server/artifacts/result-table";
-import { getDocumentById, saveDocument } from "@/server/db/queries";
+import { documentRepository } from "@/server/infrastructure/persistence/drizzle/document-repository";
 
 type EditDocumentProps = {
   session: Session;
@@ -15,7 +15,7 @@ export const editDocument = ({ session, dataStream }: EditDocumentProps) =>
     description:
       "Make a targeted edit to an existing artifact by finding and replacing an exact string. Preferred over updateDocument for small changes. The old_string must match exactly.",
     execute: async ({ id, old_string, new_string, replace_all }) => {
-      const document = await getDocumentById({ id });
+      const document = await documentRepository.findLatestById(id);
 
       if (!document) {
         return { error: "Document not found" };
@@ -44,7 +44,7 @@ export const editDocument = ({ session, dataStream }: EditDocumentProps) =>
         ? document.content.replaceAll(old_string, new_string)
         : document.content.replace(old_string, new_string);
 
-      await saveDocument({
+      await documentRepository.save({
         content: updated,
         id: document.id,
         kind: document.kind,

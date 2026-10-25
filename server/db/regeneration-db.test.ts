@@ -9,9 +9,17 @@ import type { DBMessage } from "@/server/db/schema";
 dotenv.config({ path: ".env.local", quiet: true });
 
 test("regeneration replaces only the unchanged latest answer, clears its feedback and rolls back failures", async () => {
-  const queries = await import("@/server/db/queries");
+  const { messageRepository } = await import(
+    "@/server/infrastructure/persistence/drizzle/message-repository"
+  );
+  const { chatRepository } = await import(
+    "@/server/infrastructure/persistence/drizzle/chat-repository"
+  );
+  const { voteRepository } = await import(
+    "@/server/infrastructure/persistence/drizzle/vote-repository"
+  );
   const replace = (
-    queries as unknown as {
+    messageRepository as unknown as {
       replaceRegeneratedAnswer?: (input: {
         chatId: string;
         userId: string;
@@ -54,14 +62,14 @@ test("regeneration replaces only the unchanged latest answer, clears its feedbac
   ];
   try {
     await sql`insert into users ("id", "email", is_anonymous) values (${ownerId}, ${email}, true)`;
-    await queries.saveChat({
+    await chatRepository.save({
       id: chatId,
       title: "Explicit regeneration fixture",
       userId: ownerId,
       visibility: "private",
     });
-    await queries.saveMessages({ messages: snapshot });
-    await queries.voteMessage({ chatId, messageId: answerId, type: "up" });
+    await messageRepository.saveMany(snapshot);
+    await voteRepository.upsert({ chatId, messageId: answerId, type: "up" });
     const replacement = {
       ...snapshot[1],
       parts: [{ text: "Replacement answer", type: "text" }],
@@ -70,15 +78,15 @@ test("regeneration replaces only the unchanged latest answer, clears its feedbac
       replace({ answer: replacement, chatId, snapshot, userId: randomUUID() })
     );
     assert.deepEqual(
-      (await queries.getMessagesByChatId({ id: chatId }))[1].parts,
+      (await messageRepository.listByChatId(chatId))[1].parts,
       snapshot[1].parts
     );
     await replace({ answer: replacement, chatId, snapshot, userId: ownerId });
-    const records = await queries.getMessagesByChatId({ id: chatId });
+    const records = await messageRepository.listByChatId(chatId);
     assert.equal(records.length, 2);
     assert.deepEqual(records[0].parts, snapshot[0].parts);
     assert.deepEqual(records[1].parts, replacement.parts);
-    assert.equal((await queries.getVotesByChatId({ id: chatId })).length, 0);
+    assert.equal((await voteRepository.listByChatId(chatId)).length, 0);
     // A stale concurrent generation must never overwrite a newer answer.
     await assert.rejects(
       replace({
@@ -92,20 +100,18 @@ test("regeneration replaces only the unchanged latest answer, clears its feedbac
       })
     );
     assert.deepEqual(
-      (await queries.getMessagesByChatId({ id: chatId }))[1].parts,
+      (await messageRepository.listByChatId(chatId))[1].parts,
       replacement.parts
     );
-    const currentSnapshot = await queries.getMessagesByChatId({ id: chatId });
-    await queries.saveMessages({
-      messages: [
-        {
-          ...snapshot[0],
-          createdAt: new Date(),
-          id: randomUUID(),
-          parts: [{ text: "Next question", type: "text" }],
-        },
-      ],
-    });
+    const currentSnapshot = await messageRepository.listByChatId(chatId);
+    await messageRepository.saveMany([
+      {
+        ...snapshot[0],
+        createdAt: new Date(),
+        id: randomUUID(),
+        parts: [{ text: "Next question", type: "text" }],
+      },
+    ]);
     await assert.rejects(
       replace({
         answer: replacement,
@@ -114,7 +120,7 @@ test("regeneration replaces only the unchanged latest answer, clears its feedbac
         userId: ownerId,
       })
     );
-    assert.equal((await queries.getMessagesByChatId({ id: chatId })).length, 3);
+    assert.equal((await messageRepository.listByChatId(chatId)).length, 3);
   } finally {
     await sql.begin(async (tx) => {
       await tx`delete from votes where chat_id = ${chatId}`;

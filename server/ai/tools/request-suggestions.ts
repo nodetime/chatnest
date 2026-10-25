@@ -5,8 +5,9 @@ import type { ChatMessage } from "@/app/_lib/types";
 import { generateUUID } from "@/app/_lib/utils";
 import { metadataOnlyTelemetry } from "@/server/ai/telemetry";
 import { isProtectedResultTable } from "@/server/artifacts/result-table";
-import { getDocumentById, saveSuggestions } from "@/server/db/queries";
 import type { Suggestion } from "@/server/db/schema";
+import { documentRepository } from "@/server/infrastructure/persistence/drizzle/document-repository";
+import { suggestionRepository } from "@/server/infrastructure/persistence/drizzle/suggestion-repository";
 import { getLanguageModel } from "../providers";
 
 type RequestSuggestionsProps = {
@@ -24,7 +25,7 @@ export const requestSuggestions = ({
     description:
       "Request writing suggestions for an existing document artifact. Only use this when the user explicitly asks to improve or get suggestions for a document they have already created. Never use for general questions.",
     execute: async ({ documentId }) => {
-      const document = await getDocumentById({ id: documentId });
+      const document = await documentRepository.findLatestById(documentId);
 
       if (!document?.content) {
         return {
@@ -104,14 +105,14 @@ export const requestSuggestions = ({
       if (session.user?.id) {
         const userId = session.user.id;
 
-        await saveSuggestions({
-          suggestions: suggestions.map((suggestion) => ({
+        await suggestionRepository.saveMany(
+          suggestions.map((suggestion) => ({
             ...suggestion,
             createdAt: new Date(),
             documentCreatedAt: document.createdAt,
             userId,
-          })),
-        });
+          }))
+        );
       }
 
       return {

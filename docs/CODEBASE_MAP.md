@@ -136,3 +136,9 @@ DDD chat domain extraction (P2, 2026-10-26):
 - `server/composition.ts`: cached useCases() factory + registerResumeStream; the only place platform code may reach repositories (R3 exemption point).
 - `app/(chat)/api/chat/route.ts` is now 96 lines of pure platform concerns (traceId/auth/zod/botId/geo/error mapping); request assembly lives in sibling request.ts (parseChatRequestBody, resumable-stream wiring, mapChatError). Resume stream ids still use ai's generateId.
 - Env predicates live in `server/shared/runtime.ts`; `_lib/constants` re-exports. Unit tests for the use case set OPENAI_API_KEY (not PLAYWRIGHT) to pass the model-configured check: PLAYWRIGHT is module-load-cached and leaks across same-process suites.
+
+DDD remaining-domain drain (P3, 2026-10-26):
+- `server/db/queries.ts` is DELETED. All 31 functions moved verbatim into six repositories under `server/infrastructure/persistence/drizzle/` (chat, message, user, vote, document, suggestion) behind contracts in `server/domain/<aggregate>/repository.ts`. Shared drizzle connection lives in `drizzle/client.ts` (deliberately no `server-only`: whitelisted tsx tests import this chain).
+- `server/composition.ts` now exposes domain facades (`getUseCases().chats|messages|votes|documents|suggestions|users`) restricted to the methods the platform layer needs; app/** has zero direct persistence imports (R3 achieved). Server-side callers (`server/ai/tools/*`, `server/artifacts/server.ts`) import repository implementations directly.
+- Notable preserved invariants: advisory-lock versioned document writes, protected result-table refusal, chat cascade delete with asset cleanup, replace* transactional snapshot baselines. Dead export getStreamIdsByChatId dropped.
+- `server/db/regeneration-db.test.ts` (real-DB, not in offline whitelist) now imports the repositories.

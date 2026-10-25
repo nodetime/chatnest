@@ -1,5 +1,5 @@
 import { auth } from "@/app/(auth)/auth";
-import { getSuggestionsByDocumentId } from "@/server/db/queries";
+import { getUseCases } from "@/server/composition";
 import { ChatbotError } from "@/server/shared/errors";
 
 export async function GET(request: Request) {
@@ -19,9 +19,8 @@ export async function GET(request: Request) {
     return new ChatbotError("unauthorized:suggestions").toResponse();
   }
 
-  const suggestions = await getSuggestionsByDocumentId({
-    documentId,
-  });
+  const suggestions =
+    await getUseCases().suggestions.listByDocumentId(documentId);
 
   const [suggestion] = suggestions;
 

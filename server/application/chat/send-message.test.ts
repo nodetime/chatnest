@@ -30,14 +30,20 @@ const chat = (userId: string): Chat => ({
 
 function makeDeps(overrides?: { chat?: Chat | null; messageCount?: number }) {
   const chats: ChatRepository = {
-    createStreamId: async () => null,
+    createStreamId: async () => undefined,
+    deleteAllByUserId: async () => ({ deletedCount: 0 }),
     deleteById: async () => null,
     findById: async () =>
       overrides?.chat === undefined ? null : overrides.chat,
-    updateTitle: async () => null,
+    listByUser: async () => ({ chats: [], hasMore: false }),
+    save: async () => null,
+    updateTitle: async () => true,
+    updateVisibility: async () => true,
   };
   const messages: MessageRepository = {
     countByUserSince: async () => overrides?.messageCount ?? 0,
+    deleteByChatIdAfterTimestamp: async () => null,
+    findById: async () => [],
     listByChatId: async () => [],
     replaceEditedTurn: async () => null,
     replaceRegeneratedAnswer: async () => null,

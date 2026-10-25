@@ -5,7 +5,7 @@ import {
   ResultTableMutationError,
   resultViewSchema,
 } from "@/server/artifacts/result-table";
-import { saveResultTableView } from "@/server/db/queries";
+import { getUseCases } from "@/server/composition";
 import { readBoundedBody, UploadError } from "@/server/uploads/validation";
 
 const bodySchema = z
@@ -30,7 +30,10 @@ export async function PATCH(request: Request) {
       JSON.parse((await readBoundedBody(request, 256 * 1024)).toString("utf8"))
     );
     return Response.json(
-      await saveResultTableView({ ...body, userId: session.user.id }),
+      await getUseCases().documents.saveResultTableView({
+        ...body,
+        userId: session.user.id,
+      }),
       { headers: { "Cache-Control": "private, no-store" } }
     );
   } catch (error) {

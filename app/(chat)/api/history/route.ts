@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 import { auth } from "@/app/(auth)/auth";
-import { deleteAllChatsByUserId, getChatsByUserId } from "@/server/db/queries";
+import { getUseCases } from "@/server/composition";
 import { ChatbotError } from "@/server/shared/errors";
 
 export async function GET(request: NextRequest) {
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     return new ChatbotError("unauthorized:chat").toResponse();
   }
 
-  const chats = await getChatsByUserId({
+  const chats = await getUseCases().chats.listByUser({
     endingBefore,
     id: session.user.id,
     limit,
@@ -55,7 +55,7 @@ export async function DELETE() {
     return new ChatbotError("unauthorized:chat").toResponse();
   }
 
-  const result = await deleteAllChatsByUserId({ userId: session.user.id });
+  const result = await getUseCases().chats.deleteAllByUserId(session.user.id);
 
   return Response.json(result, { status: 200 });
 }

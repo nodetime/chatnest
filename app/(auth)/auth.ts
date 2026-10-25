@@ -3,7 +3,7 @@ import NextAuth, { type DefaultSession } from "next-auth";
 import type { DefaultJWT } from "next-auth/jwt";
 import Credentials from "next-auth/providers/credentials";
 import { DUMMY_PASSWORD } from "@/app/_lib/constants";
-import { createGuestUser, getUser } from "@/server/db/queries";
+import { getUseCases } from "@/server/composition";
 import { authConfig } from "./auth.config";
 
 export type UserType = "guest" | "regular";
@@ -60,7 +60,7 @@ export const {
       async authorize(credentials) {
         const email = String(credentials.email ?? "");
         const password = String(credentials.password ?? "");
-        const users = await getUser(email);
+        const users = await getUseCases().users.findByEmail(email);
 
         if (users.length === 0) {
           await compare(password, DUMMY_PASSWORD);
@@ -89,7 +89,7 @@ export const {
     }),
     Credentials({
       async authorize() {
-        const [guestUser] = await createGuestUser();
+        const [guestUser] = await getUseCases().users.createGuest();
         return { ...guestUser, type: "guest" };
       },
       credentials: {},

@@ -5,7 +5,7 @@ import {
   closeBrowserSession,
   getBrowserSession,
 } from "@/server/agent/browser-session";
-import { getChatById } from "@/server/db/queries";
+import { getUseCases } from "@/server/composition";
 
 export const maxDuration = 60;
 const idSchema = z.string().uuid();
@@ -48,7 +48,7 @@ async function authorize(request: Request) {
       error: Response.json({ error: "Invalid chat ID" }, { status: 400 }),
     };
   }
-  const chat = await getChatById({ id: id.data });
+  const chat = await getUseCases().chats.findById(id.data);
   if (chat && chat.userId !== session.user.id) {
     return { error: Response.json({ error: "Forbidden" }, { status: 403 }) };
   }

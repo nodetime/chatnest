@@ -17,6 +17,13 @@ export interface MessageRepository {
     userId: string,
     differenceInHours: number
   ) => Promise<number>;
+  // 删除时间戳之后的消息(级联清对应投票)
+  deleteByChatIdAfterTimestamp: (
+    chatId: string,
+    timestamp: Date
+  ) => Promise<unknown>;
+  // 单条消息(可能命中 0/1 行)
+  findById: (id: string) => Promise<StoredMessage[]>;
   listByChatId: (chatId: string) => Promise<StoredMessage[]>;
   // 编辑整轮替换:以 snapshot 为并发基线,替换失败抛错回滚
   replaceEditedTurn: (input: {

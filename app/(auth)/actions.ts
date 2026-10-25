@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 
-import { createUser, getUser } from "@/server/db/queries";
+import { getUseCases } from "@/server/composition";
 
 import { signIn } from "./auth";
 
@@ -61,12 +61,15 @@ export const register = async (
       password: formData.get("password"),
     });
 
-    const [user] = await getUser(validatedData.email);
+    const [user] = await getUseCases().users.findByEmail(validatedData.email);
 
     if (user) {
       return { status: "user_exists" } as RegisterActionState;
     }
-    await createUser(validatedData.email, validatedData.password);
+    await getUseCases().users.create(
+      validatedData.email,
+      validatedData.password
+    );
     await signIn("credentials", {
       email: validatedData.email,
       password: validatedData.password,

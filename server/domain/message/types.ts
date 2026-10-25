@@ -17,7 +17,7 @@ export const messageMetadataSchema = z.object({
 export type MessageMetadata = z.infer<typeof messageMetadataSchema>;
 
 // 产物种类字面量:须与 app/_artifacts/{text,code,image,sheet}/client.tsx 的 kind 保持一致
-type ArtifactKind = "text" | "code" | "image" | "sheet";
+export type ArtifactKind = "text" | "code" | "image" | "sheet";
 
 type weatherTool = InferUITool<typeof getWeather>;
 type createDocumentTool = InferUITool<ReturnType<typeof createDocument>>;

@@ -5,7 +5,7 @@ import type { ChatMessage } from "@/app/_lib/types";
 import { codeDocumentHandler } from "@/server/artifacts/code/server";
 import { sheetDocumentHandler } from "@/server/artifacts/sheet/server";
 import { textDocumentHandler } from "@/server/artifacts/text/server";
-import { saveDocument } from "../db/queries";
+import { documentRepository } from "@/server/infrastructure/persistence/drizzle/document-repository";
 import type { Document } from "../db/schema";
 
 export type SaveDocumentProps = {
@@ -55,7 +55,7 @@ export function createDocumentHandler<T extends ArtifactKind>(config: {
       });
 
       if (args.session?.user?.id) {
-        await saveDocument({
+        await documentRepository.save({
           content: draftContent,
           id: args.id,
           kind: config.kind,
@@ -74,7 +74,7 @@ export function createDocumentHandler<T extends ArtifactKind>(config: {
       });
 
       if (args.session?.user?.id) {
-        await saveDocument({
+        await documentRepository.save({
           content: draftContent,
           id: args.document.id,
           kind: config.kind,

@@ -1,6 +1,6 @@
 import { convertToUIMessages } from "@/app/_lib/utils";
 import { auth } from "@/app/(auth)/auth";
-import { getChatById, getMessagesByChatId } from "@/server/db/queries";
+import { getUseCases } from "@/server/composition";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -12,8 +12,8 @@ export async function GET(request: Request) {
 
   const [session, chat, messages] = await Promise.all([
     auth(),
-    getChatById({ id: chatId }),
-    getMessagesByChatId({ id: chatId }),
+    getUseCases().chats.findById(chatId),
+    getUseCases().messages.listByChatId(chatId),
   ]);
 
   if (!chat) {
