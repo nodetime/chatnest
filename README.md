@@ -13,7 +13,7 @@
 
 ## 本地运行
 
-复制 `.env.example` 为本地 `.env.local`，设置 `AUTH_SECRET`、`POSTGRES_URL`。完成迁移与管理员/加密主密钥配置后，可在 `/admin/models` 管理模型地址、Key、默认/开放模型并测试连接，无需反复改环境变量；详见 [模型配置](docs/integrations/model-settings.md)。首次启动也支持环境变量配置模型连接。OpenAI 兼容接口使用 `MODEL_PROVIDER=openai`、`OPENAI_API_KEY`、`OPENAI_BASE_URL`、`OPENAI_MODEL`；不需要 Gateway Key。要启用内置浏览器，设置 `BROWSER_RUNTIME=local`，并安装匹配版本的 Chromium。
+复制 `deploy/.env.example` 为本地 `.env.local`，设置 `AUTH_SECRET`、`POSTGRES_URL`。完成迁移与管理员/加密主密钥配置后，可在 `/admin/models` 管理模型地址、Key、默认/开放模型并测试连接，无需反复改环境变量；详见 [模型配置](docs/integrations/model-settings.md)。首次启动也支持环境变量配置模型连接。OpenAI 兼容接口使用 `MODEL_PROVIDER=openai`、`OPENAI_API_KEY`、`OPENAI_BASE_URL`、`OPENAI_MODEL`；不需要 Gateway Key。要启用内置浏览器，设置 `BROWSER_RUNTIME=local`，并安装匹配版本的 Chromium。
 
 ```sh
 corepack pnpm install --frozen-lockfile
@@ -65,7 +65,7 @@ corepack pnpm dev --hostname 127.0.0.1 --port 3003
 
 ## Model Providers
 
-This template uses the [Vercel AI Gateway](https://vercel.com/docs/ai-gateway) to access multiple AI models through a unified interface. Models are configured in `lib/ai/models.ts` with per-model provider routing. Included models: Mistral, Moonshot, DeepSeek, OpenAI, and xAI.
+This template uses the [Vercel AI Gateway](https://vercel.com/docs/ai-gateway) to access multiple AI models through a unified interface. Models are configured in `server/ai/models.ts` with per-model provider routing. Included models: Mistral, Moonshot, DeepSeek, OpenAI, and xAI.
 
 ### AI Gateway Authentication
 
@@ -83,7 +83,7 @@ You can deploy your own version of Chatbot to Vercel with one click:
 
 ## Running locally
 
-You will need to use the environment variables [defined in `.env.example`](.env.example) to run Chatbot. It's recommended you use [Vercel Environment Variables](https://vercel.com/docs/projects/environment-variables) for this, but a `.env` file is all that is necessary.
+You will need to use the environment variables [defined in `deploy/.env.example`](deploy/.env.example) to run Chatbot. It's recommended you use [Vercel Environment Variables](https://vercel.com/docs/projects/environment-variables) for this, but a `.env` file is all that is necessary.
 
 > Note: You should not commit your `.env` file or it will expose secrets that will allow others to control access to your various AI and authentication provider accounts.
 

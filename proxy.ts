@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
-import { usesSecureAuthCookies } from "./lib/auth-cookies";
-import { guestRegex } from "./lib/constants";
+import { guestRegex } from "@/app/_lib/constants";
+import { usesSecureAuthCookies } from "@/server/shared/auth-cookies";
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

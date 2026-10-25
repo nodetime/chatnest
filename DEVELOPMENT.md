@@ -9,9 +9,9 @@
 | 层 | 职责 | 主要位置 |
 | --- | --- | --- |
 | 会话运行 | 官方多步工具循环、流式输出、步骤/时间限制、取消、历史 | `app/(chat)/api/chat/route.ts` |
-| Skills | 业务方法与参考材料；先展示元数据，相关任务才加载正文 | `skills/`、`lib/agent/skills.ts` |
-| 执行工具 | 官方 MCP 客户端发现现成工具；服务端白名单与确认策略 | `lib/agent/runtime.ts`、`config/agent.json` |
-| 展示 | 对话、真实工具状态、确认按钮、实际返回来源、能力配置 | `components/chat/` |
+| Skills | 业务方法与参考材料；先展示元数据，相关任务才加载正文 | `server/skills/`、`server/agent/skills.ts` |
+| 执行工具 | 官方 MCP 客户端发现现成工具；服务端白名单与确认策略 | `server/agent/runtime.ts`、`server/config/agent.json` |
+| 展示 | 对话、真实工具状态、确认按钮、实际返回来源、能力配置 | `app/_components/chat/` |
 
 只新增 `loadSkill`、`readSkillResource` 两个通用技能读取工具。搜索和网页正文提取默认接 Exa 现成 MCP，也保留可选 Tavily MCP。调查中的内容比较由模型遵循 Skill 完成。保留官方文档编辑工具用于报告，未向 Agent 开放天气工具。
 
@@ -35,15 +35,15 @@ corepack pnpm dev --hostname 127.0.0.1 --port 3000
 
 ## 扩展方式
 
-新增领域方法：添加 `skills/<name>/SKILL.md`，frontmatter 的 name 与目录一致，description 说明适用场景。参考文件放同目录下的 `references/`，按需读取；单个文件上限 64 KB，阻止目录穿越和逃逸符号链接。部署者维护技能包，聊天用户不能上传技能来修改服务端规则。
+新增领域方法：添加 `server/skills/<name>/SKILL.md`，frontmatter 的 name 与目录一致，description 说明适用场景。参考文件放同目录下的 `references/`，按需读取；单个文件上限 64 KB，阻止目录穿越和逃逸符号链接。部署者维护技能包，聊天用户不能上传技能来修改服务端规则。
 
 可选 `metadata.display-name` 和 `metadata.short-description` 用于用户可读的名称与用途；Agent 仍按原始 skill name 加载。加载成功显示“方法已就绪”，不代表调查已经完成。原始指令和参数收进工具卡“技术详情”。
 
-新增执行能力：优先在 `config/agent.json` 配置现成 HTTPS MCP 服务、真实工具名称、服务端环境变量引用、允许工具列表。工具统一命名为 `<server-id>__<remote-tool-name>`。未明确自动批准的工具需要用户确认；客户端只能回应数据库中已有的确认请求，不能借确认覆盖工具名称、参数或输出。不要用自动批准列表开放删除、投诉、联系第三方等外部写操作。
+新增执行能力：优先在 `server/config/agent.json` 配置现成 HTTPS MCP 服务、真实工具名称、服务端环境变量引用、允许工具列表。工具统一命名为 `<server-id>__<remote-tool-name>`。未明确自动批准的工具需要用户确认；客户端只能回应数据库中已有的确认请求，不能借确认覆盖工具名称、参数或输出。不要用自动批准列表开放删除、投诉、联系第三方等外部写操作。
 
 Skills 不能凭空赋予文件、联网或脚本执行权限。当前支持指令和文本参考，不执行技能脚本。网页与工具正文被视为不可信内容；Prompt/Skill 规则不能保证彻底防住提示注入，仍需权限隔离和真实评测。
 
-生产构建已显式包含默认配置与 `skills/**` 文件。若用 `AGENT_CONFIG_PATH` 指向部署包外的位置，需要自行挂载该配置，不能假定服务端打包器会自动带上它。
+生产构建已显式包含默认配置与 `server/skills/**` 文件。若用 `AGENT_CONFIG_PATH` 指向部署包外的位置，需要自行挂载该配置，不能假定服务端打包器会自动带上它。
 
 ## 可选 Porta / 1688
 
@@ -91,16 +91,16 @@ Exa 来源适配保留完整工具正文，但只将服务返回头部转成来�
 
 除读取 DOM 快照外，Agent 的导航/点击/输入等动作均需确认。暂停/接管先撤销控制修订，等待已开始的动作结束后才确认切换；旧排队动作和接管前的确认不能在交回后恢复权限。浏览器实际返回的 URL/title 可进入来源清单，画面和浏览器 cookies 不写入对话或数据库。
 
-新增验证：`tests/unit/browser.test.ts`（网络、同源、控制修订、流式事件），`tests/unit/browser-runtime.test.ts`（真实 MCP/Chromium、当前标签页一致性、中文输入、旧确认拒绝）；`tests/visual/workspace.py`（分栏/状态/手机），`tests/visual/browser_workspace.py`（真实浏览器界面、快速键入、画面、导航、暂停/接管、账号隔离）。这些检查不调用付费模型；无模型密钥时，Agent 自主操作全链路仍未验收。
+新增验证：`server/agent/browser.test.ts`（网络、同源、控制修订、流式事件），`server/agent/browser-runtime.test.ts`（真实 MCP/Chromium、当前标签页一致性、中文输入、旧确认拒绝）；`tests/visual/workspace.py`（分栏/状态/手机），`tests/visual/browser_workspace.py`（真实浏览器界面、快速键入、画面、导航、暂停/接管、账号隔离）。这些检查不调用付费模型；无模型密钥时，Agent 自主操作全链路仍未验收。
 
 ## 验证
 
 ```sh
 corepack pnpm exec tsc --noEmit
-corepack pnpm exec tsx --test tests/unit/agent.test.ts tests/unit/message-turn.test.ts
-corepack pnpm exec tsx --test tests/unit/browser.test.ts tests/unit/browser-runtime.test.ts
-corepack pnpm exec tsx --test tests/unit/model-connection.test.ts
-NODE_OPTIONS=--conditions=react-server corepack pnpm exec tsx --test --test-force-exit tests/unit/regeneration-db.test.ts
+corepack pnpm exec tsx --test server/agent/agent.test.ts server/agent/message-turn.test.ts
+corepack pnpm exec tsx --test server/agent/browser.test.ts server/agent/browser-runtime.test.ts
+corepack pnpm exec tsx --test server/ai/model-connection.test.ts
+NODE_OPTIONS=--conditions=react-server corepack pnpm exec tsx --test --test-force-exit server/db/regeneration-db.test.ts
 python3 tests/visual/desktop.py
 python3 tests/visual/tool_states.py
 python3 tests/visual/history.py
@@ -147,7 +147,7 @@ TypeScript、相关组件的 Biome、25 项相关单元/SDK 检查和生产构�
 
 三栏/浏览器早期验收（2026-10-10）：24 项单元/真实 MCP 浏览器检查、1 项 PostgreSQL 检查、相关文件 Biome 和生产构建通过；8 套 UI 检查在开发与生产模式通过。验证真实浏览器、工作区、桌面输入及重新生成导航；审查修复了确认重新校验时的旧授权恢复，以及历史浏览器结果误打开工作区。回归覆盖控制交回、确认记录淘汰、浏览器重启和流式参数状态。最终 chat/browser 生产追踪清单不包含环境文件、截图目录或 Next 配置。最新搜索任务验收见上；真实模型自主浏览器调查仍需单独验收。
 
-保持 `upstream` 指向官方仓库，`origin` 指向 `LordFoxFairy/chatnest`。产品新增逻辑主要集中在 `lib/agent/`、`skills/`、`config/` 和独立 UI 组件；原模板只保留必要接入点，不能承诺所有更新无冲突。
+保持 `upstream` 指向官方仓库，`origin` 指向 `LordFoxFairy/chatnest`。产品新增逻辑主要集中在 `server/agent/`、`server/skills/`、`server/config/` 和独立 UI 组件；原模板只保留必要接入点，不能承诺所有更新无冲突。
 
 更新时先获取上游并审阅差异，在单独分支选择安全修复或合并目标提交，再运行类型、边界、浏览器和生产构建检查。保留锁文件，AI SDK 与 MCP 客户端一起验证；当前 MCP 固定 `2.0.7`，匹配模板 AI SDK `7.0.15` 的 provider-utils 类型版本，不直接追 latest。
 

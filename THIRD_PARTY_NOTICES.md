@@ -9,8 +9,8 @@ Commit: `487a741538e787113f24a6c291f606136e2a970a`
 Vercel template listing: https://vercel.com/templates/next.js/next-js-and-shadcn-ui-admin-dashboard
 
 Adapted dashboard layout, app-sidebar, nav-main and nav-user composition into
-`components/admin/admin-shell.tsx` and `admin-navigation.tsx`; adapted upstream
-card, table and breadcrumb primitives into `components/ui/`. Removed demo data,
+`app/_components/admin/admin-shell.tsx` and `admin-navigation.tsx`; adapted upstream
+card, table and breadcrumb primitives into `app/_components/ui/`. Removed demo data,
 account switchers, billing, notifications, preference stores and demo actions.
 Existing ChatNest authorization, services and design tokens remain authoritative.
 This listing does not imply Vercel-authored backend or RBAC.
@@ -45,10 +45,10 @@ Source: https://github.com/vercel/ai-elements/tree/ca8be600bfd01b3131f9bf6134b51
 Pinned commit: `ca8be600bfd01b3131f9bf6134b51602a71f4374`
 
 Adapted `packages/elements/src/artifact.tsx` and `task.tsx` into
-`components/ai-elements/`. Local changes replace monorepo imports with the
+`app/_components/ai-elements/`. Local changes replace monorepo imports with the
 existing ChatNest UI primitives, use a native button TaskTrigger, and leave Task
 content layout to the existing activity timeline. Artifact and Task are composed
 into the conversation workspace and real tool activity groups. No SDK, runtime,
 or dependency changes. The complete pinned upstream copyright/license notice is
-retained verbatim in `components/ai-elements/AI_ELEMENTS_LICENSE`. The full
-Apache License 2.0 text is included in `components/ai-elements/APACHE-2.0.txt`.
+retained verbatim in `app/_components/ai-elements/AI_ELEMENTS_LICENSE`. The full
+Apache License 2.0 text is included in `app/_components/ai-elements/APACHE-2.0.txt`.

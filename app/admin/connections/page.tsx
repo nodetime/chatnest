@@ -1,4 +1,4 @@
-import { AdminConnections } from "@/components/admin/admin-connections";
+import { AdminConnections } from "@/app/_components/admin/admin-connections";
 
 export default function ConnectionsPage() {
   return (

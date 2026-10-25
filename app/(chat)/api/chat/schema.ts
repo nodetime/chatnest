@@ -2,9 +2,9 @@ import { z } from "zod";
 import {
   MAX_MESSAGE_CHARACTERS,
   MAX_MESSAGE_PARTS,
-} from "@/lib/agent/input-limits";
-import { ATTACHMENT_MIMES } from "@/lib/uploads/document-types";
-import { assetIdFromRef } from "@/lib/uploads/refs";
+} from "@/server/agent/input-limits";
+import { ATTACHMENT_MIMES } from "@/server/uploads/document-types";
+import { assetIdFromRef } from "@/server/uploads/refs";
 
 const textPartSchema = z.object({
   text: z

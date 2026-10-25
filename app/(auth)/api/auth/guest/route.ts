@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { signIn } from "@/app/(auth)/auth";
-import { usesSecureAuthCookies } from "@/lib/auth-cookies";
+import { usesSecureAuthCookies } from "@/server/shared/auth-cookies";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);

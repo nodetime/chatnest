@@ -2,13 +2,13 @@ import { cookies } from "next/headers";
 import Script from "next/script";
 import { Suspense } from "react";
 import { Toaster } from "sonner";
-import { AppSidebar } from "@/components/chat/app-sidebar";
-import { DataStreamProvider } from "@/components/chat/data-stream-provider";
-import { ChatShell } from "@/components/chat/shell";
-import { WorkbenchSidebarProvider } from "@/components/chat/workbench-sidebar-provider";
-import { SidebarInset } from "@/components/ui/sidebar";
-import { ActiveChatProvider } from "@/hooks/use-active-chat";
-import { isPlatformAdmin } from "@/lib/admin/access";
+import { AppSidebar } from "@/app/_components/chat/app-sidebar";
+import { DataStreamProvider } from "@/app/_components/chat/data-stream-provider";
+import { ChatShell } from "@/app/_components/chat/shell";
+import { WorkbenchSidebarProvider } from "@/app/_components/chat/workbench-sidebar-provider";
+import { SidebarInset } from "@/app/_components/ui/sidebar";
+import { ActiveChatProvider } from "@/app/_hooks/use-active-chat";
+import { isPlatformAdmin } from "@/server/admin/access";
 import { auth } from "../(auth)/auth";
 
 export default function Layout({ children }: { children: React.ReactNode }) {

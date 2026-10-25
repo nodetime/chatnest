@@ -67,7 +67,7 @@ MCP_ALLOWED_ORIGINS=https://mcp.example.org,https://porta.example.org
 
 ## 文件兼容与下一任务生效
 
-`config/agent.json` / `AGENT_CONFIG_PATH` 服务始终只读；原有完整环境引用、Porta 缺失时跳过、Exa 的既有自动审批策略保持。新增出站策略只限制 managed，不追溯改变旧文件连接；部署操作者仍负责审查 legacy 配置。Porta 的原生业务错误保留其脱敏语义，managed 通用服务不回显业务异常细节。
+`server/config/agent.json` / `AGENT_CONFIG_PATH` 服务始终只读；原有完整环境引用、Porta 缺失时跳过、Exa 的既有自动审批策略保持。新增出站策略只限制 managed，不追溯改变旧文件连接；部署操作者仍负责审查 legacy 配置。Porta 的原生业务错误保留其脱敏语义，managed 通用服务不回显业务异常细节。
 
 每次创建新 Agent runtime 才读一次 file + managed 配置并捕获快照；停用的 managed 不合入。运行中的任务不会被后台修改；下一个新任务才读取新 revision。普通用户 `/api/agent` 只收到无密钥能力摘要，不收到管理 GET、URL 或 header 值。
 
@@ -80,7 +80,7 @@ MCP_ALLOWED_ORIGINS=https://mcp.example.org,https://porta.example.org
 离线专属测试（保留 `server-only` 防护）：
 
 ```sh
-corepack pnpm exec tsx --conditions=react-server --test tests/unit/mcp-settings*.test.ts
+corepack pnpm exec tsx --conditions=react-server --test server/agent/mcp-settings/mcp-settings*.test.ts
 corepack pnpm exec tsc --noEmit
 ```
 
@@ -114,6 +114,6 @@ corepack pnpm exec tsc --noEmit
 
 独立 spec 与 quality review 均通过（quality reviewer 另跑 45 条安全离线测试与类型检查）。主会话在 1360×900 桌面和 390×844 移动端验证无文档横向溢出、移动导航打开与切页关闭；真实本地 MCP fixture 的保留凭据编辑发现两个原生工具并保存回列表，不回显保存的密钥。将发现响应延迟 5000 ms 后，忙时 Escape 保持抽屉打开、取消禁用且 X 隐藏，完成后控件恢复。存储页实际写入/读取/删除测试成功，18 项身份/页面/API 矩阵通过。
 
-干净源码副本的实际 `next build --webpack` 与 `next start` 通过，生产 `/admin/storage` 返回 200，私有文件写入/原字节读取/删除通过；overview 对普通/guest 身份返回 403，跨源存储测试返回 403，响应未泄露凭据。overview 的生产资源追踪包含 `config/agent.json`。生产工具卡正确拒绝仅供开发的 HTTP fixture 配置，存储/模型卡仍可独立读取；这不是对真实供应商或付费模型可用性的验收。私有证据保留在忽略的 `.local-review/`，本轮无付费调用。
+干净源码副本的实际 `next build --webpack` 与 `next start` 通过，生产 `/admin/storage` 返回 200，私有文件写入/原字节读取/删除通过；overview 对普通/guest 身份返回 403，跨源存储测试返回 403，响应未泄露凭据。overview 的生产资源追踪包含 `server/config/agent.json`。生产工具卡正确拒绝仅供开发的 HTTP fixture 配置，存储/模型卡仍可独立读取；这不是对真实供应商或付费模型可用性的验收。私有证据保留在忽略的 `.local-review/`，本轮无付费调用。
 
 Task 2.5 标准后台切片已验收；文档解析、结果表格仍为独立待办。当前仍仅本地存储，未实现云存储适配或迁移。

@@ -1,14 +1,14 @@
 import { auth } from "@/app/(auth)/auth";
-import { createOverviewHandler, summarizeTools } from "@/lib/admin/overview";
-import { readAgentConfig } from "@/lib/agent/config";
-import { createSettingsService } from "@/lib/agent/mcp-settings/service";
+import { createOverviewHandler, summarizeTools } from "@/server/admin/overview";
+import { readAgentConfig } from "@/server/agent/config";
+import { createSettingsService } from "@/server/agent/mcp-settings/service";
 import {
   getModelConnection,
   getRuntimeModels,
-} from "@/lib/ai/model-connection";
-import { withModelSettings } from "@/lib/ai/model-settings/runtime";
-import { DEFAULT_CHAT_MODEL } from "@/lib/ai/models";
-import { storageStatus } from "@/lib/uploads/service";
+} from "@/server/ai/model-connection";
+import { withModelSettings } from "@/server/ai/model-settings/runtime";
+import { DEFAULT_CHAT_MODEL } from "@/server/ai/models";
+import { storageStatus } from "@/server/uploads/service";
 
 export const GET = createOverviewHandler({
   model: () =>

@@ -1,5 +1,5 @@
 import { auth } from "@/app/(auth)/auth";
-import { createModelSettingsHandler } from "@/lib/ai/model-settings/handler";
+import { createModelSettingsHandler } from "@/server/ai/model-settings/handler";
 
 const handler = createModelSettingsHandler({
   session: async () => (await auth())?.user,

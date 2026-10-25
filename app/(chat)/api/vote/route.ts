@@ -1,7 +1,11 @@
 import { z } from "zod";
 import { auth } from "@/app/(auth)/auth";
-import { getChatById, getVotesByChatId, voteMessage } from "@/lib/db/queries";
-import { ChatbotError } from "@/lib/errors";
+import {
+  getChatById,
+  getVotesByChatId,
+  voteMessage,
+} from "@/server/db/queries";
+import { ChatbotError } from "@/server/shared/errors";
 
 const voteSchema = z.object({
   chatId: z.string(),

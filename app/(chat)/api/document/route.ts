@@ -1,18 +1,18 @@
 import { z } from "zod";
+import type { ArtifactKind } from "@/app/_components/chat/artifact";
 import { auth } from "@/app/(auth)/auth";
-import type { ArtifactKind } from "@/components/chat/artifact";
 import {
   isProtectedResultTable,
   parseResultTable,
-} from "@/lib/artifacts/result-table";
+} from "@/server/artifacts/result-table";
 import {
   deleteDocumentsByIdAfterTimestamp,
   getChatById,
   getDocumentsById,
   saveDocument,
   updateDocumentContent,
-} from "@/lib/db/queries";
-import { ChatbotError } from "@/lib/errors";
+} from "@/server/db/queries";
+import { ChatbotError } from "@/server/shared/errors";
 
 const documentSchema = z.object({
   content: z.string(),

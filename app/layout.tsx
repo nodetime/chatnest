@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { ThemeProvider } from "@/components/theme-provider";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { ThemeProvider } from "@/app/_components/theme-provider";
+import { TooltipProvider } from "@/app/_components/ui/tooltip";
 
 import "./globals.css";
 import { SessionProvider } from "next-auth/react";

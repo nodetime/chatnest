@@ -12,42 +12,50 @@ import {
 import { checkBotId } from "botid/server";
 import { after } from "next/server";
 import { createResumableStreamContext } from "resumable-stream";
+import {
+  isProductionEnvironment,
+  isTestEnvironment,
+} from "@/app/_lib/constants";
+import type { ChatMessage, WaitingStatusData } from "@/app/_lib/types";
+import { convertToUIMessages, generateUUID } from "@/app/_lib/utils";
 import { auth, type UserType } from "@/app/(auth)/auth";
-import { applyToolApprovals } from "@/lib/agent/approvals";
-import { createBrowserTools } from "@/lib/agent/browser-tools";
+import { applyToolApprovals } from "@/server/agent/approvals";
+import { createBrowserTools } from "@/server/agent/browser-tools";
 import {
   prepareMessageEdit,
   prepareRegeneration,
-} from "@/lib/agent/message-turn";
-import { agentStreamErrorText } from "@/lib/agent/porta-error";
+} from "@/server/agent/message-turn";
+import { agentStreamErrorText } from "@/server/agent/porta-error";
 import {
   boundedMcpHistory,
   historyProjectionTools,
   ResultEvidenceLedger,
   restoreResultEvidence,
-} from "@/lib/agent/result-evidence";
+} from "@/server/agent/result-evidence";
 import {
   createRunFailureReporter,
   hasRunFailure,
-} from "@/lib/agent/run-failure";
-import { createAgentRuntime } from "@/lib/agent/runtime";
-import { entitlementsByUserType } from "@/lib/ai/entitlements";
+} from "@/server/agent/run-failure";
+import { createAgentRuntime } from "@/server/agent/runtime";
+import { entitlementsByUserType } from "@/server/ai/entitlements";
 import {
   getModelConnection,
   getRuntimeModels,
   resolveModelId,
-} from "@/lib/ai/model-connection";
-import { getCapabilities, getModelAvailability } from "@/lib/ai/model-service";
-import { withModelSettings } from "@/lib/ai/model-settings/runtime";
-import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
-import { getLanguageModel } from "@/lib/ai/providers";
-import { metadataOnlyTelemetry } from "@/lib/ai/telemetry";
-import { createDocument } from "@/lib/ai/tools/create-document";
-import { createResultTable } from "@/lib/ai/tools/create-result-table";
-import { editDocument } from "@/lib/ai/tools/edit-document";
-import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
-import { updateDocument } from "@/lib/ai/tools/update-document";
-import { isProductionEnvironment, isTestEnvironment } from "@/lib/constants";
+} from "@/server/ai/model-connection";
+import {
+  getCapabilities,
+  getModelAvailability,
+} from "@/server/ai/model-service";
+import { withModelSettings } from "@/server/ai/model-settings/runtime";
+import { type RequestHints, systemPrompt } from "@/server/ai/prompts";
+import { getLanguageModel } from "@/server/ai/providers";
+import { metadataOnlyTelemetry } from "@/server/ai/telemetry";
+import { createDocument } from "@/server/ai/tools/create-document";
+import { createResultTable } from "@/server/ai/tools/create-result-table";
+import { editDocument } from "@/server/ai/tools/edit-document";
+import { requestSuggestions } from "@/server/ai/tools/request-suggestions";
+import { updateDocument } from "@/server/ai/tools/update-document";
 import {
   createStreamId,
   deleteChatById,
@@ -59,22 +67,20 @@ import {
   saveMessages,
   updateChatTitleById,
   updateMessage,
-} from "@/lib/db/queries";
-import type { DBMessage } from "@/lib/db/schema";
-import { ChatbotError } from "@/lib/errors";
-import { checkIpRateLimit } from "@/lib/ratelimit";
-import type { ChatMessage, WaitingStatusData } from "@/lib/types";
-import { prepareAttachmentContext } from "@/lib/uploads/context";
-import { AttachmentRoundBudget } from "@/lib/uploads/document-budget";
-import { readAttachmentTool } from "@/lib/uploads/read-attachment";
-import { uploadErrorResponse } from "@/lib/uploads/security";
+} from "@/server/db/queries";
+import type { DBMessage } from "@/server/db/schema";
+import { ChatbotError } from "@/server/shared/errors";
+import { checkIpRateLimit } from "@/server/shared/ratelimit";
+import { prepareAttachmentContext } from "@/server/uploads/context";
+import { AttachmentRoundBudget } from "@/server/uploads/document-budget";
+import { readAttachmentTool } from "@/server/uploads/read-attachment";
+import { uploadErrorResponse } from "@/server/uploads/security";
 import {
   commitUserMessage,
   readAssetForContext,
   readAttachmentAsset,
-} from "@/lib/uploads/service";
-import { readBoundedBody, UploadError } from "@/lib/uploads/validation";
-import { convertToUIMessages, generateUUID } from "@/lib/utils";
+} from "@/server/uploads/service";
+import { readBoundedBody, UploadError } from "@/server/uploads/validation";
 import { generateTitleFromUserMessage } from "../../actions";
 import { type PostRequestBody, postRequestBodySchema } from "./schema";
 

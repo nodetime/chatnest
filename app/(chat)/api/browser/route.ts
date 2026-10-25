@@ -1,11 +1,11 @@
 import { z } from "zod";
 import { auth } from "@/app/(auth)/auth";
-import { sameOriginBrowserControl } from "@/lib/agent/browser-policy";
+import { sameOriginBrowserControl } from "@/server/agent/browser-policy";
 import {
   closeBrowserSession,
   getBrowserSession,
-} from "@/lib/agent/browser-session";
-import { getChatById } from "@/lib/db/queries";
+} from "@/server/agent/browser-session";
+import { getChatById } from "@/server/db/queries";
 
 export const maxDuration = 60;
 const idSchema = z.string().uuid();

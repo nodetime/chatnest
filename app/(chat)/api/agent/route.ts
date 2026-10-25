@@ -1,11 +1,11 @@
 import { auth } from "@/app/(auth)/auth";
-import { capabilityServers } from "@/lib/agent/mcp-settings/projection";
-import { readRuntimeConfig } from "@/lib/agent/mcp-settings/runtime-config";
-import { isAdmin, managementReady } from "@/lib/agent/mcp-settings/security";
-import { discoverSkills } from "@/lib/agent/skills";
-import { getModelConnection } from "@/lib/ai/model-connection";
-import { withModelSettings } from "@/lib/ai/model-settings/runtime";
-import { uploadsAvailable } from "@/lib/uploads/service";
+import { capabilityServers } from "@/server/agent/mcp-settings/projection";
+import { readRuntimeConfig } from "@/server/agent/mcp-settings/runtime-config";
+import { isAdmin, managementReady } from "@/server/agent/mcp-settings/security";
+import { discoverSkills } from "@/server/agent/skills";
+import { getModelConnection } from "@/server/ai/model-connection";
+import { withModelSettings } from "@/server/ai/model-settings/runtime";
+import { uploadsAvailable } from "@/server/uploads/service";
 
 export async function GET() {
   const user = (await auth())?.user;

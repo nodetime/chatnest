@@ -1,0 +1,4 @@
+# Porta skill 快照按字节哈希锁定(server/skills/porta-skill.test.ts)。
+# 强制 LF,保证各平台工作区字节一致,避免 autocrlf 检出破坏完整性校验。
+server/skills/porta/** text eol=lf
+server/config/porta-skill.lock.json text eol=lf

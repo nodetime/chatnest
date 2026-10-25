@@ -1,4 +1,4 @@
-import { AdminModels } from "@/components/admin/admin-models";
+import { AdminModels } from "@/app/_components/admin/admin-models";
 export default function ModelsPage() {
   return (
     <>

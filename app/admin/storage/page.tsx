@@ -1,4 +1,4 @@
-import { AdminStorage } from "@/components/admin/admin-storage";
+import { AdminStorage } from "@/app/_components/admin/admin-storage";
 export default function StoragePage() {
   return (
     <>
