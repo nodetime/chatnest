@@ -1,3 +1,4 @@
+import { getEnv } from "@/server/shared/env";
 import "server-only";
 import { createHash, randomUUID } from "node:crypto";
 import postgres from "postgres";
@@ -22,7 +23,7 @@ import {
   validateAttachment,
 } from "./validation";
 
-const sql = postgres(process.env.POSTGRES_URL ?? "");
+const sql = postgres(getEnv().POSTGRES_URL ?? "");
 // Shared lock serializes quota reservation, lifecycle pinning and safe deletion across processes.
 const LOCK = 73_624_910;
 type Asset = {

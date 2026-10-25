@@ -3,6 +3,7 @@ import path from "node:path";
 import pino from "pino";
 import { build as prettyBuild } from "pino-pretty";
 import { createStream as createRotateStream } from "rotating-file-stream";
+import { getEnv } from "./env";
 import { getTraceId } from "./request-context";
 
 // 统一日志基座(方案:docs/02_FEAT特性/20261025101026_可观测性基座_UUID7_traceId_JSONL日志.md)
@@ -39,7 +40,7 @@ function buildStreams(level: string, injected?: LogSink) {
     return [{ level, stream: injected }];
   }
   const streams: { level: string; stream: NodeJS.WriteStream | LogSink }[] = [];
-  if (process.env.NODE_ENV === "development") {
+  if (getEnv().NODE_ENV === "development") {
     streams.push({
       level,
       stream: prettyBuild({
@@ -51,7 +52,7 @@ function buildStreams(level: string, injected?: LogSink) {
   } else {
     streams.push({ level, stream: process.stdout });
   }
-  const dir = process.env.LOG_FILE_DIR;
+  const { LOG_FILE_DIR: dir } = getEnv();
   if (dir) {
     mkdirSync(path.resolve(dir), { recursive: true });
     streams.push({
@@ -68,7 +69,7 @@ function buildStreams(level: string, injected?: LogSink) {
 }
 
 export function createLogger(options: CreateLoggerOptions = {}) {
-  const level = options.level ?? process.env.LOG_LEVEL ?? "info";
+  const level = options.level ?? getEnv().LOG_LEVEL ?? "info";
   return pino(
     {
       base: { service: "chatnest" },

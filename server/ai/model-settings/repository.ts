@@ -1,3 +1,4 @@
+import { getEnv } from "@/server/shared/env";
 import "server-only";
 import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
@@ -16,10 +17,11 @@ export interface SettingsRepository {
 let database: ReturnType<typeof drizzle> | undefined;
 function db() {
   if (!database) {
-    if (!process.env.POSTGRES_URL) {
+    const { POSTGRES_URL } = getEnv();
+    if (!POSTGRES_URL) {
       throw new Error("Model database is not configured");
     }
-    database = drizzle(postgres(process.env.POSTGRES_URL, { max: 2 }));
+    database = drizzle(postgres(POSTGRES_URL, { max: 2 }));
   }
   return database;
 }

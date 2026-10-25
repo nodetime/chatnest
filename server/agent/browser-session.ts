@@ -5,6 +5,7 @@ import { createMCPClient, type MCPTransport } from "@ai-sdk/mcp";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { createConnection } from "@playwright/mcp";
 import { chromium } from "playwright";
+import { getEnv } from "@/server/shared/env";
 import {
   BrowserControl,
   type BrowserMode,
@@ -35,12 +36,11 @@ export async function createBrowserSession() {
   });
   let browser: Awaited<ReturnType<typeof chromium.launch>>;
   try {
+    const { BROWSER_EXECUTABLE_PATH: executablePath } = getEnv();
     browser = await chromium.launch({
       chromiumSandbox: true,
       headless: true,
-      ...(process.env.BROWSER_EXECUTABLE_PATH
-        ? { executablePath: process.env.BROWSER_EXECUTABLE_PATH }
-        : {}),
+      ...(executablePath ? { executablePath } : {}),
       args: [
         "--disable-quic",
         "--force-webrtc-ip-handling-policy=disable_non_proxied_udp",

@@ -1,3 +1,4 @@
+import { getEnv } from "@/server/shared/env";
 import "server-only";
 
 import {
@@ -49,7 +50,7 @@ import {
 } from "./schema";
 import { generateHashedPassword } from "./utils";
 
-const client = postgres(process.env.POSTGRES_URL ?? "");
+const client = postgres(getEnv().POSTGRES_URL ?? "");
 const db = drizzle(client);
 
 export async function getUser(email: string): Promise<User[]> {

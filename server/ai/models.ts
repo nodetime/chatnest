@@ -1,3 +1,4 @@
+import { getEnv } from "@/server/shared/env";
 export const DEFAULT_CHAT_MODEL = "moonshotai/kimi-k2.5";
 
 export const titleModel = {
@@ -106,7 +107,7 @@ export async function getCapabilities(): Promise<
   return Object.fromEntries(results);
 }
 
-export const isDemo = process.env.IS_DEMO === "1";
+export const isDemo = getEnv().IS_DEMO === "1";
 
 type GatewayModel = {
   id: string;

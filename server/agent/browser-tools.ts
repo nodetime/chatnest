@@ -1,4 +1,5 @@
 import { dynamicTool, type ToolSet } from "ai";
+import { getEnv } from "@/server/shared/env";
 import {
   browserReadTools,
   browserToolNames,
@@ -10,7 +11,7 @@ export async function createBrowserTools(
   chatId: string,
   signal: AbortSignal
 ): Promise<ToolSet> {
-  if (process.env.BROWSER_RUNTIME !== "local") {
+  if (getEnv().BROWSER_RUNTIME !== "local") {
     return {};
   }
   const session = await getBrowserSession(owner, chatId, true);

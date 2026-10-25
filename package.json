@@ -13,6 +13,7 @@
     "start": "next start",
     "check": "ultracite check",
     "fix": "ultracite fix",
+    "typecheck": "tsc --noEmit --incremental false",
     "prepare": "husky",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "npx tsx server/db/migrate.ts",

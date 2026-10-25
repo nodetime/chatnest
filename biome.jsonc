@@ -52,5 +52,117 @@
         "useTopLevelRegex": "off"
       }
     }
-  }
+  },
+  // DDD 边界强制(规划第七节,探针验证后上墙):
+  // 坑:同一条规则被多个 override 匹配同一文件时,后写的整体替换先写的——
+  // 因此 domain 的 override 必须自带 R1+R2 全部模式,不能靠与 R2 override 叠加。
+  // R2 当前只护三层新代码——存量 server/ 有 27 处 next/@/app 依赖,P2/P3 搬完后扩大到 server/**
+  "overrides": [
+    {
+      "includes": ["server/domain/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "@/server/application/**",
+                      "@/server/infrastructure/**",
+                      "@/app/**"
+                    ],
+                    "message": "R1: domain 只放类型 + 仓储接口 + 纯函数,不得依赖外层"
+                  },
+                  {
+                    "group": ["../../**"],
+                    "message": "R1: 跨层相对导入禁止,一律用 @/ 别名"
+                  },
+                  {
+                    "group": [
+                      "@/app/**",
+                      "next/server",
+                      "next/headers",
+                      "next/navigation"
+                    ],
+                    "message": "R2: server 不认识 HTTP 与前端;请求上下文应作为参数传入"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["server/application/**", "server/infrastructure/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "@/app/**",
+                      "next/server",
+                      "next/headers",
+                      "next/navigation"
+                    ],
+                    "message": "R2: server 不认识 HTTP 与前端;请求上下文应作为参数传入"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["app/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/server/infrastructure/**"],
+                    "message": "R3: 平台层只能调 application 的 usecase,不得直接访问持久化"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["app/_components/**", "app/_hooks/**", "app/_lib/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "@/server/application/**",
+                      "@/server/infrastructure/**",
+                      "@/server/composition"
+                    ],
+                    "message": "R4: UI 层只能 import server/domain 的类型,不得调用服务端逻辑"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
 }

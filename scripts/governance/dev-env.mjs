@@ -98,13 +98,17 @@ function start() {
     log("停止", `收到 ${signal},正在优雅停止 dev 进程...`);
     try {
       child.kill(signal);
-    } catch {}
+    } catch {
+      /* 优雅停止失败则由下方 SIGKILL 兜底 */
+    }
     setTimeout(() => {
       try {
         if (child.exitCode === null) {
           child.kill("SIGKILL");
         }
-      } catch {}
+      } catch {
+        /* 进程已死则无事可做 */
+      }
       process.exit(0);
     }, 2000);
   };
@@ -161,12 +165,12 @@ function stop() {
   }
 }
 
-const command = process.argv[2];
-if (command === "nics") {
+const [, , mode] = process.argv;
+if (mode === "nics") {
   nics();
-} else if (command === "start") {
+} else if (mode === "start") {
   start();
-} else if (command === "stop") {
+} else if (mode === "stop") {
   stop();
 } else {
   console.log("用法: node scripts/governance/dev-env.mjs nics | start | stop");

@@ -7,7 +7,11 @@ function sink() {
   const lines: string[] = [];
   return {
     lines,
-    stream: { write: (chunk: string) => void lines.push(chunk) },
+    stream: {
+      write: (chunk: string) => {
+        lines.push(chunk);
+      },
+    },
   };
 }
 

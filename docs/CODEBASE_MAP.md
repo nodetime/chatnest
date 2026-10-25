@@ -123,3 +123,8 @@ Admin model settings (2026-10-24):
 - `scripts/governance/dev-env-loop.mjs`: 闭环支撑脚本(体检安装指引[Windows/macOS/Linux 分支] -> .env.local -> compose 拉库 -> 迁移 -> 委托进程工具启动);npm 入口 `pnpm dev:up`/`dev:down [--purge]`,skill 仅作调用入口。
 - `scripts/governance/dev-env.mjs`: 纯进程工具,仅三个能力:列网卡 / 绑 0.0.0.0:3003 启动 dev(Ctrl+C 优雅停止)/ 杀残留 dev(端口定位进程树,跨平台)。npm 入口 `pnpm dev:nics|start|stop`。
 - `deploy/docker-compose.dev.yml`: 开发 PostgreSQL(127.0.0.1:55432),复用命名卷 `chatnest-postgres-data`(external,删容器不丢数据;遗留同名容器按 SKILL 步骤接管)。
+
+DDD layering foundation (P1, 2026-10-26):
+- `server/domain/`, `server/application/`, `server/infrastructure/`: skeleton dirs with per-layer READMEs (responsibilities + forbidden imports); code still lives in flat server/* dirs and migrates in P2/P3. Biome overrides in `biome.jsonc` enforce R1-R4 import boundaries (probe-verified). Caveat: when multiple overrides match one file for the same rule, the later override replaces the earlier entirely — the domain override must carry both R1 and R2 patterns itself; R2 is scoped to the three layer dirs until P2/P3 relocate 27 legacy next/@/app imports in server/.
+- `server/shared/env.ts`: central zod-validated process.env registry (`getEnv()`); all 12 server-side read sites route through it (all-optional schema, parsed per call, no cache — behavior-identical to scattered reads). app/ NEXT_PUBLIC_* build-time inlining and `proxy.ts` stay outside. Tests: `server/shared/env.test.ts` (offline whitelist).
+- `pnpm typecheck`: `tsc --noEmit --incremental false`; the CI offline matrix already ran this mode, the local entry was added with it. The Lint workflow had been red for 3 commits (dev-env scripts + logger test lint errors) and was fixed in the same pass.

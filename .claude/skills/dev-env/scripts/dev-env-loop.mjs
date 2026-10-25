@@ -23,7 +23,7 @@ const VOLUME_NAME = "chatnest-postgres-data";
 const MIN_NODE_MAJOR = 22;
 const MIN_NODE_MINOR = 13;
 
-const platform = process.platform; // win32 | darwin | linux
+const { platform } = process; // win32 | darwin | linux
 const isWindows = platform === "win32";
 
 function log(tag, message) {
@@ -245,7 +245,9 @@ function start() {
   const forward = (signal) => {
     try {
       child.kill(signal);
-    } catch {}
+    } catch {
+      /* 信号转发失败由 exit 兜底 */
+    }
   };
   process.on("SIGINT", () => forward("SIGINT"));
   process.on("SIGTERM", () => forward("SIGTERM"));
@@ -271,8 +273,8 @@ function down(purge) {
   }
 }
 
-const [command, flag] = process.argv.slice(2);
-if (command === "up") {
+const [mode, flag] = process.argv.slice(2);
+if (mode === "up") {
   console.log("=== ChatNest 开发基座一键拉起 ===");
   checkNode();
   ensureDockerTooling();
@@ -285,7 +287,7 @@ if (command === "up") {
   upDatabase();
   migrate();
   start();
-} else if (command === "down") {
+} else if (mode === "down") {
   down(flag === "--purge");
 } else {
   console.log("用法: node scripts/governance/dev-env-loop.mjs up | down [--purge]");

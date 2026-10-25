@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
+import { getEnv } from "@/server/shared/env";
 
 const environmentReference = /^\$\{([A-Z][A-Z0-9_]*)\}$/;
 
@@ -90,7 +91,7 @@ export type ServerConfig = AgentConfig["servers"][number];
 
 export async function readAgentConfig() {
   const filename =
-    process.env.AGENT_CONFIG_PATH ??
+    getEnv().AGENT_CONFIG_PATH ??
     path.join(process.cwd(), "server/config/agent.json");
   // Default assets are explicitly traced in next.config.ts. External config is deployment-mounted.
   return agentConfigSchema.parse(

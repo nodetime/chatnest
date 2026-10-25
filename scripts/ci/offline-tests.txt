@@ -36,3 +36,4 @@ server/agent/run-failure.test.ts
 server/ai/model-settings/model-settings.test.ts
 server/shared/request-context.test.ts
 server/shared/logger.test.ts
+server/shared/env.test.ts
