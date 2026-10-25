@@ -9,10 +9,11 @@ export async function deleteChat(
   { id, userId }: { id: string; userId: string },
   deps: DeleteChatDeps
 ) {
-  const chat = await deps.chats.findById(id);
+  const { chats } = deps;
+  const chat = await chats.findById(id);
   if (!canAccessChat(chat, userId)) {
     // 会话缺失与属主不匹配同样拒绝,与原路由行为一致
     throw new ChatbotError("forbidden:chat");
   }
-  return deps.chats.deleteById(id);
+  return chats.deleteById(id);
 }

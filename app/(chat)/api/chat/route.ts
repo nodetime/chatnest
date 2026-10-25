@@ -3,7 +3,7 @@ import { checkBotId } from "botid/server";
 import { headers } from "next/headers";
 import { auth } from "@/app/(auth)/auth";
 import { withModelSettings } from "@/server/ai/model-settings/runtime";
-import { useCases } from "@/server/composition";
+import { getUseCases } from "@/server/composition";
 import type { ChatSession } from "@/server/domain/user/types";
 import { ChatbotError } from "@/server/shared/errors";
 import { getLogger } from "@/server/shared/logger";
@@ -56,7 +56,7 @@ async function postWithModelSettings(request: Request, session: ChatSession) {
     }
 
     const { longitude, latitude, city, country } = geolocation(request);
-    const stream = await useCases().sendMessage({
+    const stream = await getUseCases().sendMessage({
       body: parsed.body,
       ip: ipAddress(request),
       requestHints: { city, country, latitude, longitude },
@@ -82,7 +82,7 @@ export async function DELETE(request: Request) {
   }
 
   try {
-    const deletedChat = await useCases().deleteChat({
+    const deletedChat = await getUseCases().deleteChat({
       id,
       userId: session.user.id,
     });

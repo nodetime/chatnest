@@ -12,6 +12,7 @@
   "files": {
     "includes": [
       "**/*",
+      "!.ccode",
       "!app/_components/ai-elements",
       "!app/_components/elements",
       "!app/_components/ui",

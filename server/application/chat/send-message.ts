@@ -113,7 +113,8 @@ export async function sendMessage(
   deps: SendMessageDeps
 ) {
   const { session } = input;
-  const user = session.user;
+  const { user } = session;
+  const { chats, messages: messageRepo } = deps;
   const {
     id,
     message,
@@ -132,7 +133,7 @@ export async function sendMessage(
 
   await checkIpRateLimit(input.ip);
 
-  const messageCount = await deps.messages.countByUserSince(user.id, 1);
+  const messageCount = await messageRepo.countByUserSince(user.id, 1);
 
   if (messageCount > entitlementsByUserType[user.type].maxMessagesPerHour) {
     throw new ChatbotError("rate_limit:chat");
@@ -145,7 +146,7 @@ export async function sendMessage(
     throw new ChatbotError("bad_request:api");
   }
 
-  const chat = await deps.chats.findById(id);
+  const chat = await chats.findById(id);
   let messagesFromDb: StoredMessage[] = [];
   let titlePromise: Promise<string> | null = null;
 
@@ -153,7 +154,7 @@ export async function sendMessage(
     if (!canAccessChat(chat, user.id)) {
       throw new ChatbotError("forbidden:chat");
     }
-    messagesFromDb = await deps.messages.listByChatId(id);
+    messagesFromDb = await messageRepo.listByChatId(id);
   } else if (isRegeneration || isEdit) {
     throw new ChatbotError("bad_request:api");
   }
@@ -452,7 +453,7 @@ export async function sendMessage(
         try {
           const title = await titlePromise;
           dataStream.write({ data: title, type: "data-chat-title" });
-          deps.chats.updateTitle(id, title);
+          chats.updateTitle(id, title);
         } catch {
           /* non-fatal */
         }
@@ -476,7 +477,7 @@ export async function sendMessage(
         ) {
           return;
         }
-        await deps.messages.replaceEditedTurn({
+        await messageRepo.replaceEditedTurn({
           answer: {
             attachments: [],
             chatId: id,
@@ -501,7 +502,7 @@ export async function sendMessage(
         ) {
           return;
         }
-        await deps.messages.replaceRegeneratedAnswer({
+        await messageRepo.replaceRegeneratedAnswer({
           answer: {
             attachments: [],
             chatId: id,
@@ -519,14 +520,11 @@ export async function sendMessage(
           finishedMessages.map(async (finishedMsg) => {
             const existingMsg = uiMessages.find((m) => m.id === finishedMsg.id);
             if (existingMsg) {
-              await deps.messages.updateParts(
-                finishedMsg.id,
-                finishedMsg.parts
-              );
+              await messageRepo.updateParts(finishedMsg.id, finishedMsg.parts);
               return;
             }
 
-            await deps.messages.saveMany([
+            await messageRepo.saveMany([
               {
                 attachments: [],
                 chatId: id,
@@ -539,7 +537,7 @@ export async function sendMessage(
           })
         );
       } else if (finishedMessages.length > 0) {
-        await deps.messages.saveMany(
+        await messageRepo.saveMany(
           finishedMessages.map((currentMessage) => ({
             attachments: [],
             chatId: id,

@@ -2,7 +2,7 @@ import { createUIMessageStreamResponse, generateId } from "ai";
 import { after } from "next/server";
 import { createResumableStreamContext } from "resumable-stream";
 import type { sendMessage } from "@/server/application/chat/send-message";
-import { useCases } from "@/server/composition";
+import { getUseCases } from "@/server/composition";
 import { getEnv } from "@/server/shared/env";
 import { ChatbotError } from "@/server/shared/errors";
 import { uploadErrorResponse } from "@/server/uploads/security";
@@ -96,7 +96,7 @@ export function chatStreamResponse(
         if (streamContext) {
           // 续流 ID 沿用 ai 的 generateId(与迁移前一致),不换 uuid 形态
           const streamId = generateId();
-          await useCases().registerResumeStream(chatId, streamId);
+          await getUseCases().registerResumeStream(chatId, streamId);
           await streamContext.createNewResumableStream(
             streamId,
             () => sseStream

@@ -7,6 +7,7 @@ import { chatRepository } from "@/server/infrastructure/persistence/drizzle/chat
 import { messageRepository } from "@/server/infrastructure/persistence/drizzle/message-repository";
 
 // 模块级装配工厂:平台层(route/actions)只经此入口取用例,不触碰仓储实现(R3 的豁免点)
+// 命名避开 use 前缀:biome React 预设会把 use* 当 hook,嵌套调用即误报 useHookAtTopLevel
 // 单进程内只装配一次;测试不走这里,直接以 mock 仓储调 sendMessage/deleteChat
 function buildUseCases() {
   const chats = chatRepository;
@@ -24,6 +25,9 @@ function buildUseCases() {
 
 let cached: ReturnType<typeof buildUseCases> | undefined;
 
-export function useCases() {
-  return (cached ??= buildUseCases());
+export function getUseCases() {
+  if (!cached) {
+    cached = buildUseCases();
+  }
+  return cached;
 }

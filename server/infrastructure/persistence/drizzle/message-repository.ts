@@ -13,24 +13,24 @@ type QueriesEditedTurn = Parameters<typeof replaceEditedTurn>[0];
 type QueriesRegenerated = Parameters<typeof replaceRegeneratedAnswer>[0];
 
 export const messageRepository: MessageRepository = {
-  async countByUserSince(userId, differenceInHours) {
+  countByUserSince(userId, differenceInHours) {
     return getMessageCountByUserId({ differenceInHours, id: userId });
   },
-  async listByChatId(chatId) {
+  listByChatId(chatId) {
     return getMessagesByChatId({ id: chatId });
   },
-  async replaceEditedTurn(input) {
+  replaceEditedTurn(input) {
     return replaceEditedTurn(input as unknown as QueriesEditedTurn);
   },
-  async replaceRegeneratedAnswer(input) {
+  replaceRegeneratedAnswer(input) {
     return replaceRegeneratedAnswer(input as unknown as QueriesRegenerated);
   },
-  async saveMany(messages) {
+  saveMany(messages) {
     return saveMessages({
       messages: messages as Parameters<typeof saveMessages>[0]["messages"],
     });
   },
-  async updateParts(id, parts) {
+  updateParts(id, parts) {
     return updateMessage({ id, parts: parts as never });
   },
 };
