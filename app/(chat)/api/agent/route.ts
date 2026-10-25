@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import { auth } from "@/app/(auth)/auth";
 import { capabilityServers } from "@/server/agent/mcp-settings/projection";
 import { readRuntimeConfig } from "@/server/agent/mcp-settings/runtime-config";
@@ -5,13 +6,22 @@ import { isAdmin, managementReady } from "@/server/agent/mcp-settings/security";
 import { discoverSkills } from "@/server/agent/skills";
 import { getModelConnection } from "@/server/ai/model-connection";
 import { withModelSettings } from "@/server/ai/model-settings/runtime";
+import { runWithTraceId } from "@/server/shared/request-context";
+import { getLogger } from "@/server/shared/logger";
 import { uploadsAvailable } from "@/server/uploads/service";
 
 export async function GET() {
+  // proxy.ts 注入的 x-trace-id 进入 ALS,本请求内 logger 自动携带
+  const traceId = (await headers()).get("x-trace-id") ?? "no-trace";
+  return runWithTraceId(traceId, handleAgentSummary);
+}
+
+async function handleAgentSummary() {
   const user = (await auth())?.user;
   if (!user) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
+  getLogger("agent").info({ userId: user.id }, "agent 能力摘要请求");
   try {
     const [config, skills] = await Promise.all([
       readRuntimeConfig(),

@@ -34,3 +34,5 @@ app/_components/chat/runtime-interactions.test.ts
 
 server/agent/run-failure.test.ts
 server/ai/model-settings/model-settings.test.ts
+server/shared/request-context.test.ts
+server/shared/logger.test.ts

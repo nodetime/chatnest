@@ -60,6 +60,12 @@
 | [01_架构决策/20261025101500_DDD分层待办P1-P4.md](01_架构决策/20261025101500_DDD分层待办P1-P4.md) | **DDD 分层待办**:P1-P4 未做事项 + 当前实测基线(route 697 行/queries 929 行/边界规则 0 条) |
 | [01_架构决策/2026-10-24-governance-and-convergence-design.md](01_架构决策/2026-10-24-governance-and-convergence-design.md) | 治理基座与目录收敛设计(P0 v2 定稿,已执行) |
 
+### 特性方案(02_FEAT特性/,按需新增)
+
+| 文档 | 内容 |
+| --- | --- |
+| [02_FEAT特性/20261025101026_可观测性基座_UUID7_traceId_JSONL日志.md](02_FEAT特性/20261025101026_可观测性基座_UUID7_traceId_JSONL日志.md) | UUID7 + 每请求 traceId + pino JSONL 双写/轮转/脱敏方案(已实施) |
+
 ## 维护规则
 
 - 新增文档:更新本索引对应表格;持久化快照类文档用 `YYYYMMDDHHMMSS_标题` 命名,活文档(CODEBASE_MAP/task/lesson 等)保持原名。

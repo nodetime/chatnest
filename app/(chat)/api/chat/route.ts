@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import { geolocation, ipAddress } from "@vercel/functions";
 import {
   convertToModelMessages,
@@ -71,6 +72,8 @@ import {
 import type { DBMessage } from "@/server/db/schema";
 import { ChatbotError } from "@/server/shared/errors";
 import { checkIpRateLimit } from "@/server/shared/ratelimit";
+import { getLogger } from "@/server/shared/logger";
+import { runWithTraceId } from "@/server/shared/request-context";
 import { prepareAttachmentContext } from "@/server/uploads/context";
 import { AttachmentRoundBudget } from "@/server/uploads/document-budget";
 import { readAttachmentTool } from "@/server/uploads/read-attachment";
@@ -105,6 +108,14 @@ function getStreamContext() {
 }
 
 export async function POST(request: Request) {
+  // proxy.ts 注入的 x-trace-id 进入 ALS,本请求内 logger 自动携带
+  const traceId =
+    request.headers.get("x-trace-id") ?? (await headers()).get("x-trace-id") ?? "no-trace";
+  return runWithTraceId(traceId, () => handleChatPost(request));
+}
+
+async function handleChatPost(request: Request) {
+  getLogger("chat").info("chat 请求进入");
   const session = await auth();
   if (!session?.user) {
     return new ChatbotError("unauthorized:chat").toResponse();

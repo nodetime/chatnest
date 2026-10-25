@@ -69,6 +69,9 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactCompiler: true,
   serverExternalPackages: [
+    "pino",
+    "pino-pretty",
+    "rotating-file-stream",
     "mammoth",
     "exceljs",
     "yauzl",
