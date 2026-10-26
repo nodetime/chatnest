@@ -63,7 +63,7 @@ const nextConfig: NextConfig = {
       "./server/infrastructure/skills/**/*",
     ],
     "/api/files/upload": [
-      "./server/uploads/document-worker.cjs",
+      "./server/infrastructure/uploads/document-worker.cjs",
       "./node_modules/pdfjs-dist/**/*",
       "./node_modules/mammoth/**/*",
       "./node_modules/exceljs/**/*",
@@ -103,7 +103,7 @@ export default withBotId(async (phase) => {
   const pdfRequire = createRequire(pdfManifest);
   const { fileList } = await nodeFileTrace(
     [
-      "server/uploads/document-worker.cjs",
+      "server/infrastructure/uploads/document-worker.cjs",
       pdfRequire.resolve("@napi-rs/canvas"),
     ],
     { base: root, fileIOConcurrency: 64, processCwd: root }
