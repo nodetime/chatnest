@@ -1035,7 +1035,7 @@ test("artifact card lifecycle reopens the same document after close or tab switc
     const { readFileSync } = require('node:fs');
     const { runInNewContext } = require('node:vm');
     const ts = require('typescript');
-    const { openArtifactPreview } = require('./server/artifacts/stream-state.ts');
+    const { openArtifactPreview } = require('./server/domain/document/stream-state.ts');
     let chatId = 'chat-a';
     let fetching = false; let fetchError; let documentKind = 'code';
     let artifact = { documentId:'doc-a', isVisible:true, status:'idle', content:'original content', title:'Fixture A', kind:'code' };
@@ -1056,8 +1056,8 @@ test("artifact card lifecycle reopens the same document after close or tab switc
       './use-active-chat':{useActiveChat:()=>({chatId})},
       '@/app/_hooks/use-active-chat':{useActiveChat:()=>({chatId})},
       '@/app/_hooks/use-artifact':{useArtifact:()=>({artifact,setArtifact:fn=>{artifact=fn(artifact);}})},
-      '@/server/artifacts/stream-state':{openArtifactPreview},
-      '@/server/artifacts/result-table':{},'@/app/_lib/utils':{cn:()=>'',fetcher:()=>{throw new Error('Unexpected fetch');}},
+      '@/server/domain/document/stream-state':{openArtifactPreview},
+      '@/server/domain/document/result-table':{},'@/app/_lib/utils':{cn:()=>'',fetcher:()=>{throw new Error('Unexpected fetch');}},
       './artifact-type-label':{artifactTypeLabels:{text:'文本',code:'代码',image:'图片',sheet:'表格'}},'./file-symbol':{FileSymbol:'file-symbol'},'lucide-react':{ArrowUpRight:'arrow',LoaderCircle:'loader'}
     };
     const load = path => {

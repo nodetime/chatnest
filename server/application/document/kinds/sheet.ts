@@ -1,18 +1,16 @@
-import { smoothStream, streamText } from "ai";
-import { updateDocumentPrompt } from "@/server/ai/prompts";
+import { streamText } from "ai";
+import { sheetPrompt, updateDocumentPrompt } from "@/server/ai/prompts";
 import { getLanguageModel } from "@/server/ai/providers";
 import { metadataOnlyTelemetry } from "@/server/ai/telemetry";
-import { createDocumentHandler } from "@/server/artifacts/server";
+import { createDocumentHandler } from "../artifact-service";
 
-export const textDocumentHandler = createDocumentHandler<"text">({
-  kind: "text",
+export const sheetDocumentHandler = createDocumentHandler<"sheet">({
+  kind: "sheet",
   onCreateDocument: async ({ title, dataStream, modelId }) => {
     let draftContent = "";
 
     const { stream } = streamText({
-      experimental_transform: smoothStream({ chunking: "word" }),
-      instructions:
-        "Write about the given topic. Markdown is supported. Use headings wherever appropriate.",
+      instructions: `${sheetPrompt}\n\nOutput ONLY the raw CSV data. No explanations, no markdown fences.`,
       model: getLanguageModel(modelId),
       prompt: title,
       telemetry: metadataOnlyTelemetry,
@@ -22,9 +20,9 @@ export const textDocumentHandler = createDocumentHandler<"text">({
       if (delta.type === "text-delta") {
         draftContent += delta.text;
         dataStream.write({
-          data: delta.text,
+          data: draftContent,
           transient: true,
-          type: "data-textDelta",
+          type: "data-sheetDelta",
         });
       }
     }
@@ -35,8 +33,7 @@ export const textDocumentHandler = createDocumentHandler<"text">({
     let draftContent = "";
 
     const { stream } = streamText({
-      experimental_transform: smoothStream({ chunking: "word" }),
-      instructions: updateDocumentPrompt(document.content, "text"),
+      instructions: `${updateDocumentPrompt(document.content, "sheet")}\n\nOutput ONLY the raw CSV data. No explanations, no markdown fences.`,
       model: getLanguageModel(modelId),
       prompt: description,
       telemetry: metadataOnlyTelemetry,
@@ -46,9 +43,9 @@ export const textDocumentHandler = createDocumentHandler<"text">({
       if (delta.type === "text-delta") {
         draftContent += delta.text;
         dataStream.write({
-          data: delta.text,
+          data: draftContent,
           transient: true,
-          type: "data-textDelta",
+          type: "data-sheetDelta",
         });
       }
     }

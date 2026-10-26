@@ -14,7 +14,7 @@ import {
   isProtectedResultTable,
   parseResultTable,
   resultCsv,
-} from "@/server/artifacts/result-table";
+} from "@/server/domain/document/result-table";
 
 type Metadata = Record<string, never>;
 

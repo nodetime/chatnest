@@ -1,8 +1,8 @@
 import { and, eq } from "drizzle-orm";
-import { vote } from "@/server/db/schema";
 import type { VoteRepository } from "@/server/domain/vote/repository";
 import { ChatbotError } from "@/server/shared/errors";
 import { db } from "./client";
+import { vote } from "./schema";
 
 // P3:SQL 自 queries.ts 原样下沉,行为零漂移
 export const voteRepository: VoteRepository = {

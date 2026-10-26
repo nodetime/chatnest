@@ -1,12 +1,18 @@
 import type { InferUITool, UIMessage } from "ai";
 import { z } from "zod";
+// biome-ignore lint/style/noRestrictedImports: 已登记豁免:ChatTools 依赖工具定义的 InferUITool 推导,翻转需重写工具类型声明(裁决见 P5 待办)
 import type { McpSourceMetadata } from "@/server/agent/result-evidence";
+// biome-ignore lint/style/noRestrictedImports: 已登记豁免:ChatTools 依赖工具定义的 InferUITool 推导,翻转需重写工具类型声明(裁决见 P5 待办)
 import type { createDocument } from "@/server/ai/tools/create-document";
+// biome-ignore lint/style/noRestrictedImports: 已登记豁免:ChatTools 依赖工具定义的 InferUITool 推导,翻转需重写工具类型声明(裁决见 P5 待办)
 import type { createResultTable } from "@/server/ai/tools/create-result-table";
+// biome-ignore lint/style/noRestrictedImports: 已登记豁免:ChatTools 依赖工具定义的 InferUITool 推导,翻转需重写工具类型声明(裁决见 P5 待办)
 import type { getWeather } from "@/server/ai/tools/get-weather";
+// biome-ignore lint/style/noRestrictedImports: 已登记豁免:ChatTools 依赖工具定义的 InferUITool 推导,翻转需重写工具类型声明(裁决见 P5 待办)
 import type { requestSuggestions } from "@/server/ai/tools/request-suggestions";
+// biome-ignore lint/style/noRestrictedImports: 已登记豁免:ChatTools 依赖工具定义的 InferUITool 推导,翻转需重写工具类型声明(裁决见 P5 待办)
 import type { updateDocument } from "@/server/ai/tools/update-document";
-import type { Suggestion } from "@/server/db/schema";
+import type { Suggestion } from "@/server/domain/suggestion/types";
 
 // P2 从 app/_lib/types.ts 迁入:ChatMessage 是聊天域核心类型,应用层与 UI 共用(R4 允许 UI import domain 类型)
 

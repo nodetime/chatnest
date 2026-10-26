@@ -2,7 +2,7 @@ import { getEnv } from "@/server/shared/env";
 import "server-only";
 import { createHash, randomUUID } from "node:crypto";
 import postgres from "postgres";
-import type { DBMessage } from "../db/schema";
+import type { DBMessage } from "@/server/infrastructure/persistence/drizzle/schema";
 import { parseDocument } from "./document-parser";
 import {
   ATTACHMENT_MIMES,

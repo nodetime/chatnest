@@ -3,7 +3,7 @@ import type { UseChatHelpers } from "@ai-sdk/react";
 import type { ChatMessage } from "@/app/_lib/types";
 import { cn, sanitizeText } from "@/app/_lib/utils";
 import { hasRunFailure } from "@/server/agent/run-failure";
-import type { Vote } from "@/server/db/schema";
+import type { Vote } from "@/server/domain/vote/types";
 import { MessageContent, MessageResponse } from "../ai-elements/message";
 import { Shimmer } from "../ai-elements/shimmer";
 import type { ToolPart } from "../ai-elements/tool";

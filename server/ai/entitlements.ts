@@ -1,4 +1,4 @@
-import type { UserType } from "@/app/(auth)/auth";
+import type { UserType } from "@/server/domain/user/types";
 
 type Entitlements = {
   maxMessagesPerHour: number;

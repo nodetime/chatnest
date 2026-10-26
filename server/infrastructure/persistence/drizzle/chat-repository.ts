@@ -1,9 +1,9 @@
 import { and, desc, eq, gt, ilike, inArray, lt, type SQL } from "drizzle-orm";
-import { chat, message, stream, vote } from "@/server/db/schema";
 import type { ChatRepository } from "@/server/domain/chat/repository";
 import { ChatbotError } from "@/server/shared/errors";
 import { cleanupDeletedChatAssets } from "@/server/uploads/service";
 import { db } from "./client";
+import { chat, message, stream, vote } from "./schema";
 
 // P3:SQL 自 queries.ts 原样下沉,行为零漂移
 export const chatRepository: ChatRepository = {

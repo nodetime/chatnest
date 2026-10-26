@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { ChatMessage } from "@/app/_lib/types";
 import { prepareRegeneration } from "@/server/agent/message-turn";
+import type { ChatMessage } from "@/server/domain/message/types";
 
 const question: ChatMessage = {
   id: "question",

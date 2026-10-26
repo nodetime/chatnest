@@ -1,4 +1,4 @@
-import type { Vote } from "@/server/db/schema";
+import type { Vote } from "./types";
 
 // vote 仓储契约:面向领域声明,实现落 infrastructure/persistence/drizzle
 export interface VoteRepository {

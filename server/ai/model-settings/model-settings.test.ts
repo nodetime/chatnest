@@ -513,6 +513,7 @@ test("actual SDK SSE pump preserves each model snapshot through a tool child and
 });
 
 test("anonymous admin APIs bypass guest-session bootstrap and reach guarded routes", async () => {
+  // biome-ignore lint/style/noRestrictedImports: 测试探针:构造 NextRequest 驱动 proxy 中间件,非业务依赖
   const { NextRequest } = await import("next/server");
   const { proxy } = await import("@/proxy");
   const response = await proxy(

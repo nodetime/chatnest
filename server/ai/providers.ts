@@ -1,6 +1,6 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import { customProvider, gateway, wrapLanguageModel } from "ai";
-import { isTestEnvironment } from "@/app/_lib/constants";
+import { isTestEnvironment } from "@/server/shared/runtime";
 import { openAIInlineImageMiddleware } from "./inline-image-middleware";
 import { getModelConnection, resolveModelId } from "./model-connection";
 import { getModelEnvironment } from "./model-context";

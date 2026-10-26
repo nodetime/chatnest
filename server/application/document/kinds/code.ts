@@ -1,16 +1,23 @@
 import { streamText } from "ai";
-import { sheetPrompt, updateDocumentPrompt } from "@/server/ai/prompts";
+import { codePrompt, updateDocumentPrompt } from "@/server/ai/prompts";
 import { getLanguageModel } from "@/server/ai/providers";
 import { metadataOnlyTelemetry } from "@/server/ai/telemetry";
-import { createDocumentHandler } from "@/server/artifacts/server";
+import { createDocumentHandler } from "../artifact-service";
 
-export const sheetDocumentHandler = createDocumentHandler<"sheet">({
-  kind: "sheet",
+function stripFences(code: string): string {
+  return code
+    .replace(/^```[\w]*\n?/, "")
+    .replace(/\n?```\s*$/, "")
+    .trim();
+}
+
+export const codeDocumentHandler = createDocumentHandler<"code">({
+  kind: "code",
   onCreateDocument: async ({ title, dataStream, modelId }) => {
     let draftContent = "";
 
     const { stream } = streamText({
-      instructions: `${sheetPrompt}\n\nOutput ONLY the raw CSV data. No explanations, no markdown fences.`,
+      instructions: `${codePrompt}\n\nOutput ONLY the code. No explanations, no markdown fences, no wrapping.`,
       model: getLanguageModel(modelId),
       prompt: title,
       telemetry: metadataOnlyTelemetry,
@@ -20,20 +27,20 @@ export const sheetDocumentHandler = createDocumentHandler<"sheet">({
       if (delta.type === "text-delta") {
         draftContent += delta.text;
         dataStream.write({
-          data: draftContent,
+          data: stripFences(draftContent),
           transient: true,
-          type: "data-sheetDelta",
+          type: "data-codeDelta",
         });
       }
     }
 
-    return draftContent;
+    return stripFences(draftContent);
   },
   onUpdateDocument: async ({ document, description, dataStream, modelId }) => {
     let draftContent = "";
 
     const { stream } = streamText({
-      instructions: `${updateDocumentPrompt(document.content, "sheet")}\n\nOutput ONLY the raw CSV data. No explanations, no markdown fences.`,
+      instructions: `${updateDocumentPrompt(document.content, "code")}\n\nOutput ONLY the complete updated code. No explanations, no markdown fences, no wrapping.`,
       model: getLanguageModel(modelId),
       prompt: description,
       telemetry: metadataOnlyTelemetry,
@@ -43,13 +50,13 @@ export const sheetDocumentHandler = createDocumentHandler<"sheet">({
       if (delta.type === "text-delta") {
         draftContent += delta.text;
         dataStream.write({
-          data: draftContent,
+          data: stripFences(draftContent),
           transient: true,
-          type: "data-sheetDelta",
+          type: "data-codeDelta",
         });
       }
     }
 
-    return draftContent;
+    return stripFences(draftContent);
   },
 });

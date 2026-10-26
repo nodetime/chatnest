@@ -39,7 +39,7 @@ import {
 import { compactToolApprovals } from "@/server/agent/approval-transport";
 import { buildTaskMessage, type TaskDraft } from "@/server/agent/task-draft";
 import { DEFAULT_CHAT_MODEL } from "@/server/ai/models";
-import type { Vote } from "@/server/db/schema";
+import type { Vote } from "@/server/domain/vote/types";
 import { ChatbotError } from "@/server/shared/errors";
 
 type ActiveChatContextValue = {

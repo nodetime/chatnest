@@ -9,7 +9,7 @@ import {
   type ResultTable,
   resolvePointer,
   safeSourceUrl,
-} from "@/server/artifacts/result-table";
+} from "@/server/domain/document/result-table";
 
 /** Actual declared columns are the reading layer; the immutable row stays inspectable. */
 export function ResultTableRowDetails({

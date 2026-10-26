@@ -8,8 +8,8 @@ import { toast } from "sonner";
 import { useSWRConfig } from "swr";
 import { useArtifact } from "@/app/_hooks/use-artifact";
 import { cn, getDocumentTimestampByIndex } from "@/app/_lib/utils";
-import { isProtectedResultTable } from "@/server/artifacts/result-table";
-import type { Document } from "@/server/db/schema";
+import { isProtectedResultTable } from "@/server/domain/document/result-table";
+import type { Document } from "@/server/domain/document/types";
 import { LoaderIcon } from "./icons";
 
 type VersionFooterProps = {

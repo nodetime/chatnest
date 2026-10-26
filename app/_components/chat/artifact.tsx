@@ -28,8 +28,9 @@ import { cn, fetcher } from "@/app/_lib/utils";
 import {
   isProtectedResultTable,
   parseResultTable,
-} from "@/server/artifacts/result-table";
-import type { Document, Vote } from "@/server/db/schema";
+} from "@/server/domain/document/result-table";
+import type { Document } from "@/server/domain/document/types";
+import type { Vote } from "@/server/domain/vote/types";
 import { ArtifactActions } from "./artifact-actions";
 import { artifactCatalog } from "./artifact-catalog";
 import { ArtifactCloseButton } from "./artifact-close-button";
@@ -49,20 +50,7 @@ export const artifactDefinitions = [
 ];
 export type ArtifactKind = (typeof artifactDefinitions)[number]["kind"];
 
-export type UIArtifact = {
-  title: string;
-  documentId: string;
-  kind: ArtifactKind;
-  content: string;
-  isVisible: boolean;
-  status: "streaming" | "idle";
-  boundingBox: {
-    top: number;
-    left: number;
-    width: number;
-    height: number;
-  };
-};
+export type { UIArtifact } from "@/server/domain/document/types";
 
 function PureArtifact({
   addToolApprovalResponse: _addToolApprovalResponse,

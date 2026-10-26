@@ -37,7 +37,7 @@ import {
   resultCsv,
   resultRows,
   safeSourceUrl,
-} from "@/server/artifacts/result-table";
+} from "@/server/domain/document/result-table";
 import { ResultTableRowDetails } from "./result-table-row-details";
 import { ResultTableSource } from "./result-table-source";
 import "react-data-grid/lib/styles.css";

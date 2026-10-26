@@ -190,7 +190,7 @@ test("real picker event handlers reopen the same file, reset new-file content an
     const { readFileSync } = require('node:fs');
     const { runInNewContext } = require('node:vm');
     const ts = require('typescript');
-    const { openArtifactPreview } = require('./server/artifacts/stream-state.ts');
+    const { openArtifactPreview } = require('./server/domain/document/stream-state.ts');
     const { artifactSwitchReason } = require('./app/_components/chat/artifact-catalog.ts');
     const jsx = (type,props) => ({type,props});
     let artifact = {documentId:'a',title:'A',kind:'text',status:'idle',content:'unsaved fixture',boundingBox:{top:0,left:0,width:0,height:0},isVisible:true};
@@ -202,7 +202,7 @@ test("real picker event handlers reopen the same file, reset new-file content an
       '@/app/_components/ui/dropdown-menu':{DropdownMenu:'menu',DropdownMenuContent:'content',DropdownMenuItem:'item',DropdownMenuLabel:'label',DropdownMenuSeparator:'separator',DropdownMenuTrigger:'trigger'},
       '@/app/_hooks/use-artifact':{useArtifact:()=>({setArtifact:fn=>{artifact=fn(artifact)}})},
       '@/app/_hooks/use-workspace':{useWorkspace:()=>({show:next=>{tab=next;open=true}})},
-      '@/server/artifacts/stream-state':{openArtifactPreview},
+      '@/server/domain/document/stream-state':{openArtifactPreview},
       './artifact-catalog':{artifactSwitchReason}, './artifact-type-label':{ArtifactTypeLabel:'kind'},
     };
     const output={exports:{}};
@@ -247,7 +247,7 @@ test("result-table publishes authoritative view/notes dirty and saving state; fa
     const { readFileSync } = require('node:fs');
     const { runInNewContext } = require('node:vm');
     const ts = require('typescript');
-    const helpers = require('./server/artifacts/result-table.ts');
+    const helpers = require('./server/domain/document/result-table.ts');
     const jsx = (type,props) => ({type,props});
     const slots=[];let cursor=0,effects=[],pending=[],resolveFetch,bodySent,table;
     const same=(a,b)=>a&&b&&a.length===b.length&&a.every((v,i)=>v===b[i]);
@@ -259,7 +259,7 @@ test("result-table publishes authoritative view/notes dirty and saving state; fa
       '@/app/_components/ui/popover':{Popover:'popover',PopoverTrigger:'popover-trigger',PopoverContent:'popover-content'},
       '@/app/_components/ui/collapsible':{Collapsible:'collapsible',CollapsibleContent:'collapse-content',CollapsibleTrigger:'collapse-trigger'},
       '@/app/_components/ui/sheet':{Sheet:'sheet',SheetTrigger:'sheet-trigger',SheetClose:'sheet-close',SheetContent:'sheet-content',SheetDescription:'sheet-description',SheetHeader:'sheet-header',SheetTitle:'sheet-title'},
-      '@/server/artifacts/result-table':helpers,'./result-table-source':{ResultTableSource:'source'},'./result-table-row-details':{ResultTableRowDetails:'row-details'},
+      '@/server/domain/document/result-table':helpers,'./result-table-source':{ResultTableSource:'source'},'./result-table-row-details':{ResultTableRowDetails:'row-details'},
     };
     const output={exports:{}};
     const code=ts.transpileModule(readFileSync('app/_components/chat/result-table.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText;
@@ -357,7 +357,7 @@ test("actual artifact callback scopes pending metadata to the originating docume
       '@/app/_artifacts/code/client':{codeArtifact:definitions.code},'@/app/_artifacts/image/client':{imageArtifact:definitions.image},'@/app/_artifacts/sheet/client':{sheetArtifact:definitions.sheet},'@/app/_artifacts/text/client':{textArtifact:definitions.text},
       '@/app/_components/ai-elements/artifact':{Artifact:'frame'},
       '@/app/_hooks/use-artifact':{useArtifact:()=>{const id=artifact.documentId;return {artifact,setArtifact:()=>{},metadata:metadata.get(id),setMetadata:fn=>metadata.set(id,fn(metadata.get(id)))}}},
-      '@/server/artifacts/result-table':{isProtectedResultTable:()=>true,parseResultTable:()=>({})},'@/app/_lib/utils':{cn:()=>'',fetcher:()=>{}},
+      '@/server/domain/document/result-table':{isProtectedResultTable:()=>true,parseResultTable:()=>({})},'@/app/_lib/utils':{cn:()=>'',fetcher:()=>{}},
       './artifact-actions':{ArtifactActions:'actions'},'./artifact-catalog':{artifactCatalog:()=>[]},'./artifact-close-button':{ArtifactCloseButton:'close'},'./artifact-picker':{ArtifactPicker:'picker'},'./artifact-type-label':{ArtifactTypeLabel:'kind'},'./icons':{LoaderIcon:'loader'},'./toolbar':{Toolbar:'toolbar'},'./version-footer':{VersionFooter:'versions'},'./workspace-header':{WorkspaceHeader:'header'},
     };
     const output={exports:{}};const code=ts.transpileModule(readFileSync('app/_components/chat/artifact.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText;

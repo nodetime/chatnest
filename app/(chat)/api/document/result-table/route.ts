@@ -1,11 +1,11 @@
 import { z } from "zod";
 import { auth } from "@/app/(auth)/auth";
 import { sameOriginBrowserControl } from "@/server/agent/browser-policy";
+import { getUseCases } from "@/server/composition";
 import {
   ResultTableMutationError,
   resultViewSchema,
-} from "@/server/artifacts/result-table";
-import { getUseCases } from "@/server/composition";
+} from "@/server/domain/document/result-table";
 import { readBoundedBody, UploadError } from "@/server/uploads/validation";
 
 const bodySchema = z

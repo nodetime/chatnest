@@ -1,4 +1,4 @@
-import type { ChatMessage } from "@/app/_lib/types";
+import type { ChatMessage } from "@/server/domain/message/types";
 import { AttachmentRoundBudget } from "./document-budget";
 import {
   ATTACHMENT_MIMES,

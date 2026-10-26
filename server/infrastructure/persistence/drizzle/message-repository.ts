@@ -3,11 +3,11 @@ import {
   prepareMessageEdit,
   prepareRegeneration,
 } from "@/server/agent/message-turn";
-import { chat, message, vote } from "@/server/db/schema";
 import type { MessageRepository } from "@/server/domain/message/repository";
 import type { ChatMessage } from "@/server/domain/message/types";
 import { ChatbotError } from "@/server/shared/errors";
 import { db } from "./client";
+import { chat, message, vote } from "./schema";
 
 // P3:SQL 自 queries.ts 原样下沉,行为零漂移;drizzle 行/插入值经仓储边界集中结构透传
 

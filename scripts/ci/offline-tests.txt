@@ -21,7 +21,7 @@ server/ai/model-connection.test.ts
 server/agent/browser.test.ts
 app/_components/chat/task-experience.test.ts
 server/uploads/document-ingestion.test.ts
-server/artifacts/result-table.test.ts
+server/application/document/result-table.test.ts
 app/_components/chat/chat-layout.test.ts
 server/ai/ai-telemetry.test.ts
 app/_components/chat/workbench-ui.test.ts

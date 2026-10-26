@@ -1,4 +1,4 @@
-import type { Suggestion } from "@/server/db/schema";
+import type { Suggestion } from "./types";
 
 // suggestion 仓储契约:面向领域声明,实现落 infrastructure/persistence/drizzle
 export interface SuggestionRepository {

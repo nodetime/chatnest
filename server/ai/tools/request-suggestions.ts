@@ -1,11 +1,11 @@
 import { Output, streamText, tool, type UIMessageStreamWriter } from "ai";
 import type { Session } from "next-auth";
 import { z } from "zod";
-import type { ChatMessage } from "@/app/_lib/types";
-import { generateUUID } from "@/app/_lib/utils";
 import { metadataOnlyTelemetry } from "@/server/ai/telemetry";
-import { isProtectedResultTable } from "@/server/artifacts/result-table";
-import type { Suggestion } from "@/server/db/schema";
+import { isProtectedResultTable } from "@/server/domain/document/result-table";
+import { generateUUID } from "@/server/domain/message/ids";
+import type { ChatMessage } from "@/server/domain/message/types";
+import type { Suggestion } from "@/server/domain/suggestion/types";
 import { documentRepository } from "@/server/infrastructure/persistence/drizzle/document-repository";
 import { suggestionRepository } from "@/server/infrastructure/persistence/drizzle/suggestion-repository";
 import { getLanguageModel } from "../providers";

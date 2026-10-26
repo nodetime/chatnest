@@ -1,5 +1,12 @@
 import { z } from "zod";
-import type { ResultEvidenceLedger } from "../agent/result-evidence";
+// 证据只读取点:仅取已登记的成功 MCP JSON 结果;实现见 agent/result-evidence(结构兼容,无需反向依赖)
+export interface EvidenceLookup {
+  get: (
+    toolCallId: string
+  ) =>
+    | { source: z.infer<typeof resultSourceSchema>; value: unknown }
+    | undefined;
+}
 
 const forbidden = new Set(["__proto__", "prototype", "constructor"]);
 export function pointerTokens(pointer: string): string[] {
@@ -170,7 +177,7 @@ export function validView(table: ResultTable, view: ResultView): boolean {
   );
 }
 export function buildResultTable(
-  ledger: ResultEvidenceLedger,
+  ledger: EvidenceLookup,
   input: z.infer<typeof createResultTableSchema>,
   chatId: string
 ): ResultTable {

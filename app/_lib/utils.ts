@@ -1,6 +1,6 @@
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import type { Document } from '@/server/db/schema';
+import type { Document } from '@/server/domain/document/types';
 import { ChatbotError, type ErrorCode } from '@/server/shared/errors';
 
 // convertToUIMessages / getTextFromMessage / generateUUID 已迁 server/domain/message(P2),

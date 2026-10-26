@@ -3,7 +3,7 @@ import "server-only";
 import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import { modelSettings } from "../../db/schema";
+import { modelSettings } from "@/server/infrastructure/persistence/drizzle/schema";
 export type SettingsRow = {
   revision: number;
   encrypted: string;

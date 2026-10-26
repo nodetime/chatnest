@@ -1,6 +1,6 @@
-import type { ResultTable, ResultView } from "@/server/artifacts/result-table";
-import type { Document } from "@/server/db/schema";
 import type { ArtifactKind } from "@/server/domain/message/types";
+import type { ResultTable, ResultView } from "./result-table";
+import type { Document } from "./types";
 
 // document 仓储契约:面向领域声明,实现落 infrastructure/persistence/drizzle。
 // 版本化写入靠 pg_advisory_xact_lock + createdAt 单调递增;结果表受保护不可覆写。

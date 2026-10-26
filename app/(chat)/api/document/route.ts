@@ -1,11 +1,11 @@
 import { z } from "zod";
 import type { ArtifactKind } from "@/app/_components/chat/artifact";
 import { auth } from "@/app/(auth)/auth";
+import { getUseCases } from "@/server/composition";
 import {
   isProtectedResultTable,
   parseResultTable,
-} from "@/server/artifacts/result-table";
-import { getUseCases } from "@/server/composition";
+} from "@/server/domain/document/result-table";
 import { ChatbotError } from "@/server/shared/errors";
 
 const documentSchema = z.object({

@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { useSWRConfig } from "swr";
 import { useCopyToClipboard } from "usehooks-ts";
 import type { ChatMessage } from "@/app/_lib/types";
-import type { Vote } from "@/server/db/schema";
+import type { Vote } from "@/server/domain/vote/types";
 import {
   MessageAction as Action,
   MessageActions as Actions,

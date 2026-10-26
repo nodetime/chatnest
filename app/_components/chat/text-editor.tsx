@@ -22,7 +22,7 @@ import {
   suggestionsPluginKey,
   type UISuggestion,
 } from "@/app/_lib/editor/suggestions";
-import type { Suggestion } from "@/server/db/schema";
+import type { Suggestion } from "@/server/domain/suggestion/types";
 import { SuggestionDialog } from "./suggestion";
 
 type EditorProps = {

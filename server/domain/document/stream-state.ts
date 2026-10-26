@@ -1,5 +1,5 @@
-import type { UIArtifact } from "@/app/_components/chat/artifact";
-import type { CustomUIDataTypes } from "@/app/_lib/types";
+import type { UIArtifact } from "@/server/domain/document/types";
+import type { CustomUIDataTypes } from "@/server/domain/message/types";
 export function applyResultTableEvent(
   current: UIArtifact,
   data: CustomUIDataTypes["resultTable"]

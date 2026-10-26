@@ -5,7 +5,6 @@ import path from "node:path";
 import { test } from "node:test";
 import type { MCPClient } from "@ai-sdk/mcp";
 import { jsonSchema } from "ai";
-import type { ChatMessage } from "@/app/_lib/types";
 import { applyToolApprovals } from "@/server/agent/approvals";
 import { agentConfigSchema, resolveHeaders } from "@/server/agent/config";
 import {
@@ -21,6 +20,7 @@ import {
   readSkillFile,
 } from "@/server/agent/skills";
 import { collectSourceLinks } from "@/server/agent/sources";
+import type { ChatMessage } from "@/server/domain/message/types";
 import { usesSecureAuthCookies } from "@/server/shared/auth-cookies";
 import { postRequestBodySchema } from "../../app/(chat)/api/chat/schema";
 

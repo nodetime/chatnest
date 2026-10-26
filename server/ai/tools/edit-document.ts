@@ -1,8 +1,8 @@
 import { tool, type UIMessageStreamWriter } from "ai";
 import type { Session } from "next-auth";
 import { z } from "zod";
-import type { ChatMessage } from "@/app/_lib/types";
-import { isProtectedResultTable } from "@/server/artifacts/result-table";
+import { isProtectedResultTable } from "@/server/domain/document/result-table";
+import type { ChatMessage } from "@/server/domain/message/types";
 import { documentRepository } from "@/server/infrastructure/persistence/drizzle/document-repository";
 
 type EditDocumentProps = {

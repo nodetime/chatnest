@@ -6,7 +6,7 @@ import {
 } from "@/app/_components/ai-elements/conversation";
 import type { ChatMessage } from "@/app/_lib/types";
 import { prepareRegeneration } from "@/server/agent/message-turn";
-import type { Vote } from "@/server/db/schema";
+import type { Vote } from "@/server/domain/vote/types";
 import { useDataStream } from "./data-stream-provider";
 import { Greeting } from "./greeting";
 import { PreviewMessage, ThinkingMessage } from "./message";

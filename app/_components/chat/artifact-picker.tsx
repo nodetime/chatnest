@@ -14,7 +14,7 @@ import {
 } from "@/app/_components/ui/dropdown-menu";
 import { useArtifact } from "@/app/_hooks/use-artifact";
 import { useWorkspace } from "@/app/_hooks/use-workspace";
-import { openArtifactPreview } from "@/server/artifacts/stream-state";
+import { openArtifactPreview } from "@/server/domain/document/stream-state";
 import { type ArtifactEntry, artifactSwitchReason } from "./artifact-catalog";
 import { ArtifactTypeLabel } from "./artifact-type-label";
 

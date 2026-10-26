@@ -1,10 +1,10 @@
 import { eq } from "drizzle-orm";
-import { user } from "@/server/db/schema";
-import { generateHashedPassword } from "@/server/db/utils";
 import { generateUUID } from "@/server/domain/message/ids";
 import type { UserRepository } from "@/server/domain/user/repository";
 import { ChatbotError } from "@/server/shared/errors";
+import { generateHashedPassword } from "@/server/shared/password";
 import { db } from "./client";
+import { user } from "./schema";
 
 // P3:SQL 自 queries.ts 原样下沉,行为零漂移
 export const userRepository: UserRepository = {

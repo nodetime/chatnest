@@ -5,11 +5,11 @@ import {
   createUIMessageStream,
   readUIMessageStream,
 } from "ai";
-import type { ChatMessage } from "@/app/_lib/types";
 import {
   createRunFailureReporter,
   hasRunFailure,
 } from "@/server/agent/run-failure";
+import type { ChatMessage } from "@/server/domain/message/types";
 
 test("actual SDK persists a sanitized failure marker without inventing model text", async () => {
   const failure = createRunFailureReporter();

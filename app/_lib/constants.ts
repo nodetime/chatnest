@@ -1,4 +1,4 @@
-import { generateDummyPassword } from "@/server/db/utils";
+import { generateDummyPassword } from "@/server/shared/password";
 
 // 环境判定已收敛 server/shared/runtime(P2),此处转发保持单一来源
 export {

@@ -1,7 +1,7 @@
 import { createClient } from "redis";
-import { isProductionEnvironment } from "@/app/_lib/constants";
 import { getEnv } from "@/server/shared/env";
 import { ChatbotError } from "@/server/shared/errors";
+import { isProductionEnvironment } from "@/server/shared/runtime";
 
 const MAX_MESSAGES = 10;
 const TTL_SECONDS = 60 * 60;

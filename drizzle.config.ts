@@ -10,6 +10,6 @@ export default defineConfig({
     url: process.env.POSTGRES_URL ?? "",
   },
   dialect: "postgresql",
-  out: "./server/db/migrations",
-  schema: "./server/db/schema.ts",
+  out: "./server/infrastructure/persistence/drizzle/migrations",
+  schema: "./server/infrastructure/persistence/drizzle/schema.ts",
 });

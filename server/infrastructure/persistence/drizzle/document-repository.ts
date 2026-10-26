@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, gt, sql } from "drizzle-orm";
+import type { DocumentRepository } from "@/server/domain/document/repository";
 import {
   assertGenericDocumentDeletionAllowed,
   isProtectedResultTable,
@@ -7,11 +8,11 @@ import {
   resultViewSchema,
   validView,
   withResultTableView,
-} from "@/server/artifacts/result-table";
-import { chat, type Document, document, suggestion } from "@/server/db/schema";
-import type { DocumentRepository } from "@/server/domain/document/repository";
+} from "@/server/domain/document/result-table";
+import type { Document } from "@/server/domain/document/types";
 import { ChatbotError } from "@/server/shared/errors";
 import { db } from "./client";
+import { chat, document, suggestion } from "./schema";
 
 // P3:SQL 自 queries.ts 原样下沉,行为零漂移(含 advisory lock 版本化写入与结果表保护)
 

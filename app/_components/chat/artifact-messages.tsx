@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { memo } from "react";
 import { useMessages } from "@/app/_hooks/use-messages";
 import type { ChatMessage } from "@/app/_lib/types";
-import type { Vote } from "@/server/db/schema";
+import type { Vote } from "@/server/domain/vote/types";
 import type { UIArtifact } from "./artifact";
 import { PreviewMessage, ThinkingMessage } from "./message";
 

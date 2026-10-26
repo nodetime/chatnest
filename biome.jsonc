@@ -56,48 +56,13 @@
   },
   // DDD 边界强制(规划第七节,探针验证后上墙):
   // 坑:同一条规则被多个 override 匹配同一文件时,后写的整体替换先写的——
-  // 因此 domain 的 override 必须自带 R1+R2 全部模式,不能靠与 R2 override 叠加。
-  // R2 当前只护三层新代码——存量 server/ 有 27 处 next/@/app 依赖,P2/P3 搬完后扩大到 server/**
+  // 因此 R2(server/**) 放最前,domain 合体(R1+R2+反向禁令)放最后,靠覆盖顺序取胜。
+  // P5:R2 扩到整个 server/**(存量 @/app 引用已清零);R1 增加反向禁令——
+  // domain 不得依赖域模块(agent/ai/uploads/artifacts/admin/skills/config),
+  // 已知豁免仅 domain/message/types.ts 的工具 UI 类型推导(InferUITool,行内 biome-ignore)。
   "overrides": [
     {
-      "includes": ["server/domain/**"],
-      "linter": {
-        "rules": {
-          "style": {
-            "noRestrictedImports": {
-              "level": "error",
-              "options": {
-                "patterns": [
-                  {
-                    "group": [
-                      "@/server/application/**",
-                      "@/server/infrastructure/**",
-                      "@/app/**"
-                    ],
-                    "message": "R1: domain 只放类型 + 仓储接口 + 纯函数,不得依赖外层"
-                  },
-                  {
-                    "group": ["../../**"],
-                    "message": "R1: 跨层相对导入禁止,一律用 @/ 别名"
-                  },
-                  {
-                    "group": [
-                      "@/app/**",
-                      "next/server",
-                      "next/headers",
-                      "next/navigation"
-                    ],
-                    "message": "R2: server 不认识 HTTP 与前端;请求上下文应作为参数传入"
-                  }
-                ]
-              }
-            }
-          }
-        }
-      }
-    },
-    {
-      "includes": ["server/application/**", "server/infrastructure/**"],
+      "includes": ["server/**"],
       "linter": {
         "rules": {
           "style": {
@@ -157,6 +122,55 @@
                       "@/server/composition"
                     ],
                     "message": "R4: UI 层只能 import server/domain 的类型,不得调用服务端逻辑"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["server/domain/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "@/server/application/**",
+                      "@/server/infrastructure/**",
+                      "@/app/**"
+                    ],
+                    "message": "R1: domain 只放类型 + 仓储接口 + 纯函数,不得依赖外层"
+                  },
+                  {
+                    "group": ["../../**"],
+                    "message": "R1: 跨层相对导入禁止,一律用 @/ 别名"
+                  },
+                  {
+                    "group": [
+                      "@/server/agent/**",
+                      "@/server/ai/**",
+                      "@/server/uploads/**",
+                      "@/server/artifacts/**",
+                      "@/server/admin/**",
+                      "@/server/skills/**",
+                      "@/server/config/**"
+                    ],
+                    "message": "R1: domain 不得依赖域模块;域词汇表反向引用子域是层次倒置"
+                  },
+                  {
+                    "group": [
+                      "@/app/**",
+                      "next/server",
+                      "next/headers",
+                      "next/navigation"
+                    ],
+                    "message": "R2: server 不认识 HTTP 与前端;请求上下文应作为参数传入"
                   }
                 ]
               }

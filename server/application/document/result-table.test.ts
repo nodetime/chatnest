@@ -15,7 +15,7 @@ import {
   resultCsv,
   resultRows,
   safeSourceUrl,
-} from "@/server/artifacts/result-table";
+} from "@/server/domain/document/result-table";
 
 const source = {
   completedAt: "2026-10-20T12:00:00.000Z",
@@ -310,7 +310,7 @@ test("installed SDK projects current and persisted MCP results without replacing
 
 test("one result-table event replaces identity/kind/content atomically even after text-kind stream state", async () => {
   const { applyResultTableEvent } = await import(
-    "@/server/artifacts/stream-state"
+    "@/server/domain/document/stream-state"
   );
   const prior = {
     boundingBox: { height: 1, left: 0, top: 0, width: 1 },
@@ -524,7 +524,7 @@ test("model preview contains actual row values and non-JSON successes do not evi
 });
 test("view/notes updates obey whole-envelope cap before persistence", async () => {
   const { withResultTableView } = await import(
-    "@/server/artifacts/result-table"
+    "@/server/domain/document/result-table"
   );
   const value = new ResultEvidenceLedger();
   value.record(source, {
@@ -607,7 +607,7 @@ test("damaged escaped discriminator stays protected", () => {
 
 test("reopening the same cached artifact preserves hydrated content; switching IDs clears stale content", async () => {
   const { openArtifactPreview } = await import(
-    "@/server/artifacts/stream-state"
+    "@/server/domain/document/stream-state"
   );
   const boundingBox = { height: 20, left: 1, top: 2, width: 100 };
   const prior = {
@@ -686,7 +686,7 @@ test("ambiguous duplicate source IDs never overwrite original provenance or mult
 });
 test("generic version deletion rejects any protected history, retaining immutability tombstone", async () => {
   const { assertGenericDocumentDeletionAllowed } = await import(
-    "@/server/artifacts/result-table"
+    "@/server/domain/document/result-table"
   );
   assert.throws(() =>
     assertGenericDocumentDeletionAllowed([

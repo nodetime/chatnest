@@ -1,4 +1,4 @@
-import type { ChatMessage } from "@/app/_lib/types";
+import type { ChatMessage } from "@/server/domain/message/types";
 
 type FailurePart = {
   type: "data-run-status";

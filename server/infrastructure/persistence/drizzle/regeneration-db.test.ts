@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { test } from "node:test";
 import dotenv from "dotenv";
 import postgres from "postgres";
-import type { DBMessage } from "@/server/db/schema";
+import type { DBMessage } from "@/server/infrastructure/persistence/drizzle/schema";
 
 dotenv.config({ path: ".env.local", quiet: true });
 

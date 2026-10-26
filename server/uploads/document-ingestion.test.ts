@@ -307,7 +307,10 @@ test("text output truncation and busy parser admission are explicit", async () =
 });
 test("documents persist quota-accounted extraction and read tool checks actual committed association", async () => {
   const service = await readFile("server/uploads/service.ts", "utf8");
-  const schema = await readFile("server/db/schema.ts", "utf8");
+  const schema = await readFile(
+    "server/infrastructure/persistence/drizzle/schema.ts",
+    "utf8"
+  );
   // P2:chat 编排迁 application/chat/send-message.ts
   const useCase = await readFile(
     "server/application/chat/send-message.ts",

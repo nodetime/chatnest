@@ -479,6 +479,7 @@ test("client editing never deletes persisted history and rolls back SDK-swallowe
   assert.match(composer, /原图片保留，编辑时只修改文字/);
   assert.match(composer, /disabled=\{Boolean\(editingMessage\)\}/);
   const { submitEditedMessage } = await import(
+    // biome-ignore lint/style/noRestrictedImports: 测试借 UI 纯函数验证编辑提交行为,非业务依赖
     "@/app/_components/chat/message-editor"
   );
   const message = {
@@ -555,6 +556,7 @@ test("completed user markdown renders statically instead of reusing streaming bl
 });
 test("successful pending edit clears only submitted text and preserves newly typed draft", async () => {
   const { submitEditedMessage } = await import(
+    // biome-ignore lint/style/noRestrictedImports: 测试借 UI 纯函数验证编辑提交行为,非业务依赖(第二条用例)
     "@/app/_components/chat/message-editor"
   );
   const message = {

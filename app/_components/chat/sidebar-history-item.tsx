@@ -20,7 +20,7 @@ import {
 } from "@/app/_components/ui/dialog";
 import { useChatVisibility } from "@/app/_hooks/use-chat-visibility";
 import { renameChat } from "@/app/(chat)/actions";
-import type { Chat } from "@/server/db/schema";
+import type { Chat } from "@/server/domain/chat/types";
 import {
   DropdownMenu,
   DropdownMenuContent,

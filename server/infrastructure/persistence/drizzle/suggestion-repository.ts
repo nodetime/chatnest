@@ -1,8 +1,8 @@
 import { eq } from "drizzle-orm";
-import { suggestion } from "@/server/db/schema";
 import type { SuggestionRepository } from "@/server/domain/suggestion/repository";
 import { ChatbotError } from "@/server/shared/errors";
 import { db } from "./client";
+import { suggestion } from "./schema";
 
 // P3:SQL 自 queries.ts 原样下沉,行为零漂移
 export const suggestionRepository: SuggestionRepository = {

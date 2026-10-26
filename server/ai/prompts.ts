@@ -1,5 +1,5 @@
 import type { Geo } from "@vercel/functions";
-import type { ArtifactKind } from "@/app/_components/chat/artifact";
+import type { ArtifactKind } from "@/server/domain/message/types";
 
 export const artifactsPrompt = `
 Artifacts is a side panel that displays content alongside the conversation. It supports scripts (code), documents (text), and spreadsheets. Changes appear in real-time.
