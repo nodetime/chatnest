@@ -3,7 +3,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { SettingsRow } from "@/server/agent/mcp-settings/repository";
-import { createModelSettingsService } from "@/server/ai/model-settings/service";
+import { createModelSettingsService } from "@/server/application/ai/model-settings/service";
 
 const env = {
   MCP_SETTINGS_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString("base64"),
@@ -155,15 +155,17 @@ test("encrypted settings fail closed on wrong key or domain", async () => {
   );
 });
 test("concurrent request snapshots isolate keys and keep child model calls on the same connection", async () => {
-  const { runWithModelEnvironment } = await import("@/server/ai/model-context");
+  const { runWithModelEnvironment } = await import(
+    "@/server/application/ai/model-context"
+  );
   const {
     getRuntimeModels,
     resolveModelId,
     getModelConnection,
     getDirectCapabilities,
-  } = await import("@/server/ai/model-connection");
+  } = await import("@/server/application/ai/model-connection");
   const { getLanguageModel, getTitleModel } = await import(
-    "@/server/ai/providers"
+    "@/server/application/ai/providers"
   );
   await Promise.all(
     ["one", "two"].map((name) =>
@@ -198,7 +200,7 @@ test("concurrent request snapshots isolate keys and keep child model calls on th
 });
 test("management authenticates before reading and rejects cross-origin writes and oversized bodies", async () => {
   const { createModelSettingsHandler } = await import(
-    "@/server/ai/model-settings/handler"
+    "@/server/application/ai/model-settings/handler"
   );
   const prior = process.env.PLATFORM_ADMIN_USER_IDS;
   process.env.PLATFORM_ADMIN_USER_IDS = "33333333-3333-4333-8333-333333333333";
@@ -270,7 +272,7 @@ test("management authenticates before reading and rejects cross-origin writes an
 });
 test("model transport rejects private destinations and redirect forwarding; real SDK probe is bounded and sanitized", async () => {
   const { isPublicAddress, validateModelURL, modelFetch } = await import(
-    "@/server/ai/model-settings/network"
+    "@/server/application/ai/model-settings/network"
   );
   for (const ip of [
     "127.0.0.1",
@@ -332,7 +334,9 @@ test("model transport rejects private destinations and redirect forwarding; real
   const baseURL = `http://127.0.0.1:${address.port}/v1`;
   const testEnv = { MODEL_ALLOW_LOOPBACK_HTTP: "1", NODE_ENV: "test" };
   try {
-    const { probeModel } = await import("@/server/ai/model-settings/probe");
+    const { probeModel } = await import(
+      "@/server/application/ai/model-settings/probe"
+    );
     const settings = { ...config, apiKey: "probe-only", baseURL };
     assert.equal((await probeModel(settings, testEnv)).ok, true);
     status = 401;
@@ -379,10 +383,10 @@ test("actual SDK SSE pump preserves each model snapshot through a tool child and
     isStepCount,
   } = await import("ai");
   const { runWithModelEnvironment, getModelEnvironment } = await import(
-    "@/server/ai/model-context"
+    "@/server/application/ai/model-context"
   );
   const { getLanguageModel, getTitleModel } = await import(
-    "@/server/ai/providers"
+    "@/server/application/ai/providers"
   );
   const calls: string[] = [];
   const children: string[] = [];

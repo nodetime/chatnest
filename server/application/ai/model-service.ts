@@ -1,8 +1,8 @@
-import { getDirectCapabilities, getModelConnection } from "./model-connection";
 import {
   getModelAvailability as getGatewayAvailability,
   getCapabilities as getGatewayCapabilities,
-} from "./models";
+} from "@/server/domain/model/models";
+import { getDirectCapabilities, getModelConnection } from "./model-connection";
 
 export function getCapabilities() {
   return getModelConnection().provider === "openai"

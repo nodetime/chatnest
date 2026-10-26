@@ -8,7 +8,7 @@ import {
 import {
   createRunFailureReporter,
   hasRunFailure,
-} from "@/server/agent/run-failure";
+} from "@/server/domain/message/run-failure";
 import type { ChatMessage } from "@/server/domain/message/types";
 
 test("actual SDK persists a sanitized failure marker without inventing model text", async () => {

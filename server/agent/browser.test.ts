@@ -6,9 +6,9 @@ const implementation = import("@/server/agent/browser-policy").catch(
 );
 
 test("streamed browser arguments do not consume the later approval auto-open event", async () => {
-  const activity = await import("@/server/agent/workspace-events").catch(
-    () => null
-  );
+  const activity = await import(
+    "@/server/domain/message/workspace-events"
+  ).catch(() => null);
   assert.ok(activity, "browser workspace event handling is missing");
   const message = (state: string) => [
     {

@@ -3,7 +3,7 @@
 import type { UseChatHelpers } from "@ai-sdk/react";
 import { useCallback, useRef, useState } from "react";
 import type { ChatMessage } from "@/app/_lib/types";
-import { hasRunFailure } from "@/server/agent/run-failure";
+import { hasRunFailure } from "@/server/domain/message/run-failure";
 import type { ToolPart } from "../ai-elements/tool";
 import { activityDisplayState } from "./activity-groups";
 

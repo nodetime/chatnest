@@ -2,7 +2,7 @@ import { z } from "zod";
 import {
   MAX_MESSAGE_CHARACTERS,
   MAX_MESSAGE_PARTS,
-} from "@/server/agent/input-limits";
+} from "@/server/domain/message/input-limits";
 import { ATTACHMENT_MIMES } from "@/server/uploads/document-types";
 import { assetIdFromRef } from "@/server/uploads/refs";
 

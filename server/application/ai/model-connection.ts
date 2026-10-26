@@ -1,12 +1,12 @@
 // Server consumers only. Never return credentials in API metadata.
 
-import { getModelEnvironment } from "./model-context";
 import {
   type ChatModel,
   chatModels,
   DEFAULT_CHAT_MODEL,
   type ModelCapabilities,
-} from "./models";
+} from "@/server/domain/model/models";
+import { getModelEnvironment } from "./model-context";
 
 type Environment = Record<string, string | undefined>;
 

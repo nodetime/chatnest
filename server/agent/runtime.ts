@@ -1,7 +1,13 @@
 import { createMCPClient, type MCPClient } from "@ai-sdk/mcp";
 import { dynamicTool, type ToolSet } from "ai";
+import { normalizeMcpOutput } from "@/server/domain/message/mcp-output";
+import { createPortaToolError } from "@/server/domain/message/porta-error";
+import {
+  type McpSourceMetadata,
+  ResultEvidenceLedger,
+  sourceModelOutput,
+} from "@/server/domain/message/result-evidence";
 import { resolveServerConnection } from "./config";
-import { normalizeMcpOutput } from "./mcp-output";
 import { abortable, closeManagedClient } from "./mcp-settings/lifecycle";
 import {
   listNativeTools,
@@ -13,12 +19,6 @@ import {
   readRuntimeConfig,
   toolAlias,
 } from "./mcp-settings/runtime-config";
-import { createPortaToolError } from "./porta-error";
-import {
-  type McpSourceMetadata,
-  ResultEvidenceLedger,
-  sourceModelOutput,
-} from "./result-evidence";
 import { buildSkillsPrompt, createSkillTools, discoverSkills } from "./skills";
 
 export async function createAgentRuntime(

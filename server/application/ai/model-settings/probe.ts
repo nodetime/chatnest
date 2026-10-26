@@ -1,10 +1,13 @@
 import "server-only";
 import { createOpenAI } from "@ai-sdk/openai";
 import { APICallError, generateText } from "ai";
-import type { Environment } from "../../agent/mcp-settings/security";
-import { metadataOnlyTelemetry } from "../telemetry";
+import type { Environment } from "@/server/agent/mcp-settings/security";
+import type {
+  PrivateModelSettings,
+  ProbeResult,
+} from "@/server/domain/model/settings-schema";
+import { metadataOnlyTelemetry } from "@/server/shared/telemetry";
 import { ModelNetworkError, modelFetch } from "./network";
-import type { PrivateModelSettings, ProbeResult } from "./schema";
 export function connectionFailure(error: unknown): ProbeResult {
   let underlying: unknown = error;
   for (let depth = 0; depth < 4 && underlying instanceof Error; depth += 1) {

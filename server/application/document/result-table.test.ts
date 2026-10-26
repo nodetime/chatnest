@@ -3,11 +3,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  ResultEvidenceLedger,
-  restoreResultEvidence,
-  sourceModelOutput,
-} from "@/server/agent/result-evidence";
-import {
   buildResultTable,
   isProtectedResultTable,
   parseResultTable,
@@ -16,6 +11,11 @@ import {
   resultRows,
   safeSourceUrl,
 } from "@/server/domain/document/result-table";
+import {
+  ResultEvidenceLedger,
+  restoreResultEvidence,
+  sourceModelOutput,
+} from "@/server/domain/message/result-evidence";
 
 const source = {
   completedAt: "2026-10-20T12:00:00.000Z",
@@ -233,7 +233,7 @@ test("installed SDK projects current and persisted MCP results without replacing
   const { agentConfigSchema } = await import("@/server/agent/config");
   const { convertToModelMessages } = await import("ai");
   const { historyProjectionTools } = await import(
-    "@/server/agent/result-evidence"
+    "@/server/domain/message/result-evidence"
   );
   const value = new ResultEvidenceLedger();
   const events: unknown[] = [];
@@ -409,7 +409,7 @@ test("table 500 row / 30 column / 1MiB UTF8 bounds explicitly reject complete en
 
 test("approval transport carries only decisions, not persisted raw MCP/table/file values", async () => {
   const { compactToolApprovals } = await import(
-    "@/server/agent/approval-transport"
+    "@/server/domain/message/approval-transport"
   );
   const input = [
     { id: "u", parts: [{ text: "private", type: "text" }], role: "user" },
@@ -501,7 +501,7 @@ test("model preview contains actual row values and non-JSON successes do not evi
   restoreResultEvidence(restored, messages);
   assert.ok(restored.get(source.toolCallId));
   const { historyProjectionTools, boundedMcpHistory } = await import(
-    "@/server/agent/result-evidence"
+    "@/server/domain/message/result-evidence"
   );
   const tools = historyProjectionTools(restored, messages);
   const bounded = boundedMcpHistory(messages, tools, restored);
@@ -542,7 +542,7 @@ test("view/notes updates obey whole-envelope cap before persistence", async () =
 
 test("combined latest history plus current MCP projections remain <=128KiB and adapter reinvocation is pure", async () => {
   const { historyProjectionTools, boundedMcpHistory } = await import(
-    "@/server/agent/result-evidence"
+    "@/server/domain/message/result-evidence"
   );
   const value = new ResultEvidenceLedger();
   const output = {
@@ -639,7 +639,7 @@ test("reopening the same cached artifact preserves hydrated content; switching I
 
 test("ambiguous duplicate source IDs never overwrite original provenance or multiply projected history", async () => {
   const { historyProjectionTools, boundedMcpHistory } = await import(
-    "@/server/agent/result-evidence"
+    "@/server/domain/message/result-evidence"
   );
   const messages = Array.from({ length: 200 }, (_, i) => ({
     createdAt: source.completedAt,

@@ -36,9 +36,12 @@ import {
   fetchWithErrorHandlers,
   generateUUID,
 } from "@/app/_lib/utils";
-import { compactToolApprovals } from "@/server/agent/approval-transport";
-import { buildTaskMessage, type TaskDraft } from "@/server/agent/task-draft";
-import { DEFAULT_CHAT_MODEL } from "@/server/ai/models";
+import { compactToolApprovals } from "@/server/domain/message/approval-transport";
+import {
+  buildTaskMessage,
+  type TaskDraft,
+} from "@/server/domain/message/task-draft";
+import { DEFAULT_CHAT_MODEL } from "@/server/domain/model/models";
 import type { Vote } from "@/server/domain/vote/types";
 import { ChatbotError } from "@/server/shared/errors";
 

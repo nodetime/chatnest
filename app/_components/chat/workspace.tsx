@@ -6,7 +6,7 @@ import { useActiveChat } from "@/app/_hooks/use-active-chat";
 import { useArtifact } from "@/app/_hooks/use-artifact";
 import { useWorkspace } from "@/app/_hooks/use-workspace";
 import { cn } from "@/app/_lib/utils";
-import { browserWorkspaceEvents } from "@/server/agent/workspace-events";
+import { browserWorkspaceEvents } from "@/server/domain/message/workspace-events";
 import { artifactCatalog } from "./artifact-catalog";
 import { ArtifactPicker } from "./artifact-picker";
 import { BrowserWorkspace } from "./browser-workspace";

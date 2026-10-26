@@ -6,54 +6,56 @@ import {
   type ToolSet,
   toUIMessageStream,
 } from "ai";
-import { applyToolApprovals } from "@/server/agent/approvals";
 import { createBrowserTools } from "@/server/agent/browser-tools";
+import { createAgentRuntime } from "@/server/agent/runtime";
+import {
+  getModelConnection,
+  getRuntimeModels,
+  resolveModelId,
+} from "@/server/application/ai/model-connection";
+import {
+  getCapabilities,
+  getModelAvailability,
+} from "@/server/application/ai/model-service";
+import {
+  type RequestHints,
+  systemPrompt,
+} from "@/server/application/ai/prompts";
+import { getLanguageModel } from "@/server/application/ai/providers";
+import { createDocument } from "@/server/application/chat/tools/create-document";
+import { createResultTable } from "@/server/application/chat/tools/create-result-table";
+import { editDocument } from "@/server/application/chat/tools/edit-document";
+import { requestSuggestions } from "@/server/application/chat/tools/request-suggestions";
+import { updateDocument } from "@/server/application/chat/tools/update-document";
+import type { ChatRepository } from "@/server/domain/chat/repository";
+import { canAccessChat } from "@/server/domain/chat/types";
+import { applyToolApprovals } from "@/server/domain/message/approvals";
+import { convertToUIMessages } from "@/server/domain/message/convert";
+import { generateUUID } from "@/server/domain/message/ids";
 import {
   prepareMessageEdit,
   prepareRegeneration,
-} from "@/server/agent/message-turn";
-import { agentStreamErrorText } from "@/server/agent/porta-error";
+} from "@/server/domain/message/message-turn";
+import { agentStreamErrorText } from "@/server/domain/message/porta-error";
+import type {
+  MessageRepository,
+  StoredMessage,
+} from "@/server/domain/message/repository";
 import {
   boundedMcpHistory,
   historyProjectionTools,
   ResultEvidenceLedger,
   restoreResultEvidence,
-} from "@/server/agent/result-evidence";
+} from "@/server/domain/message/result-evidence";
 import {
   createRunFailureReporter,
   hasRunFailure,
-} from "@/server/agent/run-failure";
-import { createAgentRuntime } from "@/server/agent/runtime";
-import { entitlementsByUserType } from "@/server/ai/entitlements";
-import {
-  getModelConnection,
-  getRuntimeModels,
-  resolveModelId,
-} from "@/server/ai/model-connection";
-import {
-  getCapabilities,
-  getModelAvailability,
-} from "@/server/ai/model-service";
-import { type RequestHints, systemPrompt } from "@/server/ai/prompts";
-import { getLanguageModel } from "@/server/ai/providers";
-import { metadataOnlyTelemetry } from "@/server/ai/telemetry";
-import { createDocument } from "@/server/ai/tools/create-document";
-import { createResultTable } from "@/server/ai/tools/create-result-table";
-import { editDocument } from "@/server/ai/tools/edit-document";
-import { requestSuggestions } from "@/server/ai/tools/request-suggestions";
-import { updateDocument } from "@/server/ai/tools/update-document";
-import type { ChatRepository } from "@/server/domain/chat/repository";
-import { canAccessChat } from "@/server/domain/chat/types";
-import { convertToUIMessages } from "@/server/domain/message/convert";
-import { generateUUID } from "@/server/domain/message/ids";
-import type {
-  MessageRepository,
-  StoredMessage,
-} from "@/server/domain/message/repository";
+} from "@/server/domain/message/run-failure";
 import type {
   ChatMessage,
   WaitingStatusData,
 } from "@/server/domain/message/types";
+import { entitlementsByUserType } from "@/server/domain/user/entitlements";
 import type { ChatSession } from "@/server/domain/user/types";
 import { ChatbotError } from "@/server/shared/errors";
 import { checkIpRateLimit } from "@/server/shared/ratelimit";
@@ -61,6 +63,7 @@ import {
   isProductionEnvironment,
   isTestEnvironment,
 } from "@/server/shared/runtime";
+import { metadataOnlyTelemetry } from "@/server/shared/telemetry";
 import { prepareAttachmentContext } from "@/server/uploads/context";
 import { AttachmentRoundBudget } from "@/server/uploads/document-budget";
 import { readAttachmentTool } from "@/server/uploads/read-attachment";

@@ -40,13 +40,13 @@ import { useActiveChat } from "@/app/_hooks/use-active-chat";
 import { useAgentInfo } from "@/app/_hooks/use-agent-info";
 import type { Attachment, ChatMessage } from "@/app/_lib/types";
 import { cn, fetcher } from "@/app/_lib/utils";
-import { MAX_MESSAGE_CHARACTERS } from "@/server/agent/input-limits";
+import { MAX_MESSAGE_CHARACTERS } from "@/server/domain/message/input-limits";
 import {
   type ChatModel,
   chatModels,
   DEFAULT_CHAT_MODEL,
   type ModelCapabilities,
-} from "@/server/ai/models";
+} from "@/server/domain/model/models";
 import {
   completeDraftSubmission,
   UploadAdmission,

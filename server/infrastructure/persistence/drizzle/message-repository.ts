@@ -2,7 +2,7 @@ import { and, asc, count, eq, gte, inArray } from "drizzle-orm";
 import {
   prepareMessageEdit,
   prepareRegeneration,
-} from "@/server/agent/message-turn";
+} from "@/server/domain/message/message-turn";
 import type { MessageRepository } from "@/server/domain/message/repository";
 import type { ChatMessage } from "@/server/domain/message/types";
 import { ChatbotError } from "@/server/shared/errors";

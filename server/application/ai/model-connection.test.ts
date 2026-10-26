@@ -4,9 +4,9 @@ import test from "node:test";
 import { generateText, streamText } from "ai";
 
 test("an OpenAI key and custom endpoint select direct access without a gateway key", async () => {
-  const implementation = await import("@/server/ai/model-connection").catch(
-    () => null
-  );
+  const implementation = await import(
+    "@/server/application/ai/model-connection"
+  ).catch(() => null);
   assert.ok(implementation, "direct model connection configuration is missing");
   const connection = implementation.getModelConnection({
     OPENAI_API_KEY: "test-only-key",
@@ -52,9 +52,9 @@ test("an OpenAI key and custom endpoint select direct access without a gateway k
 });
 
 test("custom model catalog and capabilities do not query Vercel's gateway", async () => {
-  const implementation = await import("@/server/ai/model-connection").catch(
-    () => null
-  );
+  const implementation = await import(
+    "@/server/application/ai/model-connection"
+  ).catch(() => null);
   assert.ok(implementation, "direct model connection configuration is missing");
   const env = {
     MODEL_PROVIDER: "openai",
@@ -183,7 +183,7 @@ test("chat, streaming and title requests use the configured endpoint, key and ex
   Object.assign(process.env, overrides);
   try {
     const { getLanguageModel, getTitleModel } = await import(
-      "@/server/ai/providers"
+      "@/server/application/ai/providers"
     );
     const result = await generateText({
       maxRetries: 0,

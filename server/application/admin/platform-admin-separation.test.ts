@@ -25,11 +25,11 @@ function render(code: string) {
 
 test("platform access preserves legacy exact regular UUIDs and only explicitly overrides", async () => {
   assert.ok(
-    existsSync("server/admin/access.ts"),
+    existsSync("server/application/admin/access.ts"),
     "shared server-side platform access exists"
   );
   const { isPlatformAdmin, requirePlatformAdmin } = await import(
-    "@/server/admin/access"
+    "@/server/application/admin/access"
   );
   const user = { id: adminId, type: "regular" };
   const deny = () => {

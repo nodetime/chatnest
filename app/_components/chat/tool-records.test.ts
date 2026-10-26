@@ -106,7 +106,7 @@ const hookHarness = `
     './tool-activity-state':require('./app/_components/chat/tool-activity-state.ts'),
     './tool-presentation':require('./app/_components/chat/tool-presentation.ts'),
     './tool-result-preview':require('./app/_components/chat/tool-result-preview.tsx'),
-    '@/server/agent/sources':require('./server/agent/sources.ts'),
+    '@/server/domain/message/sources':require('./server/domain/message/sources.ts'),
   };
 `;
 
@@ -201,7 +201,7 @@ test("actual Messages keeps canonical keyed messages, order and callbacks withou
     const {Messages}=load('app/_components/chat/messages.tsx',{
       ...base,
       '@/app/_components/ai-elements/conversation':{Conversation:'conversation',ConversationContent:'conversation-content',ConversationScrollButton:'scroll-button'},
-      '@/server/agent/message-turn':{prepareRegeneration:()=>true},
+      '@/server/domain/message/message-turn':{prepareRegeneration:()=>true},
       './activity-group':{ActivityGroup:'activity'},
       './data-stream-provider':{useDataStream:()=>({})},
       './greeting':{Greeting:'greeting'},
@@ -258,7 +258,7 @@ test("submitted approval continuation remains active only for the latest group o
     const {Messages}=load('app/_components/chat/messages.tsx',{
       ...base,
       '@/app/_components/ai-elements/conversation':{Conversation:'conversation',ConversationContent:'conversation-content',ConversationScrollButton:'scroll-button'},
-      '@/server/agent/message-turn':{prepareRegeneration:()=>true},
+      '@/server/domain/message/message-turn':{prepareRegeneration:()=>true},
       './activity-group':{ActivityGroup:'activity'},
       './data-stream-provider':{useDataStream:()=>({})},
       './greeting':{Greeting:'greeting'},
@@ -374,7 +374,7 @@ test("actual Messages preserves the inspected tool subtree when the same assista
     const {Messages}=load('app/_components/chat/messages.tsx',{
       ...base,react,
       '@/app/_components/ai-elements/conversation':{Conversation:'conversation',ConversationContent:'conversation-content',ConversationScrollButton:'scroll-button'},
-      '@/server/agent/message-turn':{prepareRegeneration:()=>true},
+      '@/server/domain/message/message-turn':{prepareRegeneration:()=>true},
       './activity-group':{ActivityGroup},
       './data-stream-provider':{useDataStream:()=>({})},
       './greeting':{Greeting:'greeting'},

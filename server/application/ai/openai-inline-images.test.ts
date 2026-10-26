@@ -6,7 +6,7 @@ import sharp from "sharp";
 
 test("installed OpenAI chat converter sends original PNG and JPEG bytes as complete data URLs on the wire", async () => {
   const { openAIInlineImageMiddleware } = await import(
-    "@/server/ai/inline-image-middleware"
+    "@/server/application/ai/inline-image-middleware"
   );
   const png = await sharp({
     create: { background: "#ffaa00", channels: 3, height: 1, width: 1 },

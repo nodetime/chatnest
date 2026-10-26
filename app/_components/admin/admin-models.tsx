@@ -17,7 +17,7 @@ import { Label } from "@/app/_components/ui/label";
 import type {
   ModelConfiguration,
   ModelSettingsProjection,
-} from "@/server/ai/model-settings/schema";
+} from "@/server/domain/model/settings-schema";
 
 const prefix = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 const endpoint = `${prefix}/api/admin/models`;

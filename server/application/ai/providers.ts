@@ -1,11 +1,11 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import { customProvider, gateway, wrapLanguageModel } from "ai";
+import { titleModel } from "@/server/domain/model/models";
 import { isTestEnvironment } from "@/server/shared/runtime";
 import { openAIInlineImageMiddleware } from "./inline-image-middleware";
 import { getModelConnection, resolveModelId } from "./model-connection";
 import { getModelEnvironment } from "./model-context";
 import { modelFetch } from "./model-settings/network";
-import { titleModel } from "./models";
 
 export const myProvider = isTestEnvironment
   ? (() => {

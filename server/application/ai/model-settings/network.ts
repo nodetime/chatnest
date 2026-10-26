@@ -4,7 +4,7 @@ import { request as httpRequest } from "node:http";
 import { request as httpsRequest } from "node:https";
 import { BlockList, isIP } from "node:net";
 import { Readable } from "node:stream";
-import type { Environment } from "../../agent/mcp-settings/security";
+import type { Environment } from "@/server/agent/mcp-settings/security";
 
 export class ModelNetworkError extends Error {
   readonly code: "destination" | "redirect" | "size" | "timeout" | "network";

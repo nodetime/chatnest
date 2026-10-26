@@ -15,7 +15,7 @@ import type {
   Readiness,
   StorageReadiness,
   ToolsReadiness,
-} from "./overview-types";
+} from "@/server/domain/admin/types";
 
 export function summarizeTools(
   file: ServerConfig[],

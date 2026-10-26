@@ -208,9 +208,9 @@ test("Porta error 4008 and BridgeError retain JSON bodies without headers, leake
 });
 
 test("real AI SDK stream exposes only branded Porta error text as tool-output-error, never tool success", async () => {
-  const implementation = await import("@/server/agent/porta-error").catch(
-    () => null
-  );
+  const implementation = await import(
+    "@/server/domain/message/porta-error"
+  ).catch(() => null);
   assert.ok(
     implementation,
     "Porta-specific safe stream error formatter is required"

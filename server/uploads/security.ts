@@ -1,4 +1,4 @@
-import { isPlatformAdmin } from "../admin/access";
+import { isPlatformAdmin } from "@/server/application/admin/access";
 import { sameOriginBrowserControl } from "../agent/browser-policy";
 import { UploadCapacityError } from "./capacity";
 import { UploadError } from "./validation";

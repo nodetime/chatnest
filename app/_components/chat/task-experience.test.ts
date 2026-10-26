@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createSkillTools, discoverSkills } from "@/server/agent/skills";
-import { collectSourceLinks } from "@/server/agent/sources";
+import { collectSourceLinks } from "@/server/domain/message/sources";
 
 test("loaded skills supply readable metadata while retaining their original method", async () => {
   const [skill] = await discoverSkills();
@@ -21,9 +21,9 @@ test("loaded skills supply readable metadata while retaining their original meth
 });
 
 test("Exa source metadata comes only from result headers, excludes arbitrary snippet links and error results", async () => {
-  const implementation = await import("@/server/agent/mcp-output").catch(
-    () => null
-  );
+  const implementation = await import(
+    "@/server/domain/message/mcp-output"
+  ).catch(() => null);
   assert.ok(implementation, "MCP result source adaptation is missing");
   const output = {
     content: [
@@ -72,7 +72,9 @@ test("Exa source metadata comes only from result headers, excludes arbitrary sni
 });
 
 test("fetch source metadata excludes header-shaped text inside the page body", async () => {
-  const { normalizeMcpOutput } = await import("@/server/agent/mcp-output");
+  const { normalizeMcpOutput } = await import(
+    "@/server/domain/message/mcp-output"
+  );
   const output = {
     content: [
       {
@@ -101,9 +103,9 @@ test("fetch source metadata excludes header-shaped text inside the page body", a
 });
 
 test("task messages preserve the user's goal/materials and reject empty or oversized submissions", async () => {
-  const implementation = await import("@/server/agent/task-draft").catch(
-    () => null
-  );
+  const implementation = await import(
+    "@/server/domain/message/task-draft"
+  ).catch(() => null);
   assert.ok(implementation, "task creation is missing");
   const message = implementation.buildTaskMessage({
     goal: "查找某讲义的传播线索",

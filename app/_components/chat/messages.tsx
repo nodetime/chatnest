@@ -5,7 +5,7 @@ import {
   ConversationScrollButton,
 } from "@/app/_components/ai-elements/conversation";
 import type { ChatMessage } from "@/app/_lib/types";
-import { prepareRegeneration } from "@/server/agent/message-turn";
+import { prepareRegeneration } from "@/server/domain/message/message-turn";
 import type { Vote } from "@/server/domain/vote/types";
 import { useDataStream } from "./data-stream-provider";
 import { Greeting } from "./greeting";

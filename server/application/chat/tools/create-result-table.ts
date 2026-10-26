@@ -1,12 +1,12 @@
 import { tool, type UIMessageStreamWriter } from "ai";
 import type { Session } from "next-auth";
-import type { ResultEvidenceLedger } from "@/server/agent/result-evidence";
 import {
   buildResultTable,
   createResultTableSchema,
   type ResultTable,
 } from "@/server/domain/document/result-table";
 import { generateUUID } from "@/server/domain/message/ids";
+import type { ResultEvidenceLedger } from "@/server/domain/message/result-evidence";
 import type { ChatMessage } from "@/server/domain/message/types";
 import { documentRepository } from "@/server/infrastructure/persistence/drizzle/document-repository";
 

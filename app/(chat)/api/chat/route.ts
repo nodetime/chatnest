@@ -2,7 +2,7 @@ import { geolocation, ipAddress } from "@vercel/functions";
 import { checkBotId } from "botid/server";
 import { headers } from "next/headers";
 import { auth } from "@/app/(auth)/auth";
-import { withModelSettings } from "@/server/ai/model-settings/runtime";
+import { withModelSettings } from "@/server/application/ai/model-settings/runtime";
 import { getUseCases } from "@/server/composition";
 import type { ChatSession } from "@/server/domain/user/types";
 import { ChatbotError } from "@/server/shared/errors";

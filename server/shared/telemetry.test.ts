@@ -81,7 +81,7 @@ test("all ten application model calls explicitly use metadata-only telemetry", (
 });
 
 test("installed AI SDK and OTel retain usage but omit private prompt, tool and output content", async () => {
-  const implementation = await import("@/server/ai/telemetry").catch(
+  const implementation = await import("@/server/shared/telemetry").catch(
     () => null
   );
   assert.ok(

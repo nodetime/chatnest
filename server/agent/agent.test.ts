@@ -5,13 +5,7 @@ import path from "node:path";
 import { test } from "node:test";
 import type { MCPClient } from "@ai-sdk/mcp";
 import { jsonSchema } from "ai";
-import { applyToolApprovals } from "@/server/agent/approvals";
 import { agentConfigSchema, resolveHeaders } from "@/server/agent/config";
-import {
-  collectConversationSources,
-  conversationMarkdown,
-  sourceListMarkdown,
-} from "@/server/agent/conversation-sources";
 import { createAgentRuntime } from "@/server/agent/runtime";
 import {
   buildSkillsPrompt,
@@ -19,7 +13,13 @@ import {
   discoverSkills,
   readSkillFile,
 } from "@/server/agent/skills";
-import { collectSourceLinks } from "@/server/agent/sources";
+import { applyToolApprovals } from "@/server/domain/message/approvals";
+import {
+  collectConversationSources,
+  conversationMarkdown,
+  sourceListMarkdown,
+} from "@/server/domain/message/conversation-sources";
+import { collectSourceLinks } from "@/server/domain/message/sources";
 import type { ChatMessage } from "@/server/domain/message/types";
 import { usesSecureAuthCookies } from "@/server/shared/auth-cookies";
 import { postRequestBodySchema } from "../../app/(chat)/api/chat/schema";

@@ -2,10 +2,10 @@ import { connection } from "next/server";
 import {
   getModelConnection,
   getRuntimeModels,
-} from "@/server/ai/model-connection";
-import { getCapabilities } from "@/server/ai/model-service";
-import { withModelSettings } from "@/server/ai/model-settings/runtime";
-import { getAllGatewayModels, isDemo } from "@/server/ai/models";
+} from "@/server/application/ai/model-connection";
+import { getCapabilities } from "@/server/application/ai/model-service";
+import { withModelSettings } from "@/server/application/ai/model-settings/runtime";
+import { getAllGatewayModels, isDemo } from "@/server/domain/model/models";
 
 export async function GET() {
   try {

@@ -8,7 +8,7 @@ import { ChatShell } from "@/app/_components/chat/shell";
 import { WorkbenchSidebarProvider } from "@/app/_components/chat/workbench-sidebar-provider";
 import { SidebarInset } from "@/app/_components/ui/sidebar";
 import { ActiveChatProvider } from "@/app/_hooks/use-active-chat";
-import { isPlatformAdmin } from "@/server/admin/access";
+import { isPlatformAdmin } from "@/server/application/admin/access";
 import { auth } from "../(auth)/auth";
 
 export default function Layout({ children }: { children: React.ReactNode }) {

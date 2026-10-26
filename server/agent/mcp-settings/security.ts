@@ -1,5 +1,5 @@
 import "server-only";
-import { isPlatformAdmin as isAdmin } from "@/server/admin/access";
+import { isPlatformAdmin as isAdmin } from "@/server/application/admin/access";
 import { sameOriginBrowserControl } from "../browser-policy";
 import { parseEncryptionKey } from "./crypto";
 import { allowedOrigins } from "./network";
@@ -11,7 +11,7 @@ export class SettingsError extends Error {
     this.status = status;
   }
 }
-export { isPlatformAdmin as isAdmin } from "@/server/admin/access";
+export { isPlatformAdmin as isAdmin } from "@/server/application/admin/access";
 export function authorizeManagement(
   user: { id?: string; type?: string } | null | undefined,
   request: Request,

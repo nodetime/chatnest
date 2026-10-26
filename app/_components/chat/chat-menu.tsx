@@ -14,7 +14,7 @@ import {
 import { useActiveChat } from "@/app/_hooks/use-active-chat";
 import { useChatVisibility } from "@/app/_hooks/use-chat-visibility";
 import { useWorkspace } from "@/app/_hooks/use-workspace";
-import { collectConversationSources } from "@/server/agent/conversation-sources";
+import { collectConversationSources } from "@/server/domain/message/conversation-sources";
 
 export function ChatMenu() {
   const {

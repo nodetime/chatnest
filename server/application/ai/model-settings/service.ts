@@ -3,23 +3,23 @@ import {
   decryptSettings,
   encryptSettings,
   parseEncryptionKey,
-} from "../../agent/mcp-settings/crypto";
-import type { SettingsRepository } from "../../agent/mcp-settings/repository";
+} from "@/server/agent/mcp-settings/crypto";
+import type { SettingsRepository } from "@/server/agent/mcp-settings/repository";
 import {
   type Environment,
   SettingsError,
-} from "../../agent/mcp-settings/security";
-import { getModelConnection } from "../model-connection";
-import { validateModelURL } from "./network";
-import { listRemoteModels, probeModel } from "./probe";
-import { settingsRepository } from "./repository";
+} from "@/server/agent/mcp-settings/security";
 import {
   configurationSchema,
   editSchema,
   keySchema,
   type ModelSettingsProjection,
   type PrivateModelSettings,
-} from "./schema";
+} from "@/server/domain/model/settings-schema";
+import { settingsRepository } from "@/server/infrastructure/persistence/drizzle/model-settings-repository";
+import { getModelConnection } from "../model-connection";
+import { validateModelURL } from "./network";
+import { listRemoteModels, probeModel } from "./probe";
 
 const domain = "model-settings";
 export function createModelSettingsService({

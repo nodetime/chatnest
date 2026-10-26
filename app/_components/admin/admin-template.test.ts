@@ -119,10 +119,13 @@ test("storage separates live configuration cards, controls, limits and collapsed
 
 test("overview independently authorizes, isolates failures and never projects credentials", async () => {
   assert.ok(
-    existsSync("server/admin/overview.ts"),
+    existsSync("server/application/admin/overview.ts"),
     "guarded overview boundary exists"
   );
-  const { createOverviewHandler } = await import("@/server/admin/overview");
+  const { createOverviewHandler } = await import(
+    // biome-ignore lint/style/noRestrictedImports: 测试探针:驱动 admin 概览处理器,非 UI 依赖
+    "@/server/application/admin/overview"
+  );
   const id = "11111111-1111-4111-8111-111111111111";
   let user: { id: string; type: string } | null = null,
     calls = 0;
@@ -174,7 +177,10 @@ test("overview readiness uses existing services and attributed upstream assets, 
 });
 
 test("readiness counts missing file credentials and disabled managed connections without network probes", async () => {
-  const overview = await import("@/server/admin/overview");
+  const overview = await import(
+    // biome-ignore lint/style/noRestrictedImports: 测试探针:校验就绪度统计,非 UI 依赖
+    "@/server/application/admin/overview"
+  );
   assert.equal(
     typeof overview.summarizeTools,
     "function",
