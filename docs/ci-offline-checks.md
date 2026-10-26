@@ -38,7 +38,7 @@ On Linux with `sudo`, `unshare`, `ip`, and `runuser`, replace `offline-checks.sh
 
 The removed workflow named “Playwright Tests” explicitly populated production deployment secrets. Its `pnpm test` command loaded `.env.local` through the old Playwright config, started a development server without isolated database fixtures/migrations, and used outdated UI assumptions such as `suggested-actions` and English `Search models...`. Those tests do not currently establish the requested runtime acceptance.
 
-`server/agent/browser-runtime.test.ts` (real external browser navigation) and `server/db/regeneration-db.test.ts` (dotenv-loaded real Postgres) are intentionally absent from the offline manifest. New offline suites must be reviewed and added explicitly, not swept in via a wildcard.
+`server/infrastructure/browser/browser-runtime.test.ts` (real external browser navigation) and `server/infrastructure/persistence/drizzle/regeneration-db.test.ts` (dotenv-loaded real Postgres) are intentionally absent from the offline manifest. New offline suites must be reviewed and added explicitly, not swept in via a wildcard.
 
 Browser/HTTP fixture verification for runtime interactions remains separately recorded by the root acceptance run under the runtime-interactions plan. Passing these CI jobs alone does **not** claim approval/denial/stop/recovery in a real browser, real provider acceptance, or durable database correctness. A future browser CI job must port the current deterministic fixture and use disposable storage, loopback model/MCP endpoints and maintained selectors before being called Playwright coverage.
 

@@ -64,9 +64,9 @@ ChatNest 对 Porta 的 `isError` 继续抛工具执行异常，以保持 AI SDK/
 
 ```sh
 corepack pnpm install --frozen-lockfile
-corepack pnpm exec tsx --test server/agent/porta.test.ts server/agent/porta-errors.test.ts server/agent/agent.test.ts server/agent/message-turn.test.ts server/ai/model-connection.test.ts server/agent/browser.test.ts app/_components/chat/task-experience.test.ts
+corepack pnpm exec tsx --test server/infrastructure/skills/porta.test.ts server/application/chat/porta-errors.test.ts server/infrastructure/mcp/agent.test.ts server/domain/message/message-turn.test.ts server/application/ai/model-connection.test.ts server/infrastructure/browser/browser.test.ts app/_components/chat/task-experience.test.ts
 corepack pnpm exec tsc --noEmit
-corepack pnpm exec biome check server/agent/config.ts server/agent/runtime.ts 'app/(chat)/api/agent/route.ts' server/config/agent.json server/agent/porta.test.ts server/agent/porta-errors.test.ts server/agent/agent.test.ts
+corepack pnpm exec biome check server/infrastructure/mcp/config.ts server/infrastructure/mcp/runtime.ts 'app/(chat)/api/agent/route.ts' server/infrastructure/mcp/agent.json server/infrastructure/skills/porta.test.ts server/application/chat/porta-errors.test.ts server/infrastructure/mcp/agent.test.ts
 ```
 
 测试只使用 fixture token、注入的 MCP 连接器和既有本地模型 fixture，不读取 `.env`、不连接真实模型/OneBound。真实本地 HTTP MCP 协议与 SDK 兼容性由独立 Porta 仓库的 transport 测试覆盖；本文件的注入连接器测试不冒充真实网络验收。
@@ -75,7 +75,7 @@ corepack pnpm exec biome check server/agent/config.ts server/agent/runtime.ts 'a
 
 2026-10-20：
 
-1. RED：新增7项独立测试，运行 `corepack pnpm exec tsx --test server/agent/porta.test.ts`，7失败/0通过；失败定位到未注册服务、URL引用未支持、缺少连接解析、未加载采购Skill等预期缺口。
+1. RED：新增7项独立测试，运行 `corepack pnpm exec tsx --test server/infrastructure/skills/porta.test.ts`，7失败/0通过；失败定位到未注册服务、URL引用未支持、缺少连接解析、未加载采购Skill等预期缺口。
 2. GREEN：最小实现后，独立7项及既有15项 agent 测试全部通过（22/22）。
 3. RED：增加真实本机HTTP重定向测试，定向运行 `--test-name-pattern='rejects redirects'`；出现 `redirectedCalls: 1 !== 0`，证明原有fetch会跟随重定向。
 4. GREEN：MCP fetch 显式 `redirect: error` 后，独立8项与 agent/message-turn/model-connection 回归全部通过（29/29）；既有模型测试只使用本机HTTP fixture。

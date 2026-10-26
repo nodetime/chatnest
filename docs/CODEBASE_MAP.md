@@ -1,160 +1,66 @@
 # ChatNest codebase map
 
-- `app/(auth)/auth.ts`: NextAuth credentials/guest sessions. User has ID/type; there are no workspace roles.
-- `server/db/schema.ts`, `server/db/migrations/`: Drizzle PostgreSQL schema/migrations. `pnpm build` runs migrations first; do not run against real settings during tests.
-- `server/agent/config.ts`: deployment JSON/env MCP configuration, validation and resolution.
-- `server/agent/runtime.ts`: per-task config snapshot, HTTP MCP client, dynamic tools/list schema discovery, allowlist and approval gating.
-- `app/(chat)/api/agent/route.ts`: authenticated capability summary, never credentials.
-- `app/_components/chat/agent-library.tsx`, `app/_hooks/use-agent-info.ts`: tools/skills/settings dialog and summary fetch.
-- `app/_components/ui/`: existing shadcn/radix components/tokens; reuse instead of redesigning.
-- 单元测试就近放在各模块旁(`server/agent/`、`server/uploads/`、`app/_components/chat/` 等): tsx/node:test offline suites; existing tests inject fake MCP clients and temporary configs. 离线白名单 `scripts/ci/offline-tests.txt`;`tests/` 保留 e2e 与共享 fixtures。
-- `server/config/agent.json`: default file-managed Exa/Tavily/Porta services. Preserve compatibility and environment secrets.
-- `server/ai/telemetry.ts`: shared metadata-only AI tracing policy, explicitly applied to all ten model calls; input/output content recording stays off even with global OTel registration.
-- `server/agent/browser-policy.ts`: existing browser policy, not a sufficient MCP egress policy by itself.
-- `.local-review/` is ignored; private probes/fixtures must stay out of tracked files.
+> 模块现状的权威地图:改结构必看、必更(AGENTS.md 纪律 6)。分层演变史与逐轮裁决见 [01_架构决策/20261025101500_DDD分层待办P1-P4.md](01_架构决策/20261025101500_DDD分层待办P1-P4.md);逐轮功能验证记录见 `docs/superpowers/plans/`。
 
-MCP management additions are isolated under `server/agent/mcp-settings/`, `/api/agent/mcp`, and focused tools-tab components. Porta is a separate repository/service and does not depend on this UI.
+## 顶层结构
 
-Platform administration:
-- `app/admin/layout.tsx`: Suspense-wrapped server gate before the client shell; passes only signed-in display identity.
-- `app/_components/admin/admin-shell.tsx`, `admin-navigation.tsx`: template-derived full-height admin sidebar/header, desktop collapse and mobile Sheet. Source/commit/full MIT notice in `THIRD_PARTY_NOTICES.md`.
-- `/admin` uses `app/_components/admin/admin-overview.tsx` and independently guarded `/api/admin/overview`; `server/admin/overview.ts` isolates real readiness reads, never performs model calls or live connection probes.
-- `/admin/connections` reuses the existing MCP service/editor, presented as a searchable table with action menus and a side Sheet. File-managed connections remain read-only.
-- `/admin/storage` reads guarded `/api/admin/storage`; local-only image configuration, actual write/read/delete probe and bounded cleanup. `docs/integrations/private-uploads.md` documents deployment and lifecycle.
+一级目录:`app server public docs deploy tests scripts`(隐藏 `.github .claude .agents`)。四层 DDD 的接口层 = `app/`(route/proxy/actions),`server/` 一级仅五项:
 
-Private document ingestion (Task 3):
-- `server/uploads/document-types.ts`: browser-safe supported formats, 64 MiB document limit, text extraction states and segment contract; original image limits remain 5 MiB / 15 images / 20 MiB context.
-- `server/uploads/document-parser.ts`, `document-worker.cjs`: one admitted native Node worker, restricted environment, 20s deadline/cleanup; PDF.js text pages, Mammoth paragraph/table text, streaming ExcelJS worksheets, CSV/TXT; bounded ZIP actual-inflate/CRC/XML preflight. No OCR, password handling, external fetch, macros or formula execution.
-- `server/uploads/document-budget.ts`, `context.ts`, `read-attachment.ts`: one shared 100k source-character model-round budget including actual deduplicated 2k previews; optional <=16k `readAttachment` calls reauthorize through `service.readAttachmentAsset` every time. Historical raw read bodies are model-projected to explicit reread metadata, preserving canonical DB/UI results.
-- `server/uploads/service.ts`, `local-store.ts`: original hash/integrity, local-driver rejection on Vercel Functions (`VERCEL=1`), existing private ownership/association/lifecycle plus quota-counted persisted extraction; large-document context integrity uses streaming verification, not retained binaries.
-- `server/db/migrations/0003_document_ingestion.sql`: extraction JSON + actual UTF-8 `derivedBytes`; raw+derived quota accounting; image/document-specific size constraint.
-- `next.config.ts`: 65mb bounded Next proxy envelope; build-only pinned NFT worker dependency closure plus PDF assets/native canvas. Literal native `require.resolve` host seeds + external parser packages preserve pnpm resolution symlinks in real route traces.
-- `app/_components/chat/preview-attachment.tsx`, `tool-activity.tsx`: text-only document states, failure retry/removal and cited attachment-read cards, without changing Agent-selected tool/skill flow.
-- `server/uploads/document-ingestion.test.ts`: offline synthetic parser/budget/ZIP/worker/context/UI regression coverage. Independent root verification owns ignored mock HTTP/DB/browser/production/hermetic trace fixtures; these are not paid-provider acceptance evidence.
+```
+server/
+  domain/          聚合:chat、message、user、vote、document、
+                   suggestion、attachment、model、mcp、admin
+  application/     子域:chat(+tools)、ai(+model-settings)、
+                   document、uploads、mcp、admin
+  infrastructure/  persistence/drizzle、mcp、browser、skills、uploads
+  shared/          横切(env/errors/logger/...)
+  composition.ts   装配门面 getUseCases()
+```
 
-Optional deterministic result artifacts:
-- `server/agent/result-evidence.ts`: bounded successful-MCP ledger, DB-only history restoration and pure SDK model projections; `approval-transport.ts` sends only approval decisions.
-- `server/artifacts/result-table.ts`: immutable JSON envelope, strict pointers, limits, deterministic view/sort/filter and formula-safe CSV; `stream-state.ts` handles atomic table events.
-- `server/ai/tools/create-result-table.ts`: optional Agent-selected creation from actual MCP evidence; no secondary model or automatic workflow.
-- `/api/document/result-table` and dedicated DB transaction helpers: bound-chat ownership and expectedVersion view/notes CAS; generic document mutation paths protect evidence.
-- `app/_components/chat/result-table.tsx`: existing Workspace sheet surface with read-only original values, compact controls, provenance, raw details, exports and separate notes.
+## 分层内容与边界(biome R1-R4 机器强制,配置在根 biome.jsonc)
 
-Chat-only workbench presentation:
-- `app/(chat)/layout.tsx` supplies `.chat-workbench`; `app/globals.css` scopes shell surfaces and `.chatnest-result-grid` token/13px density overrides to chat, leaving admin/global themes unchanged.
-- `app/_components/chat/activity-groups.ts`, `activity-group.tsx`: presentation-only grouping across adjacent generic tool calls, skipping only known nonvisual SDK metadata/empty text; visible reasoning/text/source/artifact boundaries and canonical message identities stay intact. Summaries use actual call states/counts; pending approval wins, idle unfinished calls are not shown as running, and only the native table tool's known error envelope is projected as failure.
-- `app/_components/chat/tool-activity-state.ts` reconciles disclosure on tool-state/approval-event identity transitions while preserving unchanged-event manual choices; tool inputs, approvals and raw evidence stay unchanged.
-- `app/_components/chat/result-table-source.tsx` progressively reveals all original source fields in a localized Sheet; `result-table.tsx` keeps raw-row details, exports and independent view/notes save controls. Artifact lifecycle/version labels use Chinese display text and date-fns `zhCN`, without translating Agent messages or provider fields.
-- `app/_components/chat/artifact-type-label.tsx`, `artifact.tsx`, `artifact-actions.tsx`: standard multi-type artifact viewer with type labels, accessible header actions and one footer version navigator. Table-specific filter/columns/exports/notes are contained within the table renderer, not imposed on text/code/image artifacts.
-- `app/_components/chat/text-editor.tsx`: ProseMirror mounts once per component lifetime; transaction-based external/streaming updates preserve editor identity, focus, dispatch guards and read-only previews. `app/_components/chat/text-editor-lifecycle.test.ts` is an isolated hook/ProseMirror-boundary regression harness; actual typing remains browser acceptance.
+- **R1**:domain 只放类型/仓储契约/纯函数,禁依赖 application、infrastructure、`@/app/**`;跨层相对导入禁用,一律 `@/` 别名。domain 各聚合自带 `types.ts`(手写领域类型,与 drizzle schema 等价,tsc 在仓储赋值处防漂移)与 `repository.ts`(仓储契约)。message 聚合收编原 agent 纯规则 15 件(approvals/approval-transport/result-evidence/message-turn/run-failure/porta-error/sources/conversation-sources/input-limits/mcp-output/task-draft/workspace-events);document 收编 result-table/stream-state/UIArtifact;attachment 收编上传预算与限额;model 收编模型目录与设置 schema。
+- **R2**:整个 `server/**` 不认识 HTTP 与前端(禁 `@/app/**`、next/server|headers|navigation),请求上下文一律参数传入。
+- **R3**:app 路由层零直连持久化;对基础设施的访问全部经 `composition.getUseCases()` 门面(域门面 chats/messages/votes/documents/suggestions/users + agent.readConfig/discoverSkills + browser.getSession/closeSession + registerResumeStream)。R3 豁免点仅此一处。
+- **R4**:UI(`app/_components|_hooks|_lib`)只 import `server/domain` 类型;`_lib/types|utils|constants` 是指向 domain/shared 的转发 shim。
+- **登记例外**:application/uploads/service.ts 自带 SQL 连接(P8 收口);domain/model/models.ts 与 domain/attachment/refs.ts 经 shared/env 读环境(isDemo/basePath);domain/message/types.ts 工具 UI 类型推导(InferUITool)行内豁免,指向 application/chat/tools。
 
-Workbench visual refinement (2026-10-22/23):
-- Chat-only semantic light/dark palette and224px sidebar live under `.chat-workbench`; flat panes now share64px top chrome (Vercel composition pass). Admin and global themes are unchanged.
-- `document-preview.tsx` uses actual chat workspace visibility/documenttab + artifactidentity for active compact cards; its original activation also explicitly opens the documenttab. All four kinds use a lightweight file entry in chat; editors and full contents mount only in the normal workspace. Loading, generating and load-error states are distinct and document-scoped. Actual-hook/component lifecycle tests cover close/reopen, tab switches and chat isolation.
-- `toolbar.tsx` is a normal header dropdown delegating original per-kind artifact callbacks; console repair adds an action without replacing originals. Current/read-only/protected-evidence guards remain in artifact.tsx.
-- `workspace.tsx` uses explicit stretch height (overrides preflight hrheight0) and8px pointer target around a1px line; ARIA/keyboard/resize bounds remain.
+## 关键子系统(现路径)
 
+**持久化**:`server/infrastructure/persistence/drizzle/` —— schema.ts(中文注释纪律)、migrations/、migrate.ts(`pnpm db:migrate`)、client.ts(共享连接,不加 server-only:白名单 tsx 测试直连此链)、八仓储(chat/message/user/vote/document/suggestion/model-settings/mcp-settings)。保留不变量:advisory lock 版本化文档写入、结果表保护拒绝、chat 级联删除+资产清理、replace* 事务并发基线。`pnpm build` 先跑迁移再构建(禁止本地执行)。
 
-Vercel template/component composition (2026-10-23):
-- `app/_components/ai-elements/{artifact,task}.tsx` pin/adapt actual Apache-2.0 upstream primitives; full pinned upstream notice/license and Apache text live beside them, attributed in `THIRD_PARTY_NOTICES.md`. Existing Conversation/PromptInput are reused, not a new runtime/framework.
-- `app/_components/chat/messages.tsx` owns one per-chat Conversation scroll system with native jump-to-bottom; canonical message ordering, activities and callbacks stay intact. `chat-header.tsx` displays the contextual title; original model control lives in PromptInputFooter, with attachment/text structure in Header/Body.
-- `chat-title.ts` projects live/persisted/first-user/new-chat identity. `/api/messages` exposes only the already-authorized fetched chat title; no new query or access rule. `use-active-chat.tsx` exposes presentation title without changing transport or Agent scheduling.
-- `artifact-catalog.ts` indexes successful strict native document/table outputs (UUID id, exact kind, title), excludes errors/dynamic lookalikes and deduplicates latest metadata; no global active-document membership inference. `artifact-picker.tsx` reuses original preview activation plus explicit document mode.
-- `workspace-header.tsx` supplies the sole visible 64px header with file selection, original actions, mode menu and expand/close; browser/source/document bodies remain mounted on mode changes. Actual text/code/image/sheet renderers remain authoritative.
-- `result-table.tsx` projects its existing dirty/saving state through the sheet adapter into existing per-document metadata solely to guard the new file chooser, including late-document callback rejection. Original evidence, CAS, versions and save route are unchanged. Text dirty/streaming guards use their existing states.
-- `app/_components/chat/vercel-workbench.test.ts` adds pure catalog/title validation plus actual picker/table/parent callback behavioral harnesses. Root browser/HTTP proof stays ignored; mock-model verification does not imply live supplier/model acceptance or durable background execution.
+**模型网关**:`server/application/ai/` —— model-connection/model-service/model-context/providers/prompts + model-settings/{runtime,handler,service,network,probe}(加密 ModelSettings 行/AAD/CAS,DNS 钉扎 HTTPS 探测;目录 schema 在 domain/model/settings-schema.ts,仓储在 drizzle)。模型目录(chatModels/isDemo/titleModel)在 `domain/model/models.ts`。
 
+**Agent 运行时**:`server/infrastructure/mcp/` —— runtime.ts(每任务配置快照/HTTP MCP 客户端/工具发现/审批门)、config.ts(默认 agent.json + AGENT_CONFIG_PATH)、skills.ts(技能发现)。配置数据 agent.json 与技能快照(含 Porta)同层;`next.config.ts` NFT 种子指向这些路径。
 
-Readable tool records (2026-10-23 follow-up):
-- `Messages` now always renders canonical `PreviewMessage(message.id)`, independent of whether final text has arrived. Do not reintroduce outer content-dependent cross-message Tasks: they unmount inspected tools when an answer appears. `groupActivityParts` retains adjacent tools within one message; the old cross-message pure helper is no longer a rendering owner.
-- `activity-group.tsx` has no singleton group trigger, keeps keyed tool rows mounted across singleton/multi and preserves a visible inspected-call trigger through completion. `message.tsx` avoids no-text intermediate tool action bars while preserving real answer/artifact/regeneration actions.
-- `attachment-read-result.tsx` validates returned file shape, renders bounded exact excerpts/refs directly and keeps partial/extraction warnings. Character/segment/trust-boundary bookkeeping remains in original evidence, not main conversation text.
-- `tool-call-details.tsx` is the separate keyboard Sheet with exact original name/input/output/error, including false/0/empty string/null. Its trigger is beside the action, not under result collapse. Exact native createResultTable active handoff has no ephemeral inspector; failure/denial/incomplete/terminal fallbacks and MCP same-name calls retain details.
-- Latest submitted approval continuation is active in the UI, while historical idle unfinished calls stay incomplete. Agent selection, canonical message parts, native artifacts and MCP parameters are unchanged. `app/_components/chat/tool-records.test.ts` includes full parent-to-Sheet identity transition regression, not just separately rendered states.
+**MCP 管理**:`server/application/mcp/`(api/service/security/runtime-config/projection 等 + 测试),类型/schema/editor 在 `domain/mcp/`;加密经 `shared/settings-crypto`;`/api/agent/mcp` 与 mcp-connections/mcp-editor UI 消费。
 
-Unified tool results (2026-10-23):
-- `tool-presentation.ts` is browser-safe display projection only: exact native identities, server-generated alias metadata, trusted short search/web actions, bounded record/source/text previews and scoped empty/partial states. Unknown aliases remain original; no substring-based action claims.
-- `mcp-settings/projection.ts` adds credential-free `toolAliases` using runtime's authoritative server-only alias function; `use-agent-info.ts` receives that optional metadata. No client crypto, new remote discovery or scheduling change.
-- `tool-result-preview.tsx` renders compact titled records with their actual links/domains, short original-key fields and plain skill/reference text. MCP transport metadata/mirrored structured text do not become a debug tree; full canonical data stays in ToolCallDetails. URLs must be HTTP(S), credential-free; no automatic media fetch or markup execution.
-- `ToolActivity` retains disclosure/approval/Sheet ownership; all generic outcomes have meaningful bodies. Exact dynamic/native exclusions also apply in `isActivityPart`. Trusted short labels remain intact on narrow screens; arbitrary aliases/skill names still truncate.
-- `app/_components/chat/unified-tools.test.ts` plus existing lifecycle and MCP projection tests cover bounded/falsey/mixed/malformed results, identity collisions, omitted-field notices, nested empties and credential-free alias mapping.
+**浏览器工具**:`server/infrastructure/browser/`(session/proxy/tools,单进程内存状态);same-origin 策略在 `shared/browser-policy.ts`;BROWSER_RUNTIME=local 时启用,公开部署禁用。
 
-Lessie-inspired workbench refinement (2026-10-23):
-- Chat-only neutral white/gray tokens with mint selection, 208px sidebar, 52px aligned header rails and 68% default artifact width; resizable/mobile generic Workspace unchanged.
-- `result-table.tsx` keeps filter/columns/export/source/notes in the top toolbar. Controlled notes Sheet owns no duplicate draft; parent state and expectedVersion CAS remain authoritative. Save appears only for dirty/saving state.
-- Workspace grid uses 42px header/46px rows; chat entries no longer mount duplicate inline tables/editors. Default columns are title220/other140 with min120 and user resizing.
-- `vercel-workbench.test.ts` exercises actual hook/event render state for notes close/reopen/save/errors/readonly and both grid densities. Full acceptance: `docs/superpowers/plans/2026-10-23-lessie-workbench-verification.md`.
+**上传与文档摄取**:`server/domain/attachment/`(格式/限额/预算/引用)、`server/application/uploads/`(service/context;配额与属主校验顺序有测试断言)、`server/infrastructure/uploads/`(local-store/document-parser + document-worker.cjs 受限 worker)、`server/shared/uploads/`(validation 有界读体/security)。64 MiB 文档上限、100k 源字符模型轮预算、流式校验不留二进制。
 
-Structural correction after rejected visual acceptance (2026-10-23):
-- `PreviewAttachment` compact mode is used only for sent documents (adaptive width, 32px height); upload queue/status/error actions and image previews keep their full presentation. `file-symbol.tsx` provides the shared quiet file icon for attachments and artifact entries.
-- `result-table-row-details.tsx` displays actual declared labels/values/links; source IDs and original JSON remain in a collapsed technical section. The first displayed result column is frozen and emphasized; raw rows are untouched.
-- Generic artifact header uses one filename/type line, with idle timestamp contextual and pending/error states still visible.
-- Preview CSS can remain stale in persistent Turbopack cache; verify computed browser styles, not only modified source. In this acceptance the owned `.next/dev` cache was moved to ignored backup and the fixture service restarted; no source workaround was added.
+**平台管理**:`server/application/admin/`(overview 真实就绪度,不做模型调用与活跃探测;access 属主判定);`/admin` 壳组件源自模板(MIT 见 THIRD_PARTY_NOTICES.md)。
 
-Composition correction after second rejected visual acceptance (2026-10-23):
-- `WorkbenchSidebarProvider` opts only chat into `SidebarProvider.temporaryCollapseKey`. Artifact focus temporarily hides history without changing cookie preference; explicit reopening is local to focus, closing restores the saved choice.
-- `Workspace` defaults to remaining width after a 400px conversation. Manual resize stays chat-local (35–80%); mobile remains a full-screen generic viewer.
-- `Artifact` passes a normal `renderHeader` slot through sheet rendering. `ResultTableView` owns its authoritative draft and renders title/actions in that same header; no portal or duplicated table state.
-- Desktop header is one52px row; panes ≤500px use an intentional second action row. Filter/column/export Popovers handle collision outside the clipping artifact container. Last secondary table column absorbs spare width; canvas uses card surface.
-- Visual acceptance must compare against the supplied Lessie reference, not merely old ChatNest screenshots. A passing regression suite does not establish aesthetic equivalence. Keep people/match/outreach semantics out of the generic table unless actual data/features support them.
+**横切**:`server/shared/` —— env(zod 集中校验)、errors(ChatbotError 统一映射)、logger(pino JSONL 双写/轮转/脱敏 + ALS traceId)、request-context、runtime(环境判定)、telemetry(仅元数据追踪)、password、ratelimit、browser-policy、settings-crypto。
 
-- Chat detail polish: consecutive assistant messages share one quiet ChatNest sender label. Expanded activity groups use a light timeline and aligned detail controls while preserving approval/error visibility, raw-data sheets and focus restoration.
+**可观测性**:proxy.ts 每请求注入 uuid7 traceId(回显响应头);logger 经 mixin 自动携带;LOG_FILE_DIR 开文件双写(10M/日轮转,保留 14 份)。
 
-Runtime interactions (2026-10-24):
-- `tool-activity.tsx` guards the exact pending approval event against duplicate and stale callbacks; approval waiting, submission, active execution, failure and incomplete states remain distinct. Raw identities and errors stay in the existing call-details Sheet.
-- `runtime-recovery.tsx` offers recovery only for the latest idle writable failed/incomplete assistant turn. It sends a normal conversation message through the existing Agent transport, never directly retries a tool, reuses approval or clears failed evidence.
-- `conversation-notice.tsx` separates a readable transport failure summary from exact collapsed error details; input restore remains authoritative. `message.tsx` hides only empty final assistant presentation without replacing its canonical keyed wrapper.
-- `app/_components/chat/runtime-interactions.test.ts` covers approval double/stale submission, state labels, recovery guards, transport notices and empty final presentation. Browser acceptance and the inherited cross-tab approval concurrency boundary are recorded in `docs/superpowers/plans/2026-10-24-runtime-interactions-verification.md`.
+## app 层要点
 
-Porta host integration:
-- `server/skills/porta/` is a byte-identical pinned Porta skill snapshot; `server/config/porta-skill.lock.json` records upstream revision/hash. `server/skills/porta-skill.test.ts` checks provenance and the actual existing loader. No new shell runner/provider logic.
-- `server/agent/run-failure.ts` supplies request-scoped once-only sanitized failure metadata. Chat stream reports terminal failures, persists via SDK onEnd, and explicitly guards failed edits/regenerations. Approval continuation updates the same status ID to resumed without altering tool evidence.
-- Chat message/recovery components display persisted run failure after reopening, without inventing assistant text; marker-only messages omit answer actions. Status events are excluded from artifact stream handling and SDK model-message conversion.
+- `app/(auth)/auth.ts`:NextAuth credentials/guest 会话;用户仅 id/type,无工作区角色。`app/_components/ui/` 为 shadcn/radix 既有件,复用不重造。
+- 聊天主链路:`app/(chat)/api/chat/route.ts`(96 行平台层)+ 同目录 request.ts/schema.ts;业务在 application/chat/send-message.ts。
+- `app/_components/ai-elements/` 钉定的 Apache-2.0 上游原语,许可全文见 THIRD_PARTY_NOTICES.md。
+- 产物客户端在 `app/_artifacts/`,UI 组件 `app/_components/chat/`,hooks `app/_hooks/`,前端工具 `app/_lib/`(多为 domain 转发)。
 
+## 测试纪律
 
-Admin model settings (2026-10-24):
-- `/admin/models` and guarded `/api/admin/models`: one active OpenAI-compatible service, original model IDs/capabilities/default selection, masked Key keep/replace, explicit directory lookup and inference probe. Save does not imply successful connection.
-- `server/ai/model-settings/`: independent encrypted ModelSettings row/AAD with CAS; precise endpoint binding for retained keys, no Anthropic credential inference, no browser-side persisted secrets. Environment configuration remains fallback only until an explicit save.
-- `network.ts`: public HTTPS, DNS pinned to validated IP, TLS validation and no redirects, response/request/deadline bounds. Reserved fake-IP proxy answers are rejected with a specific message; they are not interpreted as invalid credentials. Loopback is a deployment opt-in for development tests only.
-- `model-context.ts`, `model-settings/runtime.ts`: immutable per-request AsyncLocalStorage snapshot shared across chat, title and artifact model children; no process.env mutation. Public model discovery/default and admin readiness use the same snapshot. Config corruption fails closed.
-- `server/ai/model-settings/model-settings.test.ts`: encryption/domain isolation, endpoint binding, CAS, authorization/CSRF/bounds, local HTTP SDK probes, null-body statuses, concurrent real SDK SSE/tool-child snapshot isolation. Local protocol fixtures are not live model acceptance.
+- 单元测试就近放模块旁,tsx/node:test 离线串行;白名单 `scripts/ci/offline-tests.txt`(只能显式追加)。
+- 测试内开模型检查用 OPENAI_API_KEY 不用 PLAYWRIGHT(模块加载期求值会跨文件泄漏,after 钩子恢复)。
+- 源码字符串断言(readSource/existsSync/require 路径)与 mock 模块映射随模块迁移同步更新;运行时 require/import 字符串路径 tsc 不查,搬目录后全局 grep。
+- Windows 本地三个已知环境误报(symlink 权限/worker 时限/NTFS 0o666),与干净树一致即非回归;CI Linux 全绿为准。
+- `.local-review/` 不入库;mock 验收不冒充真实供应商验收。
 
-开发基座编排(2026-10-25):
-- `.claude/skills/dev-env/`: 开发基座 skill;自带闭环支撑脚本 `scripts/dev-env-loop.mjs`(体检安装指引[OS 分支] -> .env.local -> compose 拉库 -> 迁移 -> 委托进程工具启动),npm 入口 `pnpm dev:up`/`dev:down [--purge]`。
-- `scripts/governance/dev-env-loop.mjs`: 闭环支撑脚本(体检安装指引[Windows/macOS/Linux 分支] -> .env.local -> compose 拉库 -> 迁移 -> 委托进程工具启动);npm 入口 `pnpm dev:up`/`dev:down [--purge]`,skill 仅作调用入口。
-- `scripts/governance/dev-env.mjs`: 纯进程工具,仅三个能力:列网卡 / 绑 0.0.0.0:3003 启动 dev(Ctrl+C 优雅停止)/ 杀残留 dev(端口定位进程树,跨平台)。npm 入口 `pnpm dev:nics|start|stop`。
-- `deploy/docker-compose.dev.yml`: 开发 PostgreSQL(127.0.0.1:55432),复用命名卷 `chatnest-postgres-data`(external,删容器不丢数据;遗留同名容器按 SKILL 步骤接管)。
+## 开发基座
 
-DDD layering foundation (P1, 2026-10-26):
-- `server/domain/`, `server/application/`, `server/infrastructure/`: skeleton dirs with per-layer READMEs (responsibilities + forbidden imports); code still lives in flat server/* dirs and migrates in P2/P3. Biome overrides in `biome.jsonc` enforce R1-R4 import boundaries (probe-verified). Caveat: when multiple overrides match one file for the same rule, the later override replaces the earlier entirely — the domain override must carry both R1 and R2 patterns itself; R2 is scoped to the three layer dirs until P2/P3 relocate 27 legacy next/@/app imports in server/.
-- `server/shared/env.ts`: central zod-validated process.env registry (`getEnv()`); all 12 server-side read sites route through it (all-optional schema, parsed per call, no cache — behavior-identical to scattered reads). app/ NEXT_PUBLIC_* build-time inlining and `proxy.ts` stay outside. Tests: `server/shared/env.test.ts` (offline whitelist).
-- `pnpm typecheck`: `tsc --noEmit --incremental false`; the CI offline matrix already ran this mode, the local entry was added with it. The Lint workflow had been red for 3 commits (dev-env scripts + logger test lint errors) and was fixed in the same pass.
-
-DDD chat domain extraction (P2, 2026-10-26):
-- `server/domain/{chat,message,user}/`: domain types, repository interfaces and pure rules (canAccessChat, convertToUIMessages, getTextFromMessage, generateUUID). ChatTools/CustomUIDataTypes/ChatMessage moved here from app/_lib/types.ts (which now re-exports; ArtifactKind inlined as the text/code/image/sheet union).
-- `server/application/chat/`: send-message use case (all four triggers; returns UIMessageStream, throws ChatbotError instead of returning Responses), delete-chat, generate-title (moved from app/(chat)/actions.ts).
-- `server/infrastructure/persistence/drizzle/{chat,message}-repository.ts`: P2 delegates to server/db/queries.ts verbatim; P3 sinks the SQL and deletes queries.ts.
-- `server/composition.ts`: cached useCases() factory + registerResumeStream; the only place platform code may reach repositories (R3 exemption point).
-- `app/(chat)/api/chat/route.ts` is now 96 lines of pure platform concerns (traceId/auth/zod/botId/geo/error mapping); request assembly lives in sibling request.ts (parseChatRequestBody, resumable-stream wiring, mapChatError). Resume stream ids still use ai's generateId.
-- Env predicates live in `server/shared/runtime.ts`; `_lib/constants` re-exports. Unit tests for the use case set OPENAI_API_KEY (not PLAYWRIGHT) to pass the model-configured check: PLAYWRIGHT is module-load-cached and leaks across same-process suites.
-
-DDD remaining-domain drain (P3, 2026-10-26):
-- `server/db/queries.ts` is DELETED. All 31 functions moved verbatim into six repositories under `server/infrastructure/persistence/drizzle/` (chat, message, user, vote, document, suggestion) behind contracts in `server/domain/<aggregate>/repository.ts`. Shared drizzle connection lives in `drizzle/client.ts` (deliberately no `server-only`: whitelisted tsx tests import this chain).
-- `server/composition.ts` now exposes domain facades (`getUseCases().chats|messages|votes|documents|suggestions|users`) restricted to the methods the platform layer needs; app/** has zero direct persistence imports (R3 achieved). Server-side callers (`server/ai/tools/*`, `server/artifacts/server.ts`) import repository implementations directly.
-- Notable preserved invariants: advisory-lock versioned document writes, protected result-table refusal, chat cascade delete with asset cleanup, replace* transactional snapshot baselines. Dead export getStreamIdsByChatId dropped.
-- `server/db/regeneration-db.test.ts` (real-DB, not in offline whitelist) now imports the repositories.
-
-Domain-module consolidation, first batch (P5+P6, 2026-10-26):
-- `server/db/` is GONE: schema.ts, migrations/, migrate.ts moved under `server/infrastructure/persistence/drizzle/` (package.json build/db:migrate and drizzle.config.ts updated); password utils moved to `server/shared/password.ts`.
-- `server/artifacts/` is GONE: result-table.ts + stream-state.ts (pure rules) live in `server/domain/document/`; artifact-service.ts + kinds/{code,text,sheet}.ts (orchestration) live in `server/application/document/`. `EvidenceLookup` interface in domain/result-table.ts replaces the former type dependency on agent/result-evidence (structural injection). The cross-domain integration test sits in application/document.
-- Domain now owns its types: UserRow/Vote/Document/Suggestion hand-written in domain/<aggregate>/types.ts (tsc guards drift at repository assignments); UI imports them instead of drizzle schema types (13 call sites rewired). UIArtifact moved from artifact.tsx to domain/document/types.ts with a re-export shim.
-- Biome: R1 gained a reverse rule (domain must not import agent/ai/uploads/artifacts/admin/skills/config) and R2 now covers ALL of server/** (the 20 legacy @/app imports in server were eliminated: _lib/types->domain/message, _lib/utils->domain/ids, _lib/constants->shared/runtime, component ArtifactKind/UserType -> domain). Override order matters: R2(server/**) first, domain composite LAST (later override replaces earlier for the same rule/file). Remaining inline exemptions: 9 documented biome-ignores (InferUITool type inference in domain/message/types x6, test probes x3).
-- Next consolidation batch (P7 candidate): agent pure rules -> domain, runtime/mcp -> infrastructure; ai providers/model-connection -> infrastructure, entitlements -> domain/user, tools -> application/chat; uploads parser/local-store -> infrastructure, budget/context -> domain, service -> application; admin -> application. Endgame: server/ top level = domain/application/infrastructure/shared/composition only.
-
-Full consolidation to layered top level (P7, 2026-10-26):
-- `server/` top level is now ONLY: `domain/ application/ infrastructure/ shared/ composition.ts`. The former agent/, ai/, uploads/, admin/, config/, skills/, artifacts/, db/ directories are all gone (P5/P6 dissolved db and artifacts; P7 dissolved the rest).
-- domain/ aggregates: chat, message (now owns the former agent pure rules: approvals, approval-transport, result-evidence, message-turn, run-failure, porta-error, sources, conversation-sources, input-limits, mcp-output, task-draft, workspace-events), user (+entitlements), vote, document (+result-table/stream-state/UIArtifact), suggestion, attachment (document-types/budget/refs/capacity/limits/client-admission), model (models catalog + settings-schema), mcp (types/schema/editor), admin (types).
-- application/: chat (send-message/delete-chat/generate-title + tools/ incl. read-attachment), ai (model-connection/model-service/model-context/prompts/providers/inline-image-middleware + model-settings/{runtime,handler,service,network,probe}), document (artifact-service + kinds), uploads (service/context; service keeps its own SQL client as a registered P8 wart), mcp (api/service/security/runtime-config/native-tools/network/discovery/lifecycle/projection + tests), admin (overview/access).
-- infrastructure/: persistence/drizzle (schema.ts, migrations/, migrate.ts, client.ts, eight repositories incl. model-settings & mcp-settings), mcp (runtime.ts, config.ts, skills.ts discovery + agent.json), browser (session/proxy/tools), skills (porta & skill snapshots + porta-skill.lock.json), uploads (local-store, document-parser, document-worker.cjs — parser spawns the worker via a cwd-relative path that moved with it).
-- shared/: env, errors, logger, password, ratelimit, request-context, runtime, telemetry, browser-policy, settings-crypto, uploads/{validation,security}.
-- composition.getUseCases() now also exposes `agent` (readConfig/discoverSkills) and `browser` (getSession/closeSession) facades — the ONLY platform-layer reach into infrastructure (R3 exemption point). app/** otherwise imports domain/application/shared only.
-- Path strings that moved with the data: next.config.ts NFT seeds (server/infrastructure/mcp/agent.json, server/infrastructure/skills/**), config.ts cwd path, skills.ts discovery root, parser worker path, porta test fixtures, offline-tests.txt entries. R1's reverse-patching group (banning domain->old module dirs) retired with the directories.
+- 一键闭环 `pnpm dev:up`(脚本 `.claude/skills/dev-env/scripts/dev-env-loop.mjs`:体检/装指引 -> .env.local -> compose PG(127.0.0.1:55432,命名卷) -> 迁移 -> 启动);收尾 `pnpm dev:down`。
+- 进程工具 `scripts/governance/dev-env.mjs` 仅三能:nics / 绑 0.0.0.0:3003 启动 / 优雅杀;入口 `pnpm dev:nics|start|stop`。

@@ -1,5 +1,15 @@
 # 当前任务
 
+## 2026-10-26：轻量 DDD 分层改造 P0-P7 全程收官
+
+- [x] P1 地基(三层骨架 + biome R1-R4 探针上墙 + shared/env 收口 12 处 + typecheck 入口,顺手修复 Lint 工作流连续三提交存量红)。
+- [x] P2 切 chat 域:route.ts 697 -> 96 行,send-message 四触发合一用例 + mock 仓储单测。
+- [x] P3 推平:queries.ts 930 行删除,SQL 零漂移下沉六域仓储,app/** 零直连持久化。
+- [x] P5+P6:server/db 与 server/artifacts 消亡,domain 类型自主化(UI 13 处改指 domain),R1 反向禁令上墙、R2 扩全 server(存量 @/app 清零)。
+- [x] P7 全量收纳:agent 纯规则 15 件入 domain/message;ai/mcp-settings/uploads/browser/skills/config 拆三方归位;server/ 一级终局 domain/application/infrastructure/shared/composition;composition agent/browser 门面收口平台层全部 infra 直连。
+- [x] 验收口径:每阶段 tsc 0 错 + lint 绿 + 离线 321 过(3 个 Windows 环境误报与干净树基线逐条一致)+ 真机冒烟;CI Lint/Offline 双工作流全绿。
+- 裁决与坑位全记录:docs/01_架构决策/20261025101500_DDD分层待办P1-P4.md。P4 双形态部署挂起待开工。
+
 ## 2026-10-22：Lessie 风格细化与 Agent UI 成熟度
 
 - [x] 实际查看 Lessie 官网及无需登录的公开工作台，记录截图、DOM 配色与布局证据；参考资料留在 ignored `.local-review/`。

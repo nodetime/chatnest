@@ -5,7 +5,7 @@
 | 主机 | 执行方式 | skill 位置 | 授权边界 |
 | --- | --- | --- | --- |
 | Codex | 已安装 `porta` CLI；也可使用已配置的 MCP | 项目 `.agents/skills/porta` 或用户 `~/.agents/skills/porta` | 遵守 Codex 的执行权限；不继承 ChatNest 的审批 |
-| ChatNest | 现有 HTTP MCP runtime，实时发现 allowlist 内的工具 | 仓库 `server/skills/porta`，已经随本次提交安装 | 保留每次调用审批；skill 不执行 shell、不授予凭据 |
+| ChatNest | 现有 HTTP MCP runtime，实时发现 allowlist 内的工具 | 仓库 `server/infrastructure/skills/porta`，已经随本次提交安装 | 保留每次调用审批；skill 不执行 shell、不授予凭据 |
 
 ## Codex
 
@@ -26,7 +26,7 @@ porta tools call <工具名> --input @request.json
 
 ## ChatNest
 
-默认 `server/config/agent.json` 已配置 Porta 的环境引用及六个原生工具 allowlist。仅需本地私密环境：
+默认 `server/infrastructure/mcp/agent.json` 已配置 Porta 的环境引用及六个原生工具 allowlist。仅需本地私密环境：
 
 ```dotenv
 PORTA_MCP_URL=https://your-porta-host/mcp
@@ -42,9 +42,9 @@ PORTA_SERVICE_TOKEN=<由管理员私密提供>
 
 ## skill 来源与升级
 
-`server/skills/porta` 是 Porta 发布源的原样快照，不是独立维护的一套指令。`server/config/porta-skill.lock.json` 记录仓库、提交、版本和三个文件的 SHA-256。CI 验证字节完整性、实际 loader 与资源读取。
+`server/infrastructure/skills/porta` 是 Porta 发布源的原样快照，不是独立维护的一套指令。`server/infrastructure/skills/porta-skill.lock.json` 记录仓库、提交、版本和三个文件的 SHA-256。CI 验证字节完整性、实际 loader 与资源读取。
 
-更新步骤：将新版本用 CLI 导出到临时目录，对比并审查三份文件，替换快照并更新 lock；运行 `server/skills/porta-skill.test.ts` 与完整检查。不要向公共 skill、lock 或文档写部署地址、凭据和客户数据。
+更新步骤：将新版本用 CLI 导出到临时目录，对比并审查三份文件，替换快照并更新 lock；运行 `server/infrastructure/skills/porta-skill.test.ts` 与完整检查。不要向公共 skill、lock 或文档写部署地址、凭据和客户数据。
 
 ## 完整任务的验收标准
 
