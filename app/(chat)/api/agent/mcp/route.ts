@@ -1,10 +1,10 @@
 import { auth } from "@/app/(auth)/auth";
-import { readAgentConfig } from "@/server/agent/config";
-import { createManagementHandler } from "@/server/agent/mcp-settings/api";
-import { createSettingsService } from "@/server/agent/mcp-settings/service";
+import { createManagementHandler } from "@/server/application/mcp/api";
+import { createSettingsService } from "@/server/application/mcp/service";
+import { getUseCases } from "@/server/composition";
 
 const handle = createManagementHandler({
-  file: async () => (await readAgentConfig()).servers,
+  file: async () => (await getUseCases().agent.readConfig()).servers,
   service: createSettingsService(),
   session: async () => (await auth())?.user,
 });

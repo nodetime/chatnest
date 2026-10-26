@@ -1,9 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createSkillTools, discoverSkills } from "@/server/agent/skills";
 import { collectSourceLinks } from "@/server/domain/message/sources";
 
 test("loaded skills supply readable metadata while retaining their original method", async () => {
+  const { createSkillTools, discoverSkills } = await import(
+    // biome-ignore lint/style/noRestrictedImports: 测试探针:直接驱动技能发现与工具构造,非 UI 依赖
+    "@/server/infrastructure/mcp/skills"
+  );
   const [skill] = await discoverSkills();
   const load = createSkillTools([skill]).loadSkill.execute;
   assert.ok(load);

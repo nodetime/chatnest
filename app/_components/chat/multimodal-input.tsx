@@ -40,6 +40,15 @@ import { useActiveChat } from "@/app/_hooks/use-active-chat";
 import { useAgentInfo } from "@/app/_hooks/use-agent-info";
 import type { Attachment, ChatMessage } from "@/app/_lib/types";
 import { cn, fetcher } from "@/app/_lib/utils";
+import {
+  completeDraftSubmission,
+  UploadAdmission,
+} from "@/server/domain/attachment/client-admission";
+import {
+  ATTACHMENT_ACCEPT,
+  isImageMime,
+  MAX_DOCUMENT_BYTES,
+} from "@/server/domain/attachment/document-types";
 import { MAX_MESSAGE_CHARACTERS } from "@/server/domain/message/input-limits";
 import {
   type ChatModel,
@@ -47,15 +56,6 @@ import {
   DEFAULT_CHAT_MODEL,
   type ModelCapabilities,
 } from "@/server/domain/model/models";
-import {
-  completeDraftSubmission,
-  UploadAdmission,
-} from "@/server/uploads/client-admission";
-import {
-  ATTACHMENT_ACCEPT,
-  isImageMime,
-  MAX_DOCUMENT_BYTES,
-} from "@/server/uploads/document-types";
 import {
   PromptInput,
   PromptInputBody,

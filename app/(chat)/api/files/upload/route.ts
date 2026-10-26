@@ -1,11 +1,11 @@
 import { auth } from "@/app/(auth)/auth";
-import { uploadCapacity } from "@/server/uploads/capacity";
+import { registerUpload } from "@/server/application/uploads/service";
+import { uploadCapacity } from "@/server/domain/attachment/capacity";
 import {
   authorizeUploadRequest,
   uploadErrorResponse,
-} from "@/server/uploads/security";
-import { registerUpload } from "@/server/uploads/service";
-import { readUploadForm } from "@/server/uploads/validation";
+} from "@/server/shared/uploads/security";
+import { readUploadForm } from "@/server/shared/uploads/validation";
 export async function POST(request: Request) {
   try {
     const ownerId = authorizeUploadRequest((await auth())?.user, request, true);

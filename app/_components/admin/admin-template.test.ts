@@ -162,7 +162,8 @@ test("overview readiness uses existing services and attributed upstream assets, 
   assert.ok(existsSync("app/_components/admin/admin-overview.tsx"));
   const route = readFileSync("app/api/admin/overview/route.ts", "utf8");
   for (const source of [
-    "readAgentConfig",
+    // P7:配置读取经组合根门面(agent.readConfig),仍是真实服务读取
+    "agent.readConfig",
     "createSettingsService",
     "storageStatus",
     "getModelConnection",

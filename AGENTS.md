@@ -4,8 +4,8 @@
 
 > 本节是全项目最高优先级要求,对 Codex、Claude 与所有协作者生效,任何任务开始前首先遵守;与其他文档、口头习惯、历史做法冲突时,以本节为准。全部条文以中文书写、中文执行。
 
-1. **数据库建模必须中文注释**:每张表、每个字段、每个索引/约束,都要在 `server/db/schema.ts` 写中文注释,并通过迁移的 `COMMENT ON` 语句落入数据库目录(psql `\d+`、DataGrip、ER 工具可见);新增表/列/索引同样适用,无例外。
-2. **禁止 `pnpm build`**(它会先执行数据库迁移);类型检查只用 `pnpm exec tsc --noEmit`。
+1. **数据库建模必须中文注释**:每张表、每个字段、每个索引/约束,都要在 `server/infrastructure/persistence/drizzle/schema.ts` 写中文注释,并通过迁移的 `COMMENT ON` 语句落入数据库目录(psql `\d+`、DataGrip、ER 工具可见);新增表/列/索引同样适用,无例外。
+2. **禁止 `pnpm build`**(它会先执行数据库迁移);类型检查只用 `pnpm typecheck`(即 tsc --noEmit)。
 3. **离线测试白名单 `scripts/ci/offline-tests.txt` 只能显式追加**,不做全目录通配;禁止绕过 CI 无网隔离机制。
 4. **不做付费模型/供应商调用**;mock 不进生产代码;mock 验收不冒充真实供应商验收。
 5. **敏感物一律不入库**:`.env*`、密钥、`.local-review/`、日志、截图。
@@ -23,7 +23,7 @@
 
 一级目录:`app server public docs deploy tests scripts`(隐藏目录 `.github .claude .agents`)。
 - `app/`:路由与页面;UI 组件在 `app/_components`,hooks 在 `app/_hooks`,前端工具在 `app/_lib`,产物客户端在 `app/_artifacts`。
-- `server/`:服务端代码(db/ai/agent/uploads/admin/artifacts/config/skills/shared),单元测试就近放在对应模块旁。
+- `server/`:轻量 DDD 分层,一级仅五项——`domain`(聚合类型/仓储契约/纯规则)、`application`(用例编排)、`infrastructure`(persistence/drizzle、mcp、browser、skills、uploads 适配)、`shared`(横切)、`composition.ts`(装配门面);单元测试就近放在对应模块旁,分层边界由 biome R1-R4 机器强制(见根 biome.jsonc)。
 - `deploy/`:部署模板与环境变量样例(vercel-template.json、.env.example)。
 收敛过程记录见
 [docs/01_架构决策/2026-10-24-governance-and-convergence-design.md](docs/01_架构决策/2026-10-24-governance-and-convergence-design.md)。

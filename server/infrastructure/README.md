@@ -15,5 +15,5 @@
 ## 硬约定
 
 - 跨层导入一律用 `@/` 别名
-- P2 起建子目录:`infrastructure/persistence/drizzle/{chat,message}-repository.ts`
-- 环境变量读取统一走 `@/server/shared/env`,不散落本层各文件
+- 子目录清单(P7 后):persistence/drizzle(schema/migrations/migrate/八仓储/client)、mcp(runtime/config/skills 发现 + agent.json)、browser(会话/代理/工具)、skills(技能快照与锁文件)、uploads(local-store/解析器/worker)
+- 环境变量读取统一走 `@/server/shared/env`;技能与配置数据文件(agent.json、技能快照)也落在本层

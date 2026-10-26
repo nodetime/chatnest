@@ -5,8 +5,11 @@ import type { sendMessage } from "@/server/application/chat/send-message";
 import { getUseCases } from "@/server/composition";
 import { getEnv } from "@/server/shared/env";
 import { ChatbotError } from "@/server/shared/errors";
-import { uploadErrorResponse } from "@/server/uploads/security";
-import { readBoundedBody, UploadError } from "@/server/uploads/validation";
+import { uploadErrorResponse } from "@/server/shared/uploads/security";
+import {
+  readBoundedBody,
+  UploadError,
+} from "@/server/shared/uploads/validation";
 import { type PostRequestBody, postRequestBodySchema } from "./schema";
 
 // 平台层请求装配:体解析 + 断线续流登记 + Response 组装(HTTP 细节不进应用层)

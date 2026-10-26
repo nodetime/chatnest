@@ -1,12 +1,15 @@
 import { z } from "zod";
 import { auth } from "@/app/(auth)/auth";
-import { sameOriginBrowserControl } from "@/server/agent/browser-policy";
 import { getUseCases } from "@/server/composition";
 import {
   ResultTableMutationError,
   resultViewSchema,
 } from "@/server/domain/document/result-table";
-import { readBoundedBody, UploadError } from "@/server/uploads/validation";
+import { sameOriginBrowserControl } from "@/server/shared/browser-policy";
+import {
+  readBoundedBody,
+  UploadError,
+} from "@/server/shared/uploads/validation";
 
 const bodySchema = z
   .object({

@@ -1,7 +1,7 @@
 import "server-only";
 import { createOpenAI } from "@ai-sdk/openai";
 import { APICallError, generateText } from "ai";
-import type { Environment } from "@/server/agent/mcp-settings/security";
+import type { Environment } from "@/server/application/mcp/security";
 import type {
   PrivateModelSettings,
   ProbeResult,

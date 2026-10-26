@@ -1,10 +1,10 @@
 import { z } from "zod";
+import { ATTACHMENT_MIMES } from "@/server/domain/attachment/document-types";
+import { assetIdFromRef } from "@/server/domain/attachment/refs";
 import {
   MAX_MESSAGE_CHARACTERS,
   MAX_MESSAGE_PARTS,
 } from "@/server/domain/message/input-limits";
-import { ATTACHMENT_MIMES } from "@/server/uploads/document-types";
-import { assetIdFromRef } from "@/server/uploads/refs";
 
 const textPartSchema = z.object({
   text: z

@@ -6,8 +6,6 @@ import {
   type ToolSet,
   toUIMessageStream,
 } from "ai";
-import { createBrowserTools } from "@/server/agent/browser-tools";
-import { createAgentRuntime } from "@/server/agent/runtime";
 import {
   getModelConnection,
   getRuntimeModels,
@@ -25,8 +23,16 @@ import { getLanguageModel } from "@/server/application/ai/providers";
 import { createDocument } from "@/server/application/chat/tools/create-document";
 import { createResultTable } from "@/server/application/chat/tools/create-result-table";
 import { editDocument } from "@/server/application/chat/tools/edit-document";
+import { readAttachmentTool } from "@/server/application/chat/tools/read-attachment";
 import { requestSuggestions } from "@/server/application/chat/tools/request-suggestions";
 import { updateDocument } from "@/server/application/chat/tools/update-document";
+import { prepareAttachmentContext } from "@/server/application/uploads/context";
+import {
+  commitUserMessage,
+  readAssetForContext,
+  readAttachmentAsset,
+} from "@/server/application/uploads/service";
+import { AttachmentRoundBudget } from "@/server/domain/attachment/document-budget";
 import type { ChatRepository } from "@/server/domain/chat/repository";
 import { canAccessChat } from "@/server/domain/chat/types";
 import { applyToolApprovals } from "@/server/domain/message/approvals";
@@ -57,6 +63,8 @@ import type {
 } from "@/server/domain/message/types";
 import { entitlementsByUserType } from "@/server/domain/user/entitlements";
 import type { ChatSession } from "@/server/domain/user/types";
+import { createBrowserTools } from "@/server/infrastructure/browser/browser-tools";
+import { createAgentRuntime } from "@/server/infrastructure/mcp/runtime";
 import { ChatbotError } from "@/server/shared/errors";
 import { checkIpRateLimit } from "@/server/shared/ratelimit";
 import {
@@ -64,14 +72,6 @@ import {
   isTestEnvironment,
 } from "@/server/shared/runtime";
 import { metadataOnlyTelemetry } from "@/server/shared/telemetry";
-import { prepareAttachmentContext } from "@/server/uploads/context";
-import { AttachmentRoundBudget } from "@/server/uploads/document-budget";
-import { readAttachmentTool } from "@/server/uploads/read-attachment";
-import {
-  commitUserMessage,
-  readAssetForContext,
-  readAttachmentAsset,
-} from "@/server/uploads/service";
 import { generateTitleFromUserMessage } from "./generate-title";
 
 // 发送消息用例(P2 从 app/(chat)/api/chat/route.ts 的 postWithModelSettings 整体迁入)

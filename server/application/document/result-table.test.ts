@@ -229,8 +229,12 @@ test("view filters and numeric/null sort never mutate source and CSV blocks form
 });
 
 test("installed SDK projects current and persisted MCP results without replacing raw UI payloads", async () => {
-  const { createAgentRuntime } = await import("@/server/agent/runtime");
-  const { agentConfigSchema } = await import("@/server/agent/config");
+  const { createAgentRuntime } = await import(
+    "@/server/infrastructure/mcp/runtime"
+  );
+  const { agentConfigSchema } = await import(
+    "@/server/infrastructure/mcp/config"
+  );
   const { convertToModelMessages } = await import("ai");
   const { historyProjectionTools } = await import(
     "@/server/domain/message/result-evidence"

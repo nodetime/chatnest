@@ -44,11 +44,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/app/_components/ui/table";
-import { refreshConflictMessage } from "@/server/agent/mcp-settings/editor";
+import { refreshConflictMessage } from "@/server/domain/mcp/editor";
 import type {
   ServerProjection,
   SettingsProjection,
-} from "@/server/agent/mcp-settings/types";
+} from "@/server/domain/mcp/types";
 import { McpEditor, requestMcp } from "./mcp-editor";
 
 async function readSettings(url: string): Promise<SettingsProjection> {

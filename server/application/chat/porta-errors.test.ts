@@ -14,7 +14,7 @@ import {
   type UIMessageChunk,
 } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
-import { createAgentRuntime } from "@/server/agent/runtime";
+import { createAgentRuntime } from "@/server/infrastructure/mcp/runtime";
 
 const serviceToken = "fixture-porta-service-token-32";
 const toolName = "porta__onebound_1688_item_search";

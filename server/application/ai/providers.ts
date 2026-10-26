@@ -12,7 +12,7 @@ export const myProvider = isTestEnvironment
       const {
         chatModel,
         titleModel: mockTitleModel,
-      } = require("./models.mock");
+      } = require("@/server/domain/model/models.mock");
       return customProvider({
         languageModels: {
           "chat-model": chatModel,

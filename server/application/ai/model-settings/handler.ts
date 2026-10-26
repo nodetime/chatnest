@@ -3,8 +3,11 @@ import { ZodError } from "zod";
 import {
   authorizeManagement,
   SettingsError,
-} from "@/server/agent/mcp-settings/security";
-import { readBoundedBody, UploadError } from "@/server/uploads/validation";
+} from "@/server/application/mcp/security";
+import {
+  readBoundedBody,
+  UploadError,
+} from "@/server/shared/uploads/validation";
 import { createModelSettingsService } from "./service";
 export function createModelSettingsHandler({
   session,

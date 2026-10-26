@@ -1,7 +1,7 @@
 import { RotateCcw } from "lucide-react";
 import type { Attachment } from "@/app/_lib/types";
 import { cn } from "@/app/_lib/utils";
-import { extractionLabels } from "@/server/uploads/document-types";
+import { extractionLabels } from "@/server/domain/attachment/document-types";
 import { Spinner } from "../ui/spinner";
 import { FileSymbol } from "./file-symbol";
 import { CrossSmallIcon } from "./icons";

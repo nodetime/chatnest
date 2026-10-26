@@ -3,6 +3,12 @@ import {
   type SendMessageInput,
   sendMessage,
 } from "@/server/application/chat/send-message";
+import {
+  closeBrowserSession,
+  getBrowserSession,
+} from "@/server/infrastructure/browser/browser-session";
+import { readAgentConfig } from "@/server/infrastructure/mcp/config";
+import { discoverSkills } from "@/server/infrastructure/mcp/skills";
 import { chatRepository } from "@/server/infrastructure/persistence/drizzle/chat-repository";
 import { documentRepository } from "@/server/infrastructure/persistence/drizzle/document-repository";
 import { messageRepository } from "@/server/infrastructure/persistence/drizzle/message-repository";
@@ -19,6 +25,16 @@ function buildUseCases() {
   const messages = messageRepository;
   return {
     // ---- P3 域门面(平台层只读/受控写)----
+    // agent 基础设施门面(R3 豁免点):配置读取与技能发现是外部世界 IO,平台层经此进入
+    agent: {
+      discoverSkills: () => discoverSkills(),
+      readConfig: () => readAgentConfig(),
+    },
+    // 共享浏览器会话门面(R3 豁免点):有状态基础设施,平台层经此进入
+    browser: {
+      closeSession: closeBrowserSession,
+      getSession: getBrowserSession,
+    },
     chats: {
       deleteAllByUserId: chats.deleteAllByUserId.bind(chats),
       findById: chats.findById.bind(chats),

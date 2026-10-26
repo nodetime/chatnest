@@ -53,9 +53,15 @@ const nextConfig: NextConfig = {
     incomingRequests: false,
   },
   outputFileTracingIncludes: {
-    "/api/agent": ["./server/config/agent.json", "./server/skills/**/*"],
-    "/api/agent/mcp": ["./server/config/agent.json"],
-    "/api/chat": ["./server/config/agent.json", "./server/skills/**/*"],
+    "/api/agent": [
+      "./server/infrastructure/mcp/agent.json",
+      "./server/infrastructure/skills/**/*",
+    ],
+    "/api/agent/mcp": ["./server/infrastructure/mcp/agent.json"],
+    "/api/chat": [
+      "./server/infrastructure/mcp/agent.json",
+      "./server/infrastructure/skills/**/*",
+    ],
     "/api/files/upload": [
       "./server/uploads/document-worker.cjs",
       "./node_modules/pdfjs-dist/**/*",

@@ -17,4 +17,4 @@
 ## 硬约定
 
 - 跨层导入一律用 `@/` 别名;`../`、`./` 仅限本层内部
-- P2 起按域建子目录:`server/domain/chat`、`server/domain/message` 等
+- 聚合清单(P7 后):chat、message(含 agent 迁入的纯规则:审批/证据账本/轮次/失败上报/Porta 错误/来源链接/输入限额)、user(含 entitlements)、vote、document(含结果表纯函数与 UIArtifact)、suggestion、attachment(上传预算/限额/引用)、model(模型目录与设置 schema)、mcp(连接管理类型/schema/editor)、admin(types)

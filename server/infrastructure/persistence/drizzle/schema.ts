@@ -252,7 +252,7 @@ export const uploadAsset = pgTable(
     // 文档解析抽取结果 JSON:供检索与预览复用,避免重复解析
     extraction:
       json("extraction").$type<
-        import("../../../uploads/document-types").DocumentExtraction
+        import("@/server/domain/attachment/document-types").DocumentExtraction
       >(),
     // 附件唯一标识:由服务端生成,不信任客户端指定
     id: uuid("id").primaryKey().notNull(),

@@ -57,9 +57,8 @@
   // DDD 边界强制(规划第七节,探针验证后上墙):
   // 坑:同一条规则被多个 override 匹配同一文件时,后写的整体替换先写的——
   // 因此 R2(server/**) 放最前,domain 合体(R1+R2+反向禁令)放最后,靠覆盖顺序取胜。
-  // P5:R2 扩到整个 server/**(存量 @/app 引用已清零);R1 增加反向禁令——
-  // domain 不得依赖域模块(agent/ai/uploads/artifacts/admin/skills/config),
-  // 已知豁免仅 domain/message/types.ts 的工具 UI 类型推导(InferUITool,行内 biome-ignore)。
+  // P7 后域模块(agent/ai/uploads/artifacts/admin/skills/config)全部消亡,反向禁令退役;
+  // 新增 server/ 顶层目录时必须同步本文件与各层 README,防止层次倒置回潮。
   "overrides": [
     {
       "includes": ["server/**"],
@@ -150,18 +149,6 @@
                   {
                     "group": ["../../**"],
                     "message": "R1: 跨层相对导入禁止,一律用 @/ 别名"
-                  },
-                  {
-                    "group": [
-                      "@/server/agent/**",
-                      "@/server/ai/**",
-                      "@/server/uploads/**",
-                      "@/server/artifacts/**",
-                      "@/server/admin/**",
-                      "@/server/skills/**",
-                      "@/server/config/**"
-                    ],
-                    "message": "R1: domain 不得依赖域模块;域词汇表反向引用子域是层次倒置"
                   },
                   {
                     "group": [

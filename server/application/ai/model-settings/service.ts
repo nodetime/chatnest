@@ -1,14 +1,8 @@
 import "server-only";
 import {
-  decryptSettings,
-  encryptSettings,
-  parseEncryptionKey,
-} from "@/server/agent/mcp-settings/crypto";
-import type { SettingsRepository } from "@/server/agent/mcp-settings/repository";
-import {
   type Environment,
   SettingsError,
-} from "@/server/agent/mcp-settings/security";
+} from "@/server/application/mcp/security";
 import {
   configurationSchema,
   editSchema,
@@ -16,7 +10,13 @@ import {
   type ModelSettingsProjection,
   type PrivateModelSettings,
 } from "@/server/domain/model/settings-schema";
+import type { SettingsRepository } from "@/server/infrastructure/persistence/drizzle/mcp-settings-repository";
 import { settingsRepository } from "@/server/infrastructure/persistence/drizzle/model-settings-repository";
+import {
+  decryptSettings,
+  encryptSettings,
+  parseEncryptionKey,
+} from "@/server/shared/settings-crypto";
 import { getModelConnection } from "../model-connection";
 import { validateModelURL } from "./network";
 import { listRemoteModels, probeModel } from "./probe";

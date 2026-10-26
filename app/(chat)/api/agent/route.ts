@@ -1,14 +1,14 @@
 import { headers } from "next/headers";
 import { auth } from "@/app/(auth)/auth";
-import { capabilityServers } from "@/server/agent/mcp-settings/projection";
-import { readRuntimeConfig } from "@/server/agent/mcp-settings/runtime-config";
-import { isAdmin, managementReady } from "@/server/agent/mcp-settings/security";
-import { discoverSkills } from "@/server/agent/skills";
 import { getModelConnection } from "@/server/application/ai/model-connection";
 import { withModelSettings } from "@/server/application/ai/model-settings/runtime";
+import { capabilityServers } from "@/server/application/mcp/projection";
+import { readRuntimeConfig } from "@/server/application/mcp/runtime-config";
+import { isAdmin, managementReady } from "@/server/application/mcp/security";
+import { uploadsAvailable } from "@/server/application/uploads/service";
+import { getUseCases } from "@/server/composition";
 import { getLogger } from "@/server/shared/logger";
 import { runWithTraceId } from "@/server/shared/request-context";
-import { uploadsAvailable } from "@/server/uploads/service";
 
 export async function GET() {
   // proxy.ts 注入的 x-trace-id 进入 ALS,本请求内 logger 自动携带
@@ -25,7 +25,7 @@ async function handleAgentSummary() {
   try {
     const [config, skills] = await Promise.all([
       readRuntimeConfig(),
-      discoverSkills(),
+      getUseCases().agent.discoverSkills(),
     ]);
     return await withModelSettings(async () =>
       Response.json(

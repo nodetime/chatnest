@@ -12,10 +12,10 @@
 
 - 禁止 import `@/app/**`、`next/server`、`next/headers`、`next/navigation`(R2)
 - 请求上下文(userId、signal、requestHints 等)一律作为参数传入,不从框架取
-- 禁止直写 SQL 或 import 驱动细节——那是 infrastructure 的事
+- 禁止直写 SQL 或 import 驱动细节——那是 infrastructure 的事;登记例外:uploads/service.ts 自带连接(P8 收口为仓储)
 
 ## 硬约定
 
 - 跨层导入一律用 `@/` 别名
-- P2 起按域建子目录:`server/application/chat` 等
-- R2 当前范围是三层目录;P2/P3 搬完存量 27 处 next/@/app 依赖后扩大到整个 server/
+- 子目录清单(P7 后):chat(send-message/delete-chat/generate-title/tools 七件)、ai(model-connection/service/context/prompts/providers/model-settings 五件)、document(artifact-service + 三 kinds)、uploads(service/context)、mcp(管理服务/api/security/发现等十件 + 测试)、admin(overview/access)
+- R2 已扩到整个 server/**;平台层直连基础设施仅经 composition 门面(R3 豁免点)

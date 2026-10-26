@@ -1,6 +1,4 @@
 import { auth } from "@/app/(auth)/auth";
-import { readAgentConfig } from "@/server/agent/config";
-import { createSettingsService } from "@/server/agent/mcp-settings/service";
 import {
   createOverviewHandler,
   summarizeTools,
@@ -10,8 +8,10 @@ import {
   getRuntimeModels,
 } from "@/server/application/ai/model-connection";
 import { withModelSettings } from "@/server/application/ai/model-settings/runtime";
+import { createSettingsService } from "@/server/application/mcp/service";
+import { storageStatus } from "@/server/application/uploads/service";
+import { getUseCases } from "@/server/composition";
 import { DEFAULT_CHAT_MODEL } from "@/server/domain/model/models";
-import { storageStatus } from "@/server/uploads/service";
 
 export const GET = createOverviewHandler({
   model: () =>
@@ -34,7 +34,7 @@ export const GET = createOverviewHandler({
     return { configured: status.configured, enabled: status.enabled };
   },
   tools: async () => {
-    const file = (await readAgentConfig()).servers;
+    const file = (await getUseCases().agent.readConfig()).servers;
     const settings = await createSettingsService().get(file);
     return summarizeTools(file, settings);
   },

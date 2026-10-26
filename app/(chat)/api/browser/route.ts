@@ -1,11 +1,7 @@
 import { z } from "zod";
 import { auth } from "@/app/(auth)/auth";
-import { sameOriginBrowserControl } from "@/server/agent/browser-policy";
-import {
-  closeBrowserSession,
-  getBrowserSession,
-} from "@/server/agent/browser-session";
 import { getUseCases } from "@/server/composition";
+import { sameOriginBrowserControl } from "@/server/shared/browser-policy";
 
 export const maxDuration = 60;
 const idSchema = z.string().uuid();
@@ -62,7 +58,7 @@ export async function GET(request: Request) {
   }
   const enabled = process.env.BROWSER_RUNTIME === "local";
   const session = enabled
-    ? await getBrowserSession(access.owner, access.chatId)
+    ? await getUseCases().browser.getSession(access.owner, access.chatId)
     : null;
   if (new URL(request.url).searchParams.get("frame") === "1") {
     const frame = await session?.frame();
@@ -102,10 +98,10 @@ export async function POST(request: Request) {
   try {
     const command = action.data;
     if (command.action === "close") {
-      await closeBrowserSession(access.owner, access.chatId);
+      await getUseCases().browser.closeSession(access.owner, access.chatId);
       return Response.json({ enabled: true, session: null }, { headers });
     }
-    const session = await getBrowserSession(
+    const session = await getUseCases().browser.getSession(
       access.owner,
       access.chatId,
       command.action === "start"

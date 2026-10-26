@@ -2,8 +2,8 @@
 // biome-ignore-all lint/suspicious/useAwait: In-memory async repository fixture.
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { SettingsRow } from "@/server/agent/mcp-settings/repository";
 import { createModelSettingsService } from "@/server/application/ai/model-settings/service";
+import type { SettingsRow } from "@/server/infrastructure/persistence/drizzle/mcp-settings-repository";
 
 const env = {
   MCP_SETTINGS_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString("base64"),
@@ -144,7 +144,7 @@ test("encrypted settings fail closed on wrong key or domain", async () => {
     }).load()
   );
   const { decryptSettings, parseEncryptionKey } = await import(
-    "@/server/agent/mcp-settings/crypto"
+    "@/server/shared/settings-crypto"
   );
   assert.throws(() =>
     decryptSettings(
