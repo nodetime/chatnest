@@ -2,12 +2,7 @@
 
 import type { UseChatHelpers } from "@ai-sdk/react";
 import { Chat, useChat } from "@ai-sdk/react";
-import {
-  type ChatInit,
-  type ChatTransport,
-  DefaultChatTransport,
-  lastAssistantMessageIsCompleteWithApprovalResponses,
-} from "ai";
+import { type ChatInit, type ChatTransport, DefaultChatTransport } from "ai";
 import { usePathname, useRouter } from "next/navigation";
 import {
   createContext,
@@ -36,7 +31,16 @@ import {
   fetchWithErrorHandlers,
   generateUUID,
 } from "@/app/_lib/utils";
-import { compactToolApprovals } from "@/server/domain/message/approval-transport";
+import {
+  type AskUserOutput,
+  compactInteractionResponses,
+  deriveTaskProgress,
+  hasPendingInteraction,
+  interactionResponseSignature,
+  shouldContinueAgent,
+  type TodoPlan,
+  validateAskUserOutput,
+} from "@/server/domain/message/agent-interactions";
 import {
   buildTaskMessage,
   type TaskDraft,
@@ -56,6 +60,19 @@ type ActiveChatContextValue = {
   stop: UseChatHelpers<ChatMessage>["stop"];
   regenerate: UseChatHelpers<ChatMessage>["regenerate"];
   addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
+  answerAskUser: (response: {
+    messageId: string;
+    toolCallId: string;
+    output: AskUserOutput;
+  }) => Promise<void>;
+  reviseAskUser: (response: {
+    messageId: string;
+    toolCallId: string;
+    output: AskUserOutput;
+  }) => Promise<void>;
+  continueAgent: () => Promise<void>;
+  agentPaused: boolean;
+  taskProgress: TodoPlan | null;
   input: string;
   setInput: Dispatch<SetStateAction<string>>;
   visibilityType: VisibilityType;
@@ -113,6 +130,28 @@ export function ActiveChatProvider({
   prevPathnameRef.current = pathname;
 
   const chatId = chatIdFromUrl ?? newChatIdRef.current;
+  const interactionGate = useRef({
+    answerPending: false,
+    chatId,
+    manual: false,
+    paused: false,
+    released: false,
+    revision: 0,
+    sentSignature: "",
+  });
+  if (interactionGate.current.chatId !== chatId) {
+    interactionGate.current = {
+      answerPending: false,
+      chatId,
+      manual: false,
+      paused: false,
+      released: false,
+      revision: 0,
+      sentSignature: "",
+    };
+  }
+  const [pausedChatId, setPausedChatId] = useState<string | null>(null);
+  const agentPaused = pausedChatId === chatId;
   const [searchMode, setSearchMode] = useState<"auto" | "web">("auto");
   const searchModeRef = useRef(searchMode);
   searchModeRef.current = searchMode;
@@ -256,24 +295,37 @@ export function ActiveChatProvider({
       }
       mutate(unstable_serialize(getChatHistoryPaginationKey));
     },
-    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses,
+    sendAutomaticallyWhen: ({ messages: currentMessages }) => {
+      const gate = interactionGate.current;
+      return (
+        gate.chatId === chatId &&
+        !gate.manual &&
+        !gate.released &&
+        shouldContinueAgent(currentMessages, gate.paused, gate.sentSignature)
+      );
+    },
     transport: new DefaultChatTransport({
       api: `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/chat`,
       fetch: fetchWithErrorHandlers,
       prepareSendMessagesRequest(request) {
         const lastMessage = request.messages.at(-1);
+        const responses = compactInteractionResponses(request.messages);
         const isToolApprovalContinuation =
-          lastMessage?.role === "assistant" &&
-          lastMessage.parts?.some((part) => {
-            const { state } = part as { state?: string };
-            return state === "approval-responded" || state === "output-denied";
-          });
+          lastMessage?.role === "assistant" && responses.length > 0;
+        if (
+          isToolApprovalContinuation &&
+          interactionGate.current.chatId === request.id
+        ) {
+          interactionGate.current.sentSignature = interactionResponseSignature(
+            request.messages
+          );
+        }
 
         return {
           body: {
             id: request.id,
             ...(isToolApprovalContinuation
-              ? { messages: compactToolApprovals(request.messages) }
+              ? { messages: responses }
               : { message: lastMessage }),
             searchMode: searchModeRef.current,
             selectedChatModel: currentModelIdRef.current,
@@ -322,18 +374,85 @@ export function ActiveChatProvider({
     });
     chatInstanceRef.current = instance;
   }
+  const activeInstance = chatInstanceRef.current;
   const {
     messages,
     setMessages,
-    sendMessage,
+    sendMessage: sdkSendMessage,
     status,
-    stop,
+    stop: sdkStop,
     regenerate,
     resumeStream,
-    addToolApprovalResponse,
+    addToolApprovalResponse: sdkAddToolApprovalResponse,
     error,
     clearError,
-  } = useChat<ChatMessage>({ chat: chatInstanceRef.current });
+  } = useChat<ChatMessage>({ chat: activeInstance });
+
+  useEffect(() => {
+    const gate = interactionGate.current;
+    gate.released = false;
+    return () => {
+      // 生命周期清理必须中止此 effect 捕获的实例。导航 render 已切换 ref，
+      // 面向旧按钮的 stop 门控会拒绝旧实例，因此清理不经过该交互入口。
+      // 同时失效卸载后的处理器及等待中的回答，阻止其随后启动另一轮请求。
+      gate.released = true;
+      gate.revision += 1;
+      activeInstance.stop();
+    };
+  }, [activeInstance]);
+
+  const stop = useCallback(async () => {
+    const gate = interactionGate.current;
+    if (
+      gate.released ||
+      gate.chatId !== chatId ||
+      chatInstanceRef.current !== activeInstance
+    ) {
+      return;
+    }
+    gate.paused = true;
+    gate.revision += 1;
+    setPausedChatId(chatId);
+    await sdkStop();
+  }, [activeInstance, chatId, sdkStop]);
+
+  const sendMessage = useCallback<UseChatHelpers<ChatMessage>["sendMessage"]>(
+    async (message, options) => {
+      const gate = interactionGate.current;
+      if (
+        gate.released ||
+        gate.chatId !== chatId ||
+        chatInstanceRef.current !== activeInstance
+      ) {
+        return;
+      }
+      gate.paused = false;
+      gate.revision += 1;
+      setPausedChatId(null);
+      await sdkSendMessage(message, options);
+    },
+    [activeInstance, chatId, sdkSendMessage]
+  );
+
+  const addToolApprovalResponse = useCallback<
+    UseChatHelpers<ChatMessage>["addToolApprovalResponse"]
+  >(
+    async (response) => {
+      const gate = interactionGate.current;
+      if (
+        gate.released ||
+        chatInstanceRef.current !== activeInstance ||
+        gate.chatId !== chatId
+      ) {
+        throw new Error("这条工具确认已过期。");
+      }
+      // 新的明确允许/拒绝是用户交互；解除暂停，但绝不替用户生成批准决定。
+      gate.paused = false;
+      setPausedChatId(null);
+      await sdkAddToolApprovalResponse(response);
+    },
+    [activeInstance, chatId, sdkAddToolApprovalResponse]
+  );
 
   const getSendError = useCallback(
     () => chatInstanceRef.current?.error ?? lastSendFailure.current,
@@ -497,6 +616,172 @@ export function ActiveChatProvider({
     ? false
     : isLoading || Boolean(loadError) || (chatData?.isReadonly ?? false);
 
+  const answerAskUser = useCallback(
+    async ({
+      messageId,
+      toolCallId,
+      output,
+    }: {
+      messageId: string;
+      toolCallId: string;
+      output: AskUserOutput;
+    }) => {
+      const origin = activeInstance;
+      const gate = interactionGate.current;
+      if (
+        !origin ||
+        origin.id !== chatId ||
+        chatInstanceRef.current !== origin ||
+        gate.chatId !== chatId ||
+        gate.released ||
+        isReadonly ||
+        origin.status === "streaming" ||
+        origin.status === "submitted" ||
+        gate.answerPending
+      ) {
+        throw new Error("当前提问暂不可提交。");
+      }
+      const latest = origin.messages.at(-1);
+      const part = latest?.parts.find(
+        (candidate) =>
+          candidate.type === "tool-askUser" &&
+          candidate.toolCallId === toolCallId
+      );
+      if (
+        latest?.id !== messageId ||
+        part?.type !== "tool-askUser" ||
+        (part.state !== "input-available" && part.state !== "output-available")
+      ) {
+        throw new Error("这条提问已过期，请查看当前对话。");
+      }
+      const validated = validateAskUserOutput(part.input, output);
+      const { revision } = gate;
+      gate.answerPending = true;
+      gate.manual = true;
+      try {
+        // SDK addToolOutput 只更新本地状态，不承诺自动网络请求完成。
+        await origin.addToolOutput({
+          output: validated,
+          tool: "askUser",
+          toolCallId,
+        });
+        if (
+          chatInstanceRef.current !== origin ||
+          interactionGate.current !== gate ||
+          gate.revision !== revision
+        ) {
+          throw new Error("执行已停止或对话已切换。");
+        }
+        gate.manual = false;
+        gate.paused = false;
+        setPausedChatId(null);
+        origin.clearError();
+        // 即使本轮还有其它 Ask/审批，也显式提交当前答案，由服务端保存并决定是否等待。
+        await origin.sendMessage();
+        if (origin.error) {
+          throw origin.error;
+        }
+      } finally {
+        gate.manual = false;
+        gate.answerPending = false;
+      }
+    },
+    [activeInstance, chatId, isReadonly]
+  );
+
+  const reviseAskUser = useCallback(
+    async ({
+      messageId,
+      toolCallId,
+      output,
+    }: {
+      messageId: string;
+      toolCallId: string;
+      output: AskUserOutput;
+    }) => {
+      const origin = activeInstance;
+      if (
+        isReadonly ||
+        interactionGate.current.released ||
+        origin?.id !== chatId ||
+        chatInstanceRef.current !== origin ||
+        origin.status === "streaming" ||
+        origin.status === "submitted"
+      ) {
+        throw new Error("当前暂不可修改回答。");
+      }
+      const message = origin.messages.find(
+        (candidate) =>
+          candidate.id === messageId && candidate.role === "assistant"
+      );
+      const part = message?.parts.find(
+        (candidate) =>
+          candidate.type === "tool-askUser" &&
+          candidate.toolCallId === toolCallId
+      );
+      if (part?.type !== "tool-askUser" || part.state !== "output-available") {
+        throw new Error("请先完成当前提问。");
+      }
+      const validated = validateAskUserOutput(part.input, output);
+      if (validated.status !== "answered") {
+        throw new Error("修改回答需要提供新的内容。");
+      }
+      const lines = part.input.questions.map((question) => {
+        const answer = validated.answers[question.id];
+        const values = Array.isArray(answer)
+          ? answer
+          : typeof answer === "string"
+            ? [answer]
+            : [];
+        return `${question.label}：${values.map((answerValue) => question.options?.find((option) => option.value === answerValue)?.label ?? answerValue).join("、") || "未填写"}`;
+      });
+      // 修改是新的用户补充，不改写已提交工具结果，也不隐式授权任何工具。
+      await sendMessage({
+        parts: [
+          {
+            text: `对刚才的回答补充/修改：\n${part.input.title}\n${lines.join("\n")}\n请据此调整后续处理，保留已有执行记录，需要授权的工具仍须请求确认。`,
+            type: "text",
+          },
+        ],
+        role: "user",
+      });
+      if (origin.error) {
+        throw origin.error;
+      }
+    },
+    [activeInstance, chatId, isReadonly, sendMessage]
+  );
+
+  const continueAgent = useCallback(async () => {
+    const origin = activeInstance;
+    if (
+      isReadonly ||
+      interactionGate.current.released ||
+      origin?.id !== chatId ||
+      chatInstanceRef.current !== origin ||
+      origin.status === "streaming" ||
+      origin.status === "submitted"
+    ) {
+      return;
+    }
+    if (hasPendingInteraction(origin.messages)) {
+      throw new Error("请先回答或跳过提问，并完成待处理的工具确认。");
+    }
+    await sendMessage({
+      parts: [
+        {
+          text: "请继续刚才未完成的任务。先核对已有工具结果与可能的副作用，不要盲目重放操作；自行判断下一步，需要信息时向我提问，需要授权的工具请重新请求确认。",
+          type: "text",
+        },
+      ],
+      role: "user",
+    });
+    if (origin.error) {
+      throw origin.error;
+    }
+  }, [activeInstance, chatId, isReadonly, sendMessage]);
+  const taskProgress = useMemo(() => deriveTaskProgress(messages), [messages]);
+
   const { data: votes } = useSWR<Vote[]>(
     !isReadonly && messages.length >= 2
       ? `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/vote?chatId=${chatId}`
@@ -513,9 +798,12 @@ export function ActiveChatProvider({
   const value = useMemo<ActiveChatContextValue>(
     () => ({
       addToolApprovalResponse,
+      agentPaused,
+      answerAskUser,
       chatId,
       chatTitle,
       clearError,
+      continueAgent,
       currentModelId,
       error,
       getSendError,
@@ -527,6 +815,7 @@ export function ActiveChatProvider({
       regenerate,
       regenerateAnswer,
       retryLoad,
+      reviseAskUser,
       searchMode,
       sendMessage,
       setCurrentModelId,
@@ -539,10 +828,16 @@ export function ActiveChatProvider({
       startTask,
       status,
       stop,
+      taskProgress,
       visibilityType: visibility,
       votes,
     }),
     [
+      answerAskUser,
+      reviseAskUser,
+      continueAgent,
+      agentPaused,
+      taskProgress,
       chatId,
       chatTitle,
       error,

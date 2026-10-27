@@ -39,3 +39,12 @@ server/shared/logger.test.ts
 server/shared/env.test.ts
 server/domain/chat/types.test.ts
 server/application/chat/send-message.test.ts
+
+# Formal Agent workspace (database lifecycle is explicit opt-in only).
+server/domain/document/library.test.ts
+app/_components/chat/formal-workspace.test.ts
+app/_components/chat/artifact-layout.test.ts
+server/domain/message/agent-interactions.test.ts
+server/application/chat/agent-interaction-tools.test.ts
+app/_components/chat/agent-interactions-ui.test.ts
+server/application/uploads/upload-lifecycle-db.test.ts

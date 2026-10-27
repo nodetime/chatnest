@@ -61,10 +61,20 @@ export function Workspace({ children }: { children: ReactNode }) {
     )) {
       if (!browserCalls.current.has(callId)) {
         browserCalls.current.add(callId);
-        workspace.show("browser");
+        // Browser evidence remains available from the view menu, but a running
+        // tool must not take focus away from the user's primary document.
+        if (!artifact.isVisible || artifact.documentId === "init") {
+          workspace.show("browser");
+        }
       }
     }
-  }, [messages, status, workspace.show]);
+  }, [
+    messages,
+    status,
+    workspace.show,
+    artifact.isVisible,
+    artifact.documentId,
+  ]);
   useEffect(() => {
     if (!workspace.open) {
       return;
@@ -192,7 +202,7 @@ export function Workspace({ children }: { children: ReactNode }) {
         <section
           aria-label="产物"
           className={cn(
-            "min-h-0 min-w-0 flex-1",
+            "flex min-h-0 min-w-0 flex-1 flex-col",
             workspace.tab !== "document" && "hidden"
           )}
           id="workspace-document"

@@ -25,6 +25,12 @@ export interface MessageRepository {
   // 单条消息(可能命中 0/1 行)
   findById: (id: string) => Promise<StoredMessage[]>;
   listByChatId: (chatId: string) => Promise<StoredMessage[]>;
+  // Ask 回答与同轮审批在聊天行锁下合并；只信任最新持久化 assistant 的工具输入。
+  mergeInteractionResponses: (input: {
+    chatId: string;
+    userId: string;
+    responses: ChatMessage[];
+  }) => Promise<{ messages: StoredMessage[]; changed: boolean }>;
   // 编辑整轮替换:以 snapshot 为并发基线,替换失败抛错回滚
   replaceEditedTurn: (input: {
     answer: StoredMessage;
@@ -41,5 +47,12 @@ export interface MessageRepository {
     userId: string;
   }) => Promise<unknown>;
   saveMany: (messages: StoredMessage[]) => Promise<unknown>;
+  // 续跑完成仅覆盖仍与原快照一致的最新 assistant，拒绝迟到写入。
+  updateContinuationParts: (input: {
+    chatId: string;
+    userId: string;
+    snapshot: StoredMessage[];
+    response: ChatMessage;
+  }) => Promise<boolean>;
   updateParts: (id: string, parts: unknown) => Promise<unknown>;
 }

@@ -71,7 +71,8 @@ export const postRequestBodySchema = z
       .default("submit-message"),
   })
   .refine((body) => Boolean(body.message) !== Boolean(body.messages), {
-    message: "Provide exactly one new user message or an approval continuation",
+    message:
+      "Provide exactly one new user message or a tool interaction continuation",
   });
 
 export type PostRequestBody = z.infer<typeof postRequestBodySchema>;

@@ -1,5 +1,11 @@
 import { and, asc, count, eq, gte, inArray } from "drizzle-orm";
 import {
+  applyAskUserResponses,
+  sameInteractionValue,
+} from "@/server/domain/message/agent-interactions";
+import { applyToolApprovals } from "@/server/domain/message/approvals";
+import { convertToUIMessages } from "@/server/domain/message/convert";
+import {
   prepareMessageEdit,
   prepareRegeneration,
 } from "@/server/domain/message/message-turn";
@@ -86,6 +92,54 @@ export const messageRepository: MessageRepository = {
     } catch (error) {
       throw new ChatbotError("bad_request:database", { cause: error });
     }
+  },
+
+  async mergeInteractionResponses({ chatId, userId, responses }) {
+    return await db.transaction(async (tx) => {
+      const [owner] = await tx
+        .select()
+        .from(chat)
+        .where(eq(chat.id, chatId))
+        .for("update");
+      if (!owner || owner.userId !== userId) {
+        throw new ChatbotError("forbidden:chat");
+      }
+      const current = await tx
+        .select()
+        .from(message)
+        .where(eq(message.chatId, chatId))
+        .orderBy(asc(message.createdAt));
+      const stored = convertToUIMessages(current);
+      const latest = stored.at(-1);
+      if (latest?.role !== "assistant") {
+        throw new ChatbotError("bad_request:api");
+      }
+      let merged: ChatMessage[];
+      try {
+        const answers = applyAskUserResponses(stored, responses);
+        // 保持审批 ID/决定匹配语义；新 Ask 协议只处理最新一条 assistant。
+        merged = applyToolApprovals(
+          answers.messages,
+          responses.filter((item) => item.id === latest.id)
+        );
+      } catch (error) {
+        throw new ChatbotError("bad_request:api", { cause: error });
+      }
+      const parts = merged.at(-1)?.parts ?? [];
+      const changed = !sameInteractionValue(latest.parts, parts);
+      if (changed) {
+        await tx
+          .update(message)
+          .set({ parts })
+          .where(and(eq(message.chatId, chatId), eq(message.id, latest.id)));
+      }
+      return {
+        changed,
+        messages: current.map((item, index) =>
+          index === current.length - 1 ? { ...item, parts } : item
+        ),
+      };
+    });
   },
 
   async replaceEditedTurn(input) {
@@ -221,6 +275,44 @@ export const messageRepository: MessageRepository = {
     } catch (error) {
       throw new ChatbotError("bad_request:database", { cause: error });
     }
+  },
+
+  async updateContinuationParts({ chatId, userId, snapshot, response }) {
+    return await db.transaction(async (tx) => {
+      const [owner] = await tx
+        .select()
+        .from(chat)
+        .where(eq(chat.id, chatId))
+        .for("update");
+      if (!owner || owner.userId !== userId) {
+        throw new ChatbotError("forbidden:chat");
+      }
+      const current = await tx
+        .select()
+        .from(message)
+        .where(eq(message.chatId, chatId))
+        .orderBy(asc(message.createdAt));
+      const unchanged =
+        current.length === snapshot.length &&
+        current.every(
+          (item, index) =>
+            item.id === snapshot[index].id &&
+            item.role === snapshot[index].role &&
+            sameInteractionValue(item.parts, snapshot[index].parts)
+        );
+      if (
+        !unchanged ||
+        current.at(-1)?.id !== response.id ||
+        response.role !== "assistant"
+      ) {
+        return false;
+      }
+      await tx
+        .update(message)
+        .set({ parts: response.parts })
+        .where(and(eq(message.chatId, chatId), eq(message.id, response.id)));
+      return true;
+    });
   },
 
   async updateParts(id, parts) {

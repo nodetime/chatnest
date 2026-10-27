@@ -280,7 +280,7 @@ test("history attachments wrap and chat-specific surface leaves global theme and
     "app/_components/chat/multimodal-input.tsx",
     "utf8"
   );
-  assert.match(composer, /\[&>div\]:rounded-\[10px\]/);
+  assert.match(composer, /\[&>div\]:rounded-\[14px\]/);
   assert.match(composer, /<input[\s\S]*?hidden[\s\S]*?ref=\{fileInputRef\}/);
 });
 
@@ -798,6 +798,7 @@ test("mixed reasoning and tools render in their original SDK order rather than m
       '../ai-elements/shimmer': {Shimmer:'shimmer'},
       '../ai-elements/tool': {},
       './activity-group': {ActivityGroup:'activity'},
+      './ask-user': {AskUser:'ask'},
       './activity-groups': {groupActivityParts},
       './data-stream-provider': {useDataStream:()=>({})},
       './document': {}, './document-preview': {}, './icons': {},
@@ -873,7 +874,7 @@ test("chat-local palette defines gentle light and dark semantic surfaces without
       "ring",
       "sidebar",
     ]) {
-      assert.match(rule, new RegExp(`--${token}: oklch\\(`));
+      assert.match(rule, new RegExp(`--${token}: (?:oklch\\(|#[0-9a-f])`));
     }
   }
   assert.match(
@@ -893,8 +894,8 @@ test("generic empty conversation has a readable invitation and one softly elevat
     process.stdout.write(renderToStaticMarkup(React.createElement(Greeting)));
   `);
   assert.match(html, /<h1/);
-  assert.match(html, /描述你的目标，或添加文件作为起点/);
-  assert.match(html, /text-sm leading-6/);
+  assert.match(html, /今天想完成什么/);
+  assert.match(html, /text-\[26px\]/);
   const composer = readFileSync(
     "app/_components/chat/multimodal-input.tsx",
     "utf8"
@@ -902,10 +903,12 @@ test("generic empty conversation has a readable invitation and one softly elevat
   assert.match(composer, /shadow-\[var\(--shadow-composer\)\]/);
   assert.doesNotMatch(composer, /focus-within:border-foreground\/25/);
   const sidebar = readFileSync("app/_components/chat/app-sidebar.tsx", "utf8");
-  assert.match(sidebar, /h-\[52px\] shrink-0/);
+  assert.match(sidebar, /flex h-12/);
   for (const entry of [
     "新对话",
-    "创建任务",
+    "文件",
+    "连接",
+    "技能",
     "ChatSearch",
     "AgentLibrary",
     "SidebarUserNav",
@@ -957,6 +960,7 @@ test("artifact and table actions keep readable 36px targets without leaking tabl
   );
   assert.match(actions, /size-9 rounded-md/);
   const viewer = readFileSync("app/_components/chat/artifact.tsx", "utf8");
+  assert.match(viewer, /!tableOwnsHeader &&/);
   assert.doesNotMatch(
     viewer,
     /ListFilter|Columns3|筛选所有字段|保存视图与备注/
@@ -995,7 +999,7 @@ test("open artifacts use a compact chat file card instead of mounting a duplicat
   const css = readFileSync("app/globals.css", "utf8");
   assert.match(
     css,
-    /\.chat-workbench\[data-slot="sidebar-wrapper"\]\s*\{[^}]*--sidebar-width: 13rem !important/
+    /\.chat-workbench\[data-slot="sidebar-wrapper"\]\s*\{[^}]*--sidebar-width: 11\.5rem !important/
   );
 });
 
@@ -1015,10 +1019,7 @@ test("artifact assistant actions live in a named header menu, never a floating t
   assert.ok(
     toolbar > 0 && toolbar < viewer.indexOf('data-slot="artifact-content"')
   );
-  assert.match(
-    viewer,
-    /isCurrentVersion &&[\s\S]*?!isReadonly &&[\s\S]*?!isProtectedResultTable\(artifact.content\)/
-  );
+  assert.match(viewer, /isCurrentVersion && !isReadonly && \([\s\S]*?<Toolbar/);
 });
 
 test("compact artifact card keeps its keyboard outline inside the clipped hit area", () => {
@@ -1159,7 +1160,7 @@ test("workspace resize grip stretches across the pane with an 8px hit area and a
 test("Lessie composition uses neutral panes, purposeful mint and narrower chat beside broad artifacts", () => {
   const css = readFileSync("app/globals.css", "utf8");
   const scoped = css.slice(css.indexOf(".chat-workbench {"));
-  assert.match(scoped, /--background: oklch\(1 0 0\)/);
+  assert.match(scoped, /--background: #fcfcfb/);
   assert.match(scoped, /--workbench-selection:/);
   assert.doesNotMatch(scoped, /0\.00[1-8] (?:65|85)\)/);
   assert.match(
@@ -1168,7 +1169,7 @@ test("Lessie composition uses neutral panes, purposeful mint and narrower chat b
   );
   assert.match(
     readFileSync("app/_components/chat/messages.tsx", "utf8"),
-    /max-w-\[720px\]/
+    /max-w-\[800px\]/
   );
   assert.match(
     readFileSync("app/_components/chat/multimodal-input.tsx", "utf8"),
@@ -1225,11 +1226,11 @@ test("record details render actual labels and values first; original JSON and pr
   assert.match(html, /raw-call-id|original-time|raw retained/);
 });
 
-test("assistant sender label appears once at a contiguous assistant transition without changing message ownership", () => {
+test("formal chat avoids repeated assistant branding without changing canonical message ownership", () => {
   const message = readFileSync("app/_components/chat/message.tsx", "utf8");
   const messages = readFileSync("app/_components/chat/messages.tsx", "utf8");
-  assert.match(message, /data-testid="assistant-sender"/);
-  assert.match(message, /ChatNest/);
+  assert.doesNotMatch(message, /data-testid="assistant-sender"/);
+  assert.match(message, /data-role=\{message.role\}/);
   assert.match(
     messages,
     /showSender=\{index === 0 \|\| messages\[index - 1\]\?\.role !== "assistant"\}/

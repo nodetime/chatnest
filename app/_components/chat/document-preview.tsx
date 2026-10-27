@@ -2,14 +2,7 @@
 
 import equal from "fast-deep-equal";
 import { ArrowUpRight, LoaderCircle } from "lucide-react";
-import {
-  type MouseEvent,
-  memo,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-} from "react";
+import { type MouseEvent, memo, useCallback, useMemo, useRef } from "react";
 import useSWR from "swr";
 import { useActiveChat } from "@/app/_hooks/use-active-chat";
 import { useArtifact } from "@/app/_hooks/use-artifact";
@@ -56,22 +49,6 @@ export function DocumentPreview({
 
   const previewDocument = useMemo(() => documents?.at(-1), [documents]);
   const hitboxRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    const boundingBox = hitboxRef.current?.getBoundingClientRect();
-
-    if (artifact.documentId && boundingBox) {
-      setArtifact((currentArtifact) => ({
-        ...currentArtifact,
-        boundingBox: {
-          height: boundingBox.height,
-          left: boundingBox.x,
-          top: boundingBox.y,
-          width: boundingBox.width,
-        },
-      }));
-    }
-  }, [artifact.documentId, setArtifact]);
 
   // A historical entry must not inherit another document's generating state.
   const requestedId = result?.id ?? args?.id;

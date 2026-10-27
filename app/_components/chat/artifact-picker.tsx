@@ -84,12 +84,12 @@ export function ArtifactPicker({
         <DropdownMenuTrigger asChild>
           <Button
             aria-label="选择本次对话的产物"
-            className="h-7 max-w-full justify-start gap-2 px-2 text-sm font-medium"
+            className="h-6 max-w-full justify-start gap-1.5 px-0 text-[15px] font-semibold hover:bg-transparent"
             disabled={Boolean(blockedReason) || entries.length === 0}
             variant="ghost"
           >
             <span className="truncate">{title || "本次对话的产物"}</span>
-            <ChevronsUpDown className="size-3.5 shrink-0 text-muted-foreground" />
+            <ChevronsUpDown className="size-3 shrink-0 text-muted-foreground" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent

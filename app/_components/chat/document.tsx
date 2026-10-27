@@ -1,6 +1,8 @@
 import { memo, useCallback } from "react";
 import { toast } from "sonner";
 import { useArtifact } from "@/app/_hooks/use-artifact";
+import { useWorkspace } from "@/app/_hooks/use-workspace";
+import { openArtifactPreview } from "@/server/domain/document/stream-state";
 import type { ArtifactKind } from "./artifact";
 import { FileIcon, LoaderIcon, MessageIcon, PencilEditIcon } from "./icons";
 
@@ -34,6 +36,7 @@ function PureDocumentToolResult({
   isReadonly,
 }: DocumentToolResultProps) {
   const { setArtifact } = useArtifact();
+  const { show } = useWorkspace();
   const handleClick = useCallback(
     (event: React.MouseEvent<HTMLButtonElement>) => {
       if (isReadonly) {
@@ -52,17 +55,12 @@ function PureDocumentToolResult({
         width: rect.width,
       };
 
-      setArtifact((currentArtifact) => ({
-        boundingBox,
-        content: currentArtifact.content,
-        documentId: result.id,
-        isVisible: true,
-        kind: result.kind,
-        status: "idle",
-        title: result.title,
-      }));
+      setArtifact((currentArtifact) =>
+        openArtifactPreview(currentArtifact, result, boundingBox)
+      );
+      show("document");
     },
-    [isReadonly, result, setArtifact]
+    [isReadonly, result, setArtifact, show]
   );
 
   return (
@@ -87,7 +85,7 @@ function PureDocumentToolResult({
   );
 }
 
-export const DocumentToolResult = memo(PureDocumentToolResult, () => true);
+export const DocumentToolResult = memo(PureDocumentToolResult);
 
 type DocumentToolCallProps = {
   type: "create" | "update" | "request-suggestions";

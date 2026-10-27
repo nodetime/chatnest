@@ -41,10 +41,12 @@ export function projectToolIdentity(
   const input = record(part.input);
   const skill = loadedSkill(part);
   const nativeTitles: Record<string, string> = {
+    "tool-askUser": "补充信息",
     "tool-createResultTable": "生成表格产物",
     "tool-loadSkill": "加载技能",
     "tool-readAttachment": "读取文件",
     "tool-readSkillResource": "读取技能参考",
+    "tool-updateTodo": "更新任务进度",
   };
   const match = aliases.find((item) => item.alias === name);
   // Exact conventional operations only; unknown operations keep their real name.

@@ -9,7 +9,7 @@ export const artifactTypeLabels: Record<ArtifactKind, string> = {
 export function ArtifactTypeLabel({ kind }: { kind: ArtifactKind }) {
   return (
     <span
-      className="shrink-0 rounded border border-border/60 bg-secondary/60 px-1.5 py-0.5 text-[11px] font-medium leading-none text-muted-foreground"
+      className="shrink-0 text-[11px] font-normal leading-4 text-muted-foreground"
       data-testid="artifact-type"
     >
       {artifactTypeLabels[kind]}

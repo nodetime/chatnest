@@ -100,6 +100,7 @@ export const codeArtifact = new Artifact<"code", Metadata>({
     {
       description: "运行代码",
       icon: <PlayIcon size={18} />,
+      id: "run-code",
       label: "运行",
       onClick: async ({ content, setMetadata }) => {
         const runId = generateUUID();
@@ -248,9 +249,10 @@ export const codeArtifact = new Artifact<"code", Metadata>({
   content: codeArtifactContent,
   description: "生成代码；代码执行仅支持 Python。",
   initialize: ({ setMetadata }) => {
-    setMetadata({
+    setMetadata((metadata) => ({
+      ...metadata,
       outputs: [],
-    });
+    }));
   },
   kind: "code",
   onStreamPart: ({ streamPart, setArtifact }) => {

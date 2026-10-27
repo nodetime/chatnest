@@ -1,4 +1,8 @@
 import { and, asc, desc, eq, gt, sql } from "drizzle-orm";
+import {
+  type LibraryEntry,
+  projectLibraryEntry,
+} from "@/server/domain/document/library";
 import type { DocumentRepository } from "@/server/domain/document/repository";
 import {
   assertGenericDocumentDeletionAllowed,
@@ -16,7 +20,9 @@ import { chat, document, suggestion } from "./schema";
 
 // P3:SQL 自 queries.ts 原样下沉,行为零漂移(含 advisory lock 版本化写入与结果表保护)
 
-export const documentRepository: DocumentRepository = {
+export const documentRepository: DocumentRepository & {
+  listRecentByUser: (userId: string) => Promise<LibraryEntry[]>;
+} = {
   async deleteAfterTimestamp({ id, timestamp }) {
     try {
       return await db.transaction(async (tx) => {
@@ -75,6 +81,23 @@ export const documentRepository: DocumentRepository = {
     } catch (error) {
       throw new ChatbotError("bad_request:database", { cause: error });
     }
+  },
+  async listRecentByUser(userId) {
+    const latest = db
+      .selectDistinctOn([document.id])
+      .from(document)
+      .where(eq(document.userId, userId))
+      .orderBy(document.id, desc(document.createdAt))
+      .as("latest_documents");
+    const rows = await db
+      .select()
+      .from(latest)
+      .orderBy(desc(latest.createdAt))
+      .limit(50);
+    return rows.flatMap((row) => {
+      const entry = projectLibraryEntry(row);
+      return entry ? [entry] : [];
+    });
   },
 
   async save({ id, title, kind, content, userId }) {

@@ -5,6 +5,7 @@ import { toolNeedsAttention } from "./tool-activity-state";
 type Part = ChatMessage["parts"][number];
 const specialTools = new Set([
   "getWeather",
+  "askUser",
   "createDocument",
   "updateDocument",
   "requestSuggestions",
