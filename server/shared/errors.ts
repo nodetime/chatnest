@@ -9,6 +9,7 @@ export type ErrorType =
 export type Surface =
   | "chat"
   | "attachment"
+  | "capability"
   | "configuration"
   | "auth"
   | "api"
@@ -29,6 +30,7 @@ export const visibilityBySurface: Record<Surface, ErrorVisibility> = {
   api: "response",
   attachment: "response",
   auth: "response",
+  capability: "response",
   chat: "response",
   configuration: "response",
   database: "log",
@@ -46,7 +48,9 @@ export class ChatbotError extends Error {
 
   constructor(errorCode: ErrorCode, cause?: string | ErrorOptions) {
     const message =
-      errorCode.endsWith(":attachment") && typeof cause === "string"
+      (errorCode.endsWith(":attachment") ||
+        errorCode.endsWith(":capability")) &&
+      typeof cause === "string"
         ? cause
         : getMessageByErrorCode(errorCode);
     const options = typeof cause === "string" ? undefined : cause;
@@ -92,6 +96,9 @@ export function getMessageByErrorCode(errorCode: ErrorCode): string {
   }
 
   switch (errorCode) {
+    case "bad_request:capability":
+      return "本次任务的能力范围已变化，请重新选择后发送消息。";
+
     case "bad_request:api":
       return "The request couldn't be processed. Please check your input and try again.";
 

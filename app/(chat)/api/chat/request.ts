@@ -2,6 +2,7 @@ import { createUIMessageStreamResponse, generateId } from "ai";
 import { after } from "next/server";
 import { createResumableStreamContext } from "resumable-stream";
 import type { sendMessage } from "@/server/application/chat/send-message";
+import { SettingsError } from "@/server/application/mcp/security";
 import { getUseCases } from "@/server/composition";
 import { getEnv } from "@/server/shared/env";
 import { ChatbotError } from "@/server/shared/errors";
@@ -68,6 +69,16 @@ function getStreamContext() {
 export function mapChatError(error: unknown, request: Request): Response {
   if (error instanceof UploadError) {
     return uploadErrorResponse(error);
+  }
+  if (error instanceof SettingsError) {
+    return Response.json(
+      {
+        cause: error.message,
+        code: "bad_request:capability",
+        message: error.message,
+      },
+      { status: error.status }
+    );
   }
   if (error instanceof ChatbotError) {
     return error.toResponse();

@@ -1,6 +1,7 @@
 import { convertToUIMessages } from "@/app/_lib/utils";
 import { auth } from "@/app/(auth)/auth";
 import { getUseCases } from "@/server/composition";
+import { redactPersonalSkillOutputs } from "@/server/domain/capability/projection";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -36,7 +37,9 @@ export async function GET(request: Request) {
 
   return Response.json({
     isReadonly,
-    messages: convertToUIMessages(messages),
+    messages: convertToUIMessages(
+      isReadonly ? redactPersonalSkillOutputs(messages) : messages
+    ),
     title: chat.title,
     userId: chat.userId,
     visibility: chat.visibility,

@@ -2,11 +2,10 @@ import { headers } from "next/headers";
 import { auth } from "@/app/(auth)/auth";
 import { getModelConnection } from "@/server/application/ai/model-connection";
 import { withModelSettings } from "@/server/application/ai/model-settings/runtime";
+import { readUserCatalog } from "@/server/application/capability/runtime";
 import { capabilityServers } from "@/server/application/mcp/projection";
-import { readRuntimeConfig } from "@/server/application/mcp/runtime-config";
 import { isAdmin, managementReady } from "@/server/application/mcp/security";
 import { uploadsAvailable } from "@/server/application/uploads/service";
-import { getUseCases } from "@/server/composition";
 import { getLogger } from "@/server/shared/logger";
 import { runWithTraceId } from "@/server/shared/request-context";
 
@@ -23,10 +22,7 @@ async function handleAgentSummary() {
   }
   getLogger("agent").info({ userId: user.id }, "agent 能力摘要请求");
   try {
-    const [config, skills] = await Promise.all([
-      readRuntimeConfig(),
-      getUseCases().agent.discoverSkills(),
-    ]);
+    const { config, skills } = await readUserCatalog(user);
     return await withModelSettings(async () =>
       Response.json(
         {
@@ -39,11 +35,21 @@ async function handleAgentSummary() {
           modelProvider: getModelConnection().provider,
           servers: capabilityServers(config.servers),
           skills: skills.map(
-            ({ name, description, displayName, shortDescription }) => ({
+            ({
+              id,
+              source,
+              name,
               description,
               displayName,
+              shortDescription,
+            }) => ({
+              description,
+              displayName,
+              enabled: true,
+              id: id ?? `builtin:${name}`,
               name,
               shortDescription,
+              source: source ?? "builtin",
             })
           ),
           uploadsConfigured: await uploadsAvailable(),

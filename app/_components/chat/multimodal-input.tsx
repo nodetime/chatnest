@@ -68,10 +68,10 @@ import {
 } from "../ai-elements/prompt-input";
 import { Button } from "../ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
-import { AgentLibrary } from "./agent-library";
 import { ComposerMenu } from "./composer-menu";
 import { StopIcon } from "./icons";
 import { PreviewAttachment } from "./preview-attachment";
+import { TaskCapabilities } from "./task-capabilities";
 import type { VisibilityType } from "./visibility-selector";
 
 function setCookie(name: string, value: string) {
@@ -595,11 +595,7 @@ function PureMultimodalInput({
               home={home}
               selectedModelId={selectedModelId}
             />
-            <AgentLibrary
-              compact
-              label={home ? "工具" : undefined}
-              tab="tools"
-            />
+            <TaskCapabilities />
             <span className={home ? "ml-auto" : undefined}>
               <ModelSelectorCompact
                 onModelChange={onModelChange}

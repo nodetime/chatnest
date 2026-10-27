@@ -332,3 +332,74 @@ export const modelSettings = pgTable(
     check("model_settings_revision", sql`${table.revision} > 0`),
   ]
 );
+
+// 个人能力配置表：按账号及配置种类隔离保存加密 MCP 连接或技能正文。
+export const capabilitySettings = pgTable(
+  "capability_settings",
+  {
+    // 绑定属主、种类及修订的 AES-GCM 密文。
+    encrypted: text("encrypted").notNull(),
+    // 配置种类：mcp 连接或 skills 个人技能。
+    kind: text("kind").notNull(),
+    // 单调递增修订；删除能力也保留配置行，防止旧授权复活。
+    revision: integer("revision").notNull(),
+    // 最近修改时间。
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    // 配置属主账号；仅服务端会话身份可访问。
+    userId: uuid("user_id").notNull(),
+  },
+  (table) => [
+    // 联合主键：每个账号每种配置仅有一行。
+    primaryKey({
+      columns: [table.userId, table.kind],
+      name: "capability_settings_pk",
+    }),
+    // 属主外键：账号删除时移除个人密文。
+    foreignKey({
+      columns: [table.userId],
+      foreignColumns: [user.id],
+      name: "capability_settings_user_fk",
+    }).onDelete("cascade"),
+    // 种类约束：只接收明确支持的个人能力聚合。
+    check("capability_settings_kind", sql`${table.kind} in ('mcp', 'skills')`),
+    // 修订约束：持久修订必须为正整数。
+    check("capability_settings_revision", sql`${table.revision} > 0`),
+  ]
+);
+
+// 会话能力范围表：服务端保存本轮选择和授权指纹，审批续跑不得扩大范围。
+export const chatCapabilityScope = pgTable(
+  "chat_capability_scopes",
+  {
+    // 所属会话，也是范围表主键。
+    chatId: uuid("chat_id").notNull(),
+    // 已选择能力的授权指纹；不包含凭据明文。
+    grants: json("grants").notNull(),
+    // 当前范围修订；新用户轮次调整后递增。
+    revision: integer("revision").notNull(),
+    // 无凭据的连接和技能稳定标识选择。
+    selection: json("selection").notNull(),
+    // 最近绑定本轮范围的时间。
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    // 会话属主；仓储事务再次核实真实 chats.user_id。
+    userId: uuid("user_id").notNull(),
+  },
+  (table) => [
+    // 主键：每个会话最多一份当前能力范围。
+    primaryKey({ columns: [table.chatId], name: "chat_capability_scopes_pk" }),
+    // 会话外键：会话删除时清理范围。
+    foreignKey({
+      columns: [table.chatId],
+      foreignColumns: [chat.id],
+      name: "chat_capability_scopes_chat_fk",
+    }).onDelete("cascade"),
+    // 属主外键：账号删除时清理范围。
+    foreignKey({
+      columns: [table.userId],
+      foreignColumns: [user.id],
+      name: "chat_capability_scopes_user_fk",
+    }).onDelete("cascade"),
+    // 修订约束：范围修订必须为正整数。
+    check("chat_capability_scopes_revision", sql`${table.revision} > 0`),
+  ]
+);

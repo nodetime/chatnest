@@ -9,8 +9,11 @@ import {
 } from "./security";
 import type { createSettingsService } from "./service";
 
-async function readBody(request: Request) {
-  if (Number(request.headers.get("content-length")) > MAX_BODY_BYTES) {
+export async function readSettingsBody(
+  request: Request,
+  maxBytes = MAX_BODY_BYTES
+) {
+  if (Number(request.headers.get("content-length")) > maxBytes) {
     throw new SettingsError(413, "配置内容过大。");
   }
   const reader = request.body?.getReader();
@@ -27,7 +30,7 @@ async function readBody(request: Request) {
         break;
       }
       size += value.length;
-      if (size > MAX_BODY_BYTES) {
+      if (size > maxBytes) {
         throw new SettingsError(413, "配置内容过大。");
       }
       chunks.push(value);
@@ -42,6 +45,7 @@ export function createManagementHandler({
   file,
   service,
   env = process.env,
+  authorize = authorizeManagement,
 }: {
   session: () => Promise<{ id?: string; type?: string } | null | undefined>;
   file: () => Promise<ServerConfig[]>;
@@ -50,11 +54,12 @@ export function createManagementHandler({
     "get" | "test" | "mutate"
   >;
   env?: Environment;
+  authorize?: typeof authorizeManagement;
 }) {
   return async (request: Request) => {
     const headers = { "Cache-Control": "private, no-store" };
     try {
-      const userId = authorizeManagement(
+      const userId = authorize(
         await session(),
         request,
         request.method !== "GET",
@@ -63,7 +68,7 @@ export function createManagementHandler({
       if (request.method === "GET") {
         return Response.json(await service.get(await file()), { headers });
       }
-      const action = actionSchema.parse(await readBody(request));
+      const action = actionSchema.parse(await readSettingsBody(request));
       const data =
         action.action === "test"
           ? await service.test(action)

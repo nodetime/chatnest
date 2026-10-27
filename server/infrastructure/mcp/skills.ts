@@ -5,6 +5,10 @@ import matter from "gray-matter";
 import { z } from "zod";
 
 export type Skill = {
+  id?: string;
+  source?: "builtin" | "personal";
+  markdown?: string;
+  authorizationVersion?: string;
   name: string;
   description: string;
   directory: string;
@@ -60,6 +64,12 @@ export async function discoverSkills(
 }
 
 export async function readSkillFile(skill: Skill, resource: string) {
+  if (skill.markdown !== undefined) {
+    if (resource !== "SKILL.md") {
+      throw new Error("个人技能仅包含 SKILL.md 文本，不支持资源或脚本。");
+    }
+    return skill.markdown;
+  }
   if (
     !resource ||
     path.isAbsolute(resource) ||
@@ -82,7 +92,10 @@ export function buildSkillsPrompt(skills: Skill[]) {
   return `Available skills (metadata only):\n${skills.map((skill) => `- ${skill.name}${skill.displayName ? ` (${skill.displayName})` : ""}: ${skill.description}`).join("\n")}\nWhen relevant, call loadSkill before doing the specialized work. Read referenced resources only as needed. Explain the chosen method briefly in the user's language using its display name. Progress notes must describe actual actions; never invent a fixed progress percentage or a background task. A skill teaches a method; it does not grant tools, permissions, or script execution. Do not pretend unavailable capabilities exist.`;
 }
 
-export function createSkillTools(skills: Skill[]) {
+export function createSkillTools(
+  skills: Skill[],
+  authorize?: (skill: Skill) => Promise<void>
+) {
   const getSkill = (name: string) => {
     const skill = skills.find((item) => item.name === name);
     if (!skill) {
@@ -90,6 +103,11 @@ export function createSkillTools(skills: Skill[]) {
     }
     return skill;
   };
+  async function read(name: string, resource: string) {
+    const skill = getSkill(name);
+    await authorize?.(skill);
+    return readSkillFile(skill, resource);
+  }
   return {
     loadSkill: tool({
       description:
@@ -98,8 +116,7 @@ export function createSkillTools(skills: Skill[]) {
         description:
           getSkill(name).shortDescription ?? getSkill(name).description,
         displayName: getSkill(name).displayName ?? name,
-        instructions: matter(await readSkillFile(getSkill(name), "SKILL.md"))
-          .content,
+        instructions: matter(await read(name, "SKILL.md")).content,
         name,
       }),
       inputSchema: z.object({ name: z.string() }),
@@ -108,7 +125,7 @@ export function createSkillTools(skills: Skill[]) {
       description:
         "Read a text reference bundled with an available skill. Does not execute scripts.",
       execute: async ({ name, resource }) => ({
-        content: await readSkillFile(getSkill(name), resource),
+        content: await read(name, resource),
         name,
         resource,
       }),

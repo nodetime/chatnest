@@ -89,7 +89,7 @@ test("exact catalog aliases provide friendly actions without hiding unknown or d
     const catalog=[{alias:'opaque_hash',name:'search.web',serverName:'Provider'}];
     assert.equal(projectToolIdentity(part,catalog).title,'搜索资料');
     assert.equal(projectToolIdentity({...part,toolName:'other_hash'},catalog).title,'other_hash');
-    assert.equal(projectToolIdentity(part,[{...catalog[0],name:'research_delete'}]).title,'Provider · research_delete');
+    assert.equal(projectToolIdentity(part,[{...catalog[0],name:'research_delete'}]).title,'使用Provider');assert.equal(projectToolIdentity(part,[{...catalog[0],name:'research_delete'}]).nativeName,'research_delete');
     assert.equal(projectToolIdentity({...part,type:'tool-loadSkill',input:{name:'slug'},output:{name:'slug',displayName:'Human skill',description:'Purpose',instructions:'private'}}).context,undefined);
     const resource={...part,type:'tool-readSkillResource',input:{name:'slug',resource:'guide.md'}};
     assert.equal(projectToolIdentity(resource).context,'guide.md');

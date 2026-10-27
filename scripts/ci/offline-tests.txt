@@ -48,3 +48,12 @@ server/domain/message/agent-interactions.test.ts
 server/application/chat/agent-interaction-tools.test.ts
 app/_components/chat/agent-interactions-ui.test.ts
 server/application/uploads/upload-lifecycle-db.test.ts
+app/_components/chat/dynamic-ask.test.ts
+app/_components/chat/personal-capabilities-ui.test.ts
+server/application/capability/api.test.ts
+server/application/capability/personal-skills.test.ts
+server/application/capability/runtime.test.ts
+server/application/capability/capability-db.test.ts
+server/application/mcp/personal-capabilities.test.ts
+server/domain/capability/projection.test.ts
+app/(chat)/api/chat/request.test.ts

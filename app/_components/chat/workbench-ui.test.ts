@@ -20,14 +20,15 @@ function renderActivity(
   return clientScript(`
     const React = require('react');
     const { renderToStaticMarkup } = require('react-dom/server');
-    const { SWRConfig } = require('swr');
+    const { SWRConfig, unstable_serialize } = require('swr');
+    const {SessionContext}=require('next-auth/react');
     const { ToolActivity } = require('./app/_components/chat/tool-activity.tsx');
     global.fetch = () => { throw new Error('Unexpected network access'); };
     const info = { skills: [{ name: 'fixture-skill', displayName: '调查方法', shortDescription: '技能说明只在详情中' }], servers: [{toolAliases:[{alias:'fixture__search',name:'search',serverName:'Fixture'}]}] };
-    const value = { provider: () => new Map(), fallback: { '/api/agent': info }, revalidateOnMount: false, revalidateOnFocus: false };
-    process.stdout.write(renderToStaticMarkup(React.createElement(SWRConfig, { value }, React.createElement(ToolActivity, {
+    const value = { provider: () => new Map(), fallback: { [unstable_serialize(['/api/agent','fixture-owner'])]: info }, revalidateOnMount: false, revalidateOnFocus: false };
+    process.stdout.write(renderToStaticMarkup(React.createElement(SessionContext.Provider,{value:{data:{user:{id:'fixture-owner'}},status:'authenticated'}},React.createElement(SWRConfig, { value }, React.createElement(ToolActivity, {
       part: ${JSON.stringify(part)}, approve: () => { throw new Error('SSR must not approve'); }, isReadonly: ${isReadonly}, isRunning: ${isRunning}
-    }))));
+    })))));
   `);
 }
 
