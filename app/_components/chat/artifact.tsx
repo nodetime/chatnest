@@ -110,23 +110,41 @@ function PureArtifact({
   const userScrolledArtifact = useRef(false);
   const [isContentDirty, setIsContentDirty] = useState(false);
   const [saveError, setSaveError] = useState("");
-  const activeIdRef = useRef(artifact.documentId);
-  activeIdRef.current = artifact.documentId;
+  const activeScopeRef = useRef({ chatId, documentId: artifact.documentId });
+  if (
+    activeScopeRef.current.chatId !== chatId ||
+    activeScopeRef.current.documentId !== artifact.documentId
+  ) {
+    activeScopeRef.current = { chatId, documentId: artifact.documentId };
+  }
+  const scope = activeScopeRef.current;
+  // SWR's bound mutator follows the latest key. Guard async editor/initializer
+  // callbacks before forwarding so they cannot write another file's metadata.
+  const setScopedMetadata = useCallback<typeof setMetadata>(
+    (...args) => {
+      if (activeScopeRef.current !== scope) {
+        return Promise.resolve();
+      }
+      return setMetadata(...args);
+    },
+    [scope, setMetadata]
+  );
   const loadedIdRef = useRef("");
   const editRevisionRef = useRef(0);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Reset transient editor state for each document/chat visit.
   useEffect(() => {
-    activeIdRef.current = artifact.documentId;
     setIsContentDirty(false);
     setSaveError("");
     setDocument(null);
+    setMode("edit");
     setCurrentVersionIndex(-1);
     return () => {
       if (saveTimerRef.current) {
         clearTimeout(saveTimerRef.current);
       }
     };
-  }, [artifact.documentId]);
+  }, [scope]);
 
   useEffect(() => {
     if (artifact.status !== "streaming") {
@@ -183,6 +201,7 @@ function PureArtifact({
         kind: ArtifactKind;
         title: string;
         chatId: string;
+        scope: typeof scope;
       },
       revision: number
     ) => {
@@ -212,7 +231,7 @@ function PureArtifact({
           { revalidate: false }
         );
         if (
-          activeIdRef.current === snapshot.id &&
+          activeScopeRef.current === snapshot.scope &&
           editRevisionRef.current === revision
         ) {
           setIsContentDirty(false);
@@ -220,7 +239,7 @@ function PureArtifact({
         }
       } catch (error) {
         if (
-          activeIdRef.current === snapshot.id &&
+          activeScopeRef.current === snapshot.scope &&
           editRevisionRef.current === revision
         ) {
           setIsContentDirty(true);
@@ -235,6 +254,7 @@ function PureArtifact({
   const saveContent = useCallback(
     (updatedContent: string, debounce: boolean) => {
       if (
+        activeScopeRef.current !== scope ||
         isReadonly ||
         (documents?.length && currentVersionIndex !== documents.length - 1) ||
         isProtectedResultTable(artifact.content)
@@ -254,6 +274,7 @@ function PureArtifact({
         chatId,
         id: artifact.documentId,
         kind: artifact.kind,
+        scope,
         title: artifact.title,
       };
       if (saveTimerRef.current) {
@@ -275,14 +296,22 @@ function PureArtifact({
       documents,
       handleContentChange,
       isReadonly,
+      scope,
       setArtifact,
     ]
   );
+  useEffect(() => {
+    setScopedMetadata((current: Record<string, unknown> | null) => ({
+      ...current,
+      documentPendingChanges: isContentDirty,
+    }));
+  }, [isContentDirty, setScopedMetadata]);
+
   const handleResultTablePendingChange = useCallback(
     (pending: boolean) => {
       // A previous table can finish/clean up after a different file is opened.
-      // setMetadata is already scoped to this callback's original document ID.
-      if (activeIdRef.current !== artifact.documentId) {
+      // Bound SWR metadata mutators follow the latest key; check viewer identity first.
+      if (activeScopeRef.current !== scope) {
         return;
       }
       setMetadata((current: Record<string, unknown> | null) => ({
@@ -290,20 +319,23 @@ function PureArtifact({
         resultTablePendingChanges: pending,
       }));
     },
-    [artifact.documentId, setMetadata]
+    [scope, setMetadata]
   );
   const handleResultTableSaved = useCallback(
     async (content: string) => {
       const id = artifact.documentId;
+      if (activeScopeRef.current !== scope) {
+        return;
+      }
       await mutateDocuments();
-      if (activeIdRef.current === id) {
+      if (activeScopeRef.current === scope) {
         setArtifact((current) =>
           current.documentId === id ? { ...current, content } : current
         );
         setCurrentVersionIndex(-1);
       }
     },
-    [artifact.documentId, mutateDocuments, setArtifact]
+    [artifact.documentId, mutateDocuments, scope, setArtifact]
   );
 
   const getDocumentContentById = useCallback(
@@ -311,17 +343,17 @@ function PureArtifact({
       if (!documents) {
         return "";
       }
-      if (!documents[index]) {
+      if (!documents[index] || documents[index].id !== artifact.documentId) {
         return "";
       }
       return documents[index].content ?? "";
     },
-    [documents]
+    [artifact.documentId, documents]
   );
 
   const handleVersionChange = useCallback(
     (type: "next" | "prev" | "toggle" | "latest") => {
-      if (!documents) {
+      if (activeScopeRef.current !== scope || !documents) {
         return;
       }
 
@@ -345,7 +377,7 @@ function PureArtifact({
         setCurrentVersionIndex((index) => index + 1);
       }
     },
-    [currentVersionIndex, documents]
+    [currentVersionIndex, documents, scope]
   );
 
   const handleArtifactScroll = useCallback(() => {
@@ -377,10 +409,10 @@ function PureArtifact({
     if (artifact.documentId !== "init" && artifactDefinition.initialize) {
       artifactDefinition.initialize({
         documentId: artifact.documentId,
-        setMetadata,
+        setMetadata: setScopedMetadata,
       });
     }
-  }, [artifact.documentId, artifactDefinition, setMetadata]);
+  }, [artifact.documentId, artifactDefinition, setScopedMetadata]);
 
   if (!artifact.isVisible && !isMobile) {
     return (
@@ -417,35 +449,36 @@ function PureArtifact({
   const renderHeader = (controls?: ReactNode) => (
     <WorkspaceHeader
       actions={
-        isCurrentVersion &&
-        !isReadonly &&
-        !isProtectedResultTable(artifact.content) && (
+        !tableOwnsHeader && (
           <div className="flex shrink-0 items-center gap-0.5">
             <ArtifactActions
-              artifact={artifact}
+              artifact={{ ...artifact, content: displayedContent }}
               currentVersionIndex={currentVersionIndex}
               handleVersionChange={handleVersionChange}
               isCurrentVersion={isCurrentVersion}
+              isReadonly={isReadonly || !isCurrentVersion}
               layout="header"
               metadata={metadata}
               mode={mode}
-              setMetadata={setMetadata}
+              setMetadata={setScopedMetadata}
             />
-            <Toolbar
-              artifactKind={artifact.kind}
-              consoleError={consoleError}
-              documentId={artifact.documentId}
-              sendMessage={sendMessage}
-              setMessages={setMessages}
-              status={status}
-              stop={stop}
-            />
+            {isCurrentVersion && !isReadonly && (
+              <Toolbar
+                artifactKind={artifact.kind}
+                consoleError={consoleError}
+                documentId={artifact.documentId}
+                sendMessage={sendMessage}
+                setMessages={setMessages}
+                status={status}
+                stop={stop}
+              />
+            )}
           </div>
         )
       }
       controls={controls}
     >
-      <div className="flex min-w-0 flex-col items-start gap-y-0.5">
+      <div className="flex min-w-0 flex-col items-start justify-center gap-1">
         {!embedded && <ArtifactCloseButton />}
         <div
           className="flex min-w-0 items-center gap-2"
@@ -463,9 +496,9 @@ function PureArtifact({
             status={artifact.status}
             title={artifact.title}
           />
-          {!tableOwnsHeader && <ArtifactTypeLabel kind={artifact.kind} />}
         </div>
-        <div className="flex min-w-0 items-center gap-2 px-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <ArtifactTypeLabel kind={artifact.kind} />
           {saveError ? (
             <span className="truncate text-xs text-destructive" role="alert">
               {saveError}
@@ -526,7 +559,7 @@ function PureArtifact({
           onResultTableSaved={handleResultTableSaved}
           onSaveContent={saveContent}
           renderHeader={renderHeader}
-          setMetadata={setMetadata}
+          setMetadata={setScopedMetadata}
           status={artifact.status}
           suggestions={[]}
           title={artifact.title}
@@ -559,7 +592,7 @@ function PureArtifact({
           x: 0,
           y: 0,
         }}
-        className="fixed inset-0 z-50 flex h-dvh flex-col overflow-hidden bg-sidebar"
+        className="fixed inset-0 z-50 flex h-dvh flex-col overflow-hidden bg-background"
         data-testid="artifact"
         exit={{ opacity: 0, scale: 0.95 }}
         initial={{
@@ -582,7 +615,7 @@ function PureArtifact({
       className={
         embedded
           ? "flex h-full w-full min-h-0 min-w-0 flex-col overflow-hidden rounded-none border-0 bg-background shadow-none"
-          : "flex h-dvh w-[60%] shrink-0 flex-col overflow-hidden border-l border-border/50 bg-sidebar transition-[width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]"
+          : "flex h-dvh w-[60%] shrink-0 flex-col overflow-hidden border-l border-border/60 bg-background transition-[width] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]"
       }
       data-testid="artifact"
     >

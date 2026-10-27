@@ -24,14 +24,6 @@ import { AgentLibrary } from "./agent-library";
 import { LoaderIcon } from "./icons";
 import { toast } from "./toast";
 
-function emailToHue(email: string): number {
-  let hash = 0;
-  for (const char of email) {
-    hash = char.charCodeAt(0) + ((hash << 5) - hash);
-  }
-  return Math.abs(hash) % 360;
-}
-
 export function SidebarUserNav({
   user,
   isPlatformAdmin = false,
@@ -89,15 +81,14 @@ export function SidebarUserNav({
                 </SidebarMenuButton>
               ) : (
                 <SidebarMenuButton
+                  aria-label="个人账户"
                   className="h-8 px-2 rounded-lg bg-transparent text-sidebar-foreground/70 transition-colors duration-150 hover:text-sidebar-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                   data-testid="user-nav-button"
+                  tooltip="个人账户"
                 >
-                  <div
-                    className="size-5 shrink-0 rounded-full ring-1 ring-sidebar-border/50"
-                    style={{
-                      background: `linear-gradient(135deg, oklch(0.35 0.08 ${emailToHue(user.email ?? "")}), oklch(0.25 0.05 ${emailToHue(user.email ?? "") + 40}))`,
-                    }}
-                  />
+                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--workbench-selection)] text-xs font-medium text-foreground">
+                    {(user.email?.[0] ?? "C").toUpperCase()}
+                  </span>
                   <span
                     className="truncate text-[13px]"
                     data-testid="user-email"
@@ -109,7 +100,7 @@ export function SidebarUserNav({
               )}
             </DropdownMenuTrigger>
             <DropdownMenuContent
-              className="w-(--radix-popper-anchor-width) rounded-lg border border-border/60 bg-card/95 backdrop-blur-xl shadow-[var(--shadow-float)]"
+              className="w-56 rounded-xl border border-border/60 bg-card/95 backdrop-blur-xl shadow-[var(--shadow-float)]"
               data-testid="user-nav-menu"
               side="top"
             >

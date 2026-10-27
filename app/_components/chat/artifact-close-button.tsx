@@ -1,18 +1,14 @@
 import { memo, useCallback } from "react";
-import { initialArtifactData, useArtifact } from "@/app/_hooks/use-artifact";
+import { useArtifact } from "@/app/_hooks/use-artifact";
 import { CrossIcon } from "./icons";
 
 function PureArtifactCloseButton() {
   const { setArtifact } = useArtifact();
   const handleClick = useCallback(() => {
-    setArtifact((currentArtifact) =>
-      currentArtifact.status === "streaming"
-        ? {
-            ...currentArtifact,
-            isVisible: false,
-          }
-        : { ...initialArtifactData, status: "idle" }
-    );
+    setArtifact((currentArtifact) => ({
+      ...currentArtifact,
+      isVisible: false,
+    }));
   }, [setArtifact]);
 
   return (

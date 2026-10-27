@@ -5,14 +5,21 @@ import {
   ConversationScrollButton,
 } from "@/app/_components/ai-elements/conversation";
 import type { ChatMessage } from "@/app/_lib/types";
+import { hasPendingInteraction } from "@/server/domain/message/agent-interactions";
 import { prepareRegeneration } from "@/server/domain/message/message-turn";
 import type { Vote } from "@/server/domain/vote/types";
+import { AgentPauseNotice } from "./agent-pause-notice";
+import type { AnswerAskUser } from "./ask-user";
 import { useDataStream } from "./data-stream-provider";
 import { Greeting } from "./greeting";
 import { PreviewMessage, ThinkingMessage } from "./message";
 import { RuntimeRecovery } from "./runtime-recovery";
 
 type MessagesProps = {
+  agentPaused?: boolean;
+  onContinue?: () => Promise<void>;
+  answerAskUser?: AnswerAskUser;
+  reviseAskUser?: AnswerAskUser;
   addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
   chatId: string;
   status: UseChatHelpers<ChatMessage>["status"];
@@ -31,6 +38,10 @@ type MessagesProps = {
 
 function PureMessages({
   addToolApprovalResponse,
+  answerAskUser,
+  reviseAskUser,
+  agentPaused = false,
+  onContinue,
   chatId,
   status,
   votes,
@@ -55,6 +66,7 @@ function PureMessages({
   const renderMessage = (message: ChatMessage, index: number) => (
     <PreviewMessage
       addToolApprovalResponse={addToolApprovalResponse}
+      answerAskUser={answerAskUser}
       canApprove={!isReadonly && !isActive && index === messages.length - 1}
       chatId={chatId}
       isLoading={isActive && messages.length - 1 === index}
@@ -72,6 +84,7 @@ function PureMessages({
       }
       regenerate={regenerate}
       requiresScrollPadding={false}
+      reviseAskUser={reviseAskUser}
       setMessages={setMessages}
       showSender={index === 0 || messages[index - 1]?.role !== "assistant"}
       vote={
@@ -81,20 +94,20 @@ function PureMessages({
   );
 
   return (
-    <div className="relative flex-1 bg-background">
+    <div className="relative min-h-0 flex-1 bg-background">
       {messages.length === 0 && !isLoading && (
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
           <Greeting />
         </div>
       )}
       <Conversation className="absolute inset-0 min-h-0" key={chatId}>
-        <ConversationContent className="mx-auto min-h-full w-full min-w-0 max-w-[720px] gap-5 px-4 py-6 sm:px-6 md:gap-6">
+        <ConversationContent className="mx-auto min-h-full w-full min-w-0 max-w-[800px] gap-5 px-4 py-6 sm:px-6 md:gap-6">
           {/* A canonical message always owns its tool subtree. Appending answer
               text must not reparent an open details dialog or its focus target. */}
           {messages.map(renderMessage)}
           {sendMessage && latestMessage?.role === "assistant" && (
             <RuntimeRecovery
-              isLatest
+              isLatest={!agentPaused}
               isReadonly={isReadonly}
               key={`${chatId}:${latestMessage.id}:recovery`}
               message={latestMessage}
@@ -107,6 +120,13 @@ function PureMessages({
             <ThinkingMessage />
           )}
 
+          {!!agentPaused && !isReadonly && !!onContinue && (
+            <AgentPauseNotice
+              key={chatId}
+              onContinue={onContinue}
+              pending={hasPendingInteraction(messages)}
+            />
+          )}
           <div className="h-2 shrink-0" />
         </ConversationContent>
         <ConversationScrollButton

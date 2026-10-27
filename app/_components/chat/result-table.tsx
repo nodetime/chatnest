@@ -133,8 +133,8 @@ export function ResultTableView({
           // record anchor and user-resized widths retain their own geometry.
           width:
             index > 0 && index === visibleColumns.length - 1
-              ? `minmax(${column.path.includes("title") ? 220 : 140}px, 1fr)`
-              : column.path.includes("title")
+              ? `minmax(${index === 0 ? 220 : 140}px, 1fr)`
+              : index === 0
                 ? 220
                 : 140,
         })),

@@ -23,7 +23,7 @@ test("home button keeps its new-chat action with visible and accessible ChatNest
   const sidebar = readFileSync("app/_components/chat/app-sidebar.tsx", "utf8");
   assert.match(
     sidebar,
-    /<button\s+aria-label="ChatNest 首页"[^>]*onClick=\{handleNew\}[^>]*>[\s\S]*?\sChatNest\s*<\/button>/
+    /<button\s+aria-label="ChatNest 首页"[^>]*onClick=\{handleNew\}[^>]*>[\s\S]*?<span>ChatNest<\/span>[\s\S]*?<\/button>/
   );
 });
 

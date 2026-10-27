@@ -1,5 +1,6 @@
 "use client";
-import { Globe, ImagePlus, ListPlus, Plus, Settings2 } from "lucide-react";
+import { Globe, ImagePlus, Paperclip, Settings2 } from "lucide-react";
+import { useSession } from "next-auth/react";
 import { type RefObject, useCallback, useState } from "react";
 import useSWR from "swr";
 import { Button } from "@/app/_components/ui/button";
@@ -16,17 +17,18 @@ import { useAgentInfo } from "@/app/_hooks/use-agent-info";
 import { fetcher } from "@/app/_lib/utils";
 import type { ModelCapabilities } from "@/server/domain/model/models";
 import { AgentLibrary } from "./agent-library";
-import { TaskDialog } from "./task-dialog";
 import { UploadUnavailableHint } from "./upload-unavailable-hint";
 
 export function ComposerMenu({
   fileInputRef,
   selectedModelId,
   busy,
+  home = false,
 }: {
   fileInputRef: RefObject<HTMLInputElement | null>;
   selectedModelId: string;
   busy: boolean;
+  home?: boolean;
 }) {
   const { searchMode, setSearchMode } = useActiveChat();
   const { data: info } = useAgentInfo();
@@ -37,7 +39,10 @@ export function ComposerMenu({
   );
   const capabilities: Record<string, ModelCapabilities> | undefined =
     models?.capabilities ?? models;
-  const canUpload = Boolean(info?.uploadsConfigured);
+  const { data: session } = useSession();
+  const canUpload = Boolean(
+    info?.uploadsConfigured && session?.user.type === "regular"
+  );
   const canSearch = Boolean(
     info?.modelConfigured &&
       capabilities?.[selectedModelId]?.tools &&
@@ -48,8 +53,6 @@ export function ComposerMenu({
       )
   );
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [taskOpen, setTaskOpen] = useState(false);
-  const openTask = useCallback(() => setTaskOpen(true), []);
   const openSettings = useCallback(() => setSettingsOpen(true), []);
   const addImage = useCallback(
     () => fileInputRef.current?.click(),
@@ -65,12 +68,17 @@ export function ComposerMenu({
         <DropdownMenuTrigger asChild>
           <Button
             aria-label="添加附件和工具"
-            className="size-9 rounded-full text-foreground hover:bg-secondary"
+            className={
+              home
+                ? "h-8 gap-2 rounded-lg px-2 text-xs text-muted-foreground"
+                : "size-8 rounded-lg text-muted-foreground hover:bg-secondary"
+            }
             data-testid="composer-menu"
-            size="icon"
+            size={home ? "sm" : "icon"}
             variant="ghost"
           >
-            <Plus className="size-5" />
+            <Paperclip className="size-4" />
+            {!!home && <span>添加材料</span>}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
@@ -83,7 +91,9 @@ export function ComposerMenu({
             添加附件
           </DropdownMenuItem>
           <p className="px-2 pb-2 text-[11px] leading-5 text-muted-foreground">
-            {info?.uploadsConfigured ? (
+            {session?.user.type === "guest" ? (
+              "登录正式账户后可上传附件。"
+            ) : info?.uploadsConfigured ? (
               capabilities?.[selectedModelId]?.vision ? (
                 "图片 JPEG/PNG ≤5 MiB；PDF/DOCX/XLSX/CSV/TXT ≤64 MiB。"
               ) : (
@@ -110,17 +120,12 @@ export function ComposerMenu({
               : "需要可用的搜索连接和支持工具的模型。"}
           </p>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={openTask}>
-            <ListPlus className="size-4" />
-            创建任务
-          </DropdownMenuItem>
           <DropdownMenuItem onSelect={openSettings}>
             <Settings2 className="size-4" />
             设置
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <TaskDialog onOpenChange={setTaskOpen} open={taskOpen} />
       <AgentLibrary
         hideTrigger
         onOpenChange={setSettingsOpen}

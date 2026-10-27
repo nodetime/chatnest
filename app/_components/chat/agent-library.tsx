@@ -96,17 +96,19 @@ export function AgentLibrary({
             aria-label={triggerLabel ?? current.label}
             className={
               compact
-                ? "h-8 rounded-full px-2.5 text-xs text-muted-foreground"
+                ? "h-8 rounded-lg px-2 text-xs text-muted-foreground"
                 : "h-10 w-full justify-start gap-3 rounded-lg px-2.5 text-sm font-normal text-sidebar-foreground"
             }
             variant="ghost"
           >
             <Icon className="size-[18px]" />
-            <span>{triggerLabel ?? current.label}</span>
+            <span className={compact && !triggerLabel ? "sr-only" : undefined}>
+              {triggerLabel ?? current.label}
+            </span>
           </Button>
         </DialogTrigger>
       )}
-      <DialogContent className="max-h-[85dvh] gap-0 overflow-y-auto rounded-2xl p-0 sm:max-w-[680px]">
+      <DialogContent className="max-h-[85dvh] gap-0 overflow-y-auto rounded-2xl p-0 sm:max-w-[640px]">
         <DialogHeader className="px-6 pt-6 pb-5">
           <DialogTitle className="text-xl">设置</DialogTitle>
           <DialogDescription>

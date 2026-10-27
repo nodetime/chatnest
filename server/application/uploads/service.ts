@@ -34,7 +34,10 @@ import {
   validateAttachment,
 } from "@/server/shared/uploads/validation";
 
-const sql = postgres(getEnv().POSTGRES_URL ?? "");
+// 原生 SQL 列名统一映射到领域属性；仅转换列名，不递归改写附件或消息 JSON 的用户字段。
+const sql = postgres(getEnv().POSTGRES_URL ?? "", {
+  transform: { column: { from: postgres.toCamel } },
+});
 // Shared lock serializes quota reservation, lifecycle pinning and safe deletion across processes.
 const LOCK = 73_624_910;
 type Asset = {

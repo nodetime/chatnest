@@ -20,6 +20,7 @@ import {
   systemPrompt,
 } from "@/server/application/ai/prompts";
 import { getLanguageModel } from "@/server/application/ai/providers";
+import { agentInteractionTools } from "@/server/application/chat/tools/agent-interactions";
 import { createDocument } from "@/server/application/chat/tools/create-document";
 import { createResultTable } from "@/server/application/chat/tools/create-result-table";
 import { editDocument } from "@/server/application/chat/tools/edit-document";
@@ -35,6 +36,10 @@ import {
 import { AttachmentRoundBudget } from "@/server/domain/attachment/document-budget";
 import type { ChatRepository } from "@/server/domain/chat/repository";
 import { canAccessChat } from "@/server/domain/chat/types";
+import {
+  hasPendingInteraction,
+  storedAskUserOutputs,
+} from "@/server/domain/message/agent-interactions";
 import { applyToolApprovals } from "@/server/domain/message/approvals";
 import { convertToUIMessages } from "@/server/domain/message/convert";
 import { generateUUID } from "@/server/domain/message/ids";
@@ -163,6 +168,16 @@ export async function sendMessage(
   }
 
   let uiMessages: ChatMessage[];
+  const isAskContinuation =
+    isToolApprovalFlow &&
+    (messages?.some((item) =>
+      item.parts.some(
+        (part) => (part as { type?: string }).type === "tool-askUser"
+      )
+    ) ||
+      convertToUIMessages(messagesFromDb)
+        .at(-1)
+        ?.parts.some((part) => part.type === "tool-askUser"));
   const regeneration = isRegeneration
     ? prepareRegeneration(
         convertToUIMessages(messagesFromDb),
@@ -191,6 +206,26 @@ export async function sendMessage(
     uiMessages = edit.context;
   } else if (regeneration) {
     uiMessages = regeneration.context;
+  } else if (isAskContinuation && messages) {
+    const committed = await messageRepo.mergeInteractionResponses({
+      chatId: id,
+      responses: messages as ChatMessage[],
+      userId: user.id,
+    });
+    messagesFromDb = committed.messages;
+    uiMessages = convertToUIMessages(committed.messages);
+    if (!committed.changed || hasPendingInteraction(uiMessages)) {
+      // 部分表单答案也立即持久化。等待其它回答/审批或重复提交时不再调用模型。
+      return createUIMessageStream<ChatMessage>({
+        execute: ({ writer }) => {
+          for (const chunk of storedAskUserOutputs(uiMessages)) {
+            writer.write(chunk);
+          }
+          writer.write({ finishReason: "tool-calls", type: "finish" });
+        },
+        originalMessages: uiMessages,
+      });
+    }
   } else if (isToolApprovalFlow && messages) {
     const dbMessages = convertToUIMessages(messagesFromDb);
     uiMessages = applyToolApprovals(dbMessages, messages as ChatMessage[]);
@@ -263,6 +298,11 @@ export async function sendMessage(
   const runFailure = createRunFailureReporter();
   const stream = createUIMessageStream<ChatMessage>({
     execute: async ({ writer: dataStream }) => {
+      if (isAskContinuation) {
+        for (const chunk of storedAskUserOutputs(uiMessages)) {
+          dataStream.write(chunk);
+        }
+      }
       // Approval continuation extends the same assistant: update only our status part.
       const previous = uiMessages.at(-1);
       if (isToolApprovalFlow && previous && hasRunFailure(previous)) {
@@ -352,6 +392,7 @@ export async function sendMessage(
           }
         }
         const tools: ToolSet = {
+          ...agentInteractionTools(),
           createResultTable: createResultTable({
             chatId: id,
             dataStream,
@@ -515,6 +556,13 @@ export async function sendMessage(
             role: "assistant",
           },
           chatId: id,
+          snapshot: messagesFromDb,
+          userId: user.id,
+        });
+      } else if (isAskContinuation) {
+        await messageRepo.updateContinuationParts({
+          chatId: id,
+          response: responseMessage,
           snapshot: messagesFromDb,
           userId: user.id,
         });

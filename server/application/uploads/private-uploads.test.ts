@@ -649,3 +649,20 @@ test("valid APNG acTL chunks are rejected even when decoder metadata omits pages
   malformed.writeUInt32BE(0x7f_ff_ff_ff, 8);
   await assert.rejects(() => validateImage(malformed, "image/png"));
 });
+
+test("guest upload refusal names attachments rather than only images", async () => {
+  const { authorizeUploadRequest } = await import(
+    "@/server/shared/uploads/security"
+  );
+  assert.throws(
+    () =>
+      authorizeUploadRequest(
+        { id: "guest", type: "guest" },
+        new Request("http://localhost", {
+          headers: { Origin: "http://localhost" },
+        }),
+        true
+      ),
+    /请使用正式账号上传附件/
+  );
+});

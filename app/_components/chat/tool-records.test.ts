@@ -99,7 +99,7 @@ const hookHarness = `
     '../ai-elements/tool':{Tool:'tool',ToolHeader:'header',ToolContent:'content',ToolInput:'input',ToolOutput:'output'},
     '@/app/_components/ai-elements/task':{Task:'task',TaskTrigger:'task-trigger',TaskContent:'task-content'},
     './tool-activity':{ToolActivity:'step'},
-    './runtime-recovery':{RuntimeRecovery:'recovery'},
+    './agent-pause-notice':{AgentPauseNotice:'paused'},'@/server/domain/message/agent-interactions':{hasPendingInteraction:()=>false},'./runtime-recovery':{RuntimeRecovery:'recovery'},
     './tool-call-details':{ToolCallDetails:'call-details'},
     './attachment-read-result':require('./app/_components/chat/attachment-read-result.tsx'),
     './activity-groups':require('./app/_components/chat/activity-groups.ts'),
@@ -236,7 +236,7 @@ test("actual PreviewMessage mixed-part grouping retains timeline boundaries, sta
       './document':{},'./document-preview':{},'./icons':{},
       './message-actions':{MessageActions:'actions'},
       './message-reasoning':{MessageReasoning:'reasoning'},
-      './preview-attachment':{},'./tool-activity':{},'./weather':{},
+      './preview-attachment':{},'./tool-activity':{},'./ask-user':{AskUser:'ask'},'./weather':{},
     });
     const first=${JSON.stringify(read)};const approve=()=>{};const edit=()=>{};
     const message={id:'mixed',role:'assistant',parts:[{type:'reasoning',text:'before'},first,{type:'text',text:'answer'}]};
@@ -369,7 +369,7 @@ test("actual Messages preserves the inspected tool subtree when the same assista
       './document':{},'./document-preview':{},'./icons':{},
       './message-actions':{MessageActions:'actions'},
       './message-reasoning':{MessageReasoning:'reasoning'},
-      './preview-attachment':{},'./tool-activity':{ToolActivity},'./weather':{},
+      './preview-attachment':{},'./tool-activity':{ToolActivity},'./ask-user':{AskUser:'ask'},'./weather':{},
     });
     const {Messages}=load('app/_components/chat/messages.tsx',{
       ...base,react,
@@ -432,7 +432,7 @@ test("canonical tool-only messages omit empty answer actions while text, artifac
       './document':{},'./document-preview':{DocumentPreview:'artifact'},'./icons':{},
       './message-actions':{MessageActions:'actions'},
       './message-reasoning':{MessageReasoning:'reasoning'},
-      './preview-attachment':{},'./tool-activity':{},'./weather':{},
+      './preview-attachment':{},'./tool-activity':{},'./ask-user':{AskUser:'ask'},'./weather':{},
     });
     const message={id:'tool-only',role:'assistant',parts:[${JSON.stringify(read)}]};
     const props={message,addToolApprovalResponse:()=>{},isLoading:false,isReadonly:false};
@@ -481,7 +481,7 @@ test("only the active native table handoff omits a temporary Sheet trigger; fall
       './document':{},'./document-preview':{DocumentPreview:'artifact'},'./icons':{},
       './message-actions':{MessageActions:'actions'},
       './message-reasoning':{MessageReasoning:'reasoning'},
-      './preview-attachment':{},'./tool-activity':{ToolActivity},'./weather':{},
+      './preview-attachment':{},'./tool-activity':{ToolActivity},'./ask-user':{AskUser:'ask'},'./weather':{},
     });
     const props={message:{id:'native-message',role:'assistant',parts:[{...table,state:'input-available'}]},addToolApprovalResponse:()=>{},isLoading:true,isReadonly:false};
     const pending=nodes(PreviewMessage(props)).find(n=>n.type===ToolActivity);assert.ok(pending);
@@ -549,7 +549,7 @@ test("reopened failed-only assistant is visible without answer actions or forged
       './document':{},'./document-preview':{},
       './message-actions':{MessageActions:'actions'},
       './message-reasoning':{MessageReasoning:'reasoning'},
-      './preview-attachment':{},'./tool-activity':{},'./weather':{},
+      './preview-attachment':{},'./tool-activity':{},'./ask-user':{AskUser:'ask'},'./weather':{},
     });
     const message={id:'failed',role:'assistant',parts:[{type:'data-run-status',id:'run-status',data:{state:'failed'}}]};
     const props={message,isLoading:false,isReadonly:false};

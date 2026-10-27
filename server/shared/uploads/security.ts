@@ -19,7 +19,7 @@ export function authorizeUploadRequest(
   ) {
     throw new UploadError(
       403,
-      admin ? "仅平台管理员可以管理存储。" : "请使用正式账号上传图片。"
+      admin ? "仅平台管理员可以管理存储。" : "请使用正式账号上传附件。"
     );
   }
   const sameOrigin = request.headers.has("host")
@@ -80,6 +80,6 @@ export function uploadErrorResponse(error: unknown) {
 
 export function requireFinalizedUpload(rows: { id: string }[]) {
   if (rows.length !== 1) {
-    throw new UploadError(409, "上传会话已失效，请重新选择图片。");
+    throw new UploadError(409, "上传会话已失效，请重新选择附件。");
   }
 }

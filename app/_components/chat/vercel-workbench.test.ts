@@ -167,7 +167,7 @@ test("workspace chrome has one aligned top row and exposes existing action label
   const chat = readFileSync("app/_components/chat/chat-header.tsx", "utf8");
   const sidebar = readFileSync("app/_components/chat/app-sidebar.tsx", "utf8");
   for (const source of [header, chat, sidebar]) {
-    assert.match(source, /\bh-\[52px\]/);
+    assert.match(source, /\bh-(?:16|12|\[64px\])/);
   }
   const actions = readFileSync(
     "app/_components/chat/artifact-actions.tsx",
@@ -409,7 +409,7 @@ test("actual sidebar focus override hides history without cookie writes, permits
     const wrapper={exports:{}};const wrappers={'react/jsx-runtime':{jsx,jsxs:jsx},'@/app/_components/ui/sidebar':{SidebarProvider:'sidebar'},'@/app/_hooks/use-active-chat':{useActiveChat:()=>({chatId})},'@/app/_hooks/use-artifact':{useArtifact:()=>({artifact})},'@/app/_hooks/use-workspace':{useWorkspace:()=>workspace}};
     runInNewContext(ts.transpileModule(readFileSync('app/_components/chat/workbench-sidebar-provider.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText,{exports:wrapper.exports,module:wrapper,require:name=>wrappers[name]});
     const focus=()=>wrapper.exports.WorkbenchSidebarProvider({defaultOpen:true}).props.temporaryCollapseKey;
-    assert.equal(focus(),'chat-a');workspace.open=false;assert.equal(focus(),undefined);workspace.open=true;workspace.tab='browser';assert.equal(focus(),undefined);workspace.tab='sources';assert.equal(focus(),undefined);workspace.tab='document';artifact.documentId='init';assert.equal(focus(),undefined);artifact.documentId='doc';artifact.isVisible=false;assert.equal(focus(),undefined);
+    assert.equal(focus(),undefined,'artifact opening preserves sidebar preference');workspace.open=false;assert.equal(focus(),undefined);workspace.open=true;workspace.tab='browser';assert.equal(focus(),undefined);workspace.tab='sources';assert.equal(focus(),undefined);workspace.tab='document';artifact.documentId='init';assert.equal(focus(),undefined);artifact.documentId='doc';artifact.isVisible=false;assert.equal(focus(),undefined);
   `,
     ],
     { encoding: "utf8", env: { ...process.env, NODE_OPTIONS: "" } }
@@ -433,7 +433,7 @@ test("focus composition defaults to a 400px conversation with manual resize reta
     "app/_components/chat/workspace-header.tsx",
     "utf8"
   );
-  assert.match(header, /@container h-\[52px\]/);
+  assert.match(header, /@container h-\[64px\]/);
   assert.match(header, /\{controls\}/);
   const table = readFileSync("app/_components/chat/result-table.tsx", "utf8");
   assert.match(table, /hidden @min-\[760px\]:inline/);

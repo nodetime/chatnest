@@ -5,6 +5,7 @@ import type { UIMessage } from "ai";
 import {
   ArrowUpIcon,
   BrainIcon,
+  ChevronDown,
   EyeIcon,
   Globe,
   LockIcon,
@@ -67,6 +68,7 @@ import {
 } from "../ai-elements/prompt-input";
 import { Button } from "../ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
+import { AgentLibrary } from "./agent-library";
 import { ComposerMenu } from "./composer-menu";
 import { StopIcon } from "./icons";
 import { PreviewAttachment } from "./preview-attachment";
@@ -96,6 +98,7 @@ function PureMultimodalInput({
   editingMessage,
   onCancelEdit,
   isLoading: _isLoading,
+  home = false,
 }: {
   chatId: string;
   input: string;
@@ -116,6 +119,7 @@ function PureMultimodalInput({
   editingMessage?: ChatMessage | null;
   onCancelEdit?: () => void;
   isLoading?: boolean;
+  home?: boolean;
 }) {
   const { data: agentInfo } = useAgentInfo();
   const { searchMode, setSearchMode, getSendError } = useActiveChat();
@@ -519,7 +523,7 @@ function PureMultimodalInput({
       />
 
       <PromptInput
-        className="[&>div]:rounded-[10px] [&>div]:border [&>div]:border-border [&>div]:bg-card [&>div]:shadow-[var(--shadow-composer)] [&>div]:transition-shadow [&>div]:duration-200 [&>div]:ring-0! [&>div]:focus-within:border-ring! [&>div]:focus-within:outline-1 [&>div]:focus-within:outline-ring/30"
+        className="[&>div]:rounded-[14px] [&>div]:border [&>div]:border-border [&>div]:bg-card [&>div]:shadow-[var(--shadow-composer)] [&>div]:transition-shadow [&>div]:duration-200 [&>div]:ring-0! [&>div]:focus-within:border-ring! [&>div]:focus-within:outline-1 [&>div]:focus-within:outline-ring/30"
         onSubmit={handlePromptSubmit}
       >
         {(attachments.length > 0 || uploadQueue.length > 0) && (
@@ -554,21 +558,26 @@ function PureMultimodalInput({
         <PromptInputBody>
           <PromptInputTextarea
             aria-label="消息输入框"
-            className="min-h-[44px] text-[15px] leading-relaxed px-3 pt-3 pb-1 placeholder:text-muted-foreground"
+            className={cn(
+              "min-h-[44px] max-h-[200px] text-[14px] leading-6 px-3.5 pt-3 pb-1 placeholder:text-muted-foreground",
+              home && "min-h-[64px] px-5 pt-5 text-base"
+            )}
             data-testid="multimodal-input"
             onChange={handleInput}
             onKeyDown={handleTextareaKeyDown}
-            placeholder={editingMessage ? "修改消息…" : "描述你想完成的事…"}
+            placeholder={
+              editingMessage
+                ? "修改消息…"
+                : home
+                  ? "描述任务，或添加文件…"
+                  : "给 ChatNest 发送消息…"
+            }
             ref={textareaRef}
             value={input}
           />
         </PromptInputBody>
         <PromptInputFooter className="gap-1 px-2 pb-2">
-          <PromptInputTools className="min-w-0 flex-wrap">
-            <ModelSelectorCompact
-              onModelChange={onModelChange}
-              selectedModelId={selectedModelId}
-            />
+          <PromptInputTools className="min-w-0 flex-1 flex-wrap">
             <ComposerMenu
               busy={
                 Boolean(editingMessage) ||
@@ -583,8 +592,20 @@ function PureMultimodalInput({
                 )
               }
               fileInputRef={fileInputRef}
+              home={home}
               selectedModelId={selectedModelId}
             />
+            <AgentLibrary
+              compact
+              label={home ? "工具" : undefined}
+              tab="tools"
+            />
+            <span className={home ? "ml-auto" : undefined}>
+              <ModelSelectorCompact
+                onModelChange={onModelChange}
+                selectedModelId={selectedModelId}
+              />
+            </span>
             {searchMode === "web" && (
               <span
                 className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1.5 text-xs"
@@ -610,7 +631,8 @@ function PureMultimodalInput({
             <PromptInputSubmit
               aria-label="发送消息"
               className={cn(
-                "h-9 w-9 rounded-lg transition-all duration-200",
+                "h-8 w-8 shrink-0 rounded-full transition-colors duration-150",
+                home && "w-[84px] rounded-lg",
                 input.trim() || attachments.length > 0
                   ? "bg-foreground text-background hover:opacity-85 active:scale-95"
                   : "bg-muted text-muted-foreground/25 cursor-not-allowed"
@@ -629,7 +651,7 @@ function PureMultimodalInput({
               status={status}
               variant="secondary"
             >
-              <ArrowUpIcon className="size-4" />
+              {home ? "开始" : <ArrowUpIcon className="size-4" />}
             </PromptInputSubmit>
           )}
         </PromptInputFooter>
@@ -814,19 +836,23 @@ function PureModelSelectorCompact({
     activeModels.find((m: ChatModel) => m.id === selectedModelId) ??
     activeModels.find((m: ChatModel) => m.id === DEFAULT_CHAT_MODEL) ??
     activeModels[0];
-  const { provider } = selectedModel;
 
   return (
     <ModelSelector onOpenChange={setOpen} open={open}>
       <ModelSelectorTrigger asChild>
         <Button
           aria-label="选择模型"
-          className="h-9 max-w-[190px] justify-between gap-2 rounded-md px-2 text-xs font-medium text-foreground transition-colors hover:bg-secondary"
+          className="h-8 w-[112px] max-w-[40vw] min-w-0 justify-between gap-1.5 rounded-lg bg-secondary px-2 text-xs font-normal text-foreground hover:bg-accent"
           data-testid="model-selector"
           variant="ghost"
         >
-          {provider ? <ModelSelectorLogo provider={provider} /> : null}
-          <ModelSelectorName>{selectedModel.name}</ModelSelectorName>
+          <span
+            className="min-w-0 flex-1 truncate text-left"
+            title={selectedModel.name}
+          >
+            {selectedModel.name}
+          </span>
+          <ChevronDown className="size-3 shrink-0" />
         </Button>
       </ModelSelectorTrigger>
       <ModelSelectorContent commandDefaultValue={selectedModel.id}>

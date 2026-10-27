@@ -1,11 +1,12 @@
+// biome-ignore-all lint/performance/noJsxPropsBind: React Compiler memoizes the consumer service notice action.
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -18,8 +19,11 @@ import {
   useArtifact,
   useArtifactSelector,
 } from "@/app/_hooks/use-artifact";
+import { useWorkbenchNavigation } from "@/app/_hooks/use-workbench-navigation";
+import { useWorkspace } from "@/app/_hooks/use-workspace";
 import type { Attachment, ChatMessage } from "@/app/_lib/types";
 import { cn } from "@/app/_lib/utils";
+import type { Document } from "@/server/domain/document/types";
 import { Artifact } from "./artifact";
 import { ChatHeader } from "./chat-header";
 import { ConversationNotice } from "./conversation-notice";
@@ -28,7 +32,9 @@ import { Greeting } from "./greeting";
 import { submitEditedMessage } from "./message-editor";
 import { Messages } from "./messages";
 import { MultimodalInput } from "./multimodal-input";
+import { WorkbenchSection } from "./workbench-section";
 import { Workspace } from "./workspace";
+import { WorkspaceHome } from "./workspace-home";
 
 export function ChatShell() {
   const {
@@ -41,6 +47,10 @@ export function ChatShell() {
     regenerate,
     regenerateAnswer,
     addToolApprovalResponse,
+    answerAskUser,
+    reviseAskUser,
+    agentPaused,
+    continueAgent,
     input,
     setInput,
     visibilityType,
@@ -56,6 +66,10 @@ export function ChatShell() {
     loadError,
   } = useActiveChat();
 
+  const { section, navigate } = useWorkbenchNavigation();
+  const workspace = useWorkspace();
+  const search = useSearchParams();
+  const requestedArtifact = search.get("artifact");
   const [editingMessage, setEditingMessage] = useState<ChatMessage | null>(
     null
   );
@@ -96,9 +110,49 @@ export function ChatShell() {
       setArtifact(initialArtifactData);
       setEditingMessage(null);
       setAttachments([]);
+      navigate("chat");
     }
     stopRef.current = stop;
-  }, [chatId, setArtifact, stop]);
+  }, [chatId, setArtifact, stop, navigate]);
+
+  useEffect(() => {
+    if (!requestedArtifact) {
+      return;
+    }
+    let cancelled = false;
+    fetch(
+      `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/document?id=${encodeURIComponent(requestedArtifact)}&chatId=${encodeURIComponent(chatId)}`
+    )
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("not found");
+        }
+        return response.json() as Promise<Document[]>;
+      })
+      .then((documents) => {
+        const latest = documents.at(-1);
+        if (!cancelled && latest) {
+          setArtifact((current) => ({
+            ...current,
+            content: latest.content ?? "",
+            documentId: latest.id,
+            isVisible: true,
+            kind: latest.kind,
+            status: "idle",
+            title: latest.title,
+          }));
+          workspace.show("document");
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          toast.error("这份成果暂时未能打开，请从文件列表重试。");
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [chatId, requestedArtifact, setArtifact, workspace.show]);
 
   const handleEditMessage = useCallback(
     (msg: ChatMessage) => {
@@ -182,46 +236,44 @@ export function ChatShell() {
     setMessages,
   ]);
 
-  const handleActivateGateway = useCallback(() => {
-    window.open(
-      "https://vercel.com/d?to=%2F%5Bteam%5D%2F%7E%2Fai%3Fmodal%3Dadd-credit-card",
-      "_blank"
-    );
-    window.location.href = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/`;
-  }, []);
-
   return (
     <>
-      <div className="chat-workbench-shell flex h-dvh w-full min-w-0 flex-row overflow-hidden">
-        <div
-          className={cn(
-            "chat-workbench-surface flex min-w-0 flex-1 flex-col overflow-hidden bg-background"
-          )}
-        >
-          <ChatHeader
-            chatId={chatId}
-            isReadonly={isReadonly}
-            selectedVisibilityType={visibilityType}
-          />
-
+      {section !== "chat" && <WorkbenchSection />}
+      <div
+        className={cn(
+          "chat-workbench-shell flex h-dvh w-full min-w-0 flex-row overflow-hidden",
+          section !== "chat" && "hidden"
+        )}
+      >
+        <div className="chat-workbench-surface flex min-w-0 flex-1 flex-col overflow-hidden bg-background">
+          <div className={isEmpty ? "md:hidden" : undefined}>
+            <ChatHeader
+              chatId={chatId}
+              isReadonly={isReadonly}
+              selectedVisibilityType={visibilityType}
+            />
+          </div>
           <div
             className={cn(
-              "relative flex min-h-0 flex-1 flex-col overflow-hidden bg-background",
-              isEmpty && "justify-center pb-20 sm:pb-24"
+              "relative flex min-h-0 flex-1 flex-col overflow-hidden",
+              isEmpty && "overflow-y-auto bg-[var(--workbench-canvas)]"
             )}
           >
-            {isEmpty ? <Greeting /> : null}
             {!isEmpty && (
               <Messages
                 addToolApprovalResponse={addToolApprovalResponse}
+                agentPaused={agentPaused}
+                answerAskUser={answerAskUser}
                 chatId={chatId}
                 isArtifactVisible={isArtifactVisible}
                 isLoading={isLoading}
                 isReadonly={isReadonly}
                 messages={messages}
+                onContinue={continueAgent}
                 onEditMessage={handleEditMessage}
                 onRegenerateAnswer={regenerateAnswer}
                 regenerate={regenerate}
+                reviseAskUser={reviseAskUser}
                 selectedModelId={currentModelId}
                 sendMessage={sendMessage}
                 setMessages={setMessages}
@@ -229,19 +281,23 @@ export function ChatShell() {
                 votes={votes}
               />
             )}
-
             <div
               className={cn(
-                "z-1 mx-auto flex w-full max-w-[720px] flex-col gap-2 bg-background px-4 sm:px-6",
-                !isEmpty && "sticky bottom-0 pb-4 pt-2 sm:pb-4"
+                "mx-auto flex w-full min-w-0 shrink-0 flex-col",
+                isEmpty
+                  ? "max-w-[1064px] px-5 pb-10 pt-12 sm:px-8 sm:pt-[72px]"
+                  : "max-w-[800px] px-4 pt-2 pb-4 sm:px-6"
               )}
+              data-testid="composer-dock"
             >
+              {!!isEmpty && <Greeting />}
               <ConversationNotice onRestore={handleRestore} />
               {!isReadonly && (
                 <MultimodalInput
                   attachments={attachments}
                   chatId={chatId}
                   editingMessage={editingMessage}
+                  home={isEmpty}
                   input={input}
                   isLoading={isLoading}
                   messages={messages}
@@ -259,13 +315,14 @@ export function ChatShell() {
                   stop={stop}
                 />
               )}
+              {!!isEmpty && (
+                <div className="mt-8">
+                  <WorkspaceHome />
+                </div>
+              )}
             </div>
-            <p className="pointer-events-none absolute inset-x-0 bottom-3 px-4 text-center text-[11px] leading-4 text-muted-foreground">
-              AI 的分析可能有误。重要结论请核对原文和来源。
-            </p>
           </div>
         </div>
-
         <Workspace>
           <Artifact
             addToolApprovalResponse={addToolApprovalResponse}
@@ -297,17 +354,14 @@ export function ChatShell() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Activate AI Gateway</AlertDialogTitle>
+            <AlertDialogTitle>对话服务暂不可用</AlertDialogTitle>
             <AlertDialogDescription>
-              This application requires{" "}
-              {process.env.NODE_ENV === "production" ? "the owner" : "you"} to
-              activate Vercel AI Gateway.
+              当前模型服务需要管理员处理。草稿已保留，你可以稍后重试。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleActivateGateway}>
-              Activate
+            <AlertDialogAction onClick={() => setShowCreditCardAlert(false)}>
+              知道了
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

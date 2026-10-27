@@ -49,9 +49,6 @@ export function AgentLibraryPanel({
     return (
       <div className="space-y-6">
         <section aria-label="可用工具" className="space-y-4">
-          <p className="text-sm leading-6 text-muted-foreground">
-            查看助手可使用的工具，连接由平台管理员管理。
-          </p>
           {info.servers.map((server) => (
             <div className="rounded-xl border p-4" key={server.id}>
               <div className="flex flex-wrap items-center gap-2 text-sm font-medium">
@@ -64,16 +61,19 @@ export function AgentLibraryPanel({
               <p className="mt-2 text-xs leading-5 text-muted-foreground">
                 {server.tools.length} 个开放工具 · 连接状态尚未实时检测
               </p>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {server.tools.map((name) => (
-                  <span
-                    className="max-w-full break-all rounded-md bg-secondary px-2 py-1 font-mono text-[10px] text-muted-foreground"
-                    key={name}
-                  >
-                    {name}
-                  </span>
-                ))}
-              </div>
+              <details className="mt-3 text-xs text-muted-foreground">
+                <summary className="cursor-pointer">工具详情</summary>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {server.tools.map((name) => (
+                    <span
+                      className="max-w-full break-all rounded-md bg-secondary px-2 py-1 font-mono text-[10px] text-muted-foreground"
+                      key={name}
+                    >
+                      {name}
+                    </span>
+                  ))}
+                </div>
+              </details>
             </div>
           ))}
           {!info.servers.length && (

@@ -11,6 +11,11 @@ import type { requestSuggestions } from "@/server/application/chat/tools/request
 // biome-ignore lint/style/noRestrictedImports: 已登记豁免:ChatTools 依赖工具定义的 InferUITool 推导,翻转需重写工具类型声明(裁决见 P5 待办)
 import type { updateDocument } from "@/server/application/chat/tools/update-document";
 import type { Suggestion } from "@/server/domain/suggestion/types";
+import type {
+  AskUserInput,
+  AskUserOutput,
+  TodoPlan,
+} from "./agent-interactions";
 import type { McpSourceMetadata } from "./result-evidence";
 
 // P2 从 app/_lib/types.ts 迁入:ChatMessage 是聊天域核心类型,应用层与 UI 共用(R4 允许 UI import domain 类型)
@@ -32,6 +37,8 @@ type requestSuggestionsTool = InferUITool<
 >;
 
 export type ChatTools = {
+  askUser: { input: AskUserInput; output: AskUserOutput };
+  updateTodo: { input: TodoPlan; output: TodoPlan };
   createResultTable: InferUITool<ReturnType<typeof createResultTable>>;
   getWeather: weatherTool;
   createDocument: createDocumentTool;

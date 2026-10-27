@@ -99,14 +99,14 @@ export const textArtifact = new Artifact<"text", TextArtifactMetadata>({
           : selectedContent;
 
       return (
-        <div className="flex flex-row px-4 py-8 md:px-16 md:py-12 lg:px-20">
+        <div className="mx-auto flex w-full max-w-[840px] flex-row px-6 py-9 md:px-10 md:py-11 [&_.ProseMirror]:min-h-[50vh] [&_.prose]:text-[14px] [&_.prose]:leading-[1.9] [&_h1]:text-[24px] [&_h1]:font-semibold [&_h2]:mt-8 [&_h2]:text-[18px] [&_h2]:font-semibold [&_h3]:text-[16px] [&_p]:leading-[1.9] [&_table]:text-[13px] [&_th]:bg-muted/60 [&_th]:font-medium [&_td]:border-border/60 [&_th]:border-border/60">
           <DiffView newContent={selectedContent} oldContent={prevContent} />
         </div>
       );
     }
 
     return (
-      <div className="flex flex-row px-4 py-8 md:px-16 md:py-12 lg:px-20">
+      <div className="mx-auto flex w-full max-w-[840px] flex-row px-6 py-9 md:px-10 md:py-11 [&_.ProseMirror]:min-h-[50vh] [&_.prose]:text-[14px] [&_.prose]:leading-[1.9] [&_h1]:text-[24px] [&_h1]:font-semibold [&_h2]:mt-8 [&_h2]:text-[18px] [&_h2]:font-semibold [&_h3]:text-[16px] [&_p]:leading-[1.9] [&_table]:text-[13px] [&_th]:bg-muted/60 [&_th]:font-medium [&_td]:border-border/60 [&_th]:border-border/60">
         <Editor
           content={content}
           currentVersionIndex={currentVersionIndex}
@@ -127,15 +127,17 @@ export const textArtifact = new Artifact<"text", TextArtifactMetadata>({
   initialize: async ({ documentId, setMetadata }) => {
     const suggestions = await getSuggestions({ documentId });
 
-    setMetadata({
+    setMetadata((metadata) => ({
+      ...metadata,
       suggestions,
-    });
+    }));
   },
   kind: "text",
   onStreamPart: ({ streamPart, setMetadata, setArtifact }) => {
     if (streamPart.type === "data-suggestion") {
       setMetadata((metadata) => ({
-        suggestions: [...metadata.suggestions, streamPart.data],
+        ...metadata,
+        suggestions: [...(metadata?.suggestions ?? []), streamPart.data],
       }));
     }
 

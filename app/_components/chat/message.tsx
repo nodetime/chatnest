@@ -2,6 +2,7 @@
 import type { UseChatHelpers } from "@ai-sdk/react";
 import type { ChatMessage } from "@/app/_lib/types";
 import { cn, sanitizeText } from "@/app/_lib/utils";
+import type { AskUserPart } from "@/server/domain/message/agent-interactions";
 import { hasRunFailure } from "@/server/domain/message/run-failure";
 import type { Vote } from "@/server/domain/vote/types";
 import { MessageContent, MessageResponse } from "../ai-elements/message";
@@ -16,6 +17,7 @@ import {
 } from "../ai-elements/tool";
 import { ActivityGroup } from "./activity-group";
 import { groupActivityParts } from "./activity-groups";
+import { type AnswerAskUser, AskUser } from "./ask-user";
 import { useDataStream } from "./data-stream-provider";
 import { DocumentToolResult } from "./document";
 import { DocumentPreview } from "./document-preview";
@@ -47,6 +49,8 @@ function WaitingText() {
 
 const PurePreviewMessage = ({
   addToolApprovalResponse,
+  answerAskUser,
+  reviseAskUser,
   chatId,
   message,
   vote,
@@ -59,9 +63,11 @@ const PurePreviewMessage = ({
   onEdit,
   onRegenerate,
   hideActivities = false,
-  showSender = true,
+  showSender: _showSender = true,
 }: {
   addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
+  answerAskUser?: AnswerAskUser;
+  reviseAskUser?: AnswerAskUser;
   chatId: string;
   message: ChatMessage;
   vote: Vote | undefined;
@@ -124,6 +130,25 @@ const PurePreviewMessage = ({
     const { type } = part;
     const key = `message-${message.id}-part-${index}`;
 
+    if (type === "tool-askUser") {
+      return (
+        <AskUser
+          canAnswer={canApprove}
+          isReadonly={isReadonly || !answerAskUser}
+          isRunning={isLoading}
+          key={part.toolCallId}
+          messageId={message.id}
+          onAnswer={
+            answerAskUser ??
+            (() =>
+              Promise.reject(new Error("当前视图只读，请回到原对话回答。")))
+          }
+          onRevise={reviseAskUser}
+          part={part as AskUserPart}
+        />
+      );
+    }
+
     if (type === "reasoning") {
       return part.text?.trim().length > 0 ? (
         <MessageReasoning
@@ -155,7 +180,7 @@ const PurePreviewMessage = ({
       return (
         <MessageContent
           className={cn("text-[15px] leading-[1.75]", {
-            "w-fit max-w-[min(85%,60ch)] overflow-hidden break-words rounded-2xl bg-secondary px-4 py-2.5":
+            "w-fit max-w-[min(90%,64ch)] overflow-hidden break-words rounded-[14px] bg-secondary px-4 py-3":
               message.role === "user",
           })}
           data-testid="message-content"
@@ -396,10 +421,7 @@ const PurePreviewMessage = ({
         )}
       >
         {isAssistant ? (
-          <div className="flex min-w-0 flex-1 flex-col gap-2">
-            {!!showSender && !isEmptyAssistant && <SenderLabel />}
-            {content}
-          </div>
+          <div className="flex min-w-0 flex-1 flex-col gap-2">{content}</div>
         ) : (
           content
         )}
@@ -410,17 +432,6 @@ const PurePreviewMessage = ({
 
 export const PreviewMessage = PurePreviewMessage;
 
-function SenderLabel() {
-  return (
-    <div
-      className="mb-1 text-xs font-medium text-muted-foreground"
-      data-testid="assistant-sender"
-    >
-      ChatNest
-    </div>
-  );
-}
-
 export const ThinkingMessage = () => (
   <div
     className="group/message w-full"
@@ -428,7 +439,6 @@ export const ThinkingMessage = () => (
     data-testid="message-assistant-loading"
   >
     <div className="flex min-w-0 flex-col gap-2">
-      <SenderLabel />
       <WaitingText />
     </div>
   </div>

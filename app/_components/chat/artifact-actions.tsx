@@ -1,5 +1,7 @@
+import { Download } from "lucide-react";
 import { memo, useCallback, useState } from "react";
 import { toast } from "sonner";
+import { artifactExport } from "@/app/_artifacts/export";
 import { cn } from "@/app/_lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { artifactDefinitions, type UIArtifact } from "./artifact";
@@ -11,6 +13,7 @@ import {
 
 type ArtifactActionsProps = {
   artifact: UIArtifact;
+  isReadonly?: boolean;
   layout?: "toolbar" | "header";
   handleVersionChange: (type: "next" | "prev" | "toggle" | "latest") => void;
   currentVersionIndex: number;
@@ -55,7 +58,7 @@ function ArtifactActionButton({
           className={cn(
             "flex items-center justify-center text-muted-foreground transition-all duration-150 focus-visible:outline-2 focus-visible:outline-ring",
             layout === "header"
-              ? "size-9 rounded-md hover:bg-muted lg:w-auto lg:gap-1.5 lg:px-2 [&_svg]:size-4"
+              ? "size-9 rounded-md hover:bg-muted @min-[960px]:w-auto @min-[960px]:gap-1.5 @min-[960px]:px-2 [&_svg]:size-4"
               : "rounded-full p-3",
             "hover:text-foreground",
             "active:scale-95",
@@ -70,7 +73,7 @@ function ArtifactActionButton({
         >
           {action.icon}
           {layout === "header" && (
-            <span className="hidden lg:inline text-xs">
+            <span className="hidden lg:inline @max-[960px]:hidden text-xs">
               {action.label ?? action.description}
             </span>
           )}
@@ -92,6 +95,7 @@ function PureArtifactActions({
   metadata,
   setMetadata,
   layout = "toolbar",
+  isReadonly = false,
 }: ArtifactActionsProps) {
   const [isLoading, setIsLoading] = useState(false);
 
@@ -120,7 +124,39 @@ function PureArtifactActions({
         layout === "header" ? "shrink-0" : "flex-col"
       )}
     >
+      {layout === "header" && (
+        <ArtifactActionButton
+          action={{
+            description: "导出产物",
+            icon: <Download className="size-4" />,
+            label: "导出",
+            onClick: () => {
+              const file = artifactExport(artifact);
+              const body =
+                file.encoding === "base64"
+                  ? Uint8Array.from(atob(file.content), (char) =>
+                      char.charCodeAt(0)
+                    )
+                  : file.content;
+              const url = URL.createObjectURL(
+                new Blob([body], { type: file.mediaType })
+              );
+              const link = document.createElement("a");
+              link.href = url;
+              link.download = file.filename;
+              link.click();
+              setTimeout(() => URL.revokeObjectURL(url), 1000);
+            },
+          }}
+          actionContext={actionContext}
+          disabled={isLoading || artifact.status === "streaming"}
+          isActive={false}
+          layout={layout}
+          setIsLoading={setIsLoading}
+        />
+      )}
       {artifactDefinition.actions
+        .filter((action) => !isReadonly || action.id !== "run-code")
         .filter(
           (action) =>
             layout !== "header" ||
@@ -150,31 +186,5 @@ function PureArtifactActions({
   );
 }
 
-export const ArtifactActions = memo(
-  PureArtifactActions,
-  (prevProps, nextProps) => {
-    if (
-      prevProps.layout !== nextProps.layout ||
-      prevProps.artifact.kind !== nextProps.artifact.kind
-    ) {
-      return false;
-    }
-    if (prevProps.artifact.status !== nextProps.artifact.status) {
-      return false;
-    }
-    if (prevProps.currentVersionIndex !== nextProps.currentVersionIndex) {
-      return false;
-    }
-    if (prevProps.isCurrentVersion !== nextProps.isCurrentVersion) {
-      return false;
-    }
-    if (prevProps.artifact.content !== nextProps.artifact.content) {
-      return false;
-    }
-    if (prevProps.mode !== nextProps.mode) {
-      return false;
-    }
-
-    return true;
-  }
-);
+// Handler and metadata identity matter even when two documents have equal text.
+export const ArtifactActions = memo(PureArtifactActions);

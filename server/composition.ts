@@ -48,6 +48,8 @@ function buildUseCases() {
       deleteAfterTimestamp:
         documentRepository.deleteAfterTimestamp.bind(documentRepository),
       listById: documentRepository.listById.bind(documentRepository),
+      listRecentByUser:
+        documentRepository.listRecentByUser.bind(documentRepository),
       save: documentRepository.save.bind(documentRepository),
       saveResultTableView:
         documentRepository.saveResultTableView.bind(documentRepository),

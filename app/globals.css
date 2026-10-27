@@ -521,24 +521,24 @@ textarea:focus-visible {
 
 /* The workbench palette is local to chat; admin and global fonts stay unchanged. */
 .chat-workbench {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.29 0.009 260);
+  --background: #fcfcfb;
+  --foreground: #232527;
   --card: oklch(1 0 0);
   --card-foreground: var(--foreground);
   --popover: var(--card);
   --popover-foreground: var(--foreground);
   --primary: var(--foreground);
   --primary-foreground: var(--card);
-  --secondary: oklch(0.97 0.002 250);
+  --secondary: #f1f2f2;
   --secondary-foreground: var(--foreground);
   --muted: oklch(0.965 0.002 250);
-  --muted-foreground: oklch(0.51 0.012 260);
+  --muted-foreground: #666b70;
   --accent: oklch(0.95 0.003 250);
   --accent-foreground: var(--foreground);
-  --border: oklch(0.922 0.004 250);
+  --border: #e3e5e5;
   --input: var(--border);
   --ring: oklch(0.52 0.075 165);
-  --sidebar: oklch(0.985 0.002 250);
+  --sidebar: #f4f4f3;
   --sidebar-foreground: var(--foreground);
   --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: var(--primary-foreground);
@@ -546,7 +546,8 @@ textarea:focus-visible {
   --sidebar-accent-foreground: var(--foreground);
   --sidebar-border: var(--border);
   --sidebar-ring: var(--ring);
-  --workbench-selection: oklch(0.94 0.035 165);
+  --workbench-selection: #e9f0ed;
+  --workbench-canvas: #f0f1f2;
   --workbench-shell: var(--sidebar);
   --workbench-surface: var(--background);
   --shadow-composer: 0 2px 8px -3px oklch(0.3 0.005 250 / 0.06);
@@ -555,10 +556,12 @@ textarea:focus-visible {
 }
 
 .chat-workbench[data-slot="sidebar-wrapper"] {
-  --sidebar-width: 13rem !important;
+  --sidebar-width: 11.5rem !important;
+  --sidebar-width-icon: 4.5rem !important;
 }
 
 .dark .chat-workbench {
+  --workbench-canvas: #202224;
   --background: oklch(0.205 0.006 260);
   --foreground: oklch(0.925 0.004 250);
   --card: oklch(0.235 0.007 260);
@@ -646,4 +649,21 @@ textarea:focus-visible {
 /* Continue the worksheet surface below its real rows; never imply extra data. */
 .chat-workbench .chatnest-result-grid {
   background-color: var(--card);
+}
+
+/* Consistent density for the formal workspace; existing shadcn primitives stay authoritative. */
+.chat-workbench [data-slot="sidebar-menu-button"] {
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+.chat-workbench [data-testid="composer-dock"] {
+  position: relative;
+  z-index: 1;
+}
+.chat-workbench [data-testid="composer-dock"] textarea {
+  field-sizing: content;
+}
+.chat-workbench [data-testid="workspace-home-content"] button:focus-visible {
+  outline-offset: 3px;
 }
