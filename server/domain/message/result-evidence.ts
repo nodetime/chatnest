@@ -117,6 +117,21 @@ export class ResultEvidenceLedger {
         "utf8"
       ) > 2000
     ) {
+      // Reduce sampled rows/strings before discarding all useful evidence.
+      value.previewOutput = boundedPreview(
+        available ? this.entries.get(source.toolCallId)?.value : output,
+        0,
+        1,
+        60
+      );
+      encoded = JSON.stringify(value);
+    }
+    if (
+      Buffer.byteLength(
+        JSON.stringify({ type: "text", value: encoded }),
+        "utf8"
+      ) > 2000
+    ) {
       encoded = JSON.stringify({
         ...value,
         previewOutput: "[preview omitted: budget]",
@@ -232,19 +247,28 @@ export class ResultEvidenceLedger {
     return this.entries.get(toolCallId);
   }
 }
-function boundedPreview(value: unknown, depth = 0): unknown {
+function boundedPreview(
+  value: unknown,
+  depth = 0,
+  rowLimit = 3,
+  textLimit = 120
+): unknown {
   if (typeof value === "string") {
-    return value.length > 120 ? `${value.slice(0, 120)}… [preview]` : value;
+    return value.length > textLimit
+      ? `${value.slice(0, textLimit)}… [preview]`
+      : value;
   }
   if (value === null || typeof value !== "object") {
     return value;
   }
-  if (depth >= 3) {
+  if (depth >= 5) {
     return "[nested value omitted from preview]";
   }
   if (Array.isArray(value)) {
     return {
-      preview: value.slice(0, 1).map((v) => boundedPreview(v, depth + 1)),
+      preview: value
+        .slice(0, rowLimit)
+        .map((v) => boundedPreview(v, depth + 1, rowLimit, textLimit)),
       totalItems: value.length,
     };
   }
@@ -252,7 +276,10 @@ function boundedPreview(value: unknown, depth = 0): unknown {
     Object.entries(value)
       .slice(0, 8)
       .filter(([key]) => key.length <= 120)
-      .map(([key, item]) => [key, boundedPreview(item, depth + 1)])
+      .map(([key, item]) => [
+        key,
+        boundedPreview(item, depth + 1, rowLimit, textLimit),
+      ])
   );
 }
 function structure(value: unknown, path = "", depth = 0): unknown[] {

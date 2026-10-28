@@ -50,6 +50,60 @@ export function isPublicAddress(address: string) {
         globalV6.check(address, "ipv6") &&
         !specialV6.check(address, "ipv6");
 }
+/** Deployment-only exact-host public DNS pins. URL origin and TLS hostname remain unchanged. */
+export function modelDNSAddresses(
+  host: string,
+  env: Environment = process.env
+): { address: string; family: number }[] | null {
+  const raw = env.MODEL_DNS_OVERRIDES?.trim();
+  if (!raw) {
+    return null;
+  }
+  const invalid = () =>
+    new ModelNetworkError(
+      "destination",
+      "模型 DNS pin 配置无效；仅允许精确域名和公网 IP。"
+    );
+  let value: unknown;
+  try {
+    value = JSON.parse(raw);
+  } catch {
+    // biome-ignore lint/style/useErrorCause: Raw config parse errors may expose deployment data.
+    throw invalid();
+  }
+  if (
+    raw.length > 8192 ||
+    !value ||
+    typeof value !== "object" ||
+    Array.isArray(value) ||
+    Object.keys(value).length > 16
+  ) {
+    throw invalid();
+  }
+  for (const [name, addresses] of Object.entries(value)) {
+    if (
+      name.length > 253 ||
+      !/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(
+        name
+      ) ||
+      !Array.isArray(addresses) ||
+      !addresses.length ||
+      addresses.length > 8 ||
+      addresses.some(
+        (address) => typeof address !== "string" || !isPublicAddress(address)
+      )
+    ) {
+      throw invalid();
+    }
+  }
+  const addresses = Object.hasOwn(value, host)
+    ? (value as Record<string, string[]>)[host]
+    : undefined;
+  return addresses
+    ? addresses.map((address) => ({ address, family: isIP(address) }))
+    : null;
+}
+
 function localAllowed(url: URL, env: Environment) {
   return (
     ["development", "test"].includes(env.NODE_ENV ?? "") &&
@@ -120,19 +174,21 @@ export function modelFetch(
       AbortSignal.timeout(120_000),
     ]);
     const host = url.hostname.replace(/^\[|\]$/g, "");
-    const addresses = await Promise.race([
-      lookup(host, { all: true }),
-      new Promise<never>((_, reject) => {
-        signal.addEventListener(
-          "abort",
-          () => reject(new Error("模型连接超时。")),
-          { once: true }
-        );
-        if (signal.aborted) {
-          reject(new Error("模型连接超时。"));
-        }
-      }),
-    ]);
+    const addresses =
+      modelDNSAddresses(host, env) ??
+      (await Promise.race([
+        lookup(host, { all: true }),
+        new Promise<never>((_, reject) => {
+          signal.addEventListener(
+            "abort",
+            () => reject(new Error("模型连接超时。")),
+            { once: true }
+          );
+          if (signal.aborted) {
+            reject(new Error("模型连接超时。"));
+          }
+        }),
+      ]));
     if (
       !addresses.length ||
       (!localAllowed(base, env) &&
