@@ -328,7 +328,7 @@ test("late editor and version callbacks cannot change or save the newly opened d
   assert.equal(writes, 0);
 });
 
-test("workspace header has one 64px title rail and a secondary keyboard mode menu", () => {
+test("workspace header separates a 52px title rail from contextual controls and keeps the keyboard mode menu", () => {
   const { WorkspaceHeader } = load(
     "app/_components/chat/workspace-header.tsx",
     {
@@ -365,10 +365,20 @@ test("workspace header has one 64px title rail and a secondary keyboard mode men
       "react/jsx-runtime": { jsx, jsxs: jsx },
     }
   );
-  const header = WorkspaceHeader({ children: "Document title" });
-  assert.match(header.props.className, /h-\[64px\]/);
+  const header = WorkspaceHeader({
+    children: "Document title",
+    controls: "Filter controls",
+  });
+  const [titlebar] = header.props.children;
+  assert.match(titlebar.props.className, /h-\[52px\]/);
+  assert.equal(titlebar.props["data-testid"], "workspace-titlebar");
   assert.equal(
-    header.props.children[0].props.children,
+    header.props.children[1].props["data-testid"],
+    "workspace-toolbar"
+  );
+  assert.equal(header.props.children[1].props.children, "Filter controls");
+  assert.equal(
+    titlebar.props.children[0].props.children,
     "Document title",
     "document identity precedes the secondary view selector"
   );

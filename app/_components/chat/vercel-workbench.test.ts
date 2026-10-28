@@ -166,9 +166,10 @@ test("workspace chrome has one aligned top row and exposes existing action label
   );
   const chat = readFileSync("app/_components/chat/chat-header.tsx", "utf8");
   const sidebar = readFileSync("app/_components/chat/app-sidebar.tsx", "utf8");
-  for (const source of [header, chat, sidebar]) {
-    assert.match(source, /\bh-(?:16|12|\[64px\])/);
+  for (const source of [header, chat]) {
+    assert.match(source, /h-\[52px\]/);
   }
+  assert.match(sidebar, /flex h-9 items-center justify-between/);
   const actions = readFileSync(
     "app/_components/chat/artifact-actions.tsx",
     "utf8"
@@ -433,14 +434,17 @@ test("focus composition defaults to a 400px conversation with manual resize reta
     "app/_components/chat/workspace-header.tsx",
     "utf8"
   );
-  assert.match(header, /@container h-\[64px\]/);
+  assert.match(header, /@container/);
+  assert.match(header, /data-testid="workspace-titlebar"/);
+  assert.match(header, /h-\[52px\]/);
   assert.match(header, /\{controls\}/);
   const table = readFileSync("app/_components/chat/result-table.tsx", "utf8");
   assert.match(table, /hidden @min-\[760px\]:inline/);
   assert.match(table, /renderHeader\(controls\)/);
   assert.match(table, /@max-\[500px\]:order-3/);
   assert.match(table, /@max-\[500px\]:overflow-x-auto/);
-  assert.match(header, /@max-\[500px\]:flex-wrap/);
+  assert.match(header, /data-testid="workspace-toolbar"/);
+  assert.match(header, /overflow-x-auto/);
   assert.doesNotMatch(table, /<details|<summary/);
   const sheet = readFileSync("app/_artifacts/sheet/client.tsx", "utf8");
   assert.match(sheet, /renderHeader=\{renderHeader\}/);

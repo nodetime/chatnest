@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronUp, Settings2 } from "lucide-react";
+import { ChevronUp, LogIn, Settings2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { User } from "next-auth";
@@ -70,7 +70,10 @@ export function SidebarUserNav({
             className="h-9 rounded-lg"
             data-testid="sidebar-login"
           >
-            <Link href="/login">登录</Link>
+            <Link href="/login">
+              <LogIn className="size-4" />
+              <span>登录</span>
+            </Link>
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>
@@ -88,7 +91,7 @@ export function SidebarUserNav({
                   <div className="flex flex-row items-center gap-2">
                     <div className="size-6 animate-pulse rounded-full bg-sidebar-foreground/10" />
                     <span className="animate-pulse rounded-md bg-sidebar-foreground/10 text-transparent text-[13px]">
-                      Loading...
+                      读取账户…
                     </span>
                   </div>
                   <div className="animate-spin text-sidebar-foreground/50">
@@ -98,7 +101,7 @@ export function SidebarUserNav({
               ) : (
                 <SidebarMenuButton
                   aria-label="个人账户"
-                  className="h-8 px-2 rounded-lg bg-transparent text-sidebar-foreground/70 transition-colors duration-150 hover:text-sidebar-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                  className="h-10 px-2 rounded-lg group-data-[collapsible=icon]:p-0.5! bg-transparent text-sidebar-foreground/70 transition-colors duration-150 hover:text-sidebar-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                   data-testid="user-nav-button"
                   tooltip="个人账户"
                 >
@@ -116,7 +119,7 @@ export function SidebarUserNav({
               )}
             </DropdownMenuTrigger>
             <DropdownMenuContent
-              className="w-56 rounded-xl border border-border/60 bg-card/95 backdrop-blur-xl shadow-[var(--shadow-float)]"
+              className="w-56 rounded-xl border border-border/60 bg-popover shadow-[var(--shadow-float)]"
               data-testid="user-nav-menu"
               side="top"
             >

@@ -137,3 +137,12 @@ server/
 - 产品显示名为「数知探AI」：首页链接、页面 title、账户页、后台、输入提示、内置技能归属与 Markdown 导出统一；后台标题为「数知探AI · 管理后台」。
 - 仓库／技术宿主名 ChatNest、Porta、CSS 标识、日志服务名、加密 AAD 以及锁定的外部 Porta skill 快照保持不变；不重写历史用户消息、来源标题和已保存产物。
 - 品牌回归覆盖新显示名、导出原文保留与内部稳定标识，既有认证／视觉选择器同步更新，不改变登录、导航或 Agent 行为。
+
+
+## Lessie 工作空间呈现（2026-10-28）
+
+- `globals.css` 的工作台语义变量统一白画布、浅中性侧栏、石墨正文和克制的选择态；展开侧栏 208px、折叠 72px，聊天/管理顶栏 52px。没有更换样式框架、字体加载或 Agent 实现。
+- `shell/greeting/workspace-home` 把任务入口约束为 840px，最近对话与真实成果为并列轻列表；`SavedArtifactCards.compact` 只是同一份属主 API 数据的呈现模式，不伪造推荐或订阅能力。
+- `workspace-header` 将原有通用标题/关闭/视图切换保留在 52px 主行，把产物 controls 放进独立可横向滚动的 toolbar；`artifact-picker` 明确可收缩边界。编辑器挂载、未保存保护与回调作用域不变。
+- `agent-library` 复用现有 Dialog，桌面侧向分类、移动横向分类，内容独立滚动；连接与技能复用相同个人组件，改为轻列表。Ask/Todo/工具行仅调整表面，不改工具定义、审批和续跑。
+- `tests/visual/lessie_workspace.py` 为显式 opt-in 的本地样式/键盘检查，只接受隔离端口33379；`formal_workspace.py` 补充长标题纯DOM边界探针和输入底部稳定断言。脚本不进入生产装配，测试模型/数据不冒充真实服务验收。

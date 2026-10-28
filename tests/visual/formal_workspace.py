@@ -71,6 +71,30 @@ def geometry(page, label):
     check("geometry: " + label)
 
 
+
+def long_title_geometry(page, label):
+    # DOM-only text boundary probe, not an edit/save/model acceptance claim.
+    title = page.get_by_test_id("artifact").get_by_role("button", name="选择本次对话的产物", exact=True).locator("span").first
+    original = title.inner_text()
+    try:
+        title.evaluate("(element) => { element.textContent = '超长产物标题与来源资料核对报告'.repeat(24) }")
+        geometry(page, label)
+        values = page.evaluate("""() => {
+          const bar=document.querySelector('[data-testid="workspace-titlebar"]');
+          const toolbar=document.querySelector('[data-testid="workspace-toolbar"]');
+          const title=bar.querySelector('[aria-label="选择本次对话的产物"] span');
+          const view=bar.querySelector('[aria-label="切换工作区视图"]');
+          const close=bar.querySelector('[aria-label="关闭工作区"]');
+          return {barHeight:bar.getBoundingClientRect().height,
+            separate:toolbar.getBoundingClientRect().y>=bar.getBoundingClientRect().bottom-1,
+            fits:title.getBoundingClientRect().right<=view.getBoundingClientRect().left+1 && close.getBoundingClientRect().right<=innerWidth,
+            truncated:title.scrollWidth>title.clientWidth};
+        }""")
+        check(label + ": long title truncates without moving toolbar or close", abs(values["barHeight"]-52)<1 and values["separate"] and values["fits"] and values["truncated"])
+    finally:
+        title.evaluate("(element, text) => {element.textContent=text}", original)
+
+
 def saved_messages(page, chat_id, predicate=lambda _: True):
     deadline = time.monotonic() + 20
     while True:
@@ -126,7 +150,7 @@ with sync_playwright() as p:
         check("collapsed sidebar has 72px geometry", abs(REPORT["geometry"]["formal-home-sidebar-collapsed"]["sidebarWidth"] - 72) < 1)
         page.get_by_role("button", name="切换侧栏", exact=True).click()
         geometry(page, "formal-home-sidebar-expanded")
-        check("expanded sidebar has 184px geometry", abs(REPORT["geometry"]["formal-home-sidebar-expanded"]["sidebarWidth"] - 184) < 1)
+        check("expanded sidebar has 208px geometry", abs(REPORT["geometry"]["formal-home-sidebar-expanded"]["sidebarWidth"] - 208) < 1)
         if os.environ.get("FORMAL_SKIP_UPLOAD") != "1":
             with page.expect_response(lambda response: response.url.endswith("/api/files/upload"), timeout=30000) as upload_info:
                 page.locator('input[type="file"][multiple]').set_input_files(str(docx()))
@@ -205,6 +229,7 @@ with sync_playwright() as p:
         check("Todo progress updates from actual completed tool snapshot")
         page.get_by_role("button", name="打开产物：FORMAL 本地证据结果表", exact=True).scroll_into_view_if_needed()
         geometry(page, "formal-artifact-desktop")
+        long_title_geometry(page, "formal-artifact-long-title-desktop")
         if EXTENDED:
             page.get_by_role("button",name="打开产物：FORMAL 本地证据结果表",exact=True).click()
             artifact=page.get_by_test_id("artifact")
@@ -273,6 +298,7 @@ with sync_playwright() as p:
         check("same-document library reopen preserves existing content and type")
         page.set_viewport_size({"width": 390, "height": 844})
         geometry(page, "formal-artifact-mobile")
+        long_title_geometry(page, "formal-artifact-long-title-mobile")
         page.get_by_role("button", name="关闭工作区", exact=True).click()
         page.get_by_role("button", name="打开侧栏", exact=True).click()
         expect(page.get_by_role("dialog")).to_be_visible()
@@ -320,6 +346,8 @@ with sync_playwright() as p:
             resume.click()
             expect(page.get_by_text("FORMAL_RESUMED_DONE",exact=False)).to_be_visible(timeout=30000)
             check("incomplete Ask can continue without invented answer or approval")
+        bottoms = [REPORT["geometry"][state]["input"]["bottom"] for state in ["formal-ask-desktop", "formal-artifact-desktop", "formal-artifact-closed", "formal-agent-paused"]]
+        check("composer stays at the same bottom during Ask, artifact toggle and pause", max(bottoms)-min(bottoms)<1)
         check("no browser page errors", not REPORT["pageErrors"])
 
     except Exception as error:

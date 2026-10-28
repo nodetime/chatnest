@@ -896,7 +896,7 @@ test("generic empty conversation has a readable invitation and one softly elevat
   `);
   assert.match(html, /<h1/);
   assert.match(html, /今天想完成什么/);
-  assert.match(html, /text-\[26px\]/);
+  assert.match(html, /text-\[28px\]/);
   const composer = readFileSync(
     "app/_components/chat/multimodal-input.tsx",
     "utf8"
@@ -904,7 +904,7 @@ test("generic empty conversation has a readable invitation and one softly elevat
   assert.match(composer, /shadow-\[var\(--shadow-composer\)\]/);
   assert.doesNotMatch(composer, /focus-within:border-foreground\/25/);
   const sidebar = readFileSync("app/_components/chat/app-sidebar.tsx", "utf8");
-  assert.match(sidebar, /flex h-12/);
+  assert.match(sidebar, /flex h-9/);
   for (const entry of [
     "新对话",
     "文件",
@@ -1006,7 +1006,7 @@ test("open artifacts use a compact chat file card instead of mounting a duplicat
   const css = readFileSync("app/globals.css", "utf8");
   assert.match(
     css,
-    /\.chat-workbench\[data-slot="sidebar-wrapper"\]\s*\{[^}]*--sidebar-width: 11\.5rem !important/
+    /\.chat-workbench\[data-slot="sidebar-wrapper"\]\s*\{[^}]*--sidebar-width: 13rem !important/
   );
 });
 
@@ -1168,7 +1168,7 @@ test("workspace resize grip stretches across the pane with an 8px hit area and a
 test("Lessie composition uses neutral panes, purposeful mint and narrower chat beside broad artifacts", () => {
   const css = readFileSync("app/globals.css", "utf8");
   const scoped = css.slice(css.indexOf(".chat-workbench {"));
-  assert.match(scoped, /--background: #fcfcfb/);
+  assert.match(scoped, /--background: #ffffff/);
   assert.match(scoped, /--workbench-selection:/);
   assert.doesNotMatch(scoped, /0\.00[1-8] (?:65|85)\)/);
   assert.match(
@@ -1244,4 +1244,52 @@ test("formal chat avoids repeated assistant branding without changing canonical 
     /showSender=\{index === 0 \|\| messages\[index - 1\]\?\.role !== "assistant"\}/
   );
   assert.match(messages, /key=\{message.id\}/);
+});
+
+test("Lessie refinement uses a white task canvas, bounded home and aligned title rails", () => {
+  const css = readFileSync("app/globals.css", "utf8");
+  const shell = readFileSync("app/_components/chat/shell.tsx", "utf8");
+  assert.match(css, /--workbench-canvas: #ffffff/);
+  assert.match(css, /--sidebar-width: 13rem/);
+  assert.doesNotMatch(css, /--workbench-canvas: #f0f1f2/);
+  assert.match(shell, /max-w-\[840px\]/);
+  const home = readFileSync("app/_components/chat/workspace-home.tsx", "utf8");
+  assert.match(home, /data-testid="home-recent-grid"/);
+  assert.match(home, /useSavedArtifacts/);
+  const header = readFileSync("app/_components/chat/chat-header.tsx", "utf8");
+  assert.match(header, /h-\[52px\]/);
+});
+
+test("artifact title rail and contextual toolbar are separate without remounting editors", () => {
+  const header = readFileSync(
+    "app/_components/chat/workspace-header.tsx",
+    "utf8"
+  );
+  assert.match(header, /data-testid="workspace-titlebar"/);
+  assert.match(header, /data-testid="workspace-toolbar"/);
+  assert.ok(
+    header.indexOf('data-testid="workspace-titlebar"') <
+      header.indexOf('data-testid="workspace-toolbar"')
+  );
+  assert.match(header, /min-w-0 flex-1/);
+  assert.match(header, /overflow-x-auto/);
+  const artifact = readFileSync("app/_components/chat/artifact.tsx", "utf8");
+  assert.match(artifact, /controls=\{controls\}/);
+  assert.match(artifact, /renderHeader=\{renderHeader\}/);
+  assert.doesNotMatch(artifact, /key=\{(?:workspace|.*width)/);
+});
+
+test("settings has responsive navigation and independently scrollable content with keyboard support", () => {
+  const source = readFileSync("app/_components/chat/agent-library.tsx", "utf8");
+  assert.match(source, /data-testid="settings-navigation"/);
+  assert.match(source, /data-testid="settings-content"/);
+  assert.match(
+    source,
+    /aria-orientation=\{isMobile \? "horizontal" : "vertical"\}/
+  );
+  assert.match(source, /ArrowDown/);
+  assert.match(source, /ArrowUp/);
+  assert.match(source, /min-h-0[^"\n]*overflow-y-auto/);
+  assert.match(source, /<PersonalConnections/);
+  assert.match(source, /<PersonalSkills/);
 });

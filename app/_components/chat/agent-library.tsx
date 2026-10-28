@@ -16,6 +16,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/app/_components/ui/dialog";
+import { useIsMobile } from "@/app/_hooks/use-mobile";
 import {
   AgentLibraryPanel,
   type AgentLibraryTab as Tab,
@@ -42,6 +43,7 @@ export function AgentLibrary({
   const open = controlledOpen ?? internalOpen;
   const [activeTab, setActiveTab] = useState<Tab>(tab);
   const { theme, setTheme } = useTheme();
+  const isMobile = useIsMobile();
   const tabs = [
     { icon: Settings2, id: "settings" as const, label: "常规" },
     { icon: Plug, id: "tools" as const, label: "连接" },
@@ -73,8 +75,11 @@ export function AgentLibrary({
     (event: KeyboardEvent<HTMLButtonElement>) => {
       const tabIds: Tab[] = ["settings", "tools", "skills"];
       const index = tabIds.indexOf(event.currentTarget.dataset.tab as Tab);
-      const delta =
-        event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+      const delta = ["ArrowRight", "ArrowDown"].includes(event.key)
+        ? 1
+        : ["ArrowLeft", "ArrowUp"].includes(event.key)
+          ? -1
+          : 0;
       if (!delta) {
         return;
       }
@@ -105,52 +110,57 @@ export function AgentLibrary({
           </Button>
         </DialogTrigger>
       )}
-      <DialogContent className="max-h-[85dvh] gap-0 overflow-y-auto rounded-2xl p-0 sm:max-w-[640px]">
-        <DialogHeader className="px-6 pt-6 pb-5">
-          <DialogTitle className="text-xl">设置</DialogTitle>
+      <DialogContent className="flex h-[min(640px,85dvh)] max-h-[85dvh] flex-col gap-0 overflow-hidden rounded-2xl p-0 sm:max-w-[760px]">
+        <DialogHeader className="shrink-0 border-b border-border/70 px-6 py-5">
+          <DialogTitle className="text-lg">设置</DialogTitle>
           <DialogDescription>管理外观、个人连接与技能。</DialogDescription>
         </DialogHeader>
-        <div
-          aria-label="能力分类"
-          className="flex gap-1 border-b px-5"
-          role="tablist"
-        >
-          {tabs.map(({ id, label, icon: TabIcon }) => (
-            <button
-              aria-controls={`agent-panel-${id}`}
-              aria-selected={activeTab === id}
-              className={`flex items-center gap-2 border-b-2 px-3 py-3 text-sm ${activeTab === id ? "border-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
-              data-tab={id}
-              id={`agent-tab-${id}`}
-              key={id}
-              onClick={handleTab}
-              onKeyDown={handleTabKey}
-              role="tab"
-              tabIndex={activeTab === id ? 0 : -1}
-              type="button"
-            >
-              <TabIcon className="size-4" />
-              {label}
-            </button>
-          ))}
-        </div>
-        <div
-          aria-labelledby={`agent-tab-${activeTab}`}
-          className="min-h-[300px] px-6 py-6"
-          id={`agent-panel-${activeTab}`}
-          role="tabpanel"
-        >
-          {activeTab === "tools" ? (
-            <PersonalConnections />
-          ) : activeTab === "skills" ? (
-            <PersonalSkills />
-          ) : (
-            <AgentLibraryPanel
-              onThemeChange={handleTheme}
-              tab="settings"
-              theme={theme}
-            />
-          )}
+        <div className="flex min-h-0 flex-1 flex-col md:grid md:grid-cols-[152px_minmax(0,1fr)]">
+          <div
+            aria-label="能力分类"
+            aria-orientation={isMobile ? "horizontal" : "vertical"}
+            className="flex shrink-0 gap-1 border-b border-border/70 bg-secondary/30 p-2 md:flex-col md:justify-start md:border-r md:border-b-0 md:p-3"
+            data-testid="settings-navigation"
+            role="tablist"
+          >
+            {tabs.map(({ id, label, icon: TabIcon }) => (
+              <button
+                aria-controls={`agent-panel-${id}`}
+                aria-selected={activeTab === id}
+                className={`flex min-w-0 flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm md:flex-none md:justify-start ${activeTab === id ? "bg-secondary font-medium text-foreground" : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground"}`}
+                data-tab={id}
+                id={`agent-tab-${id}`}
+                key={id}
+                onClick={handleTab}
+                onKeyDown={handleTabKey}
+                role="tab"
+                tabIndex={activeTab === id ? 0 : -1}
+                type="button"
+              >
+                <TabIcon className="size-4" />
+                {label}
+              </button>
+            ))}
+          </div>
+          <div
+            aria-labelledby={`agent-tab-${activeTab}`}
+            className="min-h-0 flex-1 overflow-y-auto px-6 py-6"
+            data-testid="settings-content"
+            id={`agent-panel-${activeTab}`}
+            role="tabpanel"
+          >
+            {activeTab === "tools" ? (
+              <PersonalConnections />
+            ) : activeTab === "skills" ? (
+              <PersonalSkills />
+            ) : (
+              <AgentLibraryPanel
+                onThemeChange={handleTheme}
+                tab="settings"
+                theme={theme}
+              />
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>

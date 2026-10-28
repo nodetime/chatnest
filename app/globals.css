@@ -53,7 +53,7 @@
 :root {
   --radius: 0.625rem;
   --background: oklch(0.985 0 0);
-  --foreground: #242424;
+  --foreground: #262a33;
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.12 0 0);
   --popover: oklch(1 0 0);
@@ -63,7 +63,7 @@
   --secondary: oklch(0.965 0 0);
   --secondary-foreground: oklch(0.38 0 0);
   --muted: oklch(0.94 0 0);
-  --muted-foreground: #6b6b6b;
+  --muted-foreground: #6b7078;
   --accent: oklch(0.965 0 0);
   --accent-foreground: oklch(0.12 0 0);
   --destructive: oklch(0.55 0.15 25);
@@ -76,7 +76,7 @@
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
   --sidebar: oklch(0.97 0 0);
-  --sidebar-foreground: #343434;
+  --sidebar-foreground: #343840;
   --sidebar-primary: oklch(0.12 0 0);
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.12 0 0 / 0.06);
@@ -521,24 +521,24 @@ textarea:focus-visible {
 
 /* The workbench palette is local to chat; admin and global fonts stay unchanged. */
 .chat-workbench {
-  --background: #fcfcfb;
-  --foreground: #232527;
+  --background: #ffffff;
+  --foreground: #262a33;
   --card: oklch(1 0 0);
   --card-foreground: var(--foreground);
   --popover: var(--card);
   --popover-foreground: var(--foreground);
   --primary: var(--foreground);
   --primary-foreground: var(--card);
-  --secondary: #f1f2f2;
+  --secondary: #f5f6f7;
   --secondary-foreground: var(--foreground);
   --muted: oklch(0.965 0.002 250);
-  --muted-foreground: #666b70;
+  --muted-foreground: #6b7078;
   --accent: oklch(0.95 0.003 250);
   --accent-foreground: var(--foreground);
-  --border: #e3e5e5;
+  --border: #e8eaed;
   --input: var(--border);
-  --ring: oklch(0.52 0.075 165);
-  --sidebar: #f4f4f3;
+  --ring: #555b65;
+  --sidebar: #f7f7f7;
   --sidebar-foreground: var(--foreground);
   --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: var(--primary-foreground);
@@ -546,8 +546,8 @@ textarea:focus-visible {
   --sidebar-accent-foreground: var(--foreground);
   --sidebar-border: var(--border);
   --sidebar-ring: var(--ring);
-  --workbench-selection: #e9f0ed;
-  --workbench-canvas: #f0f1f2;
+  --workbench-selection: #e9f2ef;
+  --workbench-canvas: #ffffff;
   --workbench-shell: var(--sidebar);
   --workbench-surface: var(--background);
   --shadow-composer: 0 2px 8px -3px oklch(0.3 0.005 250 / 0.06);
@@ -556,7 +556,7 @@ textarea:focus-visible {
 }
 
 .chat-workbench[data-slot="sidebar-wrapper"] {
-  --sidebar-width: 11.5rem !important;
+  --sidebar-width: 13rem !important;
   --sidebar-width-icon: 4.5rem !important;
 }
 

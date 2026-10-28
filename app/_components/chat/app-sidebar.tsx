@@ -52,8 +52,8 @@ export function AppSidebar({
   };
   return (
     <Sidebar className="border-r border-sidebar-border/60" collapsible="icon">
-      <SidebarHeader className="gap-4 px-3 py-4 group-data-[collapsible=icon]:px-3">
-        <div className="flex h-12 items-center justify-between gap-2 px-1 group-data-[collapsible=icon]:justify-center">
+      <SidebarHeader className="gap-3 px-3 py-2 group-data-[collapsible=icon]:px-3">
+        <div className="flex h-9 items-center justify-between gap-2 px-1 group-data-[collapsible=icon]:justify-center">
           <button
             aria-label="数知探AI 首页"
             className="flex min-w-0 items-center gap-2 text-sm font-semibold group-data-[collapsible=icon]:hidden"
@@ -91,7 +91,7 @@ export function AppSidebar({
           <SidebarMenuItem>
             <SidebarMenuButton
               aria-label="对话"
-              className="h-10 rounded-lg text-[13px]"
+              className="h-9 rounded-lg text-[13px]"
               isActive={section === "chat"}
               onClick={() => open("chat")}
               tooltip="对话"
@@ -103,7 +103,7 @@ export function AppSidebar({
           <SidebarMenuItem>
             <SidebarMenuButton
               aria-label="文件"
-              className="h-10 rounded-lg text-[13px]"
+              className="h-9 rounded-lg text-[13px]"
               isActive={section === "files"}
               onClick={() => open("files")}
               tooltip="文件"
@@ -115,7 +115,7 @@ export function AppSidebar({
           <SidebarMenuItem>
             <SidebarMenuButton
               aria-label="连接"
-              className="h-10 rounded-lg text-[13px]"
+              className="h-9 rounded-lg text-[13px]"
               isActive={section === "connections"}
               onClick={() => open("connections")}
               tooltip="连接"
@@ -127,7 +127,7 @@ export function AppSidebar({
           <SidebarMenuItem>
             <SidebarMenuButton
               aria-label="技能"
-              className="h-10 rounded-lg text-[13px]"
+              className="h-9 rounded-lg text-[13px]"
               isActive={section === "skills"}
               onClick={() => open("skills")}
               tooltip="技能"
