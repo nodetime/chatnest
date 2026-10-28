@@ -182,16 +182,24 @@ function docx(body: string, extra: [string, string | Buffer][] = []) {
     ...extra,
   ]);
 }
-function pdf(pages: string[]) {
+function pdf(pages: string[], cidFont = false) {
   const objects = [
     "<< /Type /Catalog /Pages 2 0 R >>",
     `<< /Type /Pages /Kids [${pages.map((_, i) => `${3 + i * 2} 0 R`).join(" ")}] /Count ${pages.length} >>`,
   ];
   for (const text of pages) {
+    const font = cidFont
+      ? "<< /Type /Font /Subtype /Type0 /BaseFont /STSong-Light /Encoding /UniGB-UCS2-H /DescendantFonts [<< /Type /Font /Subtype /CIDFontType0 /BaseFont /STSong-Light /CIDSystemInfo << /Registry (Adobe) /Ordering (GB1) /Supplement 4 >> /DW 1000 >>] >>"
+      : "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>";
     objects.push(
-      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> >> >> /Contents ${objects.length + 2} 0 R >>`
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 ${font} >> >> /Contents ${objects.length + 2} 0 R >>`
     );
-    const stream = text ? `BT /F1 12 Tf 72 720 Td (${text}) Tj ET` : "";
+    const operand = cidFont
+      ? `<${Array.from(text)
+          .map((c) => c.charCodeAt(0).toString(16).padStart(4, "0"))
+          .join("")}>`
+      : `(${text})`;
+    const stream = text ? `BT /F1 12 Tf 72 720 Td ${operand} Tj ET` : "";
     objects.push(
       `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`
     );
@@ -934,4 +942,23 @@ test("host native parser dependency seeds retain pnpm resolution links in Next r
         .includes(`"${name}"`)
     );
   }
+});
+
+test("Chinese CID text PDF uses bundled CMaps, not an OCR-only classification", async () => {
+  const { parseDocument } = await import(
+    "@/server/infrastructure/uploads/document-parser"
+  );
+  const out = await parseDocument(
+    pdf(["采购确认：金额472元", "预算上限500元"], true),
+    "application/pdf"
+  );
+  assert.equal(out.status, "ready");
+  assert.equal(out.segments.length, 2);
+  assert.match(out.segments[0].text, /采购确认/);
+  assert.match(out.segments[0].text, /472/);
+  assert.match(out.segments[1].text, /预算上限/);
+  assert.deepEqual(
+    out.segments.map((s) => s.ref),
+    ["page:1", "page:2"]
+  );
 });

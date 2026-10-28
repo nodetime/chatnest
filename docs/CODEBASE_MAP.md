@@ -114,3 +114,11 @@ server/
 - AuthLayout 移除模板 Preview/AI Gateway 双栏演示，复用现有品牌、颜色与 Input/Button/Form，桌面与移动端均使用紧凑单表单。
 - 登录、注册、返回首页、字段、按钮和提交状态统一中文；密码管理器区分 current-password/new-password，不自动打开移动端键盘，保留键盘焦点样式。
 - 个人入口认证、next 白名单与回跳契约不变；认证 UI 回归与两份已有视觉测试同步使用中文选择器。
+
+## 真实模型补验修复（2026-10-28）
+
+- `server/infrastructure/uploads/document-worker.cjs` 从 PDF.js 包解析本地 CMaps／标准字体资源，支持中文 CID 文本 PDF；依赖追踪、禁止远程资源和原有限额保持不变。
+- `server/application/uploads/service.ts` 的新对话与用户消息 raw SQL 写入采用 UTC ISO 字符串显式转 timestamp，与 Drizzle 的 UTC-naive 约定一致；不批量改写旧记录。
+- `server/domain/message/message-turn.ts` 的 `projectSettledToolHistory` 只清理模型上下文中历史未完成工具；`send-message.ts` 在附件／权限投影后、SDK 转换前使用。当前真实审批续跑、终态结果、Todo 和附件保持不变；数据库审计不改。
+- `message-time-db.test.ts` 为显式 opt-in、仅 loopback、独立临时 schema 的非 UTC 真库测试；默认离线 CI 跳过，不接触业务表。`tool-history.test.ts` 及中文 PDF 回归纳入显式测试白名单。
+- 真实模型任务、停止／异常恢复证据及合成供应商边界见 [本轮记录](integrations/2026-10-28-real-agent-e2e.md)。

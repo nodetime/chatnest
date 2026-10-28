@@ -1,6 +1,6 @@
 # 真实联调现状与下一轮边界
 
-更新：2026-10-24。此页保留上一轮历史结果；最新 CLI/skills 双端接入与实际运行见 [本轮记录](porta-host-verification.md) 和 [接入指南](porta-hosts.md)。不代表生产验收通过。
+更新：2026-10-28。最新真实模型结果见 [DOCX／Ask／Porta／产物](2026-10-27-real-model-verification.md) 与 [PDF／Excel／Todo／停止和异常续跑](2026-10-28-real-agent-e2e.md)。模型服务已可用；供应商上游仍为合成数据，不代表生产验收通过。下表为 2026-10-24 历史快照，不作当前状态。CLI/skills 接入见 [宿主记录](porta-host-verification.md) 和 [接入指南](porta-hosts.md)。
 
 ## 当前结果
 

@@ -48,3 +48,37 @@ export function prepareMessageEdit(
   };
   return { context: [...stored.slice(0, index), edited], edited, index };
 }
+
+/** Model-only projection: abandoned calls remain in UI/audit history but carry no reusable approval. */
+export function projectSettledToolHistory<
+  T extends { id: string; role: string; parts: unknown[] },
+>(messages: T[], resumingAssistantId?: string): T[] {
+  return messages.map((message) =>
+    message.role !== "assistant" || message.id === resumingAssistantId
+      ? message
+      : {
+          ...message,
+          parts: message.parts.filter((part) => {
+            if (!part || typeof part !== "object" || !("type" in part)) {
+              return true;
+            }
+            const { type } = part;
+            if (
+              typeof type !== "string" ||
+              !(type === "dynamic-tool" || type.startsWith("tool-"))
+            ) {
+              return true;
+            }
+            return (
+              !("state" in part) ||
+              ![
+                "input-streaming",
+                "input-available",
+                "approval-requested",
+                "approval-responded",
+              ].includes(String(part.state))
+            );
+          }),
+        }
+  );
+}

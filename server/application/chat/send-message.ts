@@ -55,6 +55,7 @@ import { generateUUID } from "@/server/domain/message/ids";
 import {
   prepareMessageEdit,
   prepareRegeneration,
+  projectSettledToolHistory,
 } from "@/server/domain/message/message-turn";
 import { agentStreamErrorText } from "@/server/domain/message/porta-error";
 import type {
@@ -301,7 +302,11 @@ export async function sendMessage(
     historyTools,
     evidenceLedger
   );
-  const modelMessages = await convertToModelMessages(attachmentContext, {
+  const modelHistory = projectSettledToolHistory(
+    attachmentContext,
+    isToolApprovalFlow ? uiMessages.at(-1)?.id : undefined
+  );
+  const modelMessages = await convertToModelMessages(modelHistory, {
     ignoreIncompleteToolCalls: true,
     tools: historyTools,
   });

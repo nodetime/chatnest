@@ -27,7 +27,7 @@
 | [task.md](task.md) | 逐轮任务台账(含验收数字) |
 | [lesson.md](lesson.md) | 验收教训:测试通过不等于用户认可 |
 
-### 集成细节(integrations/,7 份)
+### 集成细节(integrations/)
 
 | 文档 | 内容 |
 | --- | --- |
@@ -39,6 +39,7 @@
 | [integrations/private-uploads.md](integrations/private-uploads.md) | 私有附件与文档解析(最详尽的部署文档) |
 | [integrations/result-tables.md](integrations/result-tables.md) | MCP 结果表 |
 | [integrations/live-acceptance.md](integrations/live-acceptance.md) | 真实联调现状与验收边界(持续更新) |
+| [integrations/2026-10-28-real-agent-e2e.md](integrations/2026-10-28-real-agent-e2e.md) | PDF／Excel／Todo 与停止、异常续跑的真实模型补验 |
 
 ### 设计与验收档案(superpowers/)
 
