@@ -1,5 +1,6 @@
 import { ArrowLeftIcon } from "lucide-react";
 import Link from "next/link";
+import { BrandMark } from "@/app/_components/brand-mark";
 
 export default function AuthLayout({
   children,
@@ -17,9 +18,7 @@ export default function AuthLayout({
           className="flex items-center gap-2 text-sm font-semibold"
           href="/"
         >
-          <span className="flex size-7 items-center justify-center rounded-lg bg-primary text-xs text-primary-foreground">
-            C
-          </span>
+          <BrandMark />
           ChatNest
         </Link>
         <Link

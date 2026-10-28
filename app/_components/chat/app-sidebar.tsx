@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import type { User } from "next-auth";
 import { useCallback } from "react";
+import { BrandMark } from "@/app/_components/brand-mark";
 import {
   Sidebar,
   SidebarContent,
@@ -59,9 +60,7 @@ export function AppSidebar({
             onClick={handleNew}
             type="button"
           >
-            <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary text-xs font-semibold text-primary-foreground">
-              C
-            </span>
+            <BrandMark />
             <span>ChatNest</span>
           </button>
           <button

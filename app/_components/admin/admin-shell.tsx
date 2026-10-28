@@ -1,10 +1,11 @@
 "use client";
 // Adapted upstream dashboard Layout, AppSidebar and NavUser; see THIRD_PARTY_NOTICES.md.
-import { ArrowLeft, ChevronsUpDown, Command, LogOut } from "lucide-react";
+import { ArrowLeft, ChevronsUpDown, LogOut } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { type CSSProperties, type ReactNode, useCallback } from "react";
+import { BrandMark } from "@/app/_components/brand-mark";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -116,9 +117,13 @@ function AdminSidebar({ identity }: { identity: AdminIdentity }) {
       <SidebarHeader className="h-14 justify-center border-b px-3">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild tooltip="ChatNest 平台管理">
+            <SidebarMenuButton
+              asChild
+              className="group-data-[collapsible=icon]:p-0.5!"
+              tooltip="ChatNest 平台管理"
+            >
               <Link href="/admin">
-                <Command aria-hidden="true" />
+                <BrandMark size={28} />
                 <span className="font-semibold">
                   ChatNest{" "}
                   <span className="font-normal text-muted-foreground">

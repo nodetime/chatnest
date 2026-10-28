@@ -122,3 +122,11 @@ server/
 - `server/domain/message/message-turn.ts` 的 `projectSettledToolHistory` 只清理模型上下文中历史未完成工具；`send-message.ts` 在附件／权限投影后、SDK 转换前使用。当前真实审批续跑、终态结果、Todo 和附件保持不变；数据库审计不改。
 - `message-time-db.test.ts` 为显式 opt-in、仅 loopback、独立临时 schema 的非 UTC 真库测试；默认离线 CI 跳过，不接触业务表。`tool-history.test.ts` 及中文 PDF 回归纳入显式测试白名单。
 - 真实模型任务、停止／异常恢复证据及合成供应商边界见 [本轮记录](integrations/2026-10-28-real-agent-e2e.md)。
+
+## 品牌图标（2026-10-28）
+
+- `app/_components/brand-mark.tsx` 复用 Next Image 展示用户选定的 Figma 第一套「探索雷达」；侧栏、账户页与后台共用，保留 ChatNest 文案和原导航行为，装饰图像不重复朗读链接名称。
+- `public/brand/radar.svg` 为原始 160×160 导出，来源／哈希见同目录 README；`app/icon.svg` 同源，favicon 与 Apple 图标等比派生。公共资源尊重 NEXT_PUBLIC_BASE_PATH，不请求 Figma 临时地址，不改 Agent／Porta／模型配置。
+- 品牌回归追加至既有 `app/branding.test.ts`，继续使用原显式白名单；验证源图一致性、三个入口复用、访问命名与 basePath。
+
+- 品牌静态资源在 `proxy.ts` 精确放行 `/brand/radar.svg`、`/icon.svg`、`/apple-icon.png`，避免公开账户页创建访客会话；任意其他资源／私有 API 权限不变。Biome 仅对两份原始 SVG 关闭格式化／属性重排，仍保留其余检查。

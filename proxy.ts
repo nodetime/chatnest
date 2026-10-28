@@ -35,6 +35,12 @@ export async function proxy(request: NextRequest) {
     return response;
   };
 
+  // Public, fixed brand assets must load on login pages without creating a guest.
+  // This does not expose uploads or any arbitrary /brand/* resource.
+  if (["/brand/radar.svg", "/icon.svg", "/apple-icon.png"].includes(pathname)) {
+    return nextWithTrace();
+  }
+
   // Admin APIs own their authorization and return 401/403, never create guest sessions.
   if (pathname.startsWith("/api/auth") || pathname.startsWith("/api/admin/")) {
     return nextWithTrace();
