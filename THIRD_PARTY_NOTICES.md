@@ -52,3 +52,11 @@ into the conversation workspace and real tool activity groups. No SDK, runtime,
 or dependency changes. The complete pinned upstream copyright/license notice is
 retained verbatim in `app/_components/ai-elements/AI_ELEMENTS_LICENSE`. The full
 Apache License 2.0 text is included in `app/_components/ai-elements/APACHE-2.0.txt`.
+
+### AI Elements Question
+
+`app/_components/ai-elements/question.tsx` is adapted from Vercel AI Elements,
+commit `ca8be600bfd01b3131f9bf6134b51602a71f4374` (`packages/elements/src/question.tsx`),
+under the Apache-2.0 license reproduced above. Local import paths are adjusted;
+`asField` composes multiple model-defined questions in one owning form without
+nested HTML forms. Source: https://github.com/vercel/ai-elements/blob/ca8be600bfd01b3131f9bf6134b51602a71f4374/packages/elements/src/question.tsx

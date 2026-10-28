@@ -20,6 +20,10 @@ import {
   systemPrompt,
 } from "@/server/application/ai/prompts";
 import { getLanguageModel } from "@/server/application/ai/providers";
+import {
+  createTaskCapabilityService,
+  readUserCatalog,
+} from "@/server/application/capability/runtime";
 import { agentInteractionTools } from "@/server/application/chat/tools/agent-interactions";
 import { createDocument } from "@/server/application/chat/tools/create-document";
 import { createResultTable } from "@/server/application/chat/tools/create-result-table";
@@ -27,6 +31,7 @@ import { editDocument } from "@/server/application/chat/tools/edit-document";
 import { readAttachmentTool } from "@/server/application/chat/tools/read-attachment";
 import { requestSuggestions } from "@/server/application/chat/tools/request-suggestions";
 import { updateDocument } from "@/server/application/chat/tools/update-document";
+import { SettingsError } from "@/server/application/mcp/security";
 import { prepareAttachmentContext } from "@/server/application/uploads/context";
 import {
   commitUserMessage,
@@ -34,13 +39,17 @@ import {
   readAttachmentAsset,
 } from "@/server/application/uploads/service";
 import { AttachmentRoundBudget } from "@/server/domain/attachment/document-budget";
+import {
+  hasCurrentCapabilityScope,
+  projectSkillHistoryForModel,
+} from "@/server/domain/capability/projection";
+import type { CapabilitySelection } from "@/server/domain/capability/schema";
 import type { ChatRepository } from "@/server/domain/chat/repository";
 import { canAccessChat } from "@/server/domain/chat/types";
 import {
   hasPendingInteraction,
   storedAskUserOutputs,
 } from "@/server/domain/message/agent-interactions";
-import { applyToolApprovals } from "@/server/domain/message/approvals";
 import { convertToUIMessages } from "@/server/domain/message/convert";
 import { generateUUID } from "@/server/domain/message/ids";
 import {
@@ -89,6 +98,7 @@ export type SendMessageBody = {
   message?: { id: string; role: string; parts: unknown[] };
   messages?: { id: string; role: string; parts: unknown[] }[];
   searchMode: "auto" | "web";
+  capabilitySelection?: CapabilitySelection;
   selectedChatModel: string;
   selectedVisibilityType: "public" | "private";
   trigger: "submit-message" | "regenerate-message" | "edit-message";
@@ -168,16 +178,7 @@ export async function sendMessage(
   }
 
   let uiMessages: ChatMessage[];
-  const isAskContinuation =
-    isToolApprovalFlow &&
-    (messages?.some((item) =>
-      item.parts.some(
-        (part) => (part as { type?: string }).type === "tool-askUser"
-      )
-    ) ||
-      convertToUIMessages(messagesFromDb)
-        .at(-1)
-        ?.parts.some((part) => part.type === "tool-askUser"));
+  const isAskContinuation = isToolApprovalFlow;
   const regeneration = isRegeneration
     ? prepareRegeneration(
         convertToUIMessages(messagesFromDb),
@@ -226,9 +227,6 @@ export async function sendMessage(
         originalMessages: uiMessages,
       });
     }
-  } else if (isToolApprovalFlow && messages) {
-    const dbMessages = convertToUIMessages(messagesFromDb);
-    uiMessages = applyToolApprovals(dbMessages, messages as ChatMessage[]);
   } else {
     uiMessages = [
       ...convertToUIMessages(messagesFromDb),
@@ -258,6 +256,36 @@ export async function sendMessage(
     supportsTools,
     attachmentBudget
   );
+  const taskCapabilities = await createTaskCapabilityService({
+    chatId: id,
+    load: () => readUserCatalog(user),
+    userId: user.id,
+  }).prepare(input.body.capabilitySelection, isToolApprovalFlow, async () => {
+    if (message?.role === "user" && !isRegeneration && !isEdit) {
+      await commitUserMessage({
+        chatId: id,
+        message: {
+          attachments: [],
+          chatId: id,
+          createdAt: new Date(),
+          id: message.id,
+          parts: message.parts,
+          role: "user",
+        },
+        ownerId: user.id,
+        visibility: selectedVisibilityType,
+      });
+    }
+  });
+  if (
+    isToolApprovalFlow &&
+    !hasCurrentCapabilityScope(uiMessages, taskCapabilities.snapshot.revision)
+  ) {
+    throw new SettingsError(
+      409,
+      "此审批不属于当前任务范围，请发送新消息重新确认能力。"
+    );
+  }
   const evidenceLedger = new ResultEvidenceLedger();
   const contextIds = new Set(uiMessages.map((item) => item.id));
   const evidenceHistory = messagesFromDb.filter((item) =>
@@ -266,7 +294,10 @@ export async function sendMessage(
   restoreResultEvidence(evidenceLedger, evidenceHistory);
   const historyTools = historyProjectionTools(evidenceLedger, evidenceHistory);
   const attachmentContext = boundedMcpHistory(
-    resolvedAttachmentContext,
+    projectSkillHistoryForModel(
+      resolvedAttachmentContext,
+      taskCapabilities.skills.map((skill) => skill.name)
+    ),
     historyTools,
     evidenceLedger
   );
@@ -274,30 +305,20 @@ export async function sendMessage(
     ignoreIncompleteToolCalls: true,
     tools: historyTools,
   });
-  if (message?.role === "user" && !isRegeneration && !isEdit) {
-    await commitUserMessage({
-      chatId: id,
-      message: {
-        attachments: [],
-        chatId: id,
-        createdAt: new Date(),
-        id: message.id,
-        parts: message.parts,
-        role: "user",
-      },
-      ownerId: user.id,
-      visibility: selectedVisibilityType,
-    });
-    if (!chat) {
-      titlePromise = generateTitleFromUserMessage({
-        message: message as ChatMessage,
-      }).catch(() => "New chat");
-    }
+  if (!chat && message?.role === "user" && !isRegeneration && !isEdit) {
+    titlePromise = generateTitleFromUserMessage({
+      message: message as ChatMessage,
+    }).catch(() => "New chat");
   }
 
   const runFailure = createRunFailureReporter();
   const stream = createUIMessageStream<ChatMessage>({
     execute: async ({ writer: dataStream }) => {
+      dataStream.write({
+        data: { revision: taskCapabilities.snapshot.revision },
+        id: "capability-scope",
+        type: "data-capability-scope",
+      });
       if (isAskContinuation) {
         for (const chunk of storedAskUserOutputs(uiMessages)) {
           dataStream.write(chunk);
@@ -376,11 +397,25 @@ export async function sendMessage(
 
       let runtime: Awaited<ReturnType<typeof createAgentRuntime>> | undefined;
       try {
-        runtime = await createAgentRuntime(input.signal, undefined, undefined, {
-          ledger: evidenceLedger,
-          onSource: (source) =>
-            dataStream.write({ data: source, type: "data-mcp-source" }),
-        });
+        runtime = await createAgentRuntime(
+          input.signal,
+          undefined,
+          async () => taskCapabilities.config,
+          {
+            authorizeSkill: (skill) =>
+              taskCapabilities.assertCurrent(
+                `skill:${skill.id ?? `builtin:${skill.name}`}`
+              ),
+            authorizeTool: (server) =>
+              taskCapabilities.assertCurrent(
+                `server:${server.capabilityId ?? server.id}`
+              ),
+            ledger: evidenceLedger,
+            onSource: (source) =>
+              dataStream.write({ data: source, type: "data-mcp-source" }),
+            skills: taskCapabilities.skills,
+          }
+        );
         if (supportsTools) {
           try {
             Object.assign(
@@ -566,27 +601,6 @@ export async function sendMessage(
           snapshot: messagesFromDb,
           userId: user.id,
         });
-      } else if (isToolApprovalFlow) {
-        await Promise.all(
-          finishedMessages.map(async (finishedMsg) => {
-            const existingMsg = uiMessages.find((m) => m.id === finishedMsg.id);
-            if (existingMsg) {
-              await messageRepo.updateParts(finishedMsg.id, finishedMsg.parts);
-              return;
-            }
-
-            await messageRepo.saveMany([
-              {
-                attachments: [],
-                chatId: id,
-                createdAt: new Date(),
-                id: finishedMsg.id,
-                parts: finishedMsg.parts,
-                role: finishedMsg.role,
-              },
-            ]);
-          })
-        );
       } else if (finishedMessages.length > 0) {
         await messageRepo.saveMany(
           finishedMessages.map((currentMessage) => ({

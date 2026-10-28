@@ -7,7 +7,12 @@ import {
   type ServerConfig,
 } from "@/server/infrastructure/mcp/config";
 import { createSettingsService } from "./service";
-export type RuntimeServer = ServerConfig & { managed?: boolean };
+export type RuntimeServer = ServerConfig & {
+  managed?: boolean;
+  personal?: boolean;
+  capabilityId?: string;
+  authorizationVersion?: string;
+};
 export type RuntimeConfig = Omit<AgentConfig, "servers"> & {
   servers: RuntimeServer[];
 };
@@ -53,4 +58,13 @@ export async function readRuntimeConfig(): Promise<RuntimeConfig> {
     createSettingsService().load(),
   ]);
   return mergeManagedConfig(file, managed);
+}
+
+export function runtimeToolAlias(server: RuntimeServer, name: string) {
+  return toolAlias(
+    server.authorizationVersion
+      ? `${server.id}_${server.authorizationVersion.slice(0, 16)}`
+      : server.id,
+    name
+  );
 }

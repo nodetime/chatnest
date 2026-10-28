@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { ATTACHMENT_MIMES } from "@/server/domain/attachment/document-types";
 import { assetIdFromRef } from "@/server/domain/attachment/refs";
+import { selectionSchema } from "@/server/domain/capability/schema";
 import {
   MAX_MESSAGE_CHARACTERS,
   MAX_MESSAGE_PARTS,
@@ -60,6 +61,7 @@ const toolApprovalMessageSchema = z.object({
 
 export const postRequestBodySchema = z
   .object({
+    capabilitySelection: selectionSchema.optional(),
     id: z.uuid(),
     message: userMessageSchema.optional(),
     messages: z.array(toolApprovalMessageSchema).min(1).max(1000).optional(),

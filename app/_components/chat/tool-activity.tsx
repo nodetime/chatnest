@@ -62,6 +62,7 @@ export function ToolActivity({
     skillLoaded,
     kind,
     origin,
+    nativeName,
   } = projectToolIdentity(
     part,
     info?.servers?.flatMap((server) => server.toolAliases ?? [])
@@ -291,6 +292,11 @@ export function ToolActivity({
               data-testid="tool-approval-summary"
             >
               <p className="font-medium">请确认这次操作：{title}</p>
+              {!!nativeName && (
+                <p className="break-all text-xs text-muted-foreground">
+                  操作：{nativeName}
+                </p>
+              )}
               {!!origin && (
                 <p className="text-xs text-muted-foreground">{origin}</p>
               )}

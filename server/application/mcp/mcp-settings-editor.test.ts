@@ -165,6 +165,9 @@ test("MCP Sheet guards every busy dismissal and editor passes abort/current chec
   assert.match(source, /lifetime\.dispose\(/);
   assert.ok((source.match(/operation\.isCurrent\(\)/g) ?? []).length >= 5);
   assert.ok(
-    (source.match(/requestMcp\(action, operation\.signal\)/g) ?? []).length >= 2
+    (
+      source.match(/requestMcp\(action, operation\.signal(?:, endpoint)?\)/g) ??
+      []
+    ).length >= 2
   );
 });

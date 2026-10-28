@@ -31,6 +31,7 @@ import {
   fetchWithErrorHandlers,
   generateUUID,
 } from "@/app/_lib/utils";
+import type { CapabilitySelection } from "@/server/domain/capability/schema";
 import {
   type AskUserOutput,
   compactInteractionResponses,
@@ -51,6 +52,8 @@ import { ChatbotError } from "@/server/shared/errors";
 
 type ActiveChatContextValue = {
   chatId: string;
+  capabilitySelection: CapabilitySelection | undefined;
+  setCapabilitySelection: (value: CapabilitySelection) => void;
   chatTitle: string;
   messages: ChatMessage[];
   setMessages: UseChatHelpers<ChatMessage>["setMessages"];
@@ -130,6 +133,28 @@ export function ActiveChatProvider({
   prevPathnameRef.current = pathname;
 
   const chatId = chatIdFromUrl ?? newChatIdRef.current;
+  const [capabilityDraft, setCapabilityDraft] = useState<{
+    chatId: string;
+    value: CapabilitySelection;
+  } | null>(null);
+  const capabilityDraftRef = useRef(capabilityDraft);
+  capabilityDraftRef.current = capabilityDraft;
+  const currentScopeChat = useRef(chatId);
+  currentScopeChat.current = chatId;
+  const capabilitySelection =
+    capabilityDraft?.chatId === chatId ? capabilityDraft.value : undefined;
+  const setCapabilitySelection = useCallback(
+    (selection: CapabilitySelection) => {
+      if (currentScopeChat.current !== chatId) {
+        return;
+      }
+      const next = { chatId, value: selection };
+      capabilityDraftRef.current = next;
+      setCapabilityDraft(next);
+    },
+    [chatId]
+  );
+
   const interactionGate = useRef({
     answerPending: false,
     chatId,
@@ -327,6 +352,10 @@ export function ActiveChatProvider({
             ...(isToolApprovalContinuation
               ? { messages: responses }
               : { message: lastMessage }),
+            ...(!isToolApprovalContinuation &&
+            capabilityDraftRef.current?.chatId === request.id
+              ? { capabilitySelection: capabilityDraftRef.current.value }
+              : {}),
             searchMode: searchModeRef.current,
             selectedChatModel: currentModelIdRef.current,
             selectedVisibilityType: visibility,
@@ -800,6 +829,7 @@ export function ActiveChatProvider({
       addToolApprovalResponse,
       agentPaused,
       answerAskUser,
+      capabilitySelection,
       chatId,
       chatTitle,
       clearError,
@@ -818,6 +848,7 @@ export function ActiveChatProvider({
       reviseAskUser,
       searchMode,
       sendMessage,
+      setCapabilitySelection,
       setCurrentModelId,
       setInput,
       setMessages,
@@ -834,6 +865,8 @@ export function ActiveChatProvider({
     }),
     [
       answerAskUser,
+      capabilitySelection,
+      setCapabilitySelection,
       reviseAskUser,
       continueAgent,
       agentPaused,

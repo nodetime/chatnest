@@ -234,3 +234,54 @@ test("部分 Ask 回答与幂等重交在真实 SDK 流中返回已存答案，�
     })
   );
 });
+
+test("纯 MCP 审批重交必须先经持久化合并，不访问模型或重放外发", async () => {
+  const { sendMessage } = await import("./send-message");
+  const { readUIMessageStream } = await import("ai");
+  const deps = makeDeps({ chat: chat("u1") });
+  let merges = 0;
+  const parts = [
+    {
+      approval: { approved: true, id: "approval" },
+      input: {},
+      state: "approval-responded",
+      toolCallId: "call",
+      toolName: "fixture__run",
+      type: "dynamic-tool",
+    },
+  ];
+  deps.messages.listByChatId = async () => [
+    {
+      attachments: [],
+      chatId: "c1",
+      createdAt: new Date(),
+      id: "assistant",
+      parts,
+      role: "assistant",
+    },
+  ];
+  deps.messages.mergeInteractionResponses = async () => {
+    merges += 1;
+    return { changed: false, messages: await deps.messages.listByChatId("c1") };
+  };
+  const stream = await sendMessage(
+    {
+      body: {
+        id: "c1",
+        messages: [{ id: "assistant", parts, role: "assistant" }],
+        searchMode: "auto",
+        selectedChatModel: "test-model",
+        selectedVisibilityType: "private",
+        trigger: "submit-message",
+      },
+      requestHints: { city: "", country: "", latitude: "0", longitude: "0" },
+      session: { expires: "", user: { id: "u1", type: "regular" } },
+      signal: new AbortController().signal,
+    },
+    deps
+  );
+  assert.equal(merges, 1);
+  for await (const _message of readUIMessageStream({ stream })) {
+    /* 实际消费空续跑流。 */
+  }
+});

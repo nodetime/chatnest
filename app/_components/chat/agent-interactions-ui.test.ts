@@ -17,8 +17,8 @@ test("Ask 渲染通用表单、明确必填、支持文本和单/多选；只读
   );
   assert.match(html, /研究目标/);
   assert.match(html, /textarea/);
-  assert.match(html, /type="radio"/);
-  assert.match(html, /type="checkbox"/);
+  assert.match(html, /role="radio"/);
+  assert.match(html, /role="checkbox"/);
   assert.match(html, /确认并继续/);
   assert.match(html, /跳过/);
   assert.match(html, /required/);
@@ -70,7 +70,7 @@ test("Ask 复用shadcn表单控件，稍后回答不提交取消，已答修改�
     "utf8"
   );
   assert.match(source, /@\/app\/_components\/ui\/button/);
-  assert.match(source, /@\/app\/_components\/ui\/textarea/);
+  assert.match(source, /@\/app\/_components\/ai-elements\/question/);
   assert.match(source, /稍后回答/);
   assert.match(source, /onRevise/);
   const hook = readFileSync(
@@ -97,13 +97,13 @@ test("真实Ask组件稍后回答保留输入、同一时刻只提交一次，�
     let props={messageId:'a',part:{type:'tool-askUser',toolCallId:'ask',state:'input-available',input},onAnswer:value=>{calls.push(value);return new Promise((_,r)=>reject=r);},onRevise:async value=>{revisions.push(value);}};
     (async()=>{
       let tree=h.render(AskUser,props);
-      nodes(tree).find(node=>node.type==='textarea').props.onChange({target:{dataset:{questionId:'goal',questionType:'text'},value:'保留的草稿'}});
+      nodes(tree).find(node=>node.props?.asField).props.onValueChange({text:'保留的草稿',selectedValues:[]});
       tree=h.render(AskUser,props);button(tree,'稍后回答').props.onClick();tree=h.render(AskUser,props);assert.equal(calls.length,0);assert.ok(!nodes(tree).some(node=>node.type==='form'));
-      button(tree,'继续回答').props.onClick();tree=h.render(AskUser,props);assert.equal(nodes(tree).find(node=>node.type==='textarea').props.value,'保留的草稿');
+      button(tree,'继续回答').props.onClick();tree=h.render(AskUser,props);assert.equal(nodes(tree).find(node=>node.props?.asField).props.value.text,'保留的草稿');
       const submit=nodes(tree).find(node=>node.type==='form').props.onSubmit;
       const pending=submit({preventDefault(){}});submit({preventDefault(){}});assert.equal(calls.length,1);assert.equal(calls[0].output.answers.goal,'保留的草稿');
       props={...props,part:{...props.part,toolCallId:'replacement'}};tree=h.render(AskUser,props);reject(new Error('late failure'));await pending;tree=h.render(AskUser,props);assert.ok(!JSON.stringify(tree).includes('尚未确认提交'));
-      props={...props,part:{...props.part,state:'output-available',output:{status:'answered',answers:{goal:'原回答'}}}};tree=h.render(AskUser,props);button(tree,'修改回答').props.onClick();tree=h.render(AskUser,props);nodes(tree).find(node=>node.type==='textarea').props.onChange({target:{dataset:{questionId:'goal',questionType:'text'},value:'用户补充'}});tree=h.render(AskUser,props);await nodes(tree).find(node=>node.type==='form').props.onSubmit({preventDefault(){}});assert.equal(revisions.length,1);assert.equal(revisions[0].output.answers.goal,'用户补充');assert.equal(calls.length,1);
+      props={...props,part:{...props.part,state:'output-available',output:{status:'answered',answers:{goal:'原回答'}}}};tree=h.render(AskUser,props);button(tree,'修改回答').props.onClick();tree=h.render(AskUser,props);nodes(tree).find(node=>node.props?.asField).props.onValueChange({text:'用户补充',selectedValues:[]});tree=h.render(AskUser,props);await nodes(tree).find(node=>node.type==='form').props.onSubmit({preventDefault(){}});assert.equal(revisions.length,1);assert.equal(revisions[0].output.answers.goal,'用户补充');assert.equal(calls.length,1);
       process.stdout.write('ASYNC_DONE');
     })().catch(error=>{console.error(error);process.exitCode=1;});
   `);

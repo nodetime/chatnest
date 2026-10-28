@@ -1,15 +1,16 @@
+// biome-ignore-all lint/performance/noJsxPropsBind: Model-defined question fields capture their validated question ID.
 "use client";
 
+import { type FormEvent, useCallback, useId, useRef, useState } from "react";
 import {
-  type ChangeEvent,
-  type FormEvent,
-  useCallback,
-  useId,
-  useRef,
-  useState,
-} from "react";
+  Question,
+  QuestionActions,
+  QuestionInput,
+  QuestionOption,
+  QuestionOptions,
+  type QuestionValue,
+} from "@/app/_components/ai-elements/question";
 import { Button } from "@/app/_components/ui/button";
-import { Textarea } from "@/app/_components/ui/textarea";
 import {
   type AskUserOutput,
   type AskUserPart,
@@ -158,30 +159,20 @@ export function AskUser({
     () => (output ? submit(output) : undefined),
     [output, submit]
   );
-  const handleInputChange = useCallback(
-    (event: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
-      const field = event.target;
-      const { questionId } = field.dataset;
-      if (!questionId) {
-        return;
-      }
-      const isMulti = field.dataset.questionType === "multi";
-      const checked = "checked" in field && field.checked;
-      setDraft((previous) => {
-        const previousAnswers =
-          previous.identity === identity ? previous.answers : {};
-        const old = previousAnswers[questionId];
-        const selected = Array.isArray(old) ? old : [];
-        const next = isMulti
-          ? checked
-            ? [...new Set([...selected, field.value])]
-            : selected.filter((item) => item !== field.value)
-          : field.value;
-        return {
-          answers: { ...previousAnswers, [questionId]: next },
-          identity,
-        };
-      });
+  const handleQuestionChange = useCallback(
+    (id: string, type: "text" | "single" | "multi", value: QuestionValue) => {
+      setDraft((previous) => ({
+        answers: {
+          ...(previous.identity === identity ? previous.answers : {}),
+          [id]:
+            type === "text"
+              ? value.text
+              : type === "multi"
+                ? [...value.selectedValues]
+                : (value.selectedValues[0] ?? ""),
+        },
+        identity,
+      }));
     },
     [identity]
   );
@@ -201,10 +192,10 @@ export function AskUser({
   return (
     <section
       aria-label="Agent 提问"
-      className="w-full rounded-xl border border-border bg-muted/20 p-4 sm:p-5"
+      className="w-full overflow-hidden rounded-xl border border-border/80 bg-background p-4 text-[13px]"
       data-testid="ask-user"
     >
-      <div className="mb-4 flex items-center gap-2">
+      <div className="mb-3 flex items-start gap-2">
         <span className="size-1.5 rounded-full bg-foreground/60" />
         <h3 className="text-sm font-medium text-foreground">{input.title}</h3>
         <span className="ml-auto text-xs text-muted-foreground">
@@ -259,78 +250,85 @@ export function AskUser({
       ) : (
         <form
           aria-describedby={error ? `${formId}-error` : undefined}
-          className="space-y-4"
+          className="space-y-3"
           onSubmit={handleSubmit}
         >
-          {input.questions.map((question) => (
-            <fieldset
-              className="space-y-2"
-              disabled={pending}
-              key={question.id}
-            >
-              <legend
-                className="mb-2 text-[13px] font-medium"
-                id={`${formId}-${question.id}-label`}
-              >
-                {question.label}
-                {!!question.required && (
-                  <span aria-hidden className="ml-1 text-muted-foreground">
-                    *
-                  </span>
-                )}
-              </legend>
-              {question.type === "text" ? (
-                <Textarea
-                  aria-labelledby={`${formId}-${question.id}-label`}
-                  className="min-h-20 w-full resize-y rounded-lg border border-border bg-background p-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  data-question-id={question.id}
-                  data-question-type={question.type}
-                  maxLength={4000}
-                  onChange={handleInputChange}
-                  required={question.required}
-                  value={
-                    typeof answers[question.id] === "string"
-                      ? (answers[question.id] as string)
-                      : ""
-                  }
-                />
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {question.options?.map((option) => {
-                    const value = answers[question.id];
-                    const selected =
-                      question.type === "multi"
-                        ? Array.isArray(value) && value.includes(option.value)
-                        : value === option.value;
-                    return (
-                      <label
-                        className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-[13px] transition-colors ${selected ? "border-foreground/40 bg-accent" : "border-border bg-background hover:bg-accent/50"}`}
-                        key={option.value}
+          <div
+            className="max-h-[min(50dvh,360px)] space-y-4 overflow-y-auto overscroll-contain pr-1"
+            data-testid="ask-questions"
+          >
+            {input.questions.map((question) => {
+              const answer = answers[question.id];
+              return (
+                <fieldset
+                  className="min-w-0 space-y-2"
+                  disabled={pending}
+                  key={question.id}
+                >
+                  <legend
+                    className="mb-2 text-[13px] font-medium leading-5"
+                    id={`${formId}-${question.id}-label`}
+                  >
+                    {question.label}
+                    {!!question.required && (
+                      <span aria-hidden className="ml-1 text-muted-foreground">
+                        *
+                      </span>
+                    )}
+                  </legend>
+                  <Question
+                    asField
+                    disabled={pending}
+                    onValueChange={(value) =>
+                      handleQuestionChange(question.id, question.type, value)
+                    }
+                    selectionMode={
+                      question.type === "multi" ? "multiple" : "single"
+                    }
+                    value={{
+                      selectedValues: Array.isArray(answer)
+                        ? answer
+                        : typeof answer === "string" &&
+                            question.type !== "text" &&
+                            answer
+                          ? [answer]
+                          : [],
+                      text:
+                        typeof answer === "string" && question.type === "text"
+                          ? answer
+                          : "",
+                    }}
+                  >
+                    {question.type === "text" ? (
+                      <QuestionInput
+                        aria-labelledby={`${formId}-${question.id}-label`}
+                        className="min-h-10 max-h-32 w-full resize-y rounded-lg bg-background px-3 py-2 text-[13px]"
+                        maxLength={4000}
+                        required={question.required}
+                        rows={2}
+                      />
+                    ) : (
+                      <QuestionOptions
+                        aria-labelledby={`${formId}-${question.id}-label`}
+                        aria-required={question.required}
                       >
-                        <input
-                          checked={selected}
-                          className="accent-foreground"
-                          data-question-id={question.id}
-                          data-question-type={question.type}
-                          name={`${formId}-${question.id}`}
-                          onChange={handleInputChange}
-                          required={
-                            question.type === "single" && question.required
-                          }
-                          type={
-                            question.type === "multi" ? "checkbox" : "radio"
-                          }
-                          value={option.value}
-                        />
-                        {option.label}
-                      </label>
-                    );
-                  })}
-                </div>
-              )}
-            </fieldset>
-          ))}
-          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border/60 pt-3">
+                        {question.options?.map((option) => (
+                          <QuestionOption
+                            className="min-h-8 rounded-lg px-3 py-1.5 text-[13px]"
+                            key={option.value}
+                            value={option.value}
+                          >
+                            {option.label}
+                          </QuestionOption>
+                        ))}
+                      </QuestionOptions>
+                    )}
+                  </Question>
+                </fieldset>
+              );
+            })}
+          </div>
+          <QuestionActions className="flex flex-wrap items-center justify-end gap-1.5 border-t border-border/60 pt-3">
             <Button
               disabled={pending}
               onClick={handleDefer}
@@ -368,7 +366,7 @@ export function AskUser({
                   ? "提交修改并继续"
                   : "确认并继续"}
             </Button>
-          </div>
+          </QuestionActions>
         </form>
       )}
       {completed &&

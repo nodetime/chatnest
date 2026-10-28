@@ -122,6 +122,17 @@ const modelHttp = http.createServer(async (req, res) => {
       serialized = JSON.stringify(messages);
     metrics.uploadedTextSeen ||= serialized.includes("FORMAL_UPLOAD_EVIDENCE");
     const tools = (b.tools ?? []).map((t) => t.function.name);
+    // Select only tools actually advertised by this request; supports private,
+    // revision-bound aliases without embedding those aliases in app code.
+    const evidenceTool = (b.tools ?? []).find((entry) =>
+      entry.function.description?.includes(
+        "Return explicitly synthetic local acceptance rows"
+      )
+    )?.function.name;
+    const privateSkill = messages
+      .map((entry) => (typeof entry.content === "string" ? entry.content : ""))
+      .join("\n")
+      .match(/^- (personal:[a-z0-9-]+)/m)?.[1];
     const lastUserIndex = messages.findLastIndex((m) => m.role === "user");
     const current = messages.slice(Math.max(0, lastUserIndex));
     const calls = current.flatMap((m) => m.tool_calls ?? []);
@@ -190,7 +201,13 @@ const modelHttp = http.createServer(async (req, res) => {
         });
         return;
       }
-      if (tools.includes("updateTodo") && !finished("updateTodo")) {
+      if (
+        privateSkill &&
+        tools.includes("loadSkill") &&
+        !finished("loadSkill")
+      ) {
+        call = invocation("loadSkill", { name: privateSkill });
+      } else if (tools.includes("updateTodo") && !finished("updateTodo")) {
         call = invocation("updateTodo", {
           items: [
             { id: "read", status: "completed", title: "核对已上传文档" },
@@ -234,22 +251,22 @@ const modelHttp = http.createServer(async (req, res) => {
           ],
           title: "确认本地验收结果格式",
         });
-        extraCall = invocation("formal__review_rows", {
+        if (evidenceTool) {
+          extraCall = invocation(evidenceTool, {
+            query: "FORMAL synthetic rows, local fixture only",
+          });
+        }
+      } else if (tools.includes(evidenceTool) && !finished(evidenceTool)) {
+        call = invocation(evidenceTool, {
           query: "FORMAL synthetic rows, local fixture only",
         });
       } else if (
-        tools.includes("formal__review_rows") &&
-        !finished("formal__review_rows")
-      ) {
-        call = invocation("formal__review_rows", {
-          query: "FORMAL synthetic rows, local fixture only",
-        });
-      } else if (
+        evidenceTool &&
         tools.includes("createResultTable") &&
         !finished("createResultTable")
       ) {
         const evidenceCall = calls.find(
-          (c) => c.function.name === "formal__review_rows"
+          (c) => c.function.name === evidenceTool
         );
         const evidenceOutput = toolOutputs.find(
           (o) => o.tool_call_id === evidenceCall?.id

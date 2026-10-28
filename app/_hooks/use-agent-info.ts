@@ -1,10 +1,15 @@
 "use client";
 
+import { SessionContext } from "next-auth/react";
+import { useContext } from "react";
 import useSWR from "swr";
 
 export type AgentInfo = {
   mcpManagement?: { admin: boolean; configured: boolean };
   skills: {
+    id?: string;
+    enabled?: boolean;
+    source?: "builtin" | "personal";
     name: string;
     description: string;
     displayName?: string;
@@ -18,7 +23,7 @@ export type AgentInfo = {
     toolAliases?: { alias: string; name: string; serverName: string }[];
     missingEnvironment: string[];
     keyless?: boolean;
-    source?: "managed" | "file";
+    source?: "managed" | "file" | "personal";
   }[];
   modelConfigured: boolean;
   modelProvider?: "openai" | "gateway";
@@ -35,9 +40,13 @@ async function readInfo(url: string): Promise<AgentInfo> {
 }
 
 export function useAgentInfo(enabled = true) {
+  const session = useContext(SessionContext);
+  const ownerId = session?.data?.user?.id;
   return useSWR<AgentInfo>(
-    enabled ? `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/agent` : null,
-    readInfo,
+    enabled && ownerId
+      ? [`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/agent`, ownerId]
+      : null,
+    ([url]: [string, string]) => readInfo(url),
     { dedupingInterval: 15_000, shouldRetryOnError: false }
   );
 }

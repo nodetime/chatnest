@@ -16,11 +16,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/app/_components/ui/dialog";
-import { useAgentInfo } from "@/app/_hooks/use-agent-info";
 import {
   AgentLibraryPanel,
   type AgentLibraryTab as Tab,
 } from "./agent-library-panel";
+import { PersonalConnections } from "./personal-connections";
+import { PersonalSkills } from "./personal-skills";
 
 export function AgentLibrary({
   tab = "skills",
@@ -40,14 +41,10 @@ export function AgentLibrary({
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen ?? internalOpen;
   const [activeTab, setActiveTab] = useState<Tab>(tab);
-  const { data, error, isLoading, mutate } = useAgentInfo(open);
-  const handleRefresh = useCallback(() => {
-    mutate();
-  }, [mutate]);
   const { theme, setTheme } = useTheme();
   const tabs = [
     { icon: Settings2, id: "settings" as const, label: "常规" },
-    { icon: Plug, id: "tools" as const, label: "工具" },
+    { icon: Plug, id: "tools" as const, label: "连接" },
     { icon: BookOpen, id: "skills" as const, label: "技能" },
   ];
   const current = tabs.find((item) => item.id === tab) ?? tabs[0];
@@ -111,9 +108,7 @@ export function AgentLibrary({
       <DialogContent className="max-h-[85dvh] gap-0 overflow-y-auto rounded-2xl p-0 sm:max-w-[640px]">
         <DialogHeader className="px-6 pt-6 pb-5">
           <DialogTitle className="text-xl">设置</DialogTitle>
-          <DialogDescription>
-            调整外观，查看可用的工具和技能。
-          </DialogDescription>
+          <DialogDescription>管理外观、个人连接与技能。</DialogDescription>
         </DialogHeader>
         <div
           aria-label="能力分类"
@@ -145,27 +140,17 @@ export function AgentLibrary({
           id={`agent-panel-${activeTab}`}
           role="tabpanel"
         >
-          {activeTab !== "settings" && !!isLoading && (
-            <p className="text-sm text-muted-foreground">正在加载…</p>
+          {activeTab === "tools" ? (
+            <PersonalConnections />
+          ) : activeTab === "skills" ? (
+            <PersonalSkills />
+          ) : (
+            <AgentLibraryPanel
+              onThemeChange={handleTheme}
+              tab="settings"
+              theme={theme}
+            />
           )}
-          {activeTab !== "settings" && !!error && (
-            <p className="text-sm text-destructive" role="alert">
-              暂时未能加载，请稍后重试。
-              <button
-                className="ml-2 underline underline-offset-4"
-                onClick={handleRefresh}
-                type="button"
-              >
-                重新读取
-              </button>
-            </p>
-          )}
-          <AgentLibraryPanel
-            info={data}
-            onThemeChange={handleTheme}
-            tab={activeTab}
-            theme={theme}
-          />
         </div>
       </DialogContent>
     </Dialog>

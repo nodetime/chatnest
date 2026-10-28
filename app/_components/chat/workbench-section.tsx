@@ -1,17 +1,14 @@
 // biome-ignore-all lint/performance/noJsxPropsBind: React Compiler memoizes per-entry workspace handlers.
 "use client";
-import { ArrowLeft, Link2, Sparkles } from "lucide-react";
-import { useTheme } from "next-themes";
-import { useAgentInfo } from "@/app/_hooks/use-agent-info";
+import { ArrowLeft } from "lucide-react";
 import { useWorkbenchNavigation } from "@/app/_hooks/use-workbench-navigation";
 import { Button } from "../ui/button";
-import { AgentLibraryPanel } from "./agent-library-panel";
+import { PersonalConnections } from "./personal-connections";
+import { PersonalSkills } from "./personal-skills";
 import { SavedArtifactCards } from "./workspace-home";
 
 export function WorkbenchSection() {
   const { section, navigate } = useWorkbenchNavigation();
-  const { data, error, isLoading, mutate } = useAgentInfo(section !== "chat");
-  const { theme } = useTheme();
   const title = {
     chat: "对话",
     connections: "连接",
@@ -38,30 +35,10 @@ export function WorkbenchSection() {
         <div className="mx-auto w-full max-w-5xl">
           {section === "files" ? (
             <SavedArtifactCards />
+          ) : section === "connections" ? (
+            <PersonalConnections />
           ) : (
-            <>
-              <div className="mb-6 flex items-center gap-2 text-sm text-muted-foreground">
-                {section === "connections" ? (
-                  <Link2 className="size-4" />
-                ) : (
-                  <Sparkles className="size-4" />
-                )}
-                {section === "connections"
-                  ? "可供 Agent 使用的工具连接"
-                  : "按任务需要使用的方法与能力"}
-              </div>
-              {!!isLoading && <p role="status">正在加载…</p>}
-              {!!error && (
-                <Button onClick={() => mutate()} variant="outline">
-                  重新加载
-                </Button>
-              )}
-              <AgentLibraryPanel
-                info={data}
-                tab={section === "connections" ? "tools" : "skills"}
-                theme={theme}
-              />
-            </>
+            <PersonalSkills />
           )}
         </div>
       </main>

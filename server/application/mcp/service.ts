@@ -35,7 +35,9 @@ export function createSettingsService({
   repository = settingsRepository,
   env = process.env,
   discover = discoverConnection,
+  cryptoDomain = "mcp-settings",
 }: {
+  cryptoDomain?: string;
   repository?: SettingsRepository;
   env?: Environment;
   discover?: (
@@ -48,7 +50,7 @@ export function createSettingsService({
     const row = await repository.read();
     const servers = row
       ? managedListSchema.parse(
-          decryptSettings(row.encrypted, row.revision, key)
+          decryptSettings(row.encrypted, row.revision, key, cryptoDomain)
         )
       : [];
     if (new Set(servers.map((s) => s.id)).size !== servers.length) {
@@ -96,6 +98,13 @@ export function createSettingsService({
         return [];
       }
       return (await read()).servers;
+    },
+    async loadSnapshot() {
+      if (!managementReady(env)) {
+        return { revision: 0, servers: [] as ManagedServer[] };
+      }
+      const { revision, servers } = await read();
+      return { revision, servers };
     },
     async mutate(
       input: SettingsAction,
@@ -163,7 +172,12 @@ export function createSettingsService({
       const revision = state.revision + 1;
       if (
         !(await repository.compareAndSwap(state.revision, {
-          encrypted: encryptSettings(servers, revision, state.key),
+          encrypted: encryptSettings(
+            servers,
+            revision,
+            state.key,
+            cryptoDomain
+          ),
           revision,
           updatedAt: new Date(),
           updatedBy,

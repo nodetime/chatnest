@@ -14,8 +14,9 @@ import {
 } from "@/server/application/mcp/network";
 import {
   type RuntimeConfig,
+  type RuntimeServer,
   readRuntimeConfig,
-  toolAlias,
+  runtimeToolAlias,
 } from "@/server/application/mcp/runtime-config";
 import { normalizeMcpOutput } from "@/server/domain/message/mcp-output";
 import { createPortaToolError } from "@/server/domain/message/porta-error";
@@ -25,7 +26,12 @@ import {
   sourceModelOutput,
 } from "@/server/domain/message/result-evidence";
 import { resolveServerConnection } from "./config";
-import { buildSkillsPrompt, createSkillTools, discoverSkills } from "./skills";
+import {
+  buildSkillsPrompt,
+  createSkillTools,
+  discoverSkills,
+  type Skill,
+} from "./skills";
 
 export async function createAgentRuntime(
   signal: AbortSignal,
@@ -34,11 +40,14 @@ export async function createAgentRuntime(
   evidence: {
     ledger?: ResultEvidenceLedger;
     onSource?: (source: McpSourceMetadata) => void;
+    skills?: Skill[];
+    authorizeTool?: (server: RuntimeServer) => Promise<void>;
+    authorizeSkill?: (skill: Skill) => Promise<void>;
   } = {}
 ) {
   const [config, skills] = await Promise.all([
     loadConfig().then((snapshot) => structuredClone(snapshot)),
-    discoverSkills(),
+    evidence.skills ?? discoverSkills(),
   ]);
   const ledger = evidence.ledger ?? new ResultEvidenceLedger();
   const clients = new Set<MCPClient>();
@@ -46,7 +55,9 @@ export async function createAgentRuntime(
     signal,
     AbortSignal.timeout(config.timeoutMs),
   ]);
-  const tools: ToolSet = { ...createSkillTools(skills) };
+  const tools: ToolSet = {
+    ...createSkillTools(skills, evidence.authorizeSkill),
+  };
   const unavailable: string[] = [];
   const close = async () => {
     await Promise.allSettled(
@@ -59,6 +70,7 @@ export async function createAgentRuntime(
     const results = await Promise.allSettled(
       config.servers.map(async (server) => {
         runSignal.throwIfAborted();
+        await evidence.authorizeTool?.(server);
         const { headers, missing, url, invalid } =
           resolveServerConnection(server);
         if (missing.length > 0) {
@@ -118,7 +130,7 @@ export async function createAgentRuntime(
             if (!server.allowedTools.includes(name)) {
               continue;
             }
-            const alias = toolAlias(server.id, name);
+            const alias = runtimeToolAlias(server, name);
             if (tools[alias]) {
               throw new Error("MCP tool alias collision");
             }
@@ -126,8 +138,10 @@ export async function createAgentRuntime(
               description: `${server.name}: ${remote.description ?? name}`,
               execute: (input, options) => {
                 runSignal.throwIfAborted();
-                ledger.reserveCurrentCall(options.toolCallId, alias);
                 return (async () => {
+                  await evidence.authorizeTool?.(server);
+                  runSignal.throwIfAborted();
+                  ledger.reserveCurrentCall(options.toolCallId, alias);
                   let output: unknown;
                   try {
                     const callSignal = AbortSignal.any([
@@ -167,7 +181,7 @@ export async function createAgentRuntime(
                   const source = ledger.record(
                     {
                       completedAt: new Date().toISOString(),
-                      serverId: server.id,
+                      serverId: server.capabilityId ?? server.id,
                       serverName: server.name,
                       timeBasis: "tool-completed",
                       toolCallId: options.toolCallId,

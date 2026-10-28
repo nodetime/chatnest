@@ -1,5 +1,5 @@
 import { resolveServerConnection } from "@/server/infrastructure/mcp/config";
-import { type RuntimeServer, toolAlias } from "./runtime-config";
+import { type RuntimeServer, runtimeToolAlias } from "./runtime-config";
 // Explicit allowlist projection. Never spread a server configuration into a response.
 export function capabilityServers(servers: RuntimeServer[]) {
   return servers.map((server) => {
@@ -9,13 +9,17 @@ export function capabilityServers(servers: RuntimeServer[]) {
       keyless: Object.keys(server.headers).length === 0,
       missingEnvironment: missing,
       name: server.name,
-      source: server.managed ? ("managed" as const) : ("file" as const),
+      source: server.personal
+        ? ("personal" as const)
+        : server.managed
+          ? ("managed" as const)
+          : ("file" as const),
       status:
         missing.length || invalid
           ? ("not_configured" as const)
           : ("configured" as const),
       toolAliases: server.allowedTools.map((name) => ({
-        alias: toolAlias(server.id, name),
+        alias: runtimeToolAlias(server, name),
         name,
         serverName: server.name,
       })),

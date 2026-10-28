@@ -67,7 +67,7 @@ export function projectToolIdentity(
   const mappedTitle = match
     ? knownAction
       ? knownAction
-      : `${match.serverName} · ${match.name}`
+      : `使用${match.serverName}`
     : undefined;
   const title =
     (skill?.displayName as string | undefined) ||
@@ -87,7 +87,7 @@ export function projectToolIdentity(
       typeof value === "string" && value.trim().length > 0 && value !== title
   );
   return {
-    context: skill ? undefined : context,
+    context: skill || (match && !knownAction) ? undefined : context,
     kind:
       knownAction === "搜索资料"
         ? "search"
@@ -95,6 +95,7 @@ export function projectToolIdentity(
           ? "web"
           : "tool",
     name,
+    nativeName: match?.name,
     origin: match?.serverName,
     skillLoaded: Boolean(skill),
     title,

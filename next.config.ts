@@ -7,6 +7,8 @@ import { PHASE_PRODUCTION_BUILD } from "next/constants";
 const basePath = process.env.IS_DEMO === "1" ? "/demo" : "";
 
 const nextConfig: NextConfig = {
+  // Separate build output lets local acceptance run without replacing the preview model.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   ...(basePath
     ? {
         assetPrefix: "/demo-assets",

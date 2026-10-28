@@ -22,9 +22,13 @@ import type {
   SettingsAction,
   ToolMetadata,
 } from "@/server/domain/mcp/types";
-export async function requestMcp(action: SettingsAction, signal?: AbortSignal) {
+export async function requestMcp(
+  action: SettingsAction,
+  signal?: AbortSignal,
+  endpoint = "/api/agent/mcp"
+) {
   const response = await fetch(
-    `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/agent/mcp`,
+    `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}${endpoint}`,
     {
       body: JSON.stringify(action),
       headers: { "Content-Type": "application/json" },
@@ -48,7 +52,9 @@ export function McpEditor({
   onConflict,
   existingIds,
   onBusyChange,
+  endpoint = "/api/agent/mcp",
 }: {
+  endpoint?: string;
   server?: ServerProjection;
   existingIds: string[];
   revision: number;
@@ -120,7 +126,7 @@ export function McpEditor({
         connection: edit,
         id: id || undefined,
       });
-      const data = await requestMcp(action, operation.signal);
+      const data = await requestMcp(action, operation.signal, endpoint);
       if (!operation.isCurrent()) {
         return;
       }
@@ -168,7 +174,7 @@ export function McpEditor({
           name,
         },
       });
-      await requestMcp(action, operation.signal);
+      await requestMcp(action, operation.signal, endpoint);
       if (!operation.isCurrent()) {
         return;
       }
