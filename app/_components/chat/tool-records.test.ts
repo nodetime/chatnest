@@ -185,6 +185,8 @@ test("singleton to multi keeps the same keyed step path, user disclosure state a
     let tree=scheduler.render(ActivityGroup,props);
     const path=(node,key,p=[])=>{if(Array.isArray(node)){for(let i=0;i<node.length;i++){const found=path(node[i],key,[...p,i]);if(found)return found;}return;}if(!node||typeof node!=='object')return;if(node.type==='step'&&node.key===key)return p;return path(node.props?.children,key,[...p,node.type]);};
     const before=path(tree,first.toolCallId);assert.ok(before);
+    nodes(tree).find(n=>n.type==='step').props.onDisclosureOpenChange(first.toolCallId,true);
+    tree=scheduler.render(ActivityGroup,props);
     props={...props,parts:[first,{...first,toolCallId:'second'}]};tree=scheduler.render(ActivityGroup,props);
     assert.equal(JSON.stringify(path(tree,first.toolCallId)),JSON.stringify(before));
     const task=nodes(tree).find(n=>n.type==='task');assert.equal(task.props.open,true);

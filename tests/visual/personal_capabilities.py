@@ -141,7 +141,7 @@ with sync_playwright() as p:
    if item.is_enabled():item.uncheck()
   scope_dialog.get_by_role('button',name='完成',exact=True).click()
   check('staged next-turn selection does not change pending scope',api(page,'/api/personal/scope?chatId='+pending_chat_id).json()['selection']['serverIds']==['personal:'+server['id']])
-  ask.get_by_role('button',name='确认并继续',exact=True).click()
+  ask.get_by_role('button',name='提交回答',exact=True).click()
   page.get_by_role('button',name='允许执行',exact=True).click()
   expect(page.get_by_text('FORMAL_ACCEPTANCE_DONE',exact=False)).to_be_visible(timeout=60000)
   chat_id=page.url.split('/chat/')[1].split('?')[0]

@@ -19,13 +19,13 @@ test("Ask 渲染通用表单、明确必填、支持文本和单/多选；只读
   assert.match(html, /textarea/);
   assert.match(html, /role="radio"/);
   assert.match(html, /role="checkbox"/);
-  assert.match(html, /确认并继续/);
+  assert.match(html, /提交回答/);
   assert.match(html, /跳过/);
   assert.match(html, /required/);
   const readonly = client(
     `${code}process.stdout.write(renderToStaticMarkup(React.createElement(AskUser,{messageId:'a',part,onAnswer:async()=>{},isReadonly:true})));`
   );
-  assert.doesNotMatch(readonly, /<form|确认并继续/);
+  assert.doesNotMatch(readonly, /<form|提交回答/);
 });
 
 test("TaskProgress 使用 AI Elements Task 与真实快照计数；空计划不渲染", () => {

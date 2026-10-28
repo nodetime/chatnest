@@ -1,6 +1,12 @@
 "use client";
 
-import { CheckIcon, CircleIcon, Loader2Icon } from "lucide-react";
+import {
+  CheckIcon,
+  ChevronDown,
+  CircleIcon,
+  ListTodo,
+  Loader2Icon,
+} from "lucide-react";
 import {
   Task,
   TaskContent,
@@ -36,7 +42,7 @@ export function TaskProgress({ plan, compact = false }: TaskProgressProps) {
             type="button"
             variant="ghost"
           >
-            <span className="size-1.5 rounded-full bg-current opacity-50" />
+            <ListTodo aria-hidden className="size-3.5 shrink-0" />
             任务进度{" "}
             <span className="text-muted-foreground">
               {completed} / {plan.items.length}
@@ -45,7 +51,7 @@ export function TaskProgress({ plan, compact = false }: TaskProgressProps) {
         </PopoverTrigger>
         <PopoverContent
           align="end"
-          className="w-80 max-w-[calc(100vw-2rem)]"
+          className="w-80 max-w-[calc(100vw-2rem)] max-h-[min(60dvh,420px)] overflow-y-auto"
           side="bottom"
         >
           <TaskProgress plan={plan} />
@@ -58,7 +64,16 @@ export function TaskProgress({ plan, compact = false }: TaskProgressProps) {
       <TaskTrigger
         className="w-full justify-between text-[13px] font-medium text-foreground"
         title={`任务进度 ${completed} / ${plan.items.length}`}
-      />
+      >
+        <ListTodo aria-hidden className="size-4 shrink-0" />
+        <span>
+          任务进度 {completed} / {plan.items.length}
+        </span>
+        <ChevronDown
+          aria-hidden
+          className="ml-auto size-3.5 transition-transform group-data-[state=open]:rotate-180"
+        />
+      </TaskTrigger>
       <TaskContent className="pt-3">
         <ol className="space-y-3">
           {plan.items.map((item) => {
@@ -76,19 +91,19 @@ export function TaskProgress({ plan, compact = false }: TaskProgressProps) {
                   : "待处理";
             return (
               <li data-status={item.status} key={item.id}>
-                <TaskItem className="flex items-start gap-2.5">
+                <TaskItem className="flex min-w-0 items-start gap-2.5">
                   <Icon
                     aria-hidden
                     className={`mt-0.5 size-3.5 shrink-0 ${item.status === "in_progress" ? "text-foreground" : ""}`}
                   />
                   <span
-                    className={
+                    className={`min-w-0 break-words ${
                       item.status === "completed"
                         ? "line-through opacity-65"
                         : item.status === "in_progress"
                           ? "text-foreground"
                           : ""
-                    }
+                    }`}
                   >
                     {item.title}
                   </span>

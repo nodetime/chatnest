@@ -1053,6 +1053,7 @@ test("artifact card lifecycle reopens the same document after close or tab switc
       return {data:fetching || fetchError ? undefined : [{id,title:id,kind:documentKind,content:'fixture code'}],isLoading:fetching,error:fetchError};
     };
     const modules = {
+      'sonner':{toast:{error(){}}},'./artifact-catalog':require('./app/_components/chat/artifact-catalog.ts'),
       'react':react,'react/jsx-runtime':{jsx,jsxs:jsx},'fast-deep-equal':{__esModule:true,default:()=>true},
       'swr':{__esModule:true,default:swr},
       './use-active-chat':{useActiveChat:()=>({chatId})},

@@ -21,7 +21,6 @@ import { unstable_serialize } from "swr/infinite";
 import { projectChatTitle } from "@/app/_components/chat/chat-title";
 import { useDataStream } from "@/app/_components/chat/data-stream-provider";
 import { getChatHistoryPaginationKey } from "@/app/_components/chat/sidebar-history";
-import { toast } from "@/app/_components/chat/toast";
 import type { VisibilityType } from "@/app/_components/chat/visibility-selector";
 import { useAutoResume } from "@/app/_hooks/use-auto-resume";
 import { useChatDraft } from "@/app/_hooks/use-chat-draft";
@@ -37,6 +36,7 @@ import {
   compactInteractionResponses,
   deriveTaskProgress,
   hasPendingInteraction,
+  hasSavedAskResponse,
   interactionResponseSignature,
   shouldContinueAgent,
   type TodoPlan,
@@ -48,7 +48,6 @@ import {
 } from "@/server/domain/message/task-draft";
 import { DEFAULT_CHAT_MODEL } from "@/server/domain/model/models";
 import type { Vote } from "@/server/domain/vote/types";
-import { ChatbotError } from "@/server/shared/errors";
 
 type ActiveChatContextValue = {
   chatId: string;
@@ -260,14 +259,9 @@ export function ActiveChatProvider({
         streamError.message?.includes("AI Gateway requires a valid credit card")
       ) {
         setShowCreditCardAlert(true);
-      } else if (streamError instanceof ChatbotError) {
-        toast({ description: streamError.message, type: "error" });
-      } else {
-        toast({
-          description: streamError.message || "这一轮执行失败，请稍后重试。",
-          type: "error",
-        });
       }
+      // ConversationNotice / the persisted assistant status owns stream errors.
+      // Do not repeat the same failure as a toast or inject a continuation turn.
     },
     onFinish: ({
       isAbort,
@@ -707,8 +701,32 @@ export function ActiveChatProvider({
         origin.clearError();
         // 即使本轮还有其它 Ask/审批，也显式提交当前答案，由服务端保存并决定是否等待。
         await origin.sendMessage();
-        if (origin.error) {
-          throw origin.error;
+        if (
+          chatInstanceRef.current !== origin ||
+          interactionGate.current !== gate ||
+          gate.released
+        ) {
+          throw new Error("对话已切换。");
+        }
+        if (origin.error || gate.revision !== revision || gate.paused) {
+          // Stop may resolve normally in the SDK. Confirm only this answer via
+          // the owner-checked read API; never restart generation or replay tools.
+          const response = await fetchWithErrorHandlers(
+            `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/messages?chatId=${chatId}`,
+            { signal: AbortSignal.timeout(5000) }
+          );
+          const saved = await response.json();
+          if (
+            !Array.isArray(saved.messages) ||
+            !hasSavedAskResponse(
+              saved.messages,
+              messageId,
+              toolCallId,
+              validated
+            )
+          ) {
+            throw new Error("回答保存尚未确认，请重试提交。");
+          }
         }
       } finally {
         gate.manual = false;

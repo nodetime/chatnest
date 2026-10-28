@@ -48,6 +48,7 @@ server/
 ## app 层要点
 
 - `app/(auth)/auth.ts`:NextAuth credentials/guest 会话;用户仅 id/type,无工作区角色。`app/_components/ui/` 为 shadcn/radix 既有件,复用不重造。
+- 失败展示：`message.tsx` 显示持久化的单行中断状态；`conversation-notice.tsx` 承接当前传输/加载错误，同时暂隐最新持久化中断标记，关闭提示或重开后恢复历史状态，避免吞掉重新生成的新错误。已移除 `runtime-recovery.tsx`，不注入固定续跑用户消息、不重复 toast，用户通过底部输入框继续表达需求。
 - 聊天主链路:`app/(chat)/api/chat/route.ts`(96 行平台层)+ 同目录 request.ts/schema.ts;业务在 application/chat/send-message.ts。
 - `app/_components/ai-elements/` 钉定的 Apache-2.0 上游原语,许可全文见 THIRD_PARTY_NOTICES.md。
 - 产物客户端在 `app/_artifacts/`,UI 组件 `app/_components/chat/`,hooks `app/_hooks/`,前端工具 `app/_lib/`(多为 domain 转发)。
@@ -86,3 +87,10 @@ server/
 - `app/_components/chat/{personal-connections,personal-skills,task-capabilities}.tsx` 复用 McpEditor、Dialog、Button 和现有组件；侧栏与设置共用个人管理视图。`use-personal-capabilities` 与 Agent 摘要缓存均绑定登录用户，选择由 `use-active-chat` 仅在新用户轮次提交，审批续跑不重传选择。
 - Ask 复用 Apache-2.0 AI Elements Question（本地仅添加 asField，避免多问题嵌套 form）；题目仍来自 askUser 工具输入，长问题区域滚动，输入框不移动。未知 MCP 原生操作名保留在审批内容/详情，不把原始参数堆在时间线。
 - 普通预览与模型/MCP验收隔离；`NEXT_DIST_DIR` 可指定独立开发输出目录。`tests/visual/personal_capabilities.py` 仅接受 33379 本地夹具验收，正常预览不启动脚本模型。现有本地 browser 工具仍保留其独立审批，不属于 MCP/skills 选择集合。
+
+## Agent 交互统一（2026-10-27）
+
+- Ask 与 Todo 仍由 `agentInteractionTools()` 注册为 AI SDK 原生工具，模型决定是否调用。`ask-user` 复用 Question，按输入 schema 动态生成表单；已答摘要默认收起，未确认保存时显示待确认而非已回答。停止/异常后 `use-active-chat` 只读核实精确 messageId/toolCallId/答案，确认不重启生成、不重放工具；中断的 input-streaming 不冒充可回答的问题，也不解除 MCP 审批。
+- `activity-groups` 仅在视图中省略成功且有效的 updateTodo 快照，原始消息保留；Todo 由 `deriveTaskProgress` 唯一投影到有界滚动的任务进度列表。普通执行组默认收起，用户展开选择与正在查看的详情保留，新的审批/错误仍主动显露。
+- 原生文档/建议工具复用 ToolActivity 状态与 DocumentPreview 产物入口；只对已知原生文档工具的 `{error:string}` 契约判失败，MCP 同名字段保持源数据。消息产物卡片共用 `artifactSwitchReason`，未保存正文/表格备注或生成中阻止切到其他文件，同文件重开保留内容。
+- `agent-unification.test.ts` 含实际 SDK 中止语义回归；formal_workspace 的显式扩展模式追加双产物备注保存/切换及不完整 Ask 中止分支。正常预览不使用这些夹具。

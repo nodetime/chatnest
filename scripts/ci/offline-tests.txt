@@ -57,3 +57,5 @@ server/application/capability/capability-db.test.ts
 server/application/mcp/personal-capabilities.test.ts
 server/domain/capability/projection.test.ts
 app/(chat)/api/chat/request.test.ts
+
+app/_components/chat/agent-unification.test.ts

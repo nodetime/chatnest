@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 function clientScript(code: string) {
@@ -61,36 +62,15 @@ test("failed tool summary separates raw error evidence and active approval suppr
   `);
 });
 
-test("recovery uses one normal user message, preserves evidence and blocks busy, readonly, history and unresolved approval", () => {
-  clientScript(`${harness}
-    (async()=>{
-      const h=hooks();const {RuntimeRecovery,hasRecoverableToolFailure}=load('app/_components/chat/runtime-recovery.tsx',{...base,react:h.react});
-      const failed={id:'latest',role:'assistant',parts:[{...part,state:'output-error',errorText:'original evidence'}]};
-      assert.equal(hasRecoverableToolFailure(failed),true);
-      for(const state of ['input-available','input-streaming','approval-responded'])assert.equal(hasRecoverableToolFailure({...failed,parts:[{...part,state,approval:{id:'a',approved:true}}]}),true);
-      for(const state of ['output-denied','output-available','approval-requested'])assert.equal(hasRecoverableToolFailure({...failed,parts:[{...part,state,output:{error:'ordinary MCP data'}}]}),false);
-      assert.equal(hasRecoverableToolFailure({...failed,parts:[...failed.parts,part]}),false);
-      assert.equal(hasRecoverableToolFailure({...failed,parts:[{...part,type:'tool-createResultTable',state:'output-available',output:{error:'actual native failure'}}]}),true);
-      const calls=[];let resolve;const original=JSON.stringify(failed);let props={message:failed,status:'ready',isReadonly:false,isLatest:true,sendMessage:value=>{calls.push(value);return new Promise(r=>resolve=r);}};
-      let tree=h.render(RuntimeRecovery,props);const recover=button(tree,'让 Agent 继续处理');assert.ok(recover);
-      const pending=recover.props.onClick();recover.props.onClick();assert.equal(calls.length,1);
-      assert.equal(calls[0].role,'user');assert.equal(calls[0].parts.length,1);assert.equal(calls[0].parts[0].type,'text');assert.match(calls[0].parts[0].text,/执行结果|副作用/);assert.match(calls[0].parts[0].text,/重新.*确认|再次.*确认/);assert.equal(JSON.stringify(failed),original);
-      resolve();await pending;
-      for(const extra of [{status:'streaming'},{status:'submitted'},{isReadonly:true},{isLatest:false}]){assert.equal(h.render(RuntimeRecovery,{...props,...extra}),null);}
-      const retryHooks=hooks();const {RuntimeRecovery:RetryRecovery}=load('app/_components/chat/runtime-recovery.tsx',{...base,react:retryHooks.react});let attempts=0;props={...props,sendMessage:async()=>{attempts++;throw new Error('send failed');}};
-      tree=retryHooks.render(RetryRecovery,props);await button(tree,'让 Agent 继续处理').props.onClick();tree=retryHooks.render(RetryRecovery,props);assert.match(JSON.stringify(tree),/请求未能发送/);await button(tree,'让 Agent 继续处理').props.onClick();assert.equal(attempts,2);
-    })().then(()=>process.stdout.write('ASYNC_DONE')).catch(e=>{console.error(e);process.exitCode=1;});
-  `);
-});
-
-test("Messages grants approval only to idle latest message and forwards recovery without replacing canonical previews", () => {
+test("failed turns keep canonical previews without a separate continue action or fabricated user request", () => {
   clientScript(`${harness}
     const {Messages}=load('app/_components/chat/messages.tsx',{...base,'@/app/_components/ai-elements/conversation':{Conversation:'conversation',ConversationContent:'content',ConversationScrollButton:'scroll'},'@/server/domain/message/message-turn':{prepareRegeneration:()=>false},'./data-stream-provider':{useDataStream:()=>({})},'./greeting':{Greeting:'greeting'},'./message':{PreviewMessage:'message',ThinkingMessage:'thinking'},'./agent-pause-notice':{AgentPauseNotice:'paused'},'@/server/domain/message/agent-interactions':{hasPendingInteraction:()=>false},'./runtime-recovery':{RuntimeRecovery:'recovery'}});
-    const messages=[{id:'old',role:'assistant',parts:[part]},{id:'latest',role:'assistant',parts:[{...part,state:'output-error'}]}];const sendMessage=()=>{};
-    const props={messages,chatId:'chat',status:'ready',isReadonly:false,sendMessage};
+    const messages=[{id:'old',role:'assistant',parts:[part]},{id:'latest',role:'assistant',parts:[{type:'data-run-status',data:{state:'failed'}}]}];
+    const props={messages,chatId:'chat',status:'error',isReadonly:false,sendMessage:()=>{throw new Error('No synthetic user messages');}};
     let tree=Messages(props);let previews=nodes(tree).filter(n=>n.type==='message');assert.equal(previews[0].props.canApprove,false);assert.equal(previews[1].props.canApprove,true);assert.equal(previews[0].key,'old');assert.equal(previews[1].props.message,messages[1]);
-    const recovery=nodes(tree).find(n=>n.type==='recovery');assert.equal(recovery.props.message,messages[1]);assert.equal(recovery.props.sendMessage,sendMessage);
-    for(const extra of [{status:'submitted'},{status:'streaming'},{isReadonly:true}]){tree=Messages({...props,...extra});previews=nodes(tree).filter(n=>n.type==='message');assert.ok(previews.every(n=>n.props.canApprove===false));}
+    assert.equal(nodes(tree).filter(n=>n.type==='recovery').length,0,'No extra recovery panel beneath the assistant');
+    tree=Messages({...props,suppressLatestRunFailure:true});previews=nodes(tree).filter(n=>n.type==='message');assert.equal(previews[0].props.hideRunFailure,false);assert.equal(previews[1].props.hideRunFailure,true,'transient error owns only the newest failed turn');
+    for(const extra of [{status:'submitted'},{status:'streaming'},{isReadonly:true}]){tree=Messages({...props,...extra});previews=nodes(tree).filter(n=>n.type==='message');assert.ok(previews.every(n=>n.props.canApprove===false));assert.ok(!nodes(tree).some(n=>n.type==='recovery'));}
   `);
 });
 
@@ -103,25 +83,6 @@ test("late approval rejection and stale handlers do not overwrite a replacement 
       props={...props,part:{...part,approval:{id:'replacement'}}};tree=h.render(ToolActivity,props);old();assert.equal(calls.length,1,'stale handler must not submit the old approval');
       reject(new Error('old rejected'));await pending;tree=h.render(ToolActivity,props);assert.ok(!JSON.stringify(tree).includes('确认未能提交'));assert.ok(!button(tree,'允许执行').props.disabled);
       props={...props,part:{...part,state:'approval-responded',approval:{id:'exact-id',approved:true}},isRunning:true};tree=h.render(ToolActivity,props);assert.equal(nodes(tree).find(n=>n.type==='header').props.statusLabel,'执行中');
-    })().then(()=>process.stdout.write('ASYNC_DONE')).catch(e=>{console.error(e);process.exitCode=1;});
-  `);
-});
-
-test("actual SDK resolved transport failure retains failed evidence and recovery user request for the existing notice", () => {
-  clientScript(`${harness}
-    (async()=>{
-      const {Chat}=require('@ai-sdk/react');
-      const failed={id:'latest',role:'assistant',parts:[{...part,state:'output-error',errorText:'original evidence'}]};
-      const chat=new Chat({id:'offline',messages:[failed],transport:{sendMessages:async()=>{throw new Error('offline transport fixture');},reconnectToStream:async()=>null}});
-      const h=hooks();const {RuntimeRecovery}=load('app/_components/chat/runtime-recovery.tsx',{...base,react:h.react});
-      const props={message:failed,status:'ready',isReadonly:false,isLatest:true,sendMessage:chat.sendMessage};
-      const tree=h.render(RuntimeRecovery,props);await button(tree,'让 Agent 继续处理').props.onClick();
-      assert.equal(chat.status,'error');assert.equal(chat.error.message,'offline transport fixture');assert.equal(JSON.stringify(chat.messages[0]),JSON.stringify(failed));
-      const lastUser=chat.messages.findLast(m=>m.role==='user');assert.match(lastUser.parts[0].text,/不要盲目重复操作/);
-      const {Messages}=load('app/_components/chat/messages.tsx',{...base,'@/app/_components/ai-elements/conversation':{Conversation:'conversation',ConversationContent:'content',ConversationScrollButton:'scroll'},'@/server/domain/message/message-turn':{prepareRegeneration:()=>false},'./data-stream-provider':{useDataStream:()=>({})},'./greeting':{Greeting:'greeting'},'./message':{PreviewMessage:'message',ThinkingMessage:'thinking'},'./agent-pause-notice':{AgentPauseNotice:'paused'},'@/server/domain/message/agent-interactions':{hasPendingInteraction:()=>false},'./runtime-recovery':{RuntimeRecovery:'recovery'}});
-      const next=Messages({messages:chat.messages,status:chat.status,chatId:'offline',isReadonly:false,sendMessage:chat.sendMessage});assert.equal(nodes(next).filter(n=>n.type==='recovery').length,0,'SDK-appended user turn unmounts prior recovery instead of leaving a stuck lock');
-      let restored;const {ConversationNotice}=load('app/_components/chat/conversation-notice.tsx',{...base,react:h.react,'@/app/_hooks/use-active-chat':{useActiveChat:()=>({error:chat.error,clearError:()=>{}})},'./agent-library':{AgentLibrary:'library'}});
-      const notice=ConversationNotice({onRestore:()=>{restored=lastUser.parts.filter(p=>p.type==='text').map(p=>p.text).join('\\n');}});assert.match(JSON.stringify(notice),/这一轮还没有完成/);button(notice,'恢复刚才的输入').props.onClick();assert.equal(restored,lastUser.parts[0].text);
     })().then(()=>process.stdout.write('ASYNC_DONE')).catch(e=>{console.error(e);process.exitCode=1;});
   `);
 });
@@ -140,27 +101,44 @@ test("empty terminal assistant keeps its canonical owner without sender or answe
   `);
 });
 
-test("conversation transport notice uses a friendly summary and preserves exact optional error details and existing actions", () => {
+test("transport failures use one compact notice, retain diagnostics and deduplicate persisted failures", () => {
   clientScript(`${harness}
-    const raw='An error occurred. '+ 'opaque diagnostic '.repeat(30);let restored=0,reloaded=0;let state={error:new Error(raw),clearError:()=>{},retryLoad:()=>reloaded++};
+    const raw='An error occurred. '+ 'opaque diagnostic '.repeat(30);let restored=0,reloaded=0;let state={messages:[],error:new Error(raw),clearError:()=>{},retryLoad:()=>reloaded++};
     const {ConversationNotice}=load('app/_components/chat/conversation-notice.tsx',{...base,react:{useCallback:fn=>fn},'@/app/_hooks/use-active-chat':{useActiveChat:()=>state},'./agent-library':{AgentLibrary:'library'}});
-    let tree=ConversationNotice({onRestore:()=>restored++});const paragraphs=nodes(tree).filter(n=>n.type==='p');assert.ok(paragraphs.some(n=>String(n.props.children).includes('这次请求未能完成')));assert.ok(paragraphs.every(n=>!String(n.props.children).includes('An error occurred.')));
+    let tree=ConversationNotice({onRestore:()=>restored++});const paragraphs=nodes(tree).filter(n=>n.type==='p');assert.equal(paragraphs.length,1);assert.equal(paragraphs[0].props.children,'消息未能完成');assert.ok(paragraphs.every(n=>!String(n.props.children).includes('An error occurred.')));
     const details=nodes(tree).find(n=>n.type==='details');assert.ok(details);assert.ok(!details.props.open);assert.equal(nodes(details).find(n=>n.type==='pre').props.children,raw);
-    button(tree,'恢复刚才的输入').props.onClick();assert.equal(restored,1);
+    assert.ok(!nodes(tree).some(n=>n.type==='library'),'Model failures do not point to MCP configuration');
+    button(tree,'恢复输入').props.onClick();assert.equal(restored,1);
+    state={...state,messages:[{role:'assistant',parts:[{type:'data-run-status',data:{state:'failed'}}]}]};assert.ok(ConversationNotice({onRestore:()=>{}}),'a regenerated turn failure must retain its new diagnostics despite an old failed snapshot');
+    state={...state,messages:[...state.messages,{role:'user',parts:[{type:'text',text:'My own next request'}]}]};assert.ok(ConversationNotice({onRestore:()=>{}}),'older failure cannot hide a newer send error');
     state={...state,error:undefined,loadError:new Error(raw)};tree=ConversationNotice({onRestore:()=>restored++});assert.equal(nodes(tree).find(n=>n.type==='pre').props.children,raw);const reload=nodes(tree).find(n=>n.type==='button'&&JSON.stringify(n.props.children).includes('重新加载'));reload.props.onClick();assert.equal(reloaded,1);
   `);
 });
 
-test("persisted run failures offer guarded Agent recovery without pretending to be a tool", () => {
+test("persisted interruption is a compact status, not a recovery instruction or button", () => {
   clientScript(`${harness}
-    const h=hooks();const {RuntimeRecovery,hasRecoverableToolFailure}=load('app/_components/chat/runtime-recovery.tsx',{...base,react:h.react});
-    const failed={id:'failed-run',role:'assistant',parts:[{type:'data-run-status',id:'run-status',data:{state:'failed'}}]};
-    assert.equal(hasRecoverableToolFailure(failed),true);
-    assert.equal(hasRecoverableToolFailure({...failed,role:'user'}),false);
-    assert.equal(hasRecoverableToolFailure({...failed,parts:[{...failed.parts[0],data:{state:'resumed'}}]}),false);
-    assert.equal(hasRecoverableToolFailure({...failed,parts:[...failed.parts,part]}),false);
-    const props={message:failed,status:'ready',isReadonly:false,isLatest:true,sendMessage:()=>{}};
-    assert.ok(button(h.render(RuntimeRecovery,props),'让 Agent 继续处理'));
-    for(const extra of [{isReadonly:true},{isLatest:false},{status:'streaming'},{status:'submitted'}])assert.equal(h.render(RuntimeRecovery,{...props,...extra}),null);
+    const {PreviewMessage}=load('app/_components/chat/message.tsx',{...base,react:{useCallback:fn=>fn},'@/app/_lib/utils':{cn:()=>'',sanitizeText:t=>t},'../ai-elements/message':{MessageContent:'text',MessageResponse:'response'},'../ai-elements/shimmer':{Shimmer:'shimmer'},'./activity-group':{ActivityGroup:'activity'},'./data-stream-provider':{useDataStream:()=>({})},'./document':{},'./document-preview':{DocumentPreview:'artifact'},'./message-actions':{MessageActions:'actions'},'./message-reasoning':{MessageReasoning:'reasoning'},'./preview-attachment':{PreviewAttachment:'attachment'},'./tool-activity':{ToolActivity:'tool'},'./ask-user':{AskUser:'ask'},'./weather':{}});
+    const message={id:'failed-run',role:'assistant',parts:[{type:'data-run-status',data:{state:'failed'}}]};
+    const props={message,isLoading:false,isReadonly:false};
+    for(const readonly of [false,true]){const tree=PreviewMessage({...props,isReadonly:readonly});const notice=nodes(tree).find(n=>n.props?.['data-testid']==='run-failure');assert.ok(notice);assert.equal(notice.props.children,'响应中断');assert.equal(nodes(notice).filter(n=>n.type==='button').length,0);assert.doesNotMatch(JSON.stringify(tree),/继续处理|原始记录已保留|检查连接/);}
+    const suppressed=PreviewMessage({...props,hideRunFailure:true});assert.equal(suppressed.props.hidden,true,'do not leave an empty error bubble');
+    const running=PreviewMessage({...props,isLoading:true});assert.equal(nodes(running).filter(n=>n.props?.['data-testid']==='run-failure').length,0,'previous interruption is not shown as a new active failure');
   `);
 });
+
+test("stream errors have an inline owner instead of a duplicate toast", () => {
+  const source = requireSource();
+  const handler = source.slice(
+    source.indexOf("onError: (streamError)"),
+    source.indexOf("onFinish:")
+  );
+  assert.doesNotMatch(handler, /toast\(/);
+  assert.match(handler, /setShowCreditCardAlert/);
+});
+
+function requireSource() {
+  return readFileSync(
+    new URL("../../_hooks/use-active-chat.tsx", import.meta.url),
+    "utf8"
+  );
+}
