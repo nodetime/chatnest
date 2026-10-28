@@ -185,7 +185,7 @@ export function AskUser({
       >
         {part.state === "input-streaming"
           ? "正在整理需要你确认的问题…"
-          : "提问未完成，请让 Agent 继续处理。"}
+          : "提问未完成。"}
       </div>
     );
   }

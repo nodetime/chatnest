@@ -62,6 +62,7 @@ export function ChatShell() {
     showCreditCardAlert,
     setShowCreditCardAlert,
     clearError,
+    error,
     getSendError,
     loadError,
   } = useActiveChat();
@@ -275,9 +276,9 @@ export function ChatShell() {
                 regenerate={regenerate}
                 reviseAskUser={reviseAskUser}
                 selectedModelId={currentModelId}
-                sendMessage={sendMessage}
                 setMessages={setMessages}
                 status={status}
+                suppressLatestRunFailure={Boolean(error || loadError)}
                 votes={votes}
               />
             )}

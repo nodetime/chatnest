@@ -111,10 +111,6 @@ test("storage separates live configuration cards, controls, limits and collapsed
   }
   assert.match(html, /<details/);
   assert.doesNotMatch(html, /S3|云存储/);
-  assert.match(
-    readFileSync("app/_components/chat/conversation-notice.tsx", "utf8"),
-    /label="检查连接" tab="tools"/
-  );
 });
 
 test("overview independently authorizes, isolates failures and never projects credentials", async () => {

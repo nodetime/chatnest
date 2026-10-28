@@ -63,6 +63,7 @@ const PurePreviewMessage = ({
   onEdit,
   onRegenerate,
   hideActivities = false,
+  hideRunFailure = false,
   showSender: _showSender = true,
 }: {
   addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
@@ -80,6 +81,7 @@ const PurePreviewMessage = ({
   onEdit?: (message: ChatMessage) => void;
   onRegenerate?: () => void;
   hideActivities?: boolean;
+  hideRunFailure?: boolean;
   showSender?: boolean;
 }) => {
   const attachmentsFromMessage = message.parts.filter(
@@ -102,7 +104,7 @@ const PurePreviewMessage = ({
       part.type === "source-url" ||
       part.type === "file"
   );
-  const failedRun = hasRunFailure(message);
+  const failedRun = !hideRunFailure && hasRunFailure(message);
   const isThinking = isAssistant && isLoading && !hasAnyContent && !failedRun;
   const isEmptyAssistant =
     isAssistant && !isLoading && !hasAnyContent && !failedRun;
@@ -162,16 +164,18 @@ const PurePreviewMessage = ({
     if (
       type === "data-run-status" &&
       isAssistant &&
+      !isLoading &&
+      !hideRunFailure &&
       part.data?.state === "failed"
     ) {
       return (
         <p
-          className="text-sm leading-6 text-muted-foreground"
+          className="text-[13px] leading-5 text-muted-foreground"
           data-testid="run-failure"
           key={key}
           role="status"
         >
-          本次执行未完成，已有资料已保留。检查连接后，可让 Agent 继续处理。
+          响应中断
         </p>
       );
     }

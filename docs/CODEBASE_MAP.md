@@ -48,6 +48,7 @@ server/
 ## app 层要点
 
 - `app/(auth)/auth.ts`:NextAuth credentials/guest 会话;用户仅 id/type,无工作区角色。`app/_components/ui/` 为 shadcn/radix 既有件,复用不重造。
+- 失败展示：`message.tsx` 显示持久化的单行中断状态；`conversation-notice.tsx` 承接当前传输/加载错误，同时暂隐最新持久化中断标记，关闭提示或重开后恢复历史状态，避免吞掉重新生成的新错误。已移除 `runtime-recovery.tsx`，不注入固定续跑用户消息、不重复 toast，用户通过底部输入框继续表达需求。
 - 聊天主链路:`app/(chat)/api/chat/route.ts`(96 行平台层)+ 同目录 request.ts/schema.ts;业务在 application/chat/send-message.ts。
 - `app/_components/ai-elements/` 钉定的 Apache-2.0 上游原语,许可全文见 THIRD_PARTY_NOTICES.md。
 - 产物客户端在 `app/_artifacts/`,UI 组件 `app/_components/chat/`,hooks `app/_hooks/`,前端工具 `app/_lib/`(多为 domain 转发)。

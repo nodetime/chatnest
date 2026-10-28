@@ -21,7 +21,6 @@ import { unstable_serialize } from "swr/infinite";
 import { projectChatTitle } from "@/app/_components/chat/chat-title";
 import { useDataStream } from "@/app/_components/chat/data-stream-provider";
 import { getChatHistoryPaginationKey } from "@/app/_components/chat/sidebar-history";
-import { toast } from "@/app/_components/chat/toast";
 import type { VisibilityType } from "@/app/_components/chat/visibility-selector";
 import { useAutoResume } from "@/app/_hooks/use-auto-resume";
 import { useChatDraft } from "@/app/_hooks/use-chat-draft";
@@ -48,7 +47,6 @@ import {
 } from "@/server/domain/message/task-draft";
 import { DEFAULT_CHAT_MODEL } from "@/server/domain/model/models";
 import type { Vote } from "@/server/domain/vote/types";
-import { ChatbotError } from "@/server/shared/errors";
 
 type ActiveChatContextValue = {
   chatId: string;
@@ -260,14 +258,9 @@ export function ActiveChatProvider({
         streamError.message?.includes("AI Gateway requires a valid credit card")
       ) {
         setShowCreditCardAlert(true);
-      } else if (streamError instanceof ChatbotError) {
-        toast({ description: streamError.message, type: "error" });
-      } else {
-        toast({
-          description: streamError.message || "这一轮执行失败，请稍后重试。",
-          type: "error",
-        });
       }
+      // ConversationNotice / the persisted assistant status owns stream errors.
+      // Do not repeat the same failure as a toast or inject a continuation turn.
     },
     onFinish: ({
       isAbort,
