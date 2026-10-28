@@ -131,12 +131,9 @@ function PersonalConnectionsContent() {
           个人连接暂未开放，请联系管理员开启。平台工具仍可按授权使用。
         </p>
       )}
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="divide-y divide-border/70 border-y border-border/70">
         {mcp.data?.servers.map((server) => (
-          <article
-            className="rounded-xl border border-border/70 bg-card p-5"
-            key={server.id}
-          >
+          <article className="py-4" key={server.id}>
             <div className="flex items-start gap-3">
               <span className="rounded-lg bg-secondary/70 p-2">
                 <Plug className="size-4 text-muted-foreground" />
@@ -176,7 +173,7 @@ function PersonalConnectionsContent() {
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-            <p className="mt-4 truncate text-xs text-muted-foreground">
+            <p className="mt-2 pl-11 truncate text-xs text-muted-foreground">
               {server.origin}
             </p>
           </article>
@@ -184,7 +181,7 @@ function PersonalConnectionsContent() {
       </div>
       {regular && mcp.data?.configured && !mcp.data.servers.length && (
         <button
-          className="flex w-full items-center gap-3 rounded-xl border border-dashed p-5 text-left transition-colors hover:bg-muted/50"
+          className="flex w-full items-center gap-3 rounded-xl border border-border/80 bg-card p-5 text-left transition-colors hover:bg-muted/50"
           onClick={() => setEditing("new")}
           type="button"
         >
@@ -198,14 +195,11 @@ function PersonalConnectionsContent() {
           <h2 className="mb-3 text-xs font-medium text-muted-foreground">
             平台提供 · 只读
           </h2>
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="divide-y divide-border/70 border-y border-border/70">
             {agent.servers
               .filter((s) => s.source !== "personal")
               .map((s) => (
-                <article
-                  className="rounded-xl border border-border/60 p-4"
-                  key={s.id}
-                >
+                <article className="py-4" key={s.id}>
                   <h3 className="text-sm font-medium">{s.name}</h3>
                   <p className="mt-2 text-xs text-muted-foreground">
                     {s.tools.length} 个工具 ·{" "}

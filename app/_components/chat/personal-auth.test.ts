@@ -119,19 +119,19 @@ test("failed credentials produce an inline form alert without depending on a mis
   }
 });
 
-test("authentication pages use Chinese labels and a real ChatNest form, not a template preview", () => {
+test("authentication pages use Chinese labels and a real 数知探AI form, not a template preview", () => {
   const login = readFileSync("app/(auth)/login/page.tsx", "utf8");
   const register = readFileSync("app/(auth)/register/page.tsx", "utf8");
   const form = readFileSync("app/_components/chat/auth-form.tsx", "utf8");
   const layout = readFileSync("app/(auth)/layout.tsx", "utf8");
   const submit = readFileSync("app/_components/chat/submit-button.tsx", "utf8");
-  assert.match(login, /登录 ChatNest/);
-  assert.match(register, /注册 ChatNest/);
+  assert.match(login, /登录 数知探AI/);
+  assert.match(register, /注册 数知探AI/);
   assert.match(form, /邮箱/);
   assert.match(form, /密码/);
   assert.match(form, /autoComplete=\{passwordAutoComplete\}/);
   assert.doesNotMatch(form, /\sautoFocus\b/);
-  assert.match(layout, /ChatNest/);
+  assert.match(layout, /数知探AI/);
   assert.doesNotMatch(
     layout,
     /Preview|VercelIcon|Powered by|AI Gateway|w-screen|h-dvh/

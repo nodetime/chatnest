@@ -61,7 +61,7 @@ function AuthPage() {
 
   return (
     <>
-      <h1 className="text-2xl font-semibold tracking-tight">登录 ChatNest</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">登录 数知探AI</h1>
       <p className="text-sm text-muted-foreground">继续你的对话与工作。</p>
       <AuthForm
         action={handleSubmit}

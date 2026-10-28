@@ -194,10 +194,8 @@ export function ToolActivity({
       <Tool
         className={cn(
           "mb-0 overflow-hidden rounded-lg border-transparent bg-transparent",
-          toolNeedsAttention(displayState) &&
-            "border-border/70 bg-secondary/50",
-          displayState === "approval-requested" &&
-            "border-amber-600/20 bg-amber-500/5"
+          toolNeedsAttention(displayState) && "border-border/80 bg-card",
+          displayState === "approval-requested" && "border-amber-600/25"
         )}
         onOpenChange={setOpen}
         open={open}

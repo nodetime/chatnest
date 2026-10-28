@@ -122,3 +122,27 @@ server/
 - `server/domain/message/message-turn.ts` 的 `projectSettledToolHistory` 只清理模型上下文中历史未完成工具；`send-message.ts` 在附件／权限投影后、SDK 转换前使用。当前真实审批续跑、终态结果、Todo 和附件保持不变；数据库审计不改。
 - `message-time-db.test.ts` 为显式 opt-in、仅 loopback、独立临时 schema 的非 UTC 真库测试；默认离线 CI 跳过，不接触业务表。`tool-history.test.ts` 及中文 PDF 回归纳入显式测试白名单。
 - 真实模型任务、停止／异常恢复证据及合成供应商边界见 [本轮记录](integrations/2026-10-28-real-agent-e2e.md)。
+
+## 品牌图标（2026-10-28）
+
+- `app/_components/brand-mark.tsx` 复用 Next Image 展示用户选定的 Figma 第一套「探索雷达」；侧栏、账户页与后台共用，产品显示名统一为「数知探AI」，保留原导航行为，装饰图像不重复朗读链接名称。
+- `public/brand/radar.svg` 为原始 160×160 导出，来源／哈希见同目录 README；`app/icon.svg` 同源，favicon 与 Apple 图标等比派生。公共资源尊重 NEXT_PUBLIC_BASE_PATH，不请求 Figma 临时地址，不改 Agent／Porta／模型配置。
+- 品牌回归追加至既有 `app/branding.test.ts`，继续使用原显式白名单；验证源图一致性、三个入口复用、访问命名与 basePath。
+
+- 品牌静态资源在 `proxy.ts` 精确放行 `/brand/radar.svg`、`/icon.svg`、`/apple-icon.png`，避免公开账户页创建访客会话；任意其他资源／私有 API 权限不变。Biome 仅对两份原始 SVG 关闭格式化／属性重排，仍保留其余检查。
+
+
+## 产品命名（2026-10-28）
+
+- 产品显示名为「数知探AI」：首页链接、页面 title、账户页、后台、输入提示、内置技能归属与 Markdown 导出统一；后台标题为「数知探AI · 管理后台」。
+- 仓库／技术宿主名 ChatNest、Porta、CSS 标识、日志服务名、加密 AAD 以及锁定的外部 Porta skill 快照保持不变；不重写历史用户消息、来源标题和已保存产物。
+- 品牌回归覆盖新显示名、导出原文保留与内部稳定标识，既有认证／视觉选择器同步更新，不改变登录、导航或 Agent 行为。
+
+
+## Lessie 工作空间呈现（2026-10-28）
+
+- `globals.css` 的工作台语义变量统一白画布、浅中性侧栏、石墨正文和克制的选择态；展开侧栏 208px、折叠 72px，聊天/管理顶栏 52px。没有更换样式框架、字体加载或 Agent 实现。
+- `shell/greeting/workspace-home` 把任务入口约束为 840px，最近对话与真实成果为并列轻列表；`SavedArtifactCards.compact` 只是同一份属主 API 数据的呈现模式，不伪造推荐或订阅能力。
+- `workspace-header` 将原有通用标题/关闭/视图切换保留在 52px 主行，把产物 controls 放进独立可横向滚动的 toolbar；`artifact-picker` 明确可收缩边界。编辑器挂载、未保存保护与回调作用域不变。
+- `agent-library` 复用现有 Dialog，桌面侧向分类、移动横向分类，内容独立滚动；连接与技能复用相同个人组件，改为轻列表。Ask/Todo/工具行仅调整表面，不改工具定义、审批和续跑。
+- `tests/visual/lessie_workspace.py` 为显式 opt-in 的本地样式/键盘检查，只接受隔离端口33379；`formal_workspace.py` 补充长标题纯DOM边界探针和输入底部稳定断言。脚本不进入生产装配，测试模型/数据不冒充真实服务验收。

@@ -192,7 +192,7 @@ export function AskUser({
   return (
     <section
       aria-label="Agent 提问"
-      className="w-full overflow-hidden rounded-xl border border-border/80 bg-background p-4 text-[13px]"
+      className="w-full overflow-hidden rounded-xl border border-border/80 bg-card p-4 text-[13px] shadow-[var(--shadow-composer)]"
       data-testid="ask-user"
     >
       <div className="mb-3 flex items-start gap-2">

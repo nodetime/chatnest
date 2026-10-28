@@ -1,6 +1,8 @@
-# ChatNest
+# 数知探AI
 
 给出目标，让 Agent 查找线索、阅读网页、核对内容，并交付可追溯的结果。
+
+仓库名保留 ChatNest，产品显示名为「数知探AI」。
 
 基于官方 [vercel/chatbot](https://github.com/vercel/chatbot) 改造，采用 Next.js、Vercel AI SDK 和原模板组件。保留上游代码历史与 Apache 2.0 许可；领域方法由 Skills 封装，执行能力优先接入现成 MCP 工具。
 
@@ -8,7 +10,7 @@
 - 目标式任务入口、按需加载的 Skills、真实工具状态与执行确认。
 - 支持 OpenAI 兼容接口的自定义地址、模型与密钥，也支持 Vercel AI Gateway。
 - 默认接入免密钥、限流的 Exa 搜索与网页读取 MCP；可选 Tavily。
-- 已内置 Porta 通用 skill，复用现有 HTTP MCP；[Codex / ChatNest 接入指南](docs/integrations/porta-hosts.md)与[实际验收边界](docs/integrations/porta-host-verification.md)。
+- 已内置 Porta 通用 skill，复用现有 HTTP MCP；[Codex / 数知探AI 接入指南](docs/integrations/porta-hosts.md)与[实际验收边界](docs/integrations/porta-host-verification.md)。
 - 管理员可在设置页管理 HTTP MCP 连接，详见 [可视化 MCP 配置](docs/integrations/mcp-settings.md)。
 
 ## 本地运行

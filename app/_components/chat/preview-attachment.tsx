@@ -43,7 +43,7 @@ export const PreviewAttachment = ({
   return (
     <div
       className={cn(
-        "relative min-w-0 max-w-full shrink-0 overflow-hidden rounded-[12px] border border-border/60 bg-muted/40",
+        "relative min-w-0 max-w-full shrink-0 overflow-hidden rounded-[10px] border border-border/80 bg-card",
         isImage
           ? "h-24 w-24"
           : compact
@@ -114,7 +114,7 @@ export const PreviewAttachment = ({
           className="absolute inset-0 flex items-center justify-center rounded-[12px] bg-black/40 backdrop-blur-sm"
           data-testid="input-attachment-loader"
         >
-          <Spinner className="size-5" />
+          <Spinner className="size-4" />
         </div>
       )}
 

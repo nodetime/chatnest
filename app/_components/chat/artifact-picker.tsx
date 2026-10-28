@@ -79,16 +79,18 @@ export function ArtifactPicker({
     );
   }
   return (
-    <div className="min-w-0" title={blockedReason ?? undefined}>
+    <div className="w-full min-w-0" title={blockedReason ?? undefined}>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
             aria-label="选择本次对话的产物"
-            className="h-6 max-w-full justify-start gap-1.5 px-0 text-[15px] font-semibold hover:bg-transparent"
+            className="h-6 w-full min-w-0 max-w-full justify-start gap-1.5 px-0 text-sm font-medium hover:bg-transparent"
             disabled={Boolean(blockedReason) || entries.length === 0}
             variant="ghost"
           >
-            <span className="truncate">{title || "本次对话的产物"}</span>
+            <span className="min-w-0 flex-1 truncate text-left">
+              {title || "本次对话的产物"}
+            </span>
             <ChevronsUpDown className="size-3 shrink-0 text-muted-foreground" />
           </Button>
         </DropdownMenuTrigger>

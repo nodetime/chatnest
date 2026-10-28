@@ -51,7 +51,7 @@ export function TaskProgress({ plan, compact = false }: TaskProgressProps) {
         </PopoverTrigger>
         <PopoverContent
           align="end"
-          className="w-80 max-w-[calc(100vw-2rem)] max-h-[min(60dvh,420px)] overflow-y-auto"
+          className="rounded-xl border-border/80 p-4 w-80 max-w-[calc(100vw-2rem)] max-h-[min(60dvh,420px)] overflow-y-auto"
           side="bottom"
         >
           <TaskProgress plan={plan} />

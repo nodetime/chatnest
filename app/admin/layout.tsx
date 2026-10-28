@@ -6,7 +6,7 @@ import { auth } from "@/app/(auth)/auth";
 import { requirePlatformAdmin } from "@/server/application/admin/access";
 
 export const metadata: Metadata = {
-  title: "ChatNest Admin",
+  title: "数知探AI · 管理后台",
 };
 
 export default function AdminLayout({

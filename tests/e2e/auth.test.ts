@@ -4,7 +4,7 @@ test.describe("Authentication Pages", () => {
   test("login page renders correctly", async ({ page }) => {
     await page.goto("/login");
     await expect(
-      page.getByRole("heading", { name: "登录 ChatNest" })
+      page.getByRole("heading", { name: "登录 数知探AI" })
     ).toBeVisible();
     await expect(page.getByLabel("邮箱")).toBeVisible();
     await expect(page.getByLabel("密码")).toBeVisible();
@@ -15,7 +15,7 @@ test.describe("Authentication Pages", () => {
   test("register page renders correctly", async ({ page }) => {
     await page.goto("/register");
     await expect(
-      page.getByRole("heading", { name: "注册 ChatNest" })
+      page.getByRole("heading", { name: "注册 数知探AI" })
     ).toBeVisible();
     await expect(page.getByLabel("邮箱")).toBeVisible();
     await expect(page.getByLabel("密码")).toBeVisible();
@@ -46,7 +46,7 @@ test.describe("Personal management requires a signed-in account", () => {
         `/login?next=${encodeURIComponent(`/?section=${section}`)}`
       );
       await expect(
-        page.getByRole("heading", { name: "登录 ChatNest" })
+        page.getByRole("heading", { name: "登录 数知探AI" })
       ).toBeVisible();
       await expect(page.getByTestId(`personal-${section}`)).toHaveCount(0);
       const session = await page.request.get("/api/auth/session");

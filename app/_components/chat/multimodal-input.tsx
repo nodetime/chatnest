@@ -523,7 +523,7 @@ function PureMultimodalInput({
       />
 
       <PromptInput
-        className="[&>div]:rounded-[14px] [&>div]:border [&>div]:border-border [&>div]:bg-card [&>div]:shadow-[var(--shadow-composer)] [&>div]:transition-shadow [&>div]:duration-200 [&>div]:ring-0! [&>div]:focus-within:border-ring! [&>div]:focus-within:outline-1 [&>div]:focus-within:outline-ring/30"
+        className="[&>div]:rounded-[14px] [&>div]:border [&>div]:border-border [&>div]:bg-card [&>div]:shadow-[var(--shadow-composer)] [&>div]:transition-shadow [&>div]:duration-150 [&>div]:ring-0! [&>div]:focus-within:border-ring! [&>div]:focus-within:shadow-[var(--shadow-composer-focus)]"
         onSubmit={handlePromptSubmit}
       >
         {(attachments.length > 0 || uploadQueue.length > 0) && (
@@ -560,7 +560,7 @@ function PureMultimodalInput({
             aria-label="消息输入框"
             className={cn(
               "min-h-[44px] max-h-[200px] text-[14px] leading-6 px-3.5 pt-3 pb-1 placeholder:text-muted-foreground",
-              home && "min-h-[64px] px-5 pt-5 text-base"
+              home && "min-h-[80px] px-5 pt-5 text-[15px]"
             )}
             data-testid="multimodal-input"
             onChange={handleInput}
@@ -570,7 +570,7 @@ function PureMultimodalInput({
                 ? "修改消息…"
                 : home
                   ? "描述任务，或添加文件…"
-                  : "给 ChatNest 发送消息…"
+                  : "给 数知探AI 发送消息…"
             }
             ref={textareaRef}
             value={input}

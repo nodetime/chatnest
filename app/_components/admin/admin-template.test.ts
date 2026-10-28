@@ -30,14 +30,14 @@ test("template shell provides inset, collapsible navigation, current identity an
   assert.match(html, /href="\/admin\/connections"/);
   assert.match(html, /href="\/admin\/storage"/);
   assert.match(html, /返回工作台/);
-  assert.match(html, /ChatNest <span[^>]*>\/ Admin<\/span>/);
+  assert.match(html, /数知探AI <span[^>]*>\/ 管理后台<\/span>/);
   assert.doesNotMatch(html, /Research/);
   assert.doesNotMatch(
     html,
     /Billing|Notifications|Quick Create|\/admin\/(users|billing|logs)/
   );
   const shell = readFileSync("app/_components/admin/admin-shell.tsx", "utf8");
-  assert.match(shell, /tooltip="ChatNest 平台管理"/);
+  assert.match(shell, /tooltip="数知探AI 管理后台"/);
   assert.match(shell, /SheetContent/);
   assert.match(shell, /side="left"/);
   assert.match(shell, /SheetTitle/);

@@ -61,6 +61,12 @@
   // 新增 server/ 顶层目录时必须同步本文件与各层 README,防止层次倒置回潮。
   "overrides": [
     {
+      // Figma 原始导出须保持字节哈希；仅关闭这两个资产的格式化与属性重排。
+      "includes": ["public/brand/radar.svg", "app/icon.svg"],
+      "formatter": { "enabled": false },
+      "assist": { "enabled": false }
+    },
+    {
       "includes": ["server/**"],
       "linter": {
         "rules": {

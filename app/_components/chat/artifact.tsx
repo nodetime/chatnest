@@ -478,10 +478,10 @@ function PureArtifact({
       }
       controls={controls}
     >
-      <div className="flex min-w-0 flex-col items-start justify-center gap-1">
+      <div className="flex w-full min-w-0 flex-col items-start justify-center gap-0.5">
         {!embedded && <ArtifactCloseButton />}
         <div
-          className="flex min-w-0 items-center gap-2"
+          className="flex w-full min-w-0 items-center gap-2"
           title={
             document
               ? `更新于${formatDistance(new Date(document.createdAt), new Date(), { addSuffix: true, locale: zhCN })}`
@@ -497,7 +497,7 @@ function PureArtifact({
             title={artifact.title}
           />
         </div>
-        <div className="flex min-w-0 items-center gap-2">
+        <div className="flex w-full min-w-0 items-center gap-2">
           <ArtifactTypeLabel kind={artifact.kind} />
           {saveError ? (
             <span className="truncate text-xs text-destructive" role="alert">

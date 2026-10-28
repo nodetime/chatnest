@@ -8,7 +8,7 @@ import { SessionProvider } from "next-auth/react";
 export const metadata: Metadata = {
   description: "一个目标，按需使用 Skills 与工具，寻找可核实的答案。",
   metadataBase: new URL("https://chat.vercel.ai"),
-  title: "ChatNest",
+  title: "数知探AI",
 };
 
 const LIGHT_THEME_COLOR = "hsl(0 0% 100%)";

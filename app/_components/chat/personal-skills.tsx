@@ -202,12 +202,9 @@ function PersonalSkillsContent() {
           已启用
         </Button>
       </fieldset>
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="divide-y divide-border/70 border-y border-border/70">
         {visible.map((skill) => (
-          <article
-            className="flex min-w-0 flex-col rounded-xl border border-border/70 bg-card p-5"
-            key={skill.id}
-          >
+          <article className="flex min-w-0 flex-col py-4" key={skill.id}>
             <div className="flex items-start gap-3">
               <BookOpen className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
               <div className="min-w-0 flex-1">
@@ -215,10 +212,19 @@ function PersonalSkillsContent() {
                   {skill.displayName ?? skill.name}
                 </h3>
                 <span className="text-xs text-muted-foreground">
-                  {skill.source === "builtin" ? "ChatNest 提供" : "个人技能"} ·{" "}
+                  {skill.source === "builtin" ? "数知探AI 提供" : "个人技能"} ·{" "}
                   {skill.enabled ? "已启用" : "未启用"}
                 </span>
               </div>
+              <Button
+                className="shrink-0"
+                disabled={busy}
+                onClick={() => open(skill)}
+                size="sm"
+                variant="ghost"
+              >
+                {skill.source === "builtin" ? "查看技能" : "编辑技能"}
+              </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -273,18 +279,9 @@ function PersonalSkillsContent() {
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-            <p className="mt-4 line-clamp-3 text-[13px] leading-6 text-muted-foreground">
+            <p className="mt-2 pl-7 line-clamp-2 text-[13px] leading-6 text-muted-foreground">
               {skill.shortDescription ?? skill.description}
             </p>
-            <Button
-              className="mt-4 self-start"
-              disabled={busy}
-              onClick={() => open(skill)}
-              size="sm"
-              variant="outline"
-            >
-              {skill.source === "builtin" ? "查看技能" : "编辑技能"}
-            </Button>
           </article>
         ))}
       </div>

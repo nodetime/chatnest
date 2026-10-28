@@ -286,7 +286,7 @@ export function ChatShell() {
               className={cn(
                 "mx-auto flex w-full min-w-0 shrink-0 flex-col",
                 isEmpty
-                  ? "max-w-[1064px] px-5 pb-10 pt-12 sm:px-8 sm:pt-[72px]"
+                  ? "max-w-[840px] px-5 pb-10 pt-12 sm:px-8 sm:pt-16"
                   : "max-w-[800px] px-4 pt-2 pb-4 sm:px-6"
               )}
               data-testid="composer-dock"
@@ -317,7 +317,7 @@ export function ChatShell() {
                 />
               )}
               {!!isEmpty && (
-                <div className="mt-8">
+                <div className="mt-10">
                   <WorkspaceHome />
                 </div>
               )}

@@ -53,7 +53,13 @@ export function useOpenSavedArtifact() {
   };
 }
 
-export function SavedArtifactCards({ limit }: { limit?: number }) {
+export function SavedArtifactCards({
+  limit,
+  compact = false,
+}: {
+  limit?: number;
+  compact?: boolean;
+}) {
   const { data, error, isLoading, mutate } = useSavedArtifacts();
   const open = useOpenSavedArtifact();
   if (isLoading) {
@@ -77,18 +83,26 @@ export function SavedArtifactCards({ limit }: { limit?: number }) {
   }
   if (!data?.length) {
     return (
-      <div className="flex items-center gap-3 rounded-xl border border-dashed px-5 py-6 text-sm text-muted-foreground">
+      <div className="flex min-h-16 items-center gap-3 py-4 text-[13px] text-muted-foreground">
         <FileText className="size-5" />
-        对话中生成的文档、代码、图片和表格会保存在这里。
+        还没有保存的成果。
       </div>
     );
   }
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
+    <div
+      className={
+        compact ? "divide-y divide-border/70" : "grid gap-3 sm:grid-cols-2"
+      }
+    >
       {data.slice(0, limit).map((entry) => (
         <button
           aria-label={`打开成果：${entry.title}`}
-          className="flex min-w-0 items-center gap-3 rounded-xl border border-border/80 bg-card px-4 py-4 text-left transition-colors hover:border-ring/40 hover:bg-accent/30"
+          className={
+            compact
+              ? "flex w-full min-w-0 items-center gap-3 py-3 text-left transition-colors hover:bg-secondary/60"
+              : "flex min-w-0 items-center gap-3 rounded-xl border border-border/80 bg-card px-4 py-4 text-left transition-colors hover:border-ring/40 hover:bg-accent/30"
+          }
           key={entry.id}
           onClick={() => open(entry)}
           type="button"
@@ -120,18 +134,27 @@ export function WorkspaceHome() {
   );
   const router = useRouter();
   return (
-    <div className="space-y-7" data-testid="workspace-home-content">
-      <section aria-label="最近对话" className="space-y-3">
-        <h2 className="text-xs font-medium text-muted-foreground">最近对话</h2>
+    <div
+      className="grid items-start gap-8 sm:grid-cols-2"
+      data-testid="workspace-home-content"
+    >
+      <section
+        aria-label="最近对话"
+        className="min-w-0 space-y-3"
+        data-testid="home-recent-grid"
+      >
+        <h2 className="text-[13px] font-medium text-muted-foreground">
+          最近对话
+        </h2>
         {error ? (
           <Button onClick={() => mutate()} size="sm" variant="ghost">
             重新加载最近对话
           </Button>
         ) : data?.chats.length ? (
-          <div className="space-y-2">
+          <div className="divide-y divide-border/70">
             {data.chats.slice(0, 3).map((chat) => (
               <button
-                className="flex w-full min-w-0 items-center gap-3 rounded-xl border border-border/60 bg-card/80 px-4 py-3 text-left transition-colors hover:bg-card"
+                className="flex min-h-16 w-full min-w-0 items-center gap-3 py-3 text-left transition-colors hover:bg-secondary/60"
                 key={chat.id}
                 onClick={() => router.push(`/chat/${chat.id}`)}
                 type="button"
@@ -158,9 +181,11 @@ export function WorkspaceHome() {
           </p>
         )}
       </section>
-      <section aria-label="最近成果" className="space-y-3">
-        <h2 className="text-sm font-medium">任务成果</h2>
-        <SavedArtifactCards limit={4} />
+      <section aria-label="最近成果" className="min-w-0 space-y-3">
+        <h2 className="text-[13px] font-medium text-muted-foreground">
+          最近成果
+        </h2>
+        <SavedArtifactCards compact limit={4} />
       </section>
     </div>
   );
