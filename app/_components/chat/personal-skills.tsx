@@ -1,7 +1,6 @@
 // biome-ignore-all lint/performance/noJsxPropsBind: Cards and forms capture validated personal skill IDs.
 "use client";
 import { BookOpen, FileUp, MoreHorizontal, Plus } from "lucide-react";
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
   requestSkill,
@@ -38,6 +37,7 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { Textarea } from "../ui/textarea";
+import { PersonalAccessGate } from "./personal-access-gate";
 
 type Preview = {
   name: string;
@@ -55,6 +55,14 @@ type Editor = {
 const emptySkill =
   "---\nname: my-skill\ndescription: 描述这个技能适合处理什么任务\n---\n\n# 方法\n\n写下 Agent 可以按需参考的方法、资料要求和输出约定。\n";
 export function PersonalSkills() {
+  return (
+    <PersonalAccessGate section="skills">
+      <PersonalSkillsContent />
+    </PersonalAccessGate>
+  );
+}
+
+function PersonalSkillsContent() {
   const { regular, skills, refresh } = usePersonalCapabilities();
   const [filter, setFilter] = useState("all"),
     [editor, setEditor] = useState<Editor | null>(null),
@@ -160,14 +168,6 @@ export function PersonalSkills() {
           导入技能
         </Button>
       </div>
-      {!regular && (
-        <p className="text-sm text-muted-foreground">
-          登录后可以管理个人技能。
-          <Link className="ml-2 underline" href="/login">
-            登录
-          </Link>
-        </p>
-      )}
       {!!skills.isLoading && (
         <p className="text-sm text-muted-foreground" role="status">
           正在读取技能…

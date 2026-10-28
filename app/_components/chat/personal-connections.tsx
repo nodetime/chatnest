@@ -1,7 +1,6 @@
 // biome-ignore-all lint/performance/noJsxPropsBind: Controlled management cards bind stable connection IDs.
 "use client";
 import { Link2, MoreHorizontal, Plug, Plus } from "lucide-react";
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useAgentInfo } from "@/app/_hooks/use-agent-info";
 import {
@@ -35,8 +34,17 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { McpEditor, requestMcp } from "./mcp-editor";
+import { PersonalAccessGate } from "./personal-access-gate";
 
 export function PersonalConnections() {
+  return (
+    <PersonalAccessGate section="connections">
+      <PersonalConnectionsContent />
+    </PersonalAccessGate>
+  );
+}
+
+function PersonalConnectionsContent() {
   const { regular, mcp, refresh } = usePersonalCapabilities();
   const { data: agent } = useAgentInfo();
   const [editing, setEditing] = useState<ServerProjection | "new" | null>(null),
@@ -105,14 +113,6 @@ export function PersonalConnections() {
           添加连接
         </Button>
       </div>
-      {!regular && (
-        <p className="text-sm text-muted-foreground">
-          登录后可以添加自己的连接。
-          <Link className="ml-2 underline" href="/login">
-            登录
-          </Link>
-        </p>
-      )}
       {!!mcp.isLoading && (
         <p className="text-sm text-muted-foreground" role="status">
           正在读取连接…

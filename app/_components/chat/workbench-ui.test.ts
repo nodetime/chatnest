@@ -911,11 +911,17 @@ test("generic empty conversation has a readable invitation and one softly elevat
     "连接",
     "技能",
     "ChatSearch",
-    "AgentLibrary",
     "SidebarUserNav",
   ]) {
     assert.ok(sidebar.includes(entry));
   }
+  // Settings belong to an authenticated account, not the logged-out footer.
+  const account = readFileSync(
+    "app/_components/chat/sidebar-user-nav.tsx",
+    "utf8"
+  );
+  assert.match(account, /AgentLibrary/);
+  assert.match(account, /sidebar-login/);
 });
 
 test("approval presents a human action summary while raw arguments are reachable in call details", () => {

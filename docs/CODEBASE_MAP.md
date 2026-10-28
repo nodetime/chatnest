@@ -100,3 +100,11 @@ server/
 - `domain/message/result-evidence.ts` 的模型证据预览允许深层原始字段与最多 3 行样本，超限先缩样本，仍维持 2000 字节信封上限；来源账本不改。
 - `createResultTable` 可设置通用初始 substring `filter`，返回 visibleRowCount/viewFilter；只改保存视图，原始行和来源指针仍保留，不实现业务选品流程。
 - 当轮真实模型与真实 Porta 服务验收记录见 `docs/integrations/2026-10-27-real-model-verification.md`；上游仅为合成供应商数据。
+
+## 个人入口登录（2026-10-28）
+
+- `app/_lib/auth-navigation.ts` 白名单返回连接/技能面板；`proxy.ts` 对个人直达链接在 guest 创建前跳登录，公开登录/注册页不创建访客，不接受站外返回目标。
+- `use-workbench-navigation.ts` 在导航前检查正式会话，视图缓存按用户 ID 隔离；打开个人面板不触发聊天或模型任务。
+- `personal-access-gate.tsx` 覆盖设置、直达链接、会话失效；未授权不挂载管理子树，跨账号按 ID 重建子树，清除旧编辑草稿。访客侧栏明确展示登录入口。
+- 登录/注册沿用 AuthForm，成功跨整页身份边界清客户端旧缓存；失败在表单内可见，不依赖聊天布局的 Toaster。
+- `personal-auth.test.ts` 纳入显式离线白名单；`tests/e2e/auth.test.ts` 增加个人入口与返回链接浏览器回归。

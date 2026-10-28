@@ -1,17 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
-import { useActionState, useEffect, useState } from "react";
-
+import { useSearchParams } from "next/navigation";
+import {
+  Suspense,
+  useActionState,
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 import { AuthForm } from "@/app/_components/chat/auth-form";
 import { SubmitButton } from "@/app/_components/chat/submit-button";
-import { toast } from "@/app/_components/chat/toast";
+import { authPageHref, authReturnPath } from "@/app/_lib/auth-navigation";
 import { type LoginActionState, login } from "../actions";
 
 export default function Page() {
-  const router = useRouter();
+  return (
+    <Suspense>
+      <AuthPage />
+    </Suspense>
+  );
+}
+
+function AuthPage() {
+  const search = useSearchParams();
+  const returnTo = authReturnPath(search.get("next"));
   const [email, setEmail] = useState("");
   const [isSuccessful, setIsSuccessful] = useState(false);
 
@@ -20,28 +33,31 @@ export default function Page() {
     { status: "idle" }
   );
 
-  const { update: updateSession } = useSession();
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: router and updateSession are stable refs
   useEffect(() => {
-    if (state.status === "failed") {
-      toast({ description: "Invalid credentials!", type: "error" });
-    } else if (state.status === "invalid_data") {
-      toast({
-        description: "Failed validating your submission!",
-        type: "error",
-      });
-    } else if (state.status === "success") {
+    if (state.status === "success") {
       setIsSuccessful(true);
-      updateSession();
-      router.refresh();
+      // A full auth-boundary navigation clears guest/user-scoped client caches.
+      // The server action has already saved the signed session cookie.
+      window.location.replace(
+        `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}${returnTo}`
+      );
     }
-  }, [state.status]);
+  }, [returnTo, state.status]);
 
-  const handleSubmit = (formData: FormData) => {
-    setEmail(formData.get("email") as string);
-    formAction(formData);
-  };
+  const error =
+    state.status === "failed"
+      ? "邮箱或密码不正确，请重试。"
+      : state.status === "invalid_data"
+        ? "请填写有效的邮箱，密码至少 6 位。"
+        : undefined;
+
+  const handleSubmit = useCallback(
+    (formData: FormData) => {
+      setEmail(formData.get("email") as string);
+      formAction(formData);
+    },
+    [formAction]
+  );
 
   return (
     <>
@@ -49,13 +65,13 @@ export default function Page() {
       <p className="text-sm text-muted-foreground">
         Sign in to your account to continue
       </p>
-      <AuthForm action={handleSubmit} defaultEmail={email}>
+      <AuthForm action={handleSubmit} defaultEmail={email} error={error}>
         <SubmitButton isSuccessful={isSuccessful}>Sign in</SubmitButton>
         <p className="text-center text-[13px] text-muted-foreground">
           {"No account? "}
           <Link
             className="text-foreground underline-offset-4 hover:underline"
-            href="/register"
+            href={authPageHref("/register", returnTo)}
           >
             Sign up
           </Link>
