@@ -14,12 +14,12 @@ export default function AuthLayout({
     >
       <header className="flex items-center justify-between gap-4 px-6 py-5 sm:px-8">
         <Link
-          aria-label="ChatNest 首页"
+          aria-label="数知探AI 首页"
           className="flex items-center gap-2 text-sm font-semibold"
           href="/"
         >
           <BrandMark />
-          ChatNest
+          数知探AI
         </Link>
         <Link
           className="flex items-center gap-1.5 rounded-md text-[13px] text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-4"

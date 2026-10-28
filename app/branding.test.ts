@@ -5,31 +5,31 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { conversationMarkdown } from "@/server/domain/message/conversation-sources";
 
-test("root page metadata uses the ChatNest product title", () => {
+test("root page metadata uses the 数知探AI product title", () => {
   const layout = readFileSync("app/layout.tsx", "utf8");
   assert.match(
     layout,
-    /export const metadata: Metadata = \{[^}]*title: "ChatNest"/s
+    /export const metadata: Metadata = \{[^}]*title: "数知探AI"/s
   );
 });
 
-test("admin metadata overrides the root title with ChatNest Admin", () => {
+test("admin metadata overrides the root title with 数知探AI · 管理后台", () => {
   const layout = readFileSync("app/admin/layout.tsx", "utf8");
   assert.match(
     layout,
-    /export const metadata: Metadata = \{[^}]*title: "ChatNest Admin"/s
+    /export const metadata: Metadata = \{[^}]*title: "数知探AI · 管理后台"/s
   );
 });
 
-test("home button keeps its new-chat action with visible and accessible ChatNest branding", () => {
+test("home button keeps its new-chat action with visible and accessible 数知探AI branding", () => {
   const sidebar = readFileSync("app/_components/chat/app-sidebar.tsx", "utf8");
   assert.match(
     sidebar,
-    /<button\s+aria-label="ChatNest 首页"[^>]*onClick=\{handleNew\}[^>]*>[\s\S]*?<span>ChatNest<\/span>[\s\S]*?<\/button>/
+    /<button\s+aria-label="数知探AI 首页"[^>]*onClick=\{handleNew\}[^>]*>[\s\S]*?<span>数知探AI<\/span>[\s\S]*?<\/button>/
   );
 });
 
-test("conversation download uses a ChatNest filename and the existing Markdown exporter", () => {
+test("conversation download uses a 数知探AI filename and the existing Markdown exporter", () => {
   const sources = readFileSync(
     "app/_components/chat/conversation-sources.tsx",
     "utf8"
@@ -38,15 +38,17 @@ test("conversation download uses a ChatNest filename and the existing Markdown e
   assert.ok(sources.includes('type: "text/markdown;charset=utf-8"'));
   assert.match(
     sources,
-    /anchor\.download = `chatnest-\$\{chatId\.slice\(0, 8\)\}\.md`;/
+    /anchor\.download = `数知探AI-对话-\$\{chatId\.slice\(0, 8\)\}\.md`;/
   );
 });
 
-test("ChatNest conversation Markdown preserves message text and returned source links", () => {
+test("数知探AI conversation Markdown preserves message text and returned source links", () => {
   const markdown = conversationMarkdown([
     {
       id: "user",
-      parts: [{ text: "Research 是用户原文，不要改写。", type: "text" }],
+      parts: [
+        { text: "Research 与 ChatNest 是用户原文，不要改写。", type: "text" },
+      ],
       role: "user",
     },
     {
@@ -63,8 +65,10 @@ test("ChatNest conversation Markdown preserves message text and returned source 
       role: "assistant",
     },
   ]);
-  assert.ok(markdown.startsWith("# ChatNest 对话记录\n"));
-  assert.ok(markdown.includes("## 用户\n\nResearch 是用户原文，不要改写。"));
+  assert.ok(markdown.startsWith("# 数知探AI 对话记录\n"));
+  assert.ok(
+    markdown.includes("## 用户\n\nResearch 与 ChatNest 是用户原文，不要改写。")
+  );
   assert.ok(markdown.includes("## 助手\n\n可见回答"));
   assert.ok(
     markdown.includes(
@@ -133,4 +137,27 @@ test("public brand assets load without a login or guest session and private file
     encoding: "utf8",
     env: { HOME: process.env.HOME, NODE_ENV: "test", PATH: process.env.PATH },
   });
+});
+
+test("visible product copy is 数知探AI while repository and internal identifiers stay intact", () => {
+  for (const path of [
+    "app/layout.tsx",
+    "app/admin/layout.tsx",
+    "app/(auth)/layout.tsx",
+    "app/(auth)/login/page.tsx",
+    "app/(auth)/register/page.tsx",
+    "app/_components/chat/app-sidebar.tsx",
+    "app/_components/admin/admin-shell.tsx",
+    "app/_components/chat/multimodal-input.tsx",
+    "app/_components/chat/personal-skills.tsx",
+  ]) {
+    const source = readFileSync(path, "utf8");
+    assert.match(source, /数知探AI/, path);
+    assert.doesNotMatch(source, /ChatNest/, path);
+  }
+  assert.match(
+    readFileSync("server/shared/settings-crypto.ts", "utf8"),
+    /chatnest:/
+  );
+  assert.match(readFileSync("app/globals.css", "utf8"), /chatnest-result-grid/);
 });

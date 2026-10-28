@@ -120,14 +120,14 @@ function AdminSidebar({ identity }: { identity: AdminIdentity }) {
             <SidebarMenuButton
               asChild
               className="group-data-[collapsible=icon]:p-0.5!"
-              tooltip="ChatNest 平台管理"
+              tooltip="数知探AI 管理后台"
             >
               <Link href="/admin">
                 <BrandMark size={28} />
                 <span className="font-semibold">
-                  ChatNest{" "}
+                  数知探AI{" "}
                   <span className="font-normal text-muted-foreground">
-                    / Admin
+                    / 管理后台
                   </span>
                 </span>
               </Link>

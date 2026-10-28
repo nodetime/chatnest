@@ -570,7 +570,7 @@ function PureMultimodalInput({
                 ? "修改消息…"
                 : home
                   ? "描述任务，或添加文件…"
-                  : "给 ChatNest 发送消息…"
+                  : "给 数知探AI 发送消息…"
             }
             ref={textareaRef}
             value={input}

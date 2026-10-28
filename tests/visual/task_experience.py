@@ -57,7 +57,7 @@ with sync_playwright() as p:
     expect(page.get_by_test_id("message-user")).to_contain_text("另一个独立任务")
     assert len(requests)==2,"reload must not rerun the task"
     # Interrupt an old stream when starting an independent task.
-    page.get_by_role("button",name="ChatNest 首页",exact=True).click()
+    page.get_by_role("button",name="数知探AI 首页",exact=True).click()
     expect(page.get_by_test_id("greeting")).to_be_visible()
     expect(page.get_by_test_id("multimodal-input")).to_have_value("")
     page.evaluate("""() => {

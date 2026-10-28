@@ -215,7 +215,7 @@ function PersonalSkillsContent() {
                   {skill.displayName ?? skill.name}
                 </h3>
                 <span className="text-xs text-muted-foreground">
-                  {skill.source === "builtin" ? "ChatNest 提供" : "个人技能"} ·{" "}
+                  {skill.source === "builtin" ? "数知探AI 提供" : "个人技能"} ·{" "}
                   {skill.enabled ? "已启用" : "未启用"}
                 </span>
               </div>

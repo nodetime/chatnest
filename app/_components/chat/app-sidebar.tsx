@@ -55,13 +55,13 @@ export function AppSidebar({
       <SidebarHeader className="gap-4 px-3 py-4 group-data-[collapsible=icon]:px-3">
         <div className="flex h-12 items-center justify-between gap-2 px-1 group-data-[collapsible=icon]:justify-center">
           <button
-            aria-label="ChatNest 首页"
+            aria-label="数知探AI 首页"
             className="flex min-w-0 items-center gap-2 text-sm font-semibold group-data-[collapsible=icon]:hidden"
             onClick={handleNew}
             type="button"
           >
             <BrandMark />
-            <span>ChatNest</span>
+            <span>数知探AI</span>
           </button>
           <button
             aria-label="切换侧栏"

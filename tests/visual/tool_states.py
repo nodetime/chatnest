@@ -96,7 +96,7 @@ with sync_playwright() as p:
     assert len(requests) == 2
     assert requests[1]["message"]["role"] == "user" and "messages" not in requests[1]
     # A deliberately unfinished SSE fixture verifies true streaming status and AbortSignal wiring.
-    page.get_by_role("button", name="ChatNest 首页", exact=True).click()
+    page.get_by_role("button", name="数知探AI 首页", exact=True).click()
     expect(page.get_by_test_id("greeting")).to_be_visible()
     page.evaluate("""() => {
       const originalFetch = window.fetch;
