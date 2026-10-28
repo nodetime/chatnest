@@ -46,6 +46,15 @@ export async function proxy(request: NextRequest) {
     return nextWithTrace();
   }
 
+  // The public homepage is not a chat task. Personal return links still pass
+  // through their existing authentication guard below; no APIs are made public.
+  if (
+    pathname === "/" &&
+    !isPersonalSection(request.nextUrl.searchParams.get("section") ?? "")
+  ) {
+    return nextWithTrace();
+  }
+
   const token = await getToken({
     req: request,
     secret: process.env.AUTH_SECRET,

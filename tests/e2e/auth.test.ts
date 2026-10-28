@@ -65,7 +65,7 @@ test.describe("Personal management requires a signed-in account", () => {
   test("guest sidebar exposes login and personal buttons lead straight to it", async ({
     page,
   }) => {
-    await page.goto("/");
+    await page.goto("/chat");
     await expect(page.getByTestId("sidebar-login")).toBeVisible();
     await expect(page.getByTestId("user-nav-button")).toHaveCount(0);
     await page.getByRole("button", { exact: true, name: "技能" }).click();

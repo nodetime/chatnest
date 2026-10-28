@@ -126,7 +126,11 @@ export function ActiveChatProvider({
   } | null>(null);
   const prevPathnameRef = useRef(pathname);
 
-  if (isNewChat && prevPathnameRef.current !== pathname) {
+  if (
+    isNewChat &&
+    prevPathnameRef.current !== pathname &&
+    extractChatId(prevPathnameRef.current) !== null
+  ) {
     newChatIdRef.current = pendingTask.current?.chatId ?? generateUUID();
   }
   prevPathnameRef.current = pathname;
@@ -519,7 +523,7 @@ export function ActiveChatProvider({
       // Storage can be disabled; opening a new chat still works.
     }
     refreshNewChat((revision) => revision + 1);
-    router.push("/");
+    router.push("/chat");
   }, [router, setMessages, stop, clearError, setInput, ownerId, isNewChat]);
   const startTask = useCallback(
     (draft: TaskDraft, useWeb: boolean) => {

@@ -35,6 +35,10 @@ export function useWorkbenchNavigation() {
       if (search.has("section")) {
         const url = new URL(window.location.href);
         url.searchParams.delete("section");
+        const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+        if (url.pathname === "/" || url.pathname === `${base}/`) {
+          url.pathname = `${base}/chat`;
+        }
         window.history.replaceState(
           null,
           "",

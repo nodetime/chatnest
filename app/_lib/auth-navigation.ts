@@ -6,7 +6,9 @@ export function isPersonalSection(value: string): value is PersonalSection {
 
 /** Auth returns only to known personal views, never an external URL or another user's chat. */
 export function authReturnPath(value: string | null): string {
-  return value === "/?section=connections" || value === "/?section=skills"
+  return value === "/chat" ||
+    value === "/?section=connections" ||
+    value === "/?section=skills"
     ? value
     : "/";
 }
