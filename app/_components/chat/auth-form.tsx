@@ -8,6 +8,7 @@ export function AuthForm({
   children,
   defaultEmail = "",
   error,
+  passwordAutoComplete = "current-password",
 }: {
   action: NonNullable<
     string | ((formData: FormData) => void | Promise<void>) | undefined
@@ -15,9 +16,10 @@ export function AuthForm({
   children: React.ReactNode;
   defaultEmail?: string;
   error?: string;
+  passwordAutoComplete?: "current-password" | "new-password";
 }) {
   return (
-    <Form action={action} className="flex flex-col gap-4">
+    <Form action={action} className="flex flex-col gap-4 pt-6">
       {!!error && (
         <p className="text-sm text-destructive" role="alert">
           {error}
@@ -25,16 +27,15 @@ export function AuthForm({
       )}
       <div className="flex flex-col gap-2">
         <Label className="font-normal text-muted-foreground" htmlFor="email">
-          Email
+          邮箱
         </Label>
         <Input
           autoComplete="email"
-          autoFocus
           className="h-10 rounded-lg border-border/50 bg-muted/50 text-sm transition-colors focus:border-foreground/20 focus:bg-muted"
           defaultValue={defaultEmail}
           id="email"
           name="email"
-          placeholder="you@someo.ne"
+          placeholder="请输入邮箱"
           required
           type="email"
         />
@@ -42,13 +43,17 @@ export function AuthForm({
 
       <div className="flex flex-col gap-2">
         <Label className="font-normal text-muted-foreground" htmlFor="password">
-          Password
+          密码
         </Label>
         <Input
+          autoComplete={passwordAutoComplete}
           className="h-10 rounded-lg border-border/50 bg-muted/50 text-sm transition-colors focus:border-foreground/20 focus:bg-muted"
           id="password"
+          minLength={6}
           name="password"
-          placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;"
+          placeholder={
+            passwordAutoComplete === "new-password" ? "至少 6 位" : "请输入密码"
+          }
           required
           type="password"
         />

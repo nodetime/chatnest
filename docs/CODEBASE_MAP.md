@@ -108,3 +108,9 @@ server/
 - `personal-access-gate.tsx` 覆盖设置、直达链接、会话失效；未授权不挂载管理子树，跨账号按 ID 重建子树，清除旧编辑草稿。访客侧栏明确展示登录入口。
 - 登录/注册沿用 AuthForm，成功跨整页身份边界清客户端旧缓存；失败在表单内可见，不依赖聊天布局的 Toaster。
 - `personal-auth.test.ts` 纳入显式离线白名单；`tests/e2e/auth.test.ts` 增加个人入口与返回链接浏览器回归。
+
+## 中文账户页（2026-10-27，用户本地日期）
+
+- AuthLayout 移除模板 Preview/AI Gateway 双栏演示，复用现有品牌、颜色与 Input/Button/Form，桌面与移动端均使用紧凑单表单。
+- 登录、注册、返回首页、字段、按钮和提交状态统一中文；密码管理器区分 current-password/new-password，不自动打开移动端键盘，保留键盘焦点样式。
+- 个人入口认证、next 白名单与回跳契约不变；认证 UI 回归与两份已有视觉测试同步使用中文选择器。

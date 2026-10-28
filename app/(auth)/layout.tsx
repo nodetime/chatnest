@@ -1,7 +1,5 @@
 import { ArrowLeftIcon } from "lucide-react";
 import Link from "next/link";
-import { SparklesIcon, VercelIcon } from "@/app/_components/chat/icons";
-import { Preview } from "@/app/_components/chat/preview";
 
 export default function AuthLayout({
   children,
@@ -9,35 +7,37 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex h-dvh w-screen bg-sidebar">
-      <div className="flex w-full flex-col bg-background p-8 xl:w-[600px] xl:shrink-0 xl:rounded-r-2xl xl:border-r xl:border-border/40 md:p-16">
+    <div
+      className="flex min-h-svh flex-col bg-background"
+      data-testid="auth-shell"
+    >
+      <header className="flex items-center justify-between gap-4 px-6 py-5 sm:px-8">
         <Link
-          className="flex w-fit items-center gap-1.5 text-[13px] text-muted-foreground transition-colors hover:text-foreground"
+          aria-label="ChatNest 首页"
+          className="flex items-center gap-2 text-sm font-semibold"
+          href="/"
+        >
+          <span className="flex size-7 items-center justify-center rounded-lg bg-primary text-xs text-primary-foreground">
+            C
+          </span>
+          ChatNest
+        </Link>
+        <Link
+          className="flex items-center gap-1.5 rounded-md text-[13px] text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-4"
           href="/"
         >
           <ArrowLeftIcon className="size-3.5" />
-          Back
+          返回首页
         </Link>
-        <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-10">
-          <div className="flex flex-col gap-2">
-            <div className="mb-2 flex size-9 items-center justify-center rounded-lg bg-muted/60 text-muted-foreground ring-1 ring-border/50">
-              <SparklesIcon size={14} />
-            </div>
-            {children}
-          </div>
-        </div>
-      </div>
-
-      <div className="hidden flex-1 flex-col overflow-hidden pl-12 xl:flex">
-        <div className="flex items-center gap-1.5 pt-8 text-[13px] text-muted-foreground/50">
-          Powered by
-          <VercelIcon size={14} />
-          <span className="font-medium text-muted-foreground">AI Gateway</span>
-        </div>
-        <div className="flex-1 pt-4">
-          <Preview />
-        </div>
-      </div>
+      </header>
+      <main className="flex flex-1 items-center justify-center px-6 pt-8 pb-20 sm:pb-28">
+        <section
+          aria-label="账户登录与注册"
+          className="w-full max-w-sm space-y-2"
+        >
+          {children}
+        </section>
+      </main>
     </div>
   );
 }

@@ -61,19 +61,22 @@ function AuthPage() {
 
   return (
     <>
-      <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
-      <p className="text-sm text-muted-foreground">
-        Sign in to your account to continue
-      </p>
-      <AuthForm action={handleSubmit} defaultEmail={email} error={error}>
-        <SubmitButton isSuccessful={isSuccessful}>Sign in</SubmitButton>
-        <p className="text-center text-[13px] text-muted-foreground">
-          {"No account? "}
+      <h1 className="text-2xl font-semibold tracking-tight">登录 ChatNest</h1>
+      <p className="text-sm text-muted-foreground">继续你的对话与工作。</p>
+      <AuthForm
+        action={handleSubmit}
+        defaultEmail={email}
+        error={error}
+        passwordAutoComplete="current-password"
+      >
+        <SubmitButton isSuccessful={isSuccessful}>登录</SubmitButton>
+        <p className="pt-2 text-center text-[13px] text-muted-foreground">
+          {"还没有账号？ "}
           <Link
             className="text-foreground underline-offset-4 hover:underline"
             href={authPageHref("/register", returnTo)}
           >
-            Sign up
+            注册
           </Link>
         </p>
       </AuthForm>
