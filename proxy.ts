@@ -1,6 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { v7 as uuidv7 } from "uuid";
+import {
+  authReturnPath,
+  isPersonalSection,
+  personalLoginHref,
+} from "@/app/_lib/auth-navigation";
 import { guestRegex } from "@/app/_lib/constants";
 import { usesSecureAuthCookies } from "@/server/shared/auth-cookies";
 
@@ -43,6 +48,22 @@ export async function proxy(request: NextRequest) {
 
   const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
+  const requestedSection = request.nextUrl.searchParams.get("section") ?? "";
+  if (
+    pathname === "/" &&
+    isPersonalSection(requestedSection) &&
+    token?.type !== "regular"
+  ) {
+    return NextResponse.redirect(
+      new URL(`${base}${personalLoginHref(requestedSection)}`, request.url)
+    );
+  }
+
+  // Auth pages are public. Do not create a guest or lose a validated return target.
+  if (!token && ["/login", "/register"].includes(pathname)) {
+    return nextWithTrace();
+  }
+
   if (!token) {
     const redirectUrl = encodeURIComponent(new URL(request.url).pathname);
 
@@ -54,7 +75,12 @@ export async function proxy(request: NextRequest) {
   const isGuest = guestRegex.test(token?.email ?? "");
 
   if (token && !isGuest && ["/login", "/register"].includes(pathname)) {
-    return NextResponse.redirect(new URL(`${base}/`, request.url));
+    return NextResponse.redirect(
+      new URL(
+        `${base}${authReturnPath(request.nextUrl.searchParams.get("next"))}`,
+        request.url
+      )
+    );
   }
 
   return nextWithTrace();

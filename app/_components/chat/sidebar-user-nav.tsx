@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronUp, Settings2 } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { User } from "next-auth";
 import { signOut, useSession } from "next-auth/react";
@@ -19,7 +20,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/app/_components/ui/sidebar";
-import { guestRegex } from "@/app/_lib/constants";
 import { AgentLibrary } from "./agent-library";
 import { LoaderIcon } from "./icons";
 import { toast } from "./toast";
@@ -28,7 +28,7 @@ export function SidebarUserNav({
   user,
   isPlatformAdmin = false,
 }: {
-  user: User;
+  user: User | undefined;
   isPlatformAdmin?: boolean;
 }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -37,7 +37,7 @@ export function SidebarUserNav({
   const { data, status } = useSession();
   const { setTheme, resolvedTheme } = useTheme();
 
-  const isGuest = guestRegex.test(data?.user?.email ?? "");
+  const isGuest = data?.user?.type !== "regular";
   const handleThemeSelect = useCallback(() => {
     setTheme(resolvedTheme === "dark" ? "light" : "dark");
   }, [resolvedTheme, setTheme]);
@@ -60,6 +60,22 @@ export function SidebarUserNav({
       });
     }
   }, [isGuest, router, status]);
+
+  if (status !== "loading" && isGuest) {
+    return (
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton
+            asChild
+            className="h-9 rounded-lg"
+            data-testid="sidebar-login"
+          >
+            <Link href="/login">登录</Link>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
+    );
+  }
 
   return (
     <>
@@ -87,13 +103,13 @@ export function SidebarUserNav({
                   tooltip="个人账户"
                 >
                   <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--workbench-selection)] text-xs font-medium text-foreground">
-                    {(user.email?.[0] ?? "C").toUpperCase()}
+                    {(user?.email?.[0] ?? "C").toUpperCase()}
                   </span>
                   <span
                     className="truncate text-[13px]"
                     data-testid="user-email"
                   >
-                    {isGuest ? "本地访客" : user?.email}
+                    {user?.email}
                   </span>
                   <ChevronUp className="ml-auto size-3.5 text-sidebar-foreground/50" />
                 </SidebarMenuButton>

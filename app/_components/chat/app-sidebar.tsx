@@ -26,7 +26,6 @@ import {
   useWorkbenchNavigation,
   type WorkbenchSection,
 } from "@/app/_hooks/use-workbench-navigation";
-import { AgentLibrary } from "./agent-library";
 import { ChatSearch } from "./chat-search";
 import { SidebarHistory } from "./sidebar-history";
 import { SidebarUserNav } from "./sidebar-user-nav";
@@ -145,11 +144,7 @@ export function AppSidebar({
         </div>
       </SidebarContent>
       <SidebarFooter className="gap-1 px-3 py-4">
-        {user ? (
-          <SidebarUserNav isPlatformAdmin={isPlatformAdmin} user={user} />
-        ) : (
-          <AgentLibrary tab="settings" />
-        )}
+        <SidebarUserNav isPlatformAdmin={isPlatformAdmin} user={user} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
