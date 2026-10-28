@@ -25,6 +25,7 @@ BASE = os.environ.get("LOCAL_TEST_BASE_URL", "http://127.0.0.1:33378")
 assert BASE.startswith(("http://127.0.0.1:", "http://localhost:")), "Loopback Next only"
 OUT = Path(".local-review/formal")
 OUT.mkdir(parents=True, exist_ok=True)
+EXTENDED=os.environ.get("FORMAL_EXTENDED_INTERACTIONS")=="1"
 REPORT = {"fixtureModelAndMcp": True, "realNextAuthPostgresUploadsAndArtifacts": True, "checks": [], "pageErrors": []}
 
 
@@ -134,7 +135,7 @@ with sync_playwright() as p:
             check("real DOCX upload HTTP succeeded", upload.ok)
             expect(page.get_by_test_id("attachments-preview")).to_contain_text("formal-source.docx", timeout=30000)
             expect(page.get_by_test_id("send-button")).to_be_enabled(timeout=30000)
-        page.get_by_test_id("multimodal-input").fill("FORMAL_ACCEPTANCE：请读取上传的 DOCX，报告任务计划，用表单询问我结果格式与备注，得到回答后经独立审批读取本地 MCP 证据，再用真实 createResultTable 产出表格。这是本地模拟模型/MCP验收，不是真实供应商查询。" + "长消息边界验证。" * 120)
+        page.get_by_test_id("multimodal-input").fill(("FORMAL_ARTIFACT_PAIR " if EXTENDED else "")+"FORMAL_ACCEPTANCE：请读取上传的 DOCX，报告任务计划，用表单询问我结果格式与备注，得到回答后经独立审批读取本地 MCP 证据，再用真实 createResultTable 产出表格。这是本地模拟模型/MCP验收，不是真实供应商查询。" + "长消息边界验证。" * 120)
         with page.expect_response(lambda response: response.url.endswith("/api/chat") and response.request.method == "POST", timeout=60000) as chat_info:
             page.get_by_test_id("send-button").click()
         chat_response = chat_info.value
@@ -157,7 +158,7 @@ with sync_playwright() as p:
             check("real DOCX parsed into model context", fixture_health()["uploadedTextSeen"])
         else:
             REPORT["realUploadSkipped"] = True
-        ask.get_by_role("button", name="确认并继续", exact=True).scroll_into_view_if_needed()
+        ask.get_by_role("button", name="提交回答", exact=True).scroll_into_view_if_needed()
         geometry(page, "formal-ask-desktop")
         before = len(chat_posts)
         ask.get_by_role("radio", name="结果表", exact=True).check()
@@ -168,11 +169,11 @@ with sync_playwright() as p:
         check("Ask draft remains editable without continuation", len(chat_posts) == before)
         # Responsive boundary while long question and draft are present.
         page.set_viewport_size({"width": 390, "height": 844})
-        ask.get_by_role("button", name="确认并继续", exact=True).scroll_into_view_if_needed()
+        ask.get_by_role("button", name="提交回答", exact=True).scroll_into_view_if_needed()
         geometry(page, "formal-ask-mobile")
         page.set_viewport_size({"width": 1440, "height": 960})
         model_calls_before_answer = fixture_health()["modelCalls"]
-        ask.get_by_role("button", name="确认并继续", exact=True).click()
+        ask.get_by_role("button", name="提交回答", exact=True).click()
         approval = page.get_by_test_id("tool-activity").filter(has=page.get_by_role("button", name="允许执行", exact=True))
         expect(approval).to_be_visible(timeout=60000)
         expect(ask).to_contain_text("已回答")
@@ -192,7 +193,7 @@ with sync_playwright() as p:
         for name in ["updateTodo", "askUser", "formal__review_rows", "createResultTable"]:
             check("real SDK tool completed: " + name, tool_parts[name]["state"] == "output-available")
         check("edited Ask answer persisted", tool_parts["askUser"]["output"]["answers"]["notes"] == "编辑后的说明：仅采用本地模拟证据")
-        result = tool_parts["createResultTable"]["output"]
+        result = next(part["output"] for part in actual_parts if part["type"]=="tool-createResultTable" and part.get("output",{}).get("title")=="FORMAL 本地证据结果表")
         assert result.get("id"), result
         document = page.request.get(BASE + "/api/document?id=" + result["id"] + "&chatId=" + chat_id)
         assert document.ok, document.status
@@ -204,6 +205,34 @@ with sync_playwright() as p:
         check("Todo progress updates from actual completed tool snapshot")
         page.get_by_role("button", name="打开产物：FORMAL 本地证据结果表", exact=True).scroll_into_view_if_needed()
         geometry(page, "formal-artifact-desktop")
+        if EXTENDED:
+            page.get_by_role("button",name="打开产物：FORMAL 本地证据结果表",exact=True).click()
+            artifact=page.get_by_test_id("artifact")
+            page.get_by_role("button",name="个人备注",exact=True).click()
+            page.get_by_role("textbox",name="备注内容",exact=True).fill("UNIFIED_NOTE：这份备注需要保留。")
+            page.get_by_role("button",name="关闭个人备注",exact=True).click()
+            page.get_by_role("button",name="打开产物：FORMAL 另一份证据表",exact=True).click()
+            expect(artifact.get_by_role("button",name="选择本次对话的产物",exact=True)).to_contain_text("FORMAL 本地证据结果表")
+            check("message artifact switch cannot discard unsaved notes")
+            page.get_by_role("button",name="个人备注",exact=True).click()
+            expect(page.get_by_role("textbox",name="备注内容",exact=True)).to_have_value("UNIFIED_NOTE：这份备注需要保留。")
+            page.get_by_role("button",name="关闭个人备注",exact=True).click()
+            page.get_by_role("button",name="保存视图与备注",exact=True).click()
+            expect(page.get_by_role("button",name="保存视图与备注",exact=True)).to_have_count(0,timeout=20000)
+            page.get_by_role("button",name="打开产物：FORMAL 另一份证据表",exact=True).click()
+            expect(artifact.get_by_role("button",name="选择本次对话的产物",exact=True)).to_contain_text("FORMAL 另一份证据表")
+            check("saved notes release cross-artifact switch")
+            page.get_by_role("button",name="打开产物：FORMAL 本地证据结果表",exact=True).click()
+            page.get_by_role("button",name="个人备注",exact=True).click()
+            expect(page.get_by_role("textbox",name="备注内容",exact=True)).to_have_value("UNIFIED_NOTE：这份备注需要保留。")
+            page.get_by_role("button",name="关闭个人备注",exact=True).click()
+            check("reopened result table retains actually saved notes")
+            summary=page.get_by_test_id("ask-answer-summary").first
+            expect(summary).not_to_have_attribute("open", "")
+            summary.locator("summary").click()
+            expect(summary).to_contain_text("编辑后的说明")
+            check("answered dynamic Ask collapses but remains inspectable")
+
         close = page.get_by_role("button", name="关闭工作区", exact=True)
         if not close.count():
             raise AssertionError("artifact has no close control")
@@ -273,7 +302,26 @@ with sync_playwright() as p:
         page.goto(BASE + "/chat/" + stop_id, wait_until="networkidle")
         page.wait_for_timeout(1800)
         check("stop and explicit continuation do not auto-run again after reload", fixture_health()["modelCalls"] == count_after_explicit_continue)
+
+        if EXTENDED:
+            page.goto(BASE,wait_until="networkidle")
+            page.get_by_test_id("multimodal-input").fill("FORMAL_STOP_ASK：停止尚未生成完整的问题，随后明确续跑。")
+            page.get_by_test_id("send-button").click()
+            expect(page.get_by_test_id("ask-user").or_(page.get_by_text("正在准备问题…",exact=True))).to_be_visible(timeout=30000)
+            partial_id=chat_posts[-1]["id"];owned_chats.append(partial_id)
+            page.get_by_test_id("stop-button").click()
+            expect(page.get_by_text("提问已中断",exact=True)).to_be_visible(timeout=15000)
+            resume=page.get_by_test_id("agent-paused").get_by_role("button",name="继续任务",exact=True)
+            expect(resume).to_be_visible()
+            check("stopping incomplete Ask removes fake waiting and leaves explicit continuation")
+            calls_before=fixture_health()["modelCalls"]
+            page.wait_for_timeout(800)
+            check("stopped incomplete Ask does not autonomously continue",fixture_health()["modelCalls"]==calls_before)
+            resume.click()
+            expect(page.get_by_text("FORMAL_RESUMED_DONE",exact=False)).to_be_visible(timeout=30000)
+            check("incomplete Ask can continue without invented answer or approval")
         check("no browser page errors", not REPORT["pageErrors"])
+
     except Exception as error:
         REPORT["failure"] = str(error)
         page.screenshot(path=str(OUT / "formal-failure.png"), full_page=True)

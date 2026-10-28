@@ -3,6 +3,7 @@
 import equal from "fast-deep-equal";
 import { ArrowUpRight, LoaderCircle } from "lucide-react";
 import { type MouseEvent, memo, useCallback, useMemo, useRef } from "react";
+import { toast } from "sonner";
 import useSWR from "swr";
 import { useActiveChat } from "@/app/_hooks/use-active-chat";
 import { useArtifact } from "@/app/_hooks/use-artifact";
@@ -11,6 +12,7 @@ import { fetcher } from "@/app/_lib/utils";
 import { openArtifactPreview } from "@/server/domain/document/stream-state";
 import type { Document } from "@/server/domain/document/types";
 import type { ArtifactKind, UIArtifact } from "./artifact";
+import { artifactSwitchReason } from "./artifact-catalog";
 import { artifactTypeLabels } from "./artifact-type-label";
 import { FileSymbol } from "./file-symbol";
 
@@ -124,12 +126,22 @@ const PureHitboxLayer = ({
   ) => void;
 }) => {
   const { show } = useWorkspace();
+  const { artifact, metadata } = useArtifact();
   const handleClick = useCallback(
     (event: MouseEvent<HTMLElement>) => {
+      const reason = artifactSwitchReason({
+        isContentDirty: metadata?.documentPendingChanges === true,
+        resultTablePendingChanges: metadata?.resultTablePendingChanges === true,
+        status: artifact.status,
+      });
+      if (result?.id !== artifact.documentId && reason) {
+        toast.error(reason);
+        return;
+      }
       const boundingBox = event.currentTarget.getBoundingClientRect();
 
-      setArtifact((artifact) =>
-        openArtifactPreview(artifact, result ?? {}, {
+      setArtifact((currentArtifact) =>
+        openArtifactPreview(currentArtifact, result ?? {}, {
           height: boundingBox.height,
           left: boundingBox.x,
           top: boundingBox.y,
@@ -140,7 +152,7 @@ const PureHitboxLayer = ({
       // Closing or switching workspace tabs does not mutate artifact state.
       show("document");
     },
-    [setArtifact, result, show]
+    [artifact, metadata, setArtifact, result, show]
   );
 
   return (

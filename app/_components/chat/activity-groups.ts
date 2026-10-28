@@ -1,4 +1,5 @@
 import type { ChatMessage } from "@/app/_lib/types";
+import { todoPlanSchema } from "@/server/domain/message/agent-interactions";
 import type { ToolPart } from "../ai-elements/tool";
 import { toolNeedsAttention } from "./tool-activity-state";
 
@@ -28,6 +29,9 @@ export function isActivityPart(part: Part): part is Part & ToolPart {
 // canonical arrays untouched; only skip these known structural parts in the view.
 function isStructuralPart(part: Part) {
   return (
+    (part.type === "tool-updateTodo" &&
+      part.state === "output-available" &&
+      todoPlanSchema.safeParse(part.output).success) ||
     part.type === "step-start" ||
     part.type === "data-mcp-source" ||
     (part.type === "data-run-status" && part.data?.state === "resumed") ||
@@ -99,11 +103,16 @@ export function groupActivityMessages(messages: ChatMessage[]): MessageGroup[] {
   return groups;
 }
 
-// Only this native tool defines an output-available { error: string } failure
-// contract. A similarly named field in dynamic/MCP output remains raw evidence.
-function nativeResultTableError(part: ToolPart) {
+// Only these native document tools define { error: string } business failures.
+// A similarly named field in dynamic/MCP output remains raw evidence.
+function nativeDocumentError(part: ToolPart) {
   if (
-    part.type === "tool-createResultTable" &&
+    [
+      "tool-createResultTable",
+      "tool-createDocument",
+      "tool-updateDocument",
+      "tool-requestSuggestions",
+    ].includes(part.type) &&
     part.state === "output-available" &&
     part.output !== null &&
     typeof part.output === "object" &&
@@ -115,14 +124,14 @@ function nativeResultTableError(part: ToolPart) {
 }
 
 export function activityErrorText(part: ToolPart) {
-  return nativeResultTableError(part) ?? part.errorText;
+  return nativeDocumentError(part) ?? part.errorText;
 }
 
 export function activityDisplayState(
   part: ToolPart,
   isRunning = false
 ): ToolPart["state"] {
-  if (nativeResultTableError(part) !== undefined) {
+  if (nativeDocumentError(part) !== undefined) {
     return "output-error";
   }
   if (
@@ -193,7 +202,7 @@ export function activitySummary(parts: ToolPart[], isRunning = false) {
       !parts.some(
         (part) =>
           part.state === "output-error" ||
-          nativeResultTableError(part) !== undefined
+          nativeDocumentError(part) !== undefined
       )
         ? "未完成"
         : state === "approval-responded" && isRunning
@@ -206,6 +215,7 @@ export function activitySummary(parts: ToolPart[], isRunning = false) {
 type Summary = ReturnType<typeof activitySummary>;
 export type ActivityDisclosure = {
   open: boolean;
+  manual?: boolean;
   state: Summary["state"];
   attention: string[];
   active: boolean;
@@ -216,7 +226,7 @@ export function initialActivityDisclosure(
   return {
     active: summary.active,
     attention: summary.attention,
-    open: summary.active || summary.attention.length > 0,
+    open: summary.attention.length > 0,
     state: summary.state,
   };
 }
@@ -236,9 +246,11 @@ export function reconcileActivityDisclosure(
   }
   return {
     ...initialActivityDisclosure(summary),
-    open:
-      newAttention || (summary.active && !current.active)
-        ? true
+    manual: newAttention ? false : current.manual,
+    open: newAttention
+      ? true
+      : current.manual
+        ? current.open
         : summary.state === "output-available"
           ? false
           : current.open,

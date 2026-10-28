@@ -143,7 +143,7 @@ test("new attention event IDs reopen even when aggregate state is unchanged; rer
         current,
         activitySummary([tool("active", "input-available")], true)
       ).open,
-      true
+      false
     );
   }
 });

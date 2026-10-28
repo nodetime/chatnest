@@ -40,6 +40,11 @@ export function ActivityGroup({
     ...initialActivityDisclosure(summary),
     singleton,
   }));
+  const onDisclosureOpenChange = useCallback((_id: string, open: boolean) => {
+    setDisclosure((value) =>
+      value.singleton ? { ...value, manual: true, open } : value
+    );
+  }, []);
   const [inspectedCallId, setInspectedCallId] = useState<string | null>(null);
   const inspecting = parts.some((part) => part.toolCallId === inspectedCallId);
   if (inspectedCallId !== null && !inspecting) {
@@ -54,12 +59,8 @@ export function ActivityGroup({
   const reconciled = reconcileActivityDisclosure(disclosure, summary);
   const current = {
     ...reconciled,
-    // The first row stays mounted when streaming adds a second step. Expose the
-    // new group without hiding a manually opened excerpt or approval controls.
-    open:
-      inspecting || (disclosure.singleton && !singleton)
-        ? true
-        : reconciled.open,
+    // Keep the inspected row visible; ordinary streaming does not open groups.
+    open: inspecting || reconciled.open,
     singleton,
   };
   // While its dialog is open, retain the source row through completion. Store
@@ -73,7 +74,7 @@ export function ActivityGroup({
   }
   const attention = toolNeedsAttention(summary.state);
   const setOpen = useCallback((open: boolean) => {
-    setDisclosure((value) => ({ ...value, open }));
+    setDisclosure((value) => ({ ...value, manual: true, open }));
   }, []);
   return (
     <Task
@@ -138,6 +139,7 @@ export function ActivityGroup({
                 isRunning={isRunning}
                 key={part.toolCallId}
                 onDetailsOpenChange={onDetailsOpenChange}
+                onDisclosureOpenChange={onDisclosureOpenChange}
                 part={part}
                 timeline={!singleton}
               />

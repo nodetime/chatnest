@@ -96,8 +96,8 @@ export function AskUser({
         const handler = revising && onRevise ? onRevise : onAnswer;
         await handler({ messageId, output, toolCallId: part.toolCallId });
         if (current.current === request) {
+          request.pending = false;
           if (revising) {
-            request.pending = false;
             setMode({ collapsed: false, identity, revising: false });
           }
           setSubmission({ error: "", identity, pending: false });
@@ -177,15 +177,15 @@ export function AskUser({
     [identity]
   );
 
-  if (!input) {
+  if (!input || part.state === "input-streaming") {
     return (
       <div
         className="rounded-xl border p-4 text-sm text-muted-foreground"
         role="status"
       >
-        {part.state === "input-streaming"
-          ? "正在整理需要你确认的问题…"
-          : "提问未完成。"}
+        {part.state === "input-streaming" && isRunning
+          ? "正在准备问题…"
+          : "提问已中断"}
       </div>
     );
   }
@@ -199,11 +199,17 @@ export function AskUser({
         <span className="size-1.5 rounded-full bg-foreground/60" />
         <h3 className="text-sm font-medium text-foreground">{input.title}</h3>
         <span className="ml-auto text-xs text-muted-foreground">
-          {completed
-            ? output?.status === "cancelled"
-              ? "已跳过"
-              : "已回答"
-            : "等待你的回答"}
+          {pending
+            ? "正在提交…"
+            : error
+              ? revising
+                ? "修改未提交"
+                : "提交待确认"
+              : completed
+                ? output?.status === "cancelled"
+                  ? "已跳过"
+                  : "已回答"
+                : "等待你的回答"}
         </span>
       </div>
       {collapsed && available ? (
@@ -219,34 +225,39 @@ export function AskUser({
           </Button>
         </div>
       ) : (completed && !revising) || !available ? (
-        <dl className="space-y-3 text-sm">
-          {input.questions.map((question) => {
-            const value = output?.answers[question.id];
-            const values = Array.isArray(value)
-              ? value
-              : typeof value === "string"
-                ? [value]
-                : [];
-            const labels = values.map(
-              (item) =>
-                question.options?.find((option) => option.value === item)
-                  ?.label ?? item
-            );
-            return (
-              <div key={question.id}>
-                <dt className="text-xs text-muted-foreground">
-                  {question.label}
-                </dt>
-                <dd className="mt-1 whitespace-pre-wrap break-words">
-                  {labels.join("、") ||
-                    (output?.status === "cancelled"
-                      ? "已跳过这次提问"
-                      : "尚未回答")}
-                </dd>
-              </div>
-            );
-          })}
-        </dl>
+        <details data-testid="ask-answer-summary" open={!completed}>
+          <summary className="w-fit cursor-pointer text-xs text-muted-foreground focus-visible:outline-2 focus-visible:outline-ring">
+            查看回答
+          </summary>
+          <dl className="mt-3 max-h-64 space-y-3 overflow-y-auto text-[13px]">
+            {input.questions.map((question) => {
+              const value = output?.answers[question.id];
+              const values = Array.isArray(value)
+                ? value
+                : typeof value === "string"
+                  ? [value]
+                  : [];
+              const labels = values.map(
+                (item) =>
+                  question.options?.find((option) => option.value === item)
+                    ?.label ?? item
+              );
+              return (
+                <div key={question.id}>
+                  <dt className="text-xs text-muted-foreground">
+                    {question.label}
+                  </dt>
+                  <dd className="mt-1 whitespace-pre-wrap break-words">
+                    {labels.join("、") ||
+                      (output?.status === "cancelled"
+                        ? "已跳过这次提问"
+                        : "尚未回答")}
+                  </dd>
+                </div>
+              );
+            })}
+          </dl>
+        </details>
       ) : (
         <form
           aria-describedby={error ? `${formId}-error` : undefined}
@@ -360,11 +371,7 @@ export function AskUser({
               </Button>
             )}
             <Button disabled={pending} size="sm" type="submit">
-              {pending
-                ? "正在提交…"
-                : revising
-                  ? "提交修改并继续"
-                  : "确认并继续"}
+              {pending ? "正在提交…" : revising ? "提交修改" : "提交回答"}
             </Button>
           </QuestionActions>
         </form>
@@ -374,7 +381,8 @@ export function AskUser({
         !revising &&
         available &&
         onRevise &&
-        !pending && (
+        !pending &&
+        !error && (
           <Button
             className="mt-3"
             onClick={handleRevise}

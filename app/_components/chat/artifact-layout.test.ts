@@ -494,6 +494,7 @@ test("historical preview cards never rewrite the active document's animation bou
   const { DocumentPreview } = load(
     "app/_components/chat/document-preview.tsx",
     {
+      "./artifact-catalog": { artifactSwitchReason: () => null },
       "./artifact-type-label": { artifactTypeLabels: { text: "文本" } },
       "./file-symbol": { FileSymbol: "file" },
       "@/app/_hooks/use-active-chat": {
@@ -530,6 +531,13 @@ test("historical preview cards never rewrite the active document's animation bou
         }),
       },
       "react/jsx-runtime": { jsx, jsxs: jsx },
+      sonner: {
+        toast: {
+          error() {
+            /* This read-only test never opens a card. */
+          },
+        },
+      },
       swr: {
         __esModule: true,
         default: () => ({

@@ -2,6 +2,7 @@ import type { ToolPart } from "../ai-elements/tool";
 
 type ToolState = ToolPart["state"];
 export type ToolDisclosure = {
+  manual?: boolean;
   state: ToolState;
   open: boolean;
   identity?: string;
@@ -42,11 +43,14 @@ export function reconcileToolDisclosure(
   }
   return {
     identity,
+    manual: toolNeedsAttention(state) ? false : current.manual,
     open: toolNeedsAttention(state)
       ? true
-      : state === "output-available"
-        ? false
-        : current.open,
+      : current.manual
+        ? current.open
+        : state === "output-available"
+          ? false
+          : current.open,
     state,
   };
 }

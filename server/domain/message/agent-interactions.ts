@@ -215,7 +215,8 @@ export function hasPendingInteraction(messages: ChatMessage[]) {
       (part) =>
         ("state" in part && part.state === "approval-requested") ||
         (part.type === "tool-askUser" &&
-          ["input-streaming", "input-available"].includes(part.state))
+          part.state === "input-available" &&
+          askUserInputSchema.safeParse(part.input).success)
     )
   );
 }
@@ -357,5 +358,26 @@ export function storedAskUserOutputs(messages: ChatMessage[]) {
           },
         ]
       : []
+  );
+}
+
+/** 中断后只用属主服务端快照确认提交；本地 addToolOutput 不等于已保存。 */
+export function hasSavedAskResponse(
+  messages: ChatMessage[],
+  messageId: string,
+  toolCallId: string,
+  output: AskUserOutput
+) {
+  const message = messages.find(
+    (item) => item.id === messageId && item.role === "assistant"
+  );
+  return (
+    message?.parts.some(
+      (part) =>
+        part.type === "tool-askUser" &&
+        part.toolCallId === toolCallId &&
+        part.state === "output-available" &&
+        sameInteractionValue(part.output, output)
+    ) ?? false
   );
 }

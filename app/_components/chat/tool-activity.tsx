@@ -45,6 +45,7 @@ export function ToolActivity({
   canApprove = true,
   timeline = false,
   onDetailsOpenChange,
+  onDisclosureOpenChange,
 }: {
   part: ToolPart;
   approve: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
@@ -53,6 +54,7 @@ export function ToolActivity({
   canApprove?: boolean;
   timeline?: boolean;
   onDetailsOpenChange?: (toolCallId: string, open: boolean) => void;
+  onDisclosureOpenChange?: (toolCallId: string, open: boolean) => void;
 }) {
   const { data: info } = useAgentInfo();
   const {
@@ -101,9 +103,13 @@ export function ToolActivity({
     setDisclosure(currentDisclosure);
   }
   const { open } = currentDisclosure;
-  const setOpen = useCallback((value: boolean) => {
-    setDisclosure((current) => ({ ...current, open: value }));
-  }, []);
+  const setOpen = useCallback(
+    (value: boolean) => {
+      setDisclosure((current) => ({ ...current, manual: true, open: value }));
+      onDisclosureOpenChange?.(part.toolCallId, value);
+    },
+    [onDisclosureOpenChange, part.toolCallId]
+  );
   const MethodIcon =
     part.type === "tool-readAttachment" ||
     part.type === "tool-readSkillResource"

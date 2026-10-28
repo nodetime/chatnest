@@ -177,12 +177,32 @@ const modelHttp = http.createServer(async (req, res) => {
               }) +
               "\n\n"
           );
-        send({
-          content: "FORMAL_STOP_PARTIAL：这段已生成内容应保留。",
-          role: "assistant",
-        });
+        const partialAsk = JSON.stringify(messages[lastUserIndex]).includes(
+          "FORMAL_STOP_ASK"
+        );
+        send(
+          partialAsk
+            ? {
+                role: "assistant",
+                tool_calls: [
+                  {
+                    function: {
+                      arguments: '{"title":"选择范围","questions":[',
+                      name: "askUser",
+                    },
+                    id: `partial_${randomUUID()}`,
+                    index: 0,
+                    type: "function",
+                  },
+                ],
+              }
+            : {
+                content: "FORMAL_STOP_PARTIAL：这段已生成内容应保留。",
+                role: "assistant",
+              }
+        );
         const interval = setInterval(() => {
-          if (!res.destroyed) {
+          if (!res.destroyed && !partialAsk) {
             send({ content: " 等待中。" });
           }
         }, 1000);
@@ -291,6 +311,17 @@ const modelHttp = http.createServer(async (req, res) => {
           sourceToolCallId: evidence.sourceToolCallId,
           title: "FORMAL 本地证据结果表",
         });
+        if (serialized.includes("FORMAL_ARTIFACT_PAIR")) {
+          extraCall = invocation("createResultTable", {
+            columns: [
+              { label: "名称", path: "/name" },
+              { label: "价格", path: "/price" },
+            ],
+            rowsPath: "/rows",
+            sourceToolCallId: evidence.sourceToolCallId,
+            title: "FORMAL 另一份证据表",
+          });
+        }
       } else if (
         finished("createResultTable") &&
         tools.includes("updateTodo") &&

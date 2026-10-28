@@ -36,6 +36,7 @@ import {
   compactInteractionResponses,
   deriveTaskProgress,
   hasPendingInteraction,
+  hasSavedAskResponse,
   interactionResponseSignature,
   shouldContinueAgent,
   type TodoPlan,
@@ -700,8 +701,32 @@ export function ActiveChatProvider({
         origin.clearError();
         // 即使本轮还有其它 Ask/审批，也显式提交当前答案，由服务端保存并决定是否等待。
         await origin.sendMessage();
-        if (origin.error) {
-          throw origin.error;
+        if (
+          chatInstanceRef.current !== origin ||
+          interactionGate.current !== gate ||
+          gate.released
+        ) {
+          throw new Error("对话已切换。");
+        }
+        if (origin.error || gate.revision !== revision || gate.paused) {
+          // Stop may resolve normally in the SDK. Confirm only this answer via
+          // the owner-checked read API; never restart generation or replay tools.
+          const response = await fetchWithErrorHandlers(
+            `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/messages?chatId=${chatId}`,
+            { signal: AbortSignal.timeout(5000) }
+          );
+          const saved = await response.json();
+          if (
+            !Array.isArray(saved.messages) ||
+            !hasSavedAskResponse(
+              saved.messages,
+              messageId,
+              toolCallId,
+              validated
+            )
+          ) {
+            throw new Error("回答保存尚未确认，请重试提交。");
+          }
         }
       } finally {
         gate.manual = false;

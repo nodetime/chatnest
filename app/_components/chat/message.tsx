@@ -8,18 +8,10 @@ import type { Vote } from "@/server/domain/vote/types";
 import { MessageContent, MessageResponse } from "../ai-elements/message";
 import { Shimmer } from "../ai-elements/shimmer";
 import type { ToolPart } from "../ai-elements/tool";
-import {
-  Tool,
-  ToolContent,
-  ToolHeader,
-  ToolInput,
-  ToolOutput,
-} from "../ai-elements/tool";
 import { ActivityGroup } from "./activity-group";
 import { groupActivityParts } from "./activity-groups";
 import { type AnswerAskUser, AskUser } from "./ask-user";
 import { useDataStream } from "./data-stream-provider";
-import { DocumentToolResult } from "./document";
 import { DocumentPreview } from "./document-preview";
 import { MessageActions } from "./message-actions";
 import { MessageReasoning } from "./message-reasoning";
@@ -93,17 +85,21 @@ const PurePreviewMessage = ({
   const isUser = message.role === "user";
   const isAssistant = message.role === "assistant";
 
-  const hasAnyContent = message.parts?.some(
-    (part) =>
+  const groupedParts = groupActivityParts(message.parts);
+  const hasAnyContent = groupedParts.some((group) => {
+    if (group.kind === "activity") {
+      return true;
+    }
+    const { part } = group;
+    return (
       (part.type === "text" && part.text?.trim().length > 0) ||
-      (part.type === "reasoning" &&
-        "text" in part &&
-        part.text?.trim().length > 0) ||
+      (part.type === "reasoning" && part.text?.trim().length > 0) ||
       part.type.startsWith("tool-") ||
       part.type === "dynamic-tool" ||
       part.type === "source-url" ||
       part.type === "file"
-  );
+    );
+  });
   const failedRun = !hideRunFailure && hasRunFailure(message);
   const isThinking = isAssistant && isLoading && !hasAnyContent && !failedRun;
   const isEmptyAssistant =
@@ -237,86 +233,35 @@ const PurePreviewMessage = ({
       );
     }
 
-    if (type === "tool-createDocument") {
-      const { toolCallId } = part;
-
-      if (part.output && "error" in part.output) {
+    if (
+      type === "tool-createDocument" ||
+      type === "tool-updateDocument" ||
+      type === "tool-requestSuggestions"
+    ) {
+      if (
+        part.state === "output-available" &&
+        part.output &&
+        !("error" in part.output) &&
+        "id" in part.output &&
+        part.output.id
+      ) {
         return (
-          <div
-            className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-500 dark:bg-red-950/50"
-            key={toolCallId}
-          >
-            Error creating document: {String(part.output.error)}
-          </div>
-        );
-      }
-
-      return (
-        <DocumentPreview
-          isReadonly={isReadonly}
-          key={toolCallId}
-          result={part.output}
-        />
-      );
-    }
-
-    if (type === "tool-updateDocument") {
-      const { toolCallId } = part;
-
-      if (part.output && "error" in part.output) {
-        return (
-          <div
-            className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-500 dark:bg-red-950/50"
-            key={toolCallId}
-          >
-            Error updating document: {String(part.output.error)}
-          </div>
-        );
-      }
-
-      return (
-        <div className="relative" key={toolCallId}>
           <DocumentPreview
-            args={{ ...part.output, isUpdate: true }}
             isReadonly={isReadonly}
+            key={part.toolCallId}
             result={part.output}
           />
-        </div>
-      );
-    }
-
-    if (type === "tool-requestSuggestions") {
-      const { toolCallId, state } = part;
-
+        );
+      }
       return (
-        <Tool
-          className="w-[min(100%,450px)]"
-          defaultOpen={true}
-          key={toolCallId}
-        >
-          <ToolHeader state={state} type="tool-requestSuggestions" />
-          <ToolContent>
-            {state === "input-available" && <ToolInput input={part.input} />}
-            {state === "output-available" && (
-              <ToolOutput
-                errorText={undefined}
-                output={
-                  "error" in part.output ? (
-                    <div className="rounded border p-2 text-red-500">
-                      Error: {String(part.output.error)}
-                    </div>
-                  ) : (
-                    <DocumentToolResult
-                      isReadonly={isReadonly}
-                      result={part.output}
-                      type="request-suggestions"
-                    />
-                  )
-                }
-              />
-            )}
-          </ToolContent>
-        </Tool>
+        <ToolActivity
+          approve={addToolApprovalResponse}
+          canApprove={canApprove}
+          isReadonly={isReadonly}
+          isRunning={isLoading}
+          key={part.toolCallId}
+          part={part as ToolPart}
+        />
       );
     }
 
@@ -359,7 +304,6 @@ const PurePreviewMessage = ({
     }
     return null;
   };
-  const groupedParts = groupActivityParts(message.parts);
   const parts = groupedParts.map((group) =>
     group.kind === "activity" ? (
       hideActivities ? null : (
