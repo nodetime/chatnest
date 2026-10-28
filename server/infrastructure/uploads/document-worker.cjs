@@ -4,6 +4,7 @@
  * Pure-text parser, not a security sandbox: deployment container CPU/RSS/disk limits remain required. */
 const { parentPort, workerData } = require("node:worker_threads");
 const { Readable } = require("node:stream");
+const { dirname } = require("node:path");
 const MAX_TOTAL = 128 * 1024 * 1024,
   MAX_XML = 32 * 1024 * 1024,
   MAX_XML_TOTAL = 64 * 1024 * 1024;
@@ -500,12 +501,19 @@ async function parse(bytes, mime) {
       fail("PDF 文件头无效。");
     }
     const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+    // Only trusted, bundled assets; never fetch font/CMap URLs supplied by a PDF.
+    const pdfAssets = dirname(
+      require.resolve("pdfjs-dist/package.json")
+    ).replaceAll("\\", "/");
     const task = pdfjs.getDocument({
+      cMapPacked: true,
+      cMapUrl: `${pdfAssets}/cmaps/`,
       data: new Uint8Array(bytes),
       disableAutoFetch: true,
       disableFontFace: true,
       isEvalSupported: false,
       isOffscreenCanvasSupported: false,
+      standardFontDataUrl: `${pdfAssets}/standard_fonts/`,
       stopAtErrors: true,
       useSystemFonts: false,
       useWorkerFetch: false,

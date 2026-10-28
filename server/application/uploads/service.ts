@@ -397,10 +397,13 @@ export async function commitUserMessage(input: {
         throw new UploadError(409, "附件已移除或失效，请重新上传。");
       }
     }
+    // 与 Drizzle timestamp 的 UTC-naive 写入约定一致；Date 的 timestamptz
+    // 参数会被数据库会话时区折算，导致下一条 user 排到上一条 assistant 前。
+    const createdAt = input.message.createdAt.toISOString();
     if (!existing) {
-      await tx`INSERT INTO chats ("id",created_at,"title",user_id,"visibility") VALUES (${input.chatId},now(),'New chat',${input.ownerId},${input.visibility})`;
+      await tx`INSERT INTO chats ("id",created_at,"title",user_id,"visibility") VALUES (${input.chatId},${createdAt}::timestamp,'New chat',${input.ownerId},${input.visibility})`;
     }
-    await tx`INSERT INTO messages ("id",chat_id,"role","parts","attachments",created_at) VALUES (${input.message.id},${input.chatId},'user',${tx.json(input.message.parts as never)},'[]'::json,${input.message.createdAt})`;
+    await tx`INSERT INTO messages ("id",chat_id,"role","parts","attachments",created_at) VALUES (${input.message.id},${input.chatId},'user',${tx.json(input.message.parts as never)},'[]'::json,${createdAt}::timestamp)`;
     for (const id of assets) {
       // biome-ignore lint/performance/noAwaitInLoops: Bounded sequential I/O prevents concurrent memory and transaction pressure.
       await tx`UPDATE upload_assets SET "state"='used' WHERE "id"=${id}`;

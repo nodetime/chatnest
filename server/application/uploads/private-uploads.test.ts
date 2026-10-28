@@ -295,7 +295,9 @@ test("upload routes and chat entry wire private lifecycle before persistence/tit
     "validate before title"
   );
   assert.ok(
-    route.includes("convertToModelMessages(attachmentContext"),
+    /const modelHistory = projectSettledToolHistory\(\s*attachmentContext,/.test(
+      route
+    ) && route.includes("convertToModelMessages(modelHistory"),
     "model receives resolved inline bytes"
   );
   const preview = await readFile(

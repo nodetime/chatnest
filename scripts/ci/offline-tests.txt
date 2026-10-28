@@ -63,3 +63,7 @@ app/_components/chat/agent-unification.test.ts
 server/application/ai/model-settings/dns-pins.test.ts
 
 app/_components/chat/personal-auth.test.ts
+
+server/application/uploads/message-time-db.test.ts
+
+server/domain/message/tool-history.test.ts
