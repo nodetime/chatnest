@@ -69,6 +69,13 @@ export const resultColumnSchema = z
 export const createResultTableSchema = z
   .object({
     columns: z.array(resultColumnSchema).min(1).max(30).optional(),
+    filter: z
+      .string()
+      .max(500)
+      .optional()
+      .describe(
+        "Optional case-insensitive display substring across selected columns. Original evidence rows are retained unchanged."
+      ),
     rowsPath: pointerSchema,
     sourceToolCallId: z.string().min(1).max(200),
     title: z.string().trim().min(1).max(200),
@@ -235,7 +242,7 @@ export function buildResultTable(
     type: "result-table",
     version: 1,
     view: {
-      filter: "",
+      filter: parsed.filter ?? "",
       sort: [],
       visibleColumns: normalized.map((c) => c.path),
     },

@@ -727,3 +727,70 @@ test("the same authorized pending approval resumes once, but is not a new reusab
     mismatch.reserveCurrentCall("pending", "different__tool")
   );
 });
+
+test("深层原生结果的模型预览保留可判断的实际标题价格，而不是只剩结构", () => {
+  const value = new ResultEvidenceLedger();
+  const items = [
+    {
+      detail_url: "https://example.invalid/001",
+      num_iid: "001",
+      price: "39.80",
+      seller: "样本工厂",
+      title: "灰色旅行包",
+      verification: "模拟上游",
+    },
+    {
+      detail_url: "https://example.invalid/002",
+      num_iid: "002",
+      price: "45.50",
+      seller: "样本用品",
+      title: "黑色旅行包",
+      verification: "模拟上游",
+    },
+    {
+      detail_url: "https://example.invalid/003",
+      num_iid: "003",
+      price: "18.20",
+      seller: "样本百货",
+      title: "收纳袋",
+      verification: "模拟上游",
+    },
+  ];
+  const output = {
+    structuredContent: {
+      items: { item: items, keyword: "旅行包", total_results: 3 },
+    },
+  };
+  value.record(source, output);
+  const projection = sourceModelOutput(value, source.toolCallId, output);
+  for (const item of items) {
+    assert.ok(projection.value.includes(item.title));
+    assert.ok(projection.value.includes(item.price));
+  }
+  assert.ok(Buffer.byteLength(JSON.stringify(projection), "utf8") <= 2000);
+  assert.deepEqual(output.structuredContent.items.item, items);
+});
+
+test("Agent 可设置通用表格显示筛选，原始证据行仍完整保留", () => {
+  const value = new ResultEvidenceLedger();
+  const original = [
+    { price: "39.80", title: "灰色旅行包" },
+    { price: "45.50", title: "黑色旅行包" },
+    { price: "18.20", title: "收纳袋" },
+  ];
+  value.record(source, { structuredContent: { items: original } });
+  const table = buildResultTable(
+    value,
+    {
+      filter: "旅行包",
+      rowsPath: "/items",
+      sourceToolCallId: source.toolCallId,
+      title: "旅行包比较",
+    },
+    "chat"
+  );
+  assert.deepEqual(table.rows, original);
+  assert.equal(table.view.filter, "旅行包");
+  assert.equal(resultRows(table).length, 2);
+  assert.equal(parseResultTable(JSON.stringify(table))?.view.filter, "旅行包");
+});

@@ -4,6 +4,7 @@ import {
   buildResultTable,
   createResultTableSchema,
   type ResultTable,
+  resultRows,
 } from "@/server/domain/document/result-table";
 import { generateUUID } from "@/server/domain/message/ids";
 import type { ResultEvidenceLedger } from "@/server/domain/message/result-evidence";
@@ -23,7 +24,7 @@ export function createResultTable({
 }) {
   return tool({
     description:
-      "Optionally create a read-only result table from a recent successful MCP JSON tool output. Use the literal sourceToolCallId and rowsPath from that tool's bounded preview. Columns select original JSON Pointer fields; never supply row values or invent evidence. Tool returned does not mean independently verified. This is optional: answer normally when no table is useful.",
+      "Optionally create a read-only result table from a recent successful MCP JSON tool output. Use the literal sourceToolCallId and rowsPath from that tool's bounded preview. Columns select original JSON Pointer fields; optional filter sets the initial visible substring filter without deleting original evidence rows. Inspect actual sampled values before drawing conclusions; samples can be incomplete. Never supply row values or invent evidence. Tool returned does not mean independently verified. This is optional: answer normally when no table is useful.",
     execute: async (input) => {
       if (!session.user?.id) {
         return { error: "Sign in required" };
@@ -63,6 +64,8 @@ export function createResultTable({
         sourceToolCallId: table.source.toolCallId,
         title: input.title,
         version: data.version,
+        viewFilter: table.view.filter,
+        visibleRowCount: resultRows(table).length,
       };
     },
     inputSchema: createResultTableSchema,

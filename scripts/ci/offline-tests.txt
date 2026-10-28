@@ -59,3 +59,5 @@ server/domain/capability/projection.test.ts
 app/(chat)/api/chat/request.test.ts
 
 app/_components/chat/agent-unification.test.ts
+
+server/application/ai/model-settings/dns-pins.test.ts
