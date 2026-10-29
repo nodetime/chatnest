@@ -33,7 +33,7 @@ def register(browser,label):
  page.goto(BASE+'/register',wait_until='networkidle')
  page.get_by_role('textbox',name='邮箱',exact=True).fill('personal-'+uuid4().hex+'@example.test')
  page.get_by_label('密码',exact=True).fill(secrets.token_urlsafe(24))
- page.get_by_role('button',name='注册',exact=True).click();page.wait_for_url(BASE+'/',timeout=30000)
+ page.get_by_role('button',name='注册',exact=True).click();page.wait_for_url(BASE+'/',timeout=30000);page.goto(BASE+'/chat',wait_until='networkidle')
  check('real registration '+label,api(page,'/api/auth/session').json()['user']['type']=='regular')
  return context,page
 

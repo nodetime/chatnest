@@ -67,3 +67,5 @@ app/_components/chat/personal-auth.test.ts
 server/application/uploads/message-time-db.test.ts
 
 server/domain/message/tool-history.test.ts
+
+app/_components/landing/home.test.ts

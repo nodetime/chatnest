@@ -121,7 +121,7 @@ with sync_playwright() as p:
     chat_posts = []
     page.on("request", lambda request: chat_posts.append(request.post_data_json) if request.url.endswith("/api/chat") and request.method == "POST" else None)
     try:
-        page.goto(BASE, wait_until="networkidle", timeout=90000)
+        page.goto(BASE + "/chat", wait_until="networkidle", timeout=90000)
         models = page.request.get(BASE + "/api/models").json()
         check("dedicated local fixture model selected", models["selectableModelIds"] == ["formal-fixture"])
         expect(page.get_by_test_id("multimodal-input")).to_be_visible(timeout=30000)
@@ -138,6 +138,7 @@ with sync_playwright() as p:
             page.get_by_label("密码", exact=True).fill(account["password"])
             page.get_by_role("button", name="注册", exact=True).click()
             page.wait_for_url(BASE + "/", timeout=30000)
+            page.goto(BASE + "/chat", wait_until="networkidle")
             session_user = page.request.get(BASE + "/api/auth/session").json().get("user", {})
             REPORT["fixtureRegisteredUserId"] = session_user.get("id")
             check("real browser registration for upload-eligible local test account", session_user.get("type") == "regular")
@@ -279,12 +280,12 @@ with sync_playwright() as p:
         check("library returns owned artifact metadata only", any(entry["id"] == result["id"] for entry in entries) and all(set(entry) <= {"id", "title", "kind", "createdAt", "chatId"} for entry in entries))
         foreign_context = browser.new_context()
         foreign_page = foreign_context.new_page()
-        foreign_page.goto(BASE, wait_until="networkidle")
+        foreign_page.goto(BASE + "/chat", wait_until="networkidle")
         REPORT["foreignFixtureGuestId"] = foreign_page.request.get(BASE + "/api/auth/session").json().get("user", {}).get("id")
         foreign_entries = foreign_page.request.get(BASE + "/api/library").json()
         check("another fresh account cannot see owned artifact in library", all(entry["id"] != result["id"] for entry in foreign_entries))
         foreign_context.close()
-        page.goto(BASE, wait_until="networkidle")
+        page.goto(BASE + "/chat", wait_until="networkidle")
         page.get_by_role("button", name="文件", exact=True).click()
         page.get_by_role("button", name="打开成果：FORMAL 本地证据结果表", exact=True).click()
         page.wait_for_url("**/chat/" + chat_id + "?artifact=" + result["id"])
@@ -306,7 +307,7 @@ with sync_playwright() as p:
         page.keyboard.press("Escape")
         page.set_viewport_size({"width": 1440, "height": 960})
         # New fresh chat uses the same real server and a deliberately slow fixture stream.
-        page.goto(BASE, wait_until="networkidle")
+        page.goto(BASE + "/chat", wait_until="networkidle")
         page.get_by_test_id("multimodal-input").fill("FORMAL_STOP：验证停止保留已输出内容且刷新后不自动续跑。")
         page.get_by_test_id("send-button").click()
         expect(page.get_by_text("FORMAL_STOP_PARTIAL", exact=False)).to_be_visible(timeout=30000)
@@ -330,7 +331,7 @@ with sync_playwright() as p:
         check("stop and explicit continuation do not auto-run again after reload", fixture_health()["modelCalls"] == count_after_explicit_continue)
 
         if EXTENDED:
-            page.goto(BASE,wait_until="networkidle")
+            page.goto(BASE + "/chat",wait_until="networkidle")
             page.get_by_test_id("multimodal-input").fill("FORMAL_STOP_ASK：停止尚未生成完整的问题，随后明确续跑。")
             page.get_by_test_id("send-button").click()
             expect(page.get_by_test_id("ask-user").or_(page.get_by_text("正在准备问题…",exact=True))).to_be_visible(timeout=30000)

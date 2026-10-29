@@ -146,3 +146,11 @@ server/
 - `workspace-header` 将原有通用标题/关闭/视图切换保留在 52px 主行，把产物 controls 放进独立可横向滚动的 toolbar；`artifact-picker` 明确可收缩边界。编辑器挂载、未保存保护与回调作用域不变。
 - `agent-library` 复用现有 Dialog，桌面侧向分类、移动横向分类，内容独立滚动；连接与技能复用相同个人组件，改为轻列表。Ask/Todo/工具行仅调整表面，不改工具定义、审批和续跑。
 - `tests/visual/lessie_workspace.py` 为显式 opt-in 的本地样式/键盘检查，只接受隔离端口33379；`formal_workspace.py` 补充长标题纯DOM边界探针和输入底部稳定断言。脚本不进入生产装配，测试模型/数据不冒充真实服务验收。
+
+## 独立C端首页（2026-10-28）
+
+- `app/_components/landing/`：HomeEntry按路径/个人section分流，LandingPage为独立全宽首页；LandingPreview的示例只在此页面展示，不进入聊天/证据/库；局部landing.css不改变后台或工作台主题。
+- `/chat`空页复用既有聊天layout与ActiveChatProvider；`/chat/:id`不变。proxy只精确公开非个人root，旧个人root仍走认证；导航消费section后归一/chat，新对话也留在/chat。空对话跨旧root/chat不重新生成chatId，保留草稿与附件身份。
+- `landing-draft.ts`为有界纯解析及先删除后消费；DraftReceiver只在身份确定后的空工作台交接草稿，不调用模型。正文不进URL，不跨正式身份，不丢已有草稿；完整页面导航保证guest/正式身份边界重新读取。
+- Python脚本仅在工作台挂载，不在公开首页加载。`auth-navigation`允许/chat安全登录回跳；AuthForm用useId+登录/注册前缀处理缓存页面同时存在的标签/输入身份。
+- `home.test.ts`显式纳入离线清单，`tests/visual/landing_home.py`为隔离本地页面验收，断言无模型POST；旧正式/个人/样式及E2E页对象改从/chat进入工作台。

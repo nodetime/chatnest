@@ -56,6 +56,7 @@ with sync_playwright() as p:
         page.get_by_label('密码', exact=True).fill(secrets.token_urlsafe(24))
         page.get_by_role('button', name='注册', exact=True).click()
         page.wait_for_url(BASE+'/', timeout=30000)
+        page.goto(BASE+'/chat',wait_until='networkidle')
         expect(page.get_by_test_id('multimodal-input')).to_be_visible()
         page.get_by_role('heading', name='今天想完成什么？', exact=True).click()
         capture(page, 'home-light')
