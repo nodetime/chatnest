@@ -1,7 +1,5 @@
-import { getEnv } from "@/server/shared/env";
 import "server-only";
 import { createHash, randomUUID } from "node:crypto";
-import postgres from "postgres";
 import {
   ATTACHMENT_MIMES,
   type DocumentExtraction,
@@ -14,6 +12,7 @@ import {
   assetRef,
   UUID_PATTERN,
 } from "@/server/domain/attachment/refs";
+import { getDatabaseClient } from "@/server/infrastructure/persistence/drizzle/connection";
 import type { DBMessage } from "@/server/infrastructure/persistence/drizzle/schema";
 import { parseDocument } from "@/server/infrastructure/uploads/document-parser";
 import {
@@ -35,9 +34,7 @@ import {
 } from "@/server/shared/uploads/validation";
 
 // 原生 SQL 列名统一映射到领域属性；仅转换列名，不递归改写附件或消息 JSON 的用户字段。
-const sql = postgres(getEnv().POSTGRES_URL ?? "", {
-  transform: { column: { from: postgres.toCamel } },
-});
+const sql = getDatabaseClient("uploads");
 // Shared lock serializes quota reservation, lifecycle pinning and safe deletion across processes.
 const LOCK = 73_624_910;
 type Asset = {

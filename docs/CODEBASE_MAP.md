@@ -154,3 +154,7 @@ server/
 - `landing-draft.ts`为有界纯解析及先删除后消费；DraftReceiver只在身份确定后的空工作台交接草稿，不调用模型。正文不进URL，不跨正式身份，不丢已有草稿；完整页面导航保证guest/正式身份边界重新读取。
 - Python脚本仅在工作台挂载，不在公开首页加载。`auth-navigation`允许/chat安全登录回跳；AuthForm用useId+登录/注册前缀处理缓存页面同时存在的标签/输入身份。
 - `home.test.ts`显式纳入离线清单，`tests/visual/landing_home.py`为隔离本地页面验收，断言无模型POST；旧正式/个人/样式及E2E页对象改从/chat进入工作台。
+
+## 数据库连接生命周期（2026-10-28）
+
+`persistence/drizzle/connection.ts`以版本化global Symbol缓存进程级postgres-js池，抵抗Next路由bundle/开发热更新重新求值。ORM（含模型/MCP设置）最多4连接，上传原生SQL最多2连接，空闲20秒释放；后者只做原有列名映射、不改JSON。URL改变要求重启，既不静默混库也不无限按URL增池。预算为每Node进程6连接，部署需按进程/副本数计算，迁移继续使用一次性max1。显式回归`connection.test.ts`；`connection-db.test.ts`为本地真库opt-in，检查重复模块加载、36并发查询和原始JSON。

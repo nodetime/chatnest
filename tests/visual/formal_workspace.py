@@ -153,8 +153,15 @@ with sync_playwright() as p:
         geometry(page, "formal-home-sidebar-expanded")
         check("expanded sidebar has 208px geometry", abs(REPORT["geometry"]["formal-home-sidebar-expanded"]["sidebarWidth"] - 208) < 1)
         if os.environ.get("FORMAL_SKIP_UPLOAD") != "1":
+            # Use the actual enabled menu, rather than firing an event on an
+            # unhydrated hidden input before client capability/session loading.
+            page.get_by_test_id("composer-menu").click()
+            add_file = page.get_by_role("menuitem", name="添加附件", exact=True)
+            expect(add_file).to_be_enabled(timeout=30000)
             with page.expect_response(lambda response: response.url.endswith("/api/files/upload"), timeout=30000) as upload_info:
-                page.locator('input[type="file"][multiple]').set_input_files(str(docx()))
+                with page.expect_file_chooser() as chooser:
+                    add_file.click()
+                chooser.value.set_files(str(docx()))
             upload = upload_info.value
             REPORT["upload"] = {"status": upload.status, "data": upload.json()}
             check("real DOCX upload HTTP succeeded", upload.ok)
