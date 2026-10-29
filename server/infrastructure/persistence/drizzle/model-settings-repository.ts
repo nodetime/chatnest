@@ -2,8 +2,8 @@ import { getEnv } from "@/server/shared/env";
 import "server-only";
 import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
 import { modelSettings } from "@/server/infrastructure/persistence/drizzle/schema";
+import { getDatabaseClient } from "./connection";
 export type SettingsRow = {
   revision: number;
   encrypted: string;
@@ -21,7 +21,7 @@ function db() {
     if (!POSTGRES_URL) {
       throw new Error("Model database is not configured");
     }
-    database = drizzle(postgres(POSTGRES_URL, { max: 2 }));
+    database = drizzle(getDatabaseClient());
   }
   return database;
 }
