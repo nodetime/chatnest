@@ -43,6 +43,12 @@ export async function createAgentRuntime(
     skills?: Skill[];
     authorizeTool?: (server: RuntimeServer) => Promise<void>;
     authorizeSkill?: (skill: Skill) => Promise<void>;
+    billToolCall?: (input: {
+      args: unknown;
+      canonicalToolKey: string;
+      next: () => Promise<unknown>;
+      toolCallId: string;
+    }) => Promise<unknown>;
   } = {}
 ) {
   const [config, skills] = await Promise.all([
@@ -134,6 +140,14 @@ export async function createAgentRuntime(
             if (tools[alias]) {
               throw new Error("MCP tool alias collision");
             }
+            const nativeMeta =
+              remote._meta && typeof remote._meta === "object"
+                ? (remote._meta as Record<string, unknown>)["porta/native"]
+                : undefined;
+            const canonicalToolKey =
+              nativeMeta && typeof nativeMeta === "object"
+                ? `native_mcp/${String((nativeMeta as Record<string, unknown>).service)}/${String((nativeMeta as Record<string, unknown>).name)}`
+                : `${server.id}/${name}`;
             serverTools[alias] = dynamicTool({
               description: `${server.name}: ${remote.description ?? name}`,
               execute: (input, options) => {
@@ -149,14 +163,23 @@ export async function createAgentRuntime(
                       AbortSignal.timeout(config.toolTimeoutMs),
                       ...(options.abortSignal ? [options.abortSignal] : []),
                     ]);
-                    output = await abortable(
-                      () =>
-                        remote.execute(input, {
-                          ...options,
-                          abortSignal: callSignal,
-                        }),
-                      callSignal
-                    );
+                    const execute = () =>
+                      abortable(
+                        () =>
+                          remote.execute(input, {
+                            ...options,
+                            abortSignal: callSignal,
+                          }),
+                        callSignal,
+                      );
+                    output = await (evidence.billToolCall
+                      ? evidence.billToolCall({
+                          args: input,
+                          canonicalToolKey,
+                          next: execute,
+                          toolCallId: options.toolCallId,
+                        })
+                      : execute());
                   } catch {
                     // SDK exceptions can contain the full URL and authorization headers.
                     // biome-ignore lint/style/useErrorCause: Raw SDK/crypto causes may contain credentials; intentionally discard.

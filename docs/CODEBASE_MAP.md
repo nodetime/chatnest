@@ -9,9 +9,9 @@
 ```
 server/
   domain/          聚合:chat、message、user、vote、document、
-                   suggestion、attachment、model、mcp、admin
+                   suggestion、attachment、model、mcp、admin、billing
   application/     子域:chat(+tools)、ai(+model-settings)、
-                   document、uploads、mcp、admin
+                   document、uploads、mcp、admin、platform
   infrastructure/  persistence/drizzle、mcp、browser、skills、uploads
   shared/          横切(env/errors/logger/...)
   composition.ts   装配门面 getUseCases()
@@ -27,7 +27,7 @@ server/
 
 ## 关键子系统(现路径)
 
-**持久化**:`server/infrastructure/persistence/drizzle/` —— schema.ts(中文注释纪律)、migrations/、migrate.ts(`pnpm db:migrate`)、client.ts(共享连接,不加 server-only:白名单 tsx 测试直连此链)、八仓储(chat/message/user/vote/document/suggestion/model-settings/mcp-settings)。保留不变量:advisory lock 版本化文档写入、结果表保护拒绝、chat 级联删除+资产清理、replace* 事务并发基线。`pnpm build` 先跑迁移再构建(禁止本地执行)。
+**持久化**:`server/infrastructure/persistence/drizzle/` —— schema.ts(中文注释纪律)、migrations/、migrate.ts(`pnpm db:migrate`)、client.ts(共享连接,不加 server-only:白名单 tsx 测试直连此链)、仓储覆盖 chat/message/user/vote/document/suggestion/model-settings/mcp-settings/billing。billing 新增 external identity、execution operation/receipt、settlement outbox，单次 attempt CAS 与账务命令恢复不重放供应商调用。保留不变量:advisory lock 版本化文档写入、结果表保护拒绝、chat 级联删除+资产清理、replace* 事务并发基线。`pnpm build` 先跑迁移再构建(禁止本地执行)。
 
 **模型网关**:`server/application/ai/` —— model-connection/model-service/model-context/providers/prompts + model-settings/{runtime,handler,service,network,probe}(加密 ModelSettings 行/AAD/CAS,DNS 钉扎 HTTPS 探测,可选部署侧 MODEL_DNS_OVERRIDES 精确域名公网 pin(仍保留 TLS/地址校验,dns-pins.test.ts 回归);目录 schema 在 domain/model/settings-schema.ts,仓储在 drizzle)。模型目录(chatModels/isDemo/titleModel)在 `domain/model/models.ts`。
 

@@ -15,6 +15,13 @@ const envSchema = z.object({
   LOG_LEVEL: z.string().optional(),
   NEXT_PUBLIC_BASE_PATH: z.string().optional(),
   NODE_ENV: z.enum(["development", "test", "production"]).optional(),
+  PLATFORM_BASE_URL: z.string().url().optional(),
+  PLATFORM_ID: z.string().min(1).max(128).optional(),
+  PLATFORM_MODE: z.enum(["standalone", "connected"]).optional(),
+  PLATFORM_SERVICE_TOKEN: z.string().optional(),
+  PLATFORM_SESSION_ENCRYPTION_KEY: z.string().optional(),
+  CHATNEST_DEPLOYMENT_ID: z.string().min(1).max(128).optional(),
+  CHATNEST_CONTROL_TOKEN: z.string().optional(),
   // 数据库连接串;缺省时空串兜底,首次真正查询时才失败(与改造前行为一致)
   POSTGRES_URL: z.string().optional(),
   REDIS_URL: z.string().optional(),

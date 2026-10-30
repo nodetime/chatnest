@@ -1,0 +1,35 @@
+openapi: 3.1.0
+info:
+  title: Platform Points Protocol
+  version: v1
+paths:
+  /capabilities:
+    get: { responses: { '200': { description: OK } } }
+  /identity/register:
+    post: { responses: { '200': { description: OK } } }
+  /identity/login:
+    post: { responses: { '200': { description: OK } } }
+  /identity/refresh:
+    post: { responses: { '200': { description: OK } } }
+  /identity/logout:
+    post: { responses: { '200': { description: OK } } }
+  /identity/me:
+    get: { responses: { '200': { description: OK } } }
+  /me/access:
+    get: { responses: { '200': { description: OK } } }
+  /me/wallet:
+    get: { responses: { '200': { description: OK } } }
+  /me/ledger:
+    get: { responses: { '200': { description: OK } } }
+  /operations/reserve:
+    post: { responses: { '200': { description: OK } } }
+  /operations/{operationId}/dispatch:
+    post: { parameters: [{ name: operationId, in: path, required: true, schema: { type: string } }], responses: { '200': { description: OK } } }
+  /operations/{operationId}/report:
+    post: { parameters: [{ name: operationId, in: path, required: true, schema: { type: string } }], responses: { '200': { description: OK } } }
+  /operations/{operationId}:
+    get: { parameters: [{ name: operationId, in: path, required: true, schema: { type: string } }], responses: { '200': { description: OK } } }
+  /operations/{operationId}/cancel:
+    post: { parameters: [{ name: operationId, in: path, required: true, schema: { type: string } }], responses: { '200': { description: OK } } }
+  /internal/v1/receipts/{attemptId}:
+    get: { parameters: [{ name: attemptId, in: path, required: true, schema: { type: string } }], responses: { '200': { description: OK } } }
