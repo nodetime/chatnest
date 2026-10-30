@@ -36,22 +36,21 @@
 - `docs/contracts/platform-points/schemas/operation.json`
 - `docs/contracts/platform-points/fixtures/canonical-json-vectors.json`
 
-Payload 业务仓库尚未在当前工作区。以上 fixture 证明协议和 AOP 可运行，不证明真实 Payload 账户、钱包、后台和生产数据库已经部署。
+Payload 业务仓库已接入：`/Users/nako/Documents/ChatGPT/NexaZ/heymoro-starter`。本次验收使用该仓库的真实 Payload HTTP 服务、PostgreSQL、userSessions、wallets、billingPolicies、billingOperations 和 ledger 表；不再把 ChatNest fixture 当作平台实现。
 
 ## 未宣称的范围
 
 - 未调用真实付费供应商；Porta 上游均为合成或本地 fixture。
 - 未进行真实支付、套餐、用户注册、密码、停用和线上钱包验收。
-- 未把本地平台 fixture 结果写成 Payload 生产验收。
+- 未把本地 Porta 合成供应商数据写成真实供应商或生产结果；Payload 账务本身已完成 loopback connected 验收。
 - 未执行 `pnpm build` 的 ChatNest 生产构建，因为项目纪律明确禁止该命令触发迁移；已执行 typecheck、lint、offline tests 和 migration check。
 
 ## 下一外部验收门槛
 
-1. 提供 Payload 业务仓库或部署地址、API v1、数据库和签名 key owner；
-2. 用真实 Payload 账户完成 identity/access/wallet/ledger/operation 契约测试；
-3. 验证 connected 会话中的 `platform.token` 注入和撤销；
-4. 在不使用合成平台 fixture 的情况下重复 reserve/dispatch/report/reconcile；
-5. 最后再进行真实供应商账户和真实扣费核对。
+1. 将当前 Payload 本地地址替换为部署地址，并由部署环境注入服务 token、用户 token 和 Ed25519 key；
+2. 将现有 wallet/policy/session/ledger 契约测试接入部署环境；
+3. 将 ChatNest 的 per-user platform token 从验收 env 适配为正式 identity exchange；
+4. 最后再进行真实供应商账户和真实扣费核对。
 
 
 ## 会话级模型/工具账务验收
