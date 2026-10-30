@@ -23,7 +23,6 @@ const envSchema = z.object({
   PLATFORM_SERVICE_TOKEN: z.string().optional(),
   PLATFORM_SESSION_ENCRYPTION_KEY: z.string().optional(),
   PLATFORM_USER_ISSUER: z.string().min(1).max(256).optional(),
-  PLATFORM_USER_TOKEN: z.string().optional(),
   // 数据库连接串;缺省时空串兜底,首次真正查询时才失败(与改造前行为一致)
   POSTGRES_URL: z.string().optional(),
   REDIS_URL: z.string().optional(),

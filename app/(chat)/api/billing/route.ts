@@ -1,5 +1,6 @@
 import { auth } from "@/app/(auth)/auth";
 import { createPlatformBillingClient } from "@/server/application/platform/client";
+import { exchangePlatformIdentity } from "@/server/application/platform/identity";
 import { getEnv } from "@/server/shared/env";
 
 export async function GET(request: Request) {
@@ -16,15 +17,28 @@ export async function GET(request: Request) {
   if (
     env.PLATFORM_MODE !== "connected" ||
     !env.PLATFORM_BASE_URL ||
-    !env.PLATFORM_SERVICE_TOKEN ||
-    !env.PLATFORM_USER_TOKEN
+    !env.PLATFORM_SERVICE_TOKEN
   ) {
     return Response.json({ code: "PLATFORM_NOT_CONNECTED" }, { status: 503 });
+  }
+  let exchanged: Awaited<ReturnType<typeof exchangePlatformIdentity>>;
+  try {
+    exchanged = await exchangePlatformIdentity({
+      baseUrl: env.PLATFORM_BASE_URL,
+      issuer: env.PLATFORM_USER_ISSUER ?? "chatnest",
+      serviceToken: env.PLATFORM_SERVICE_TOKEN,
+      subject: session.user.id,
+    });
+  } catch {
+    return Response.json(
+      { code: "PLATFORM_IDENTITY_EXCHANGE_FAILED" },
+      { status: 503 }
+    );
   }
   const client = createPlatformBillingClient({
     baseUrl: env.PLATFORM_BASE_URL,
     serviceToken: env.PLATFORM_SERVICE_TOKEN,
-    userToken: env.PLATFORM_USER_TOKEN,
+    userToken: exchanged.token,
   });
   const details = await client.sessionDetails?.(sessionGroupId);
   return Response.json(details);

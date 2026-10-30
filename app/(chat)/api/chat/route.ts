@@ -3,6 +3,7 @@ import { checkBotId } from "botid/server";
 import { headers } from "next/headers";
 import { auth } from "@/app/(auth)/auth";
 import { withModelSettings } from "@/server/application/ai/model-settings/runtime";
+import { exchangePlatformIdentity } from "@/server/application/platform/identity";
 import { getUseCases } from "@/server/composition";
 import type { ChatSession } from "@/server/domain/user/types";
 import { getEnv } from "@/server/shared/env";
@@ -37,17 +38,31 @@ async function handleChatPost(request: Request) {
   }
   try {
     const env = getEnv();
-    const connectedSession =
-      env.PLATFORM_MODE === "connected" && env.PLATFORM_USER_TOKEN
-        ? {
-            ...session,
-            platform: {
-              issuer: env.PLATFORM_USER_ISSUER ?? env.PLATFORM_ID ?? "payload",
-              subject: session.user.id,
-              token: env.PLATFORM_USER_TOKEN,
-            },
-          }
-        : session;
+    let connectedSession: ChatSession = session;
+    if (
+      env.PLATFORM_MODE === "connected" &&
+      env.PLATFORM_BASE_URL &&
+      env.PLATFORM_SERVICE_TOKEN
+    ) {
+      try {
+        const exchanged = await exchangePlatformIdentity({
+          baseUrl: env.PLATFORM_BASE_URL,
+          issuer: env.PLATFORM_USER_ISSUER ?? "chatnest",
+          serviceToken: env.PLATFORM_SERVICE_TOKEN,
+          subject: session.user.id,
+        });
+        connectedSession = {
+          ...session,
+          platform: {
+            issuer: exchanged.issuer,
+            subject: exchanged.subject,
+            token: exchanged.token,
+          },
+        };
+      } catch {
+        // connected mode remains fail-closed in composition when exchange fails
+      }
+    }
     return await withModelSettings(() =>
       postWithModelSettings(request, connectedSession)
     );

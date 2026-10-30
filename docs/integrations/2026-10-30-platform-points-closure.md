@@ -49,7 +49,7 @@ Payload 业务仓库已接入：`/Users/nako/Documents/ChatGPT/NexaZ/heymoro-sta
 
 1. 将当前 Payload 本地地址替换为部署地址，并由部署环境注入服务 token、用户 token 和 Ed25519 key；
 2. 将现有 wallet/policy/session/ledger 契约测试接入部署环境；
-3. 将 ChatNest 的 per-user platform token 从验收 env 适配为正式 identity exchange；
+3. 将 Payload `externalIdentities` 绑定流程接入正式账号管理与部署环境；ChatNest 已改为正式 identity exchange，不再使用全局 `PLATFORM_USER_TOKEN`；
 4. 最后再进行真实供应商账户和真实扣费核对。
 
 
