@@ -451,6 +451,8 @@ export const executionOperation = pgTable(
     createdAt: timestamp("created_at").notNull().defaultNow(),
     // Porta 出站证据状态。
     dispatchEvidence: text("dispatch_evidence"),
+    // 模型步骤对应的模型标识。
+    modelId: text("model_id"),
     // 平台 operation 唯一标识。
     operationId: text("operation_id").primaryKey().notNull(),
     // 平台价格版本快照。
@@ -461,8 +463,12 @@ export const executionOperation = pgTable(
     reservedPoints: text("reserved_points"),
     // Agent run 标识，允许同一聊天多轮执行关联。
     runId: text("run_id"),
+    // 平台账务会话组，同一 ChatNest 对话内模型/工具步骤共享。
+    sessionGroupId: text("session_group_id").notNull(),
     // 本地执行状态。
     state: text("state").notNull(),
+    // 会话内步骤顺序，用于用户查看明细。
+    stepIndex: integer("step_index"),
     // 账务 subject 类型：model 或 tool。
     subjectType: text("subject_type").notNull(),
     // 最近状态更新时间。

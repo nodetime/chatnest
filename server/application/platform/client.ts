@@ -5,6 +5,7 @@ import type {
   PlatformDispatchResult,
   PlatformReserveInput,
   PlatformReserveResult,
+  PlatformSessionDetails,
 } from "./protocol";
 
 const reserveResponseSchema = z.object({
@@ -14,6 +15,35 @@ const reserveResponseSchema = z.object({
 });
 
 const dispatchResponseSchema = z.object({ permit: z.string().min(1) });
+const sessionDetailsSchema = z.object({
+  session: z.object({
+    chatId: z.string(),
+    runId: z.string().nullable(),
+    sessionGroupId: z.string(),
+    status: z.string(),
+  }),
+  steps: z.array(
+    z.object({
+      attemptId: z.string(),
+      canonicalToolKey: z.string(),
+      capturedPoints: z.string(),
+      createdAt: z.string(),
+      modelId: z.string().nullable(),
+      operationId: z.string(),
+      outcome: z.string().nullable(),
+      receipt: z.unknown().nullable(),
+      reservedPoints: z.string(),
+      state: z.string(),
+      stepIndex: z.number().nullable(),
+      subjectType: z.enum(["model", "tool"]),
+      updatedAt: z.string(),
+    })
+  ),
+  totals: z.object({
+    capturedPoints: z.string(),
+    reservedPoints: z.string(),
+  }),
+});
 
 export type PlatformClientOptions = {
   baseUrl: string;
@@ -109,6 +139,16 @@ export function createPlatformBillingClient(
         input,
         `${input.operationId}:reserve`,
         reserveResponseSchema
+      );
+    },
+    sessionDetails(sessionGroupId: string): Promise<PlatformSessionDetails> {
+      return request(
+        options,
+        "GET",
+        `/api/platform/v1/sessions/${encodeURIComponent(sessionGroupId)}`,
+        undefined,
+        `${sessionGroupId}:details`,
+        sessionDetailsSchema
       );
     },
   };

@@ -53,3 +53,10 @@ Payload 业务仓库尚未在当前工作区。以上 fixture 证明协议和 AO
 4. 在不使用合成平台 fixture 的情况下重复 reserve/dispatch/report/reconcile；
 5. 最后再进行真实供应商账户和真实扣费核对。
 
+
+## 会话级模型/工具账务验收
+
+- Payload `billingSessions` 是展示聚合根，`billingOperations` 是不可重复的子步骤；模型 request 与 Porta tool call 使用同一个 `sessionGroupId`。
+- 模型收费策略键为 `model/<modelId>`，工具收费策略键为 Porta canonical key；两类步骤可以配置不同 `pointsPerCall`。
+- `GET /api/platform/v1/sessions/:sessionGroupId` 和 ChatNest `GET /api/chat/billing` 均返回 totals + steps，步骤包含 reserve/capture/state/outcome/receipt。
+- connected 模式下缺少 Payload 用户 token 会 fail-closed；不会降级为 standalone 或免费模型调用。

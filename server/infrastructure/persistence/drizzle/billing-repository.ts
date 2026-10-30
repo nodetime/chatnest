@@ -31,9 +31,12 @@ export const billingRepository: BillingRepository = {
       attemptId: input.attemptId,
       canonicalToolKey: input.canonicalToolKey,
       chatId: input.chatId,
+      modelId: input.modelId,
       operationId: input.operationId,
       runId: input.runId,
+      sessionGroupId: input.sessionGroupId ?? input.chatId,
       state: "ready",
+      stepIndex: input.stepIndex,
       subjectType: input.subjectType,
       userId: input.userId,
     });

@@ -3,6 +3,9 @@ export type ExecutionOperationInput = {
   canonicalToolKey: string;
   chatId: string;
   operationId: string;
+  sessionGroupId?: string;
+  stepIndex?: number;
+  modelId?: string;
   runId?: string;
   subjectType: "model" | "tool";
   userId: string;

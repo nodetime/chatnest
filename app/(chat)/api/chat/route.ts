@@ -5,6 +5,7 @@ import { auth } from "@/app/(auth)/auth";
 import { withModelSettings } from "@/server/application/ai/model-settings/runtime";
 import { getUseCases } from "@/server/composition";
 import type { ChatSession } from "@/server/domain/user/types";
+import { getEnv } from "@/server/shared/env";
 import { ChatbotError } from "@/server/shared/errors";
 import { getLogger } from "@/server/shared/logger";
 import { runWithTraceId } from "@/server/shared/request-context";
@@ -35,8 +36,20 @@ async function handleChatPost(request: Request) {
     return new ChatbotError("unauthorized:chat").toResponse();
   }
   try {
+    const env = getEnv();
+    const connectedSession =
+      env.PLATFORM_MODE === "connected" && env.PLATFORM_USER_TOKEN
+        ? {
+            ...session,
+            platform: {
+              issuer: env.PLATFORM_USER_ISSUER ?? env.PLATFORM_ID ?? "payload",
+              subject: session.user.id,
+              token: env.PLATFORM_USER_TOKEN,
+            },
+          }
+        : session;
     return await withModelSettings(() =>
-      postWithModelSettings(request, session)
+      postWithModelSettings(request, connectedSession)
     );
   } catch {
     return new ChatbotError("offline:configuration").toResponse();

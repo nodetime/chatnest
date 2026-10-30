@@ -11,6 +11,11 @@ export type BillingExecutionContext = {
   billingDimensions?: Record<string, boolean | number | string>;
   canonicalToolKey: string;
   operationId: string;
+  sessionGroupId?: string;
+  runId?: string;
+  stepIndex?: number;
+  subjectType?: "model" | "tool";
+  modelId?: string;
   subjectId: string;
   tool?: ToolIdentity;
 };
@@ -21,6 +26,18 @@ type OperationStore = {
     operationId: string;
   }) => Promise<boolean>;
   create: (input: BillingExecutionContext) => Promise<void>;
+  enqueueSettlement?: (input: {
+    command: "cancel" | "reconcile" | "report";
+    idempotencyKey: string;
+    operationId: string;
+    payload: unknown;
+  }) => Promise<void>;
+  saveReceipt?: (input: {
+    attemptId: string;
+    operationId: string;
+    payload: unknown;
+    receiptId: string;
+  }) => Promise<void>;
 };
 
 type ToolBillingOptions = {
@@ -58,6 +75,24 @@ function assertConnected(
   }
 }
 
+async function reportOrEnqueue(
+  operations: OperationStore,
+  platform: PlatformBillingClient,
+  input: PlatformReportInput
+) {
+  try {
+    await platform.report(input);
+  } catch (error) {
+    await operations.enqueueSettlement?.({
+      command: "report",
+      idempotencyKey: `${input.operationId}:report`,
+      operationId: input.operationId,
+      payload: input,
+    });
+    throw error;
+  }
+}
+
 export function createToolBillingAroundCall(
   options: ToolBillingOptions
 ): AroundToolCall {
@@ -73,8 +108,14 @@ export function createToolBillingAroundCall(
     const reserveInput: PlatformReserveInput = {
       attemptId: context.attemptId,
       billingDimensions: context.billingDimensions,
+      canonicalToolKey: context.canonicalToolKey,
+      modelId: context.modelId,
       operationId: context.operationId,
+      runId: context.runId,
+      sessionGroupId: context.sessionGroupId ?? context.subjectId,
+      stepIndex: context.stepIndex,
       subjectId: context.subjectId,
+      subjectType: context.subjectType ?? "tool",
       tool: context.tool ?? {
         api: context.canonicalToolKey,
         platform: "unknown",
@@ -102,17 +143,27 @@ export function createToolBillingAroundCall(
         operationId: context.operationId,
         outcome: "unknown",
       };
-      await options.platform.report(report);
+      await reportOrEnqueue(options.operations, options.platform, report);
       throw error;
     }
-    await options.platform.report({
+    const receipt =
+      result && typeof result === "object"
+        ? (result as { executionReceipt?: { receiptId?: string } })
+            .executionReceipt
+        : undefined;
+    if (receipt?.receiptId) {
+      await options.operations.saveReceipt?.({
+        attemptId: context.attemptId,
+        operationId: context.operationId,
+        payload: receipt,
+        receiptId: receipt.receiptId,
+      });
+    }
+    await reportOrEnqueue(options.operations, options.platform, {
       attemptId: context.attemptId,
       operationId: context.operationId,
       outcome: "response",
-      receipt:
-        result && typeof result === "object"
-          ? (result as { executionReceipt?: unknown }).executionReceipt
-          : undefined,
+      receipt,
     });
     return result;
   };

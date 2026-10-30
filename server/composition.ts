@@ -1,4 +1,5 @@
 import { deleteChat } from "@/server/application/chat/delete-chat";
+import { wrapModelWithBilling } from "@/server/application/chat/model-billing";
 import {
   type SendMessageInput,
   sendMessage,
@@ -73,9 +74,41 @@ function buildUseCases() {
       sendMessage(input, {
         chats,
         messages,
+        modelBillingFactory:
+          env.PLATFORM_MODE === "connected"
+            ? ({ chatId, modelId, runId, session, stepIndex, userId }) => {
+                const client =
+                  env.PLATFORM_BASE_URL &&
+                  env.PLATFORM_SERVICE_TOKEN &&
+                  session.platform?.token
+                    ? createPlatformBillingClient({
+                        baseUrl: env.PLATFORM_BASE_URL,
+                        serviceToken: env.PLATFORM_SERVICE_TOKEN,
+                        userToken: session.platform.token,
+                      })
+                    : undefined;
+                if (!client) {
+                  return () => {
+                    throw new Error(
+                      "Connected model billing requires platform and user session"
+                    );
+                  };
+                }
+                return (model: unknown) =>
+                  wrapModelWithBilling(model, {
+                    chatId,
+                    client,
+                    modelId,
+                    repository: billingRepository,
+                    runId,
+                    stepIndex,
+                    userId,
+                  });
+              }
+            : undefined,
         toolBillingFactory:
           env.PLATFORM_MODE === "connected"
-            ? ({ chatId, session, userId }) => {
+            ? ({ chatId, runId, session, userId }) => {
                 const client =
                   env.PLATFORM_BASE_URL &&
                   env.PLATFORM_SERVICE_TOKEN &&
@@ -91,6 +124,7 @@ function buildUseCases() {
                   client,
                   mode: "connected",
                   repository: billingRepository,
+                  runId,
                   userId,
                 });
               }

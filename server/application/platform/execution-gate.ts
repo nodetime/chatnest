@@ -8,6 +8,7 @@ import type { PlatformBillingClient } from "./protocol";
 
 export type RequestToolBillingInput = {
   chatId: string;
+  runId?: string;
   client?: PlatformBillingClient;
   mode: "connected" | "standalone";
   repository?: BillingRepository;
@@ -15,6 +16,7 @@ export type RequestToolBillingInput = {
 };
 
 export function createRequestToolBilling(input: RequestToolBillingInput) {
+  let stepIndex = 0;
   const around = createToolBillingAroundCall({
     mode: input.mode,
     operations: input.repository
@@ -25,10 +27,16 @@ export function createRequestToolBilling(input: RequestToolBillingInput) {
               attemptId: context.attemptId,
               canonicalToolKey: context.canonicalToolKey,
               chatId: input.chatId,
+              modelId: context.modelId,
               operationId: context.operationId,
+              runId: context.runId,
+              sessionGroupId: context.sessionGroupId,
+              stepIndex: context.stepIndex,
               subjectType: "tool",
               userId: input.userId,
             }),
+          enqueueSettlement: input.repository.enqueueSettlement,
+          saveReceipt: input.repository.saveReceipt,
         }
       : undefined,
     platform: input.client,
@@ -45,7 +53,15 @@ export function createRequestToolBilling(input: RequestToolBillingInput) {
         attemptId: randomUUID(),
         canonicalToolKey: call.canonicalToolKey,
         operationId: randomUUID(),
+        runId: input.runId,
+        sessionGroupId: input.chatId,
+        stepIndex: (() => {
+          const current = stepIndex;
+          stepIndex += 1;
+          return current;
+        })(),
         subjectId: input.userId,
+        subjectType: "tool",
         toolCallId: call.toolCallId,
       } as BillingExecutionContext & { toolCallId: string },
       call.next
