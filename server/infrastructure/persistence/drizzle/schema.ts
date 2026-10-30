@@ -409,118 +409,136 @@ export const chatCapabilityScope = pgTable(
 export const externalIdentity = pgTable(
   "external_identities",
   {
-    // 外部身份所属平台实例标识。
-    platformId: text("platform_id").notNull(),
-    // 外部身份签发方标识。
-    issuer: text("issuer").notNull(),
-    // 外部身份主体标识。
-    subject: text("subject").notNull(),
-    // 映射到本地 users.id 的账号外键。
-    userId: uuid("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
     // 映射创建时间。
     createdAt: timestamp("created_at").notNull().defaultNow(),
+    // 外部身份签发方标识。
+    issuer: text("issuer").notNull(),
+    // 外部身份所属平台实例标识。
+    platformId: text("platform_id").notNull(),
+    // 外部身份主体标识。
+    subject: text("subject").notNull(),
     // 映射最近确认时间。
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    // 映射到本地 users.id 的账号外键。
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
   },
   (table) => [
     // 外部主体三元组唯一，防止同一平台主体串号。
-    primaryKey({ columns: [table.platformId, table.issuer, table.subject], name: "external_identities_pk" }),
+    primaryKey({
+      columns: [table.platformId, table.issuer, table.subject],
+      name: "external_identities_pk",
+    }),
     // 一个本地账号在本期最多关联一个平台主体。
     index("external_identities_user_idx").on(table.userId),
-  ],
+  ]
 );
 
 // Agent 执行操作表：记录一次需要平台准入或收据恢复的模型/工具 operation。
 export const executionOperation = pgTable(
   "execution_operations",
   {
-    // 平台 operation 唯一标识。
-    operationId: text("operation_id").primaryKey().notNull(),
     // 一次真实出站 attempt 唯一标识。
     attemptId: text("attempt_id").notNull(),
-    // 本地用户属主。
-    userId: uuid("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
-    // 所属聊天。
-    chatId: uuid("chat_id").notNull().references(() => chat.id, { onDelete: "cascade" }),
-    // Agent run 标识，允许同一聊天多轮执行关联。
-    runId: text("run_id"),
     // canonical provider/platform/api 工具身份。
     canonicalToolKey: text("canonical_tool_key").notNull(),
-    // 账务 subject 类型：model 或 tool。
-    subjectType: text("subject_type").notNull(),
-    // 本地执行状态。
-    state: text("state").notNull(),
-    // 平台价格版本快照。
-    priceVersion: text("price_version"),
-    // 平台预留积分十进制字符串。
-    reservedPoints: text("reserved_points"),
-    // Porta 出站证据状态。
-    dispatchEvidence: text("dispatch_evidence"),
-    // Porta receipt 不可变 JSON 快照。
-    receipt: json("receipt"),
+    // 所属聊天。
+    chatId: uuid("chat_id")
+      .notNull()
+      .references(() => chat.id, { onDelete: "cascade" }),
     // 创建时间。
     createdAt: timestamp("created_at").notNull().defaultNow(),
+    // Porta 出站证据状态。
+    dispatchEvidence: text("dispatch_evidence"),
+    // 平台 operation 唯一标识。
+    operationId: text("operation_id").primaryKey().notNull(),
+    // 平台价格版本快照。
+    priceVersion: text("price_version"),
+    // Porta receipt 不可变 JSON 快照。
+    receipt: json("receipt"),
+    // 平台预留积分十进制字符串。
+    reservedPoints: text("reserved_points"),
+    // Agent run 标识，允许同一聊天多轮执行关联。
+    runId: text("run_id"),
+    // 本地执行状态。
+    state: text("state").notNull(),
+    // 账务 subject 类型：model 或 tool。
+    subjectType: text("subject_type").notNull(),
     // 最近状态更新时间。
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    // 本地用户属主。
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
   },
   (table) => [
     // attempt 全局唯一，阻止同一次出站被重复接管。
-    check("execution_operations_attempt_nonempty", sql`${table.attemptId} <> ''`),
+    check(
+      "execution_operations_attempt_nonempty",
+      sql`${table.attemptId} <> ''`
+    ),
     // 只允许已定义的本地执行状态。
-    check("execution_operations_state", sql`${table.state} in ('ready','sending','sent','settled','failed','reconcile_pending')`),
+    check(
+      "execution_operations_state",
+      sql`${table.state} in ('ready','sending','sent','settled','failed','reconcile_pending')`
+    ),
     // 只允许模型或工具两类账务主体。
-    check("execution_operations_subject_type", sql`${table.subjectType} in ('model','tool')`),
+    check(
+      "execution_operations_subject_type",
+      sql`${table.subjectType} in ('model','tool')`
+    ),
     index("execution_operations_user_idx").on(table.userId, table.createdAt),
     index("execution_operations_attempt_idx").on(table.attemptId),
-  ],
+  ]
 );
 
 // 执行 receipt 表：保存不依赖消息 parts 的不可变结算证据。
 export const executionReceipt = pgTable(
   "execution_receipts",
   {
-    // receipt 唯一标识。
-    receiptId: text("receipt_id").primaryKey().notNull(),
-    // 对应 operation。
-    operationId: text("operation_id").notNull(),
     // 对应 attempt。
     attemptId: text("attempt_id").notNull(),
-    // receipt 版本。
-    revision: integer("revision").notNull().default(1),
-    // 签名后的 receipt JSON。
-    payload: json("payload").notNull(),
     // 保存时间。
     createdAt: timestamp("created_at").notNull().defaultNow(),
+    // 对应 operation。
+    operationId: text("operation_id").notNull(),
+    // 签名后的 receipt JSON。
+    payload: json("payload").notNull(),
+    // receipt 唯一标识。
+    receiptId: text("receipt_id").primaryKey().notNull(),
+    // receipt 版本。
+    revision: integer("revision").notNull().default(1),
   },
   (table) => [
     // 同一 attempt 只允许一个当前 receipt。
     index("execution_receipts_attempt_idx").on(table.attemptId),
     check("execution_receipts_revision", sql`${table.revision} > 0`),
-  ],
+  ]
 );
 
 // 结算 outbox：只恢复平台账务命令，不重放供应商调用。
 export const settlementOutbox = pgTable(
   "settlement_outbox",
   {
-    // outbox 行唯一标识。
-    id: uuid("id").primaryKey().defaultRandom(),
-    // 对应 operation。
-    operationId: text("operation_id").notNull(),
+    // 已尝试次数。
+    attempts: integer("attempts").notNull().default(0),
     // 账务命令类型。
     command: text("command").notNull(),
+    // 创建时间。
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    // outbox 行唯一标识。
+    id: uuid("id").primaryKey().defaultRandom(),
     // 平台幂等键。
     idempotencyKey: text("idempotency_key").notNull(),
+    // 下次尝试时间。
+    nextAttemptAt: timestamp("next_attempt_at").notNull().defaultNow(),
+    // 对应 operation。
+    operationId: text("operation_id").notNull(),
     // 命令 JSON，不包含原始响应正文和凭据。
     payload: json("payload").notNull(),
     // outbox 状态。
     state: text("state").notNull().default("pending"),
-    // 已尝试次数。
-    attempts: integer("attempts").notNull().default(0),
-    // 下次尝试时间。
-    nextAttemptAt: timestamp("next_attempt_at").notNull().defaultNow(),
-    // 创建时间。
-    createdAt: timestamp("created_at").notNull().defaultNow(),
     // 最近更新时间。
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -528,7 +546,13 @@ export const settlementOutbox = pgTable(
     // 同一账务命令幂等键唯一。
     index("settlement_outbox_idempotency_idx").on(table.idempotencyKey),
     // 只允许有限命令和状态。
-    check("settlement_outbox_command", sql`${table.command} in ('report','cancel','reconcile')`),
-    check("settlement_outbox_state", sql`${table.state} in ('pending','processing','succeeded','failed')`),
-  ],
+    check(
+      "settlement_outbox_command",
+      sql`${table.command} in ('report','cancel','reconcile')`
+    ),
+    check(
+      "settlement_outbox_state",
+      sql`${table.state} in ('pending','processing','succeeded','failed')`
+    ),
+  ]
 );

@@ -9,12 +9,14 @@ test("platform client sends separated credentials, idempotency and rejects redir
   const requests: Request[] = [];
   const client = createPlatformBillingClient({
     baseUrl: "https://platform.example",
+    fetcher: (input, init) => {
+      requests.push(new Request(input, init));
+      return Promise.resolve(
+        Response.json({ holdId: "hold-1", reservedPoints: "2" })
+      );
+    },
     serviceToken: "service-token",
     userToken: "user-token",
-    fetcher: async (input, init) => {
-      requests.push(new Request(input, init));
-      return Response.json({ holdId: "hold-1", reservedPoints: "2" });
-    },
   });
   const result = await client.reserve({
     attemptId: "attempt-1",
@@ -23,18 +25,26 @@ test("platform client sends separated credentials, idempotency and rejects redir
     tool: { api: "search", platform: "1688", provider: "onebound" },
   });
   assert.deepEqual(result, { holdId: "hold-1", reservedPoints: "2" });
-  assert.equal(requests[0].headers.get("Authorization"), "Bearer service-token");
+  assert.equal(
+    requests[0].headers.get("Authorization"),
+    "Bearer service-token"
+  );
   assert.equal(requests[0].headers.get("X-Platform-User-Token"), "user-token");
-  assert.equal(requests[0].headers.get("Idempotency-Key"), "operation-1:reserve");
+  assert.equal(
+    requests[0].headers.get("Idempotency-Key"),
+    "operation-1:reserve"
+  );
 });
 
 test("platform client surfaces business errors without fallback", async () => {
   const client = createPlatformBillingClient({
     baseUrl: "https://platform.example",
+    fetcher: () =>
+      Promise.resolve(
+        Response.json({ code: "INSUFFICIENT_CREDITS" }, { status: 409 })
+      ),
     serviceToken: "service-token",
     userToken: "user-token",
-    fetcher: async () =>
-      Response.json({ code: "INSUFFICIENT_CREDITS" }, { status: 409 }),
   });
   await assert.rejects(
     client.reserve({
@@ -46,6 +56,6 @@ test("platform client surfaces business errors without fallback", async () => {
     (error: unknown) =>
       error instanceof PlatformHttpError &&
       error.status === 409 &&
-      error.code === "INSUFFICIENT_CREDITS",
+      error.code === "INSUFFICIENT_CREDITS"
   );
 });

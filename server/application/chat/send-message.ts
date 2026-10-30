@@ -125,6 +125,18 @@ export type SendMessageDeps = {
     toolCallId: string;
     userId: string;
   }) => Promise<unknown>;
+  toolBillingFactory?: (input: {
+    chatId: string;
+    session: ChatSession;
+    userId: string;
+  }) =>
+    | ((call: {
+        args: unknown;
+        canonicalToolKey: string;
+        next: () => Promise<unknown>;
+        toolCallId: string;
+      }) => Promise<unknown>)
+    | undefined;
 };
 
 const HEALTH_CHECK_DELAY_MS = 9000;
@@ -325,6 +337,11 @@ export async function sendMessage(
   }
 
   const runFailure = createRunFailureReporter();
+  const requestToolBilling = deps.toolBillingFactory?.({
+    chatId: id,
+    session,
+    userId: user.id,
+  });
   const stream = createUIMessageStream<ChatMessage>({
     execute: async ({ writer: dataStream }) => {
       dataStream.write({
@@ -423,21 +440,23 @@ export async function sendMessage(
               taskCapabilities.assertCurrent(
                 `server:${server.capabilityId ?? server.id}`
               ),
+            billToolCall:
+              requestToolBilling ??
+              (deps.toolBilling
+                ? ({ args, canonicalToolKey, next, toolCallId }) =>
+                    deps.toolBilling?.({
+                      args,
+                      canonicalToolKey,
+                      chatId: id,
+                      next,
+                      toolCallId,
+                      userId: user.id,
+                    }) ?? next()
+                : undefined),
             ledger: evidenceLedger,
             onSource: (source) =>
               dataStream.write({ data: source, type: "data-mcp-source" }),
             skills: taskCapabilities.skills,
-            billToolCall: deps.toolBilling
-              ? ({ args, canonicalToolKey, next, toolCallId }) =>
-                  deps.toolBilling?.({
-                    args,
-                    canonicalToolKey,
-                    chatId: id,
-                    next,
-                    toolCallId,
-                    userId: user.id,
-                  }) ?? next()
-              : undefined,
           }
         );
         if (supportsTools) {

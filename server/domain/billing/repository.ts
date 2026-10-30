@@ -16,16 +16,16 @@ export type ExecutionReceiptInput = {
 };
 
 export interface BillingRepository {
-  claimSending(input: {
+  claimSending: (input: {
     attemptId: string;
     operationId: string;
-  }): Promise<boolean>;
-  createOperation(input: ExecutionOperationInput): Promise<void>;
-  saveReceipt(input: ExecutionReceiptInput): Promise<void>;
-  enqueueSettlement(input: {
+  }) => Promise<boolean>;
+  createOperation: (input: ExecutionOperationInput) => Promise<void>;
+  enqueueSettlement: (input: {
     command: "cancel" | "reconcile" | "report";
     idempotencyKey: string;
     operationId: string;
     payload: unknown;
-  }): Promise<void>;
+  }) => Promise<void>;
+  saveReceipt: (input: ExecutionReceiptInput) => Promise<void>;
 }

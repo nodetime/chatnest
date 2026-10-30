@@ -12,9 +12,9 @@ const context = {
 test("standalone tool billing is explicitly unmetered and calls next once", async () => {
   let calls = 0;
   const around = createToolBillingAroundCall({ mode: "standalone" });
-  const result = await around(context, async () => {
-    calls++;
-    return "ok";
+  const result = await around(context, () => {
+    calls += 1;
+    return Promise.resolve("ok");
   });
   assert.equal(result, "ok");
   assert.equal(calls, 1);
@@ -25,57 +25,66 @@ test("connected tool billing reserves, dispatches, claims sending and reports on
   let calls = 0;
   const around = createToolBillingAroundCall({
     mode: "connected",
-    platform: {
-      dispatch: async () => {
-        events.push("dispatch");
-        return { permit: "permit" };
+    operations: {
+      claimSending: () => {
+        events.push("sending");
+        return Promise.resolve(true);
       },
-      report: async () => {
-        events.push("report");
-      },
-      reserve: async () => {
-        events.push("reserve");
-        return { holdId: "hold-1", reservedPoints: "2" };
+      create: () => {
+        events.push("ready");
+        return Promise.resolve();
       },
     },
-    operations: {
-      claimSending: async () => {
-        events.push("sending");
-        return true;
+    platform: {
+      dispatch: () => {
+        events.push("dispatch");
+        return Promise.resolve({ permit: "permit" });
       },
-      create: async () => {
-        events.push("ready");
+      report: () => {
+        events.push("report");
+        return Promise.resolve();
+      },
+      reserve: () => {
+        events.push("reserve");
+        return Promise.resolve({ holdId: "hold-1", reservedPoints: "2" });
       },
     },
   });
-  const result = await around(context, async () => {
-    calls++;
-    return { ok: true };
+  const result = await around(context, () => {
+    calls += 1;
+    return Promise.resolve({ ok: true });
   });
   assert.deepEqual(result, { ok: true });
   assert.equal(calls, 1);
-  assert.deepEqual(events, ["ready", "reserve", "dispatch", "sending", "report"]);
+  assert.deepEqual(events, [
+    "ready",
+    "reserve",
+    "dispatch",
+    "sending",
+    "report",
+  ]);
 });
 
 test("connected mode never falls back to unmetered when platform reserve fails", async () => {
   let calls = 0;
   const around = createToolBillingAroundCall({
     mode: "connected",
-    platform: {
-      dispatch: async () => ({ permit: "never" }),
-      report: async () => undefined,
-      reserve: async () => {
-        throw new Error("platform down");
-      },
+    operations: {
+      claimSending: async () => true,
+      create: async () => undefined,
     },
-    operations: { claimSending: async () => true, create: async () => undefined },
+    platform: {
+      dispatch: () => Promise.resolve({ permit: "never" }),
+      report: () => Promise.resolve(),
+      reserve: () => Promise.reject(new Error("platform down")),
+    },
   });
   await assert.rejects(
-    around(context, async () => {
-      calls++;
-      return "free";
+    around(context, () => {
+      calls += 1;
+      return Promise.resolve("free");
     }),
-    /platform down/,
+    /platform down/
   );
   assert.equal(calls, 0);
 });
@@ -84,23 +93,25 @@ test("a losing sending CAS does not call the supplier or report", async () => {
   const events: string[] = [];
   const around = createToolBillingAroundCall({
     mode: "connected",
+    operations: {
+      claimSending: () => Promise.resolve(false),
+      create: () => Promise.resolve(),
+    },
     platform: {
       dispatch: async () => ({ permit: "permit" }),
-      report: async () => {
+      report: () => {
         events.push("report");
+        return Promise.resolve();
       },
-      reserve: async () => ({ holdId: "hold-1", reservedPoints: "2" }),
-    },
-    operations: {
-      claimSending: async () => false,
-      create: async () => undefined,
+      reserve: () => Promise.resolve({ holdId: "hold-1", reservedPoints: "2" }),
     },
   });
   await assert.rejects(
-    around(context, async () => {
+    around(context, () => {
       events.push("supplier");
+      return Promise.resolve();
     }),
-    /already claimed/,
+    /already claimed/
   );
   assert.deepEqual(events, []);
 });

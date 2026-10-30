@@ -20,7 +20,10 @@ test("platform points contract contains every v1 operation and strict operation 
     "/operations/{operationId}/cancel",
     "/internal/v1/receipts/{attemptId}",
   ]) {
-    assert.match(openapi, new RegExp(path.replaceAll("{", "\\{").replaceAll("}", "\\}")));
+    assert.match(
+      openapi,
+      new RegExp(path.replaceAll("{", "\\{").replaceAll("}", "\\}"))
+    );
   }
   assert.equal(schema.additionalProperties, false);
   assert.deepEqual(schema.required, [

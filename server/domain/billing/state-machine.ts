@@ -30,45 +30,59 @@ function assertNever(value: never): never {
 
 export function transitionBillingState(
   state: BillingState,
-  event: BillingEvent,
+  event: BillingEvent
 ): BillingState {
   switch (event.type) {
     case "reserve":
-      if (state !== "idle") throw new Error("reserve requires idle state");
+      if (state !== "idle") {
+        throw new Error("reserve requires idle state");
+      }
       return "reserved";
     case "dispatch":
-      if (state !== "reserved")
+      if (state !== "reserved") {
         throw new Error("dispatch requires reserved state");
+      }
       return "dispatching";
     case "receipt":
-      if (state !== "dispatching")
+      if (state !== "dispatching") {
         throw new Error("receipt requires dispatching state");
-      if (event.dispatchEvidence === "not_dispatched") return "released";
-      if (event.dispatchEvidence === "unknown") return "reconcile_pending";
+      }
+      if (event.dispatchEvidence === "not_dispatched") {
+        return "released";
+      }
+      if (event.dispatchEvidence === "unknown") {
+        return "reconcile_pending";
+      }
       return "settling";
     case "settle":
-      if (state !== "settling")
+      if (state !== "settling") {
         throw new Error("settle requires settling state");
+      }
       return "settled";
     case "release":
-      if (state !== "reserved" && state !== "settling")
+      if (state !== "reserved" && state !== "settling") {
         throw new Error("release requires reserved or settling state");
+      }
       return "released";
     case "reconcile_charge":
-      if (state !== "reconcile_pending")
+      if (state !== "reconcile_pending") {
         throw new Error("reconcile_charge requires reconcile_pending state");
+      }
       return "settled";
     case "reconcile_release":
-      if (state !== "reconcile_pending")
+      if (state !== "reconcile_pending") {
         throw new Error("reconcile_release requires reconcile_pending state");
+      }
       return "released";
     case "adjust":
-      if (state !== "reconcile_pending" && state !== "overage_pending")
+      if (state !== "reconcile_pending" && state !== "overage_pending") {
         throw new Error("adjust requires a review state");
+      }
       return "adjusted";
     case "overage":
-      if (state !== "settling")
+      if (state !== "settling") {
         throw new Error("overage requires settling state");
+      }
       return "overage_pending";
     default:
       return assertNever(event);

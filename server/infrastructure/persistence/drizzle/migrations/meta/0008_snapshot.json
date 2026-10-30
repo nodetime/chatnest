@@ -46,12 +46,8 @@
           "name": "capability_settings_user_fk",
           "tableFrom": "capability_settings",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -59,10 +55,7 @@
       "compositePrimaryKeys": {
         "capability_settings_pk": {
           "name": "capability_settings_pk",
-          "columns": [
-            "user_id",
-            "kind"
-          ]
+          "columns": ["user_id", "kind"]
         }
       },
       "uniqueConstraints": {},
@@ -122,12 +115,8 @@
           "name": "chats_user_id_users_id_fk",
           "tableFrom": "chats",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -186,12 +175,8 @@
           "name": "chat_capability_scopes_chat_fk",
           "tableFrom": "chat_capability_scopes",
           "tableTo": "chats",
-          "columnsFrom": [
-            "chat_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["chat_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -199,12 +184,8 @@
           "name": "chat_capability_scopes_user_fk",
           "tableFrom": "chat_capability_scopes",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -212,9 +193,7 @@
       "compositePrimaryKeys": {
         "chat_capability_scopes_pk": {
           "name": "chat_capability_scopes_pk",
-          "columns": [
-            "chat_id"
-          ]
+          "columns": ["chat_id"]
         }
       },
       "uniqueConstraints": {},
@@ -276,12 +255,8 @@
           "name": "documents_user_id_users_id_fk",
           "tableFrom": "documents",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -289,10 +264,7 @@
       "compositePrimaryKeys": {
         "documents_id_created_at_pk": {
           "name": "documents_id_created_at_pk",
-          "columns": [
-            "id",
-            "created_at"
-          ]
+          "columns": ["id", "created_at"]
         }
       },
       "uniqueConstraints": {},
@@ -434,12 +406,8 @@
           "name": "execution_operations_user_id_users_id_fk",
           "tableFrom": "execution_operations",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -447,12 +415,8 @@
           "name": "execution_operations_chat_id_chats_id_fk",
           "tableFrom": "execution_operations",
           "tableTo": "chats",
-          "columnsFrom": [
-            "chat_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["chat_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -613,12 +577,8 @@
           "name": "external_identities_user_id_users_id_fk",
           "tableFrom": "external_identities",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -626,11 +586,7 @@
       "compositePrimaryKeys": {
         "external_identities_pk": {
           "name": "external_identities_pk",
-          "columns": [
-            "platform_id",
-            "issuer",
-            "subject"
-          ]
+          "columns": ["platform_id", "issuer", "subject"]
         }
       },
       "uniqueConstraints": {},
@@ -680,12 +636,8 @@
           "name": "mcp_settings_updated_by_users_id_fk",
           "tableFrom": "mcp_settings",
           "tableTo": "users",
-          "columnsFrom": [
-            "updated_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["updated_by"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -753,12 +705,8 @@
           "name": "messages_chat_id_chats_id_fk",
           "tableFrom": "messages",
           "tableTo": "chats",
-          "columnsFrom": [
-            "chat_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["chat_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -811,12 +759,8 @@
           "name": "model_settings_updated_by_users_id_fk",
           "tableFrom": "model_settings",
           "tableTo": "users",
-          "columnsFrom": [
-            "updated_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["updated_by"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -970,12 +914,8 @@
           "name": "streams_chat_id_chats_id_fk",
           "tableFrom": "streams",
           "tableTo": "chats",
-          "columnsFrom": [
-            "chat_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["chat_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -983,9 +923,7 @@
       "compositePrimaryKeys": {
         "streams_id_pk": {
           "name": "streams_id_pk",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {},
@@ -1060,12 +998,8 @@
           "name": "suggestions_user_id_users_id_fk",
           "tableFrom": "suggestions",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1073,14 +1007,8 @@
           "name": "suggestions_document_id_document_created_at_documents_id_created_at_fk",
           "tableFrom": "suggestions",
           "tableTo": "documents",
-          "columnsFrom": [
-            "document_id",
-            "document_created_at"
-          ],
-          "columnsTo": [
-            "id",
-            "created_at"
-          ],
+          "columnsFrom": ["document_id", "document_created_at"],
+          "columnsTo": ["id", "created_at"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1088,9 +1016,7 @@
       "compositePrimaryKeys": {
         "suggestions_id_pk": {
           "name": "suggestions_id_pk",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {},
@@ -1177,12 +1103,8 @@
           "name": "upload_assets_owner_id_users_id_fk",
           "tableFrom": "upload_assets",
           "tableTo": "users",
-          "columnsFrom": [
-            "owner_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["owner_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1229,12 +1151,8 @@
           "name": "upload_asset_messages_asset_id_upload_assets_id_fk",
           "tableFrom": "upload_asset_messages",
           "tableTo": "upload_assets",
-          "columnsFrom": [
-            "asset_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["asset_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1242,12 +1160,8 @@
           "name": "upload_asset_messages_message_id_messages_id_fk",
           "tableFrom": "upload_asset_messages",
           "tableTo": "messages",
-          "columnsFrom": [
-            "message_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["message_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1255,10 +1169,7 @@
       "compositePrimaryKeys": {
         "upload_asset_messages_asset_id_message_id_pk": {
           "name": "upload_asset_messages_asset_id_message_id_pk",
-          "columns": [
-            "asset_id",
-            "message_id"
-          ]
+          "columns": ["asset_id", "message_id"]
         }
       },
       "uniqueConstraints": {},
@@ -1311,12 +1222,8 @@
           "name": "upload_settings_updated_by_users_id_fk",
           "tableFrom": "upload_settings",
           "tableTo": "users",
-          "columnsFrom": [
-            "updated_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["updated_by"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1437,12 +1344,8 @@
           "name": "votes_chat_id_chats_id_fk",
           "tableFrom": "votes",
           "tableTo": "chats",
-          "columnsFrom": [
-            "chat_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["chat_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1450,12 +1353,8 @@
           "name": "votes_message_id_messages_id_fk",
           "tableFrom": "votes",
           "tableTo": "messages",
-          "columnsFrom": [
-            "message_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["message_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1463,10 +1362,7 @@
       "compositePrimaryKeys": {
         "votes_chat_id_message_id_pk": {
           "name": "votes_chat_id_message_id_pk",
-          "columns": [
-            "chat_id",
-            "message_id"
-          ]
+          "columns": ["chat_id", "message_id"]
         }
       },
       "uniqueConstraints": {},

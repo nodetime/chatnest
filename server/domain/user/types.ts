@@ -20,4 +20,13 @@ export type UserRow = {
 export type SessionUser = { id: string; type: UserType };
 
 // 完整鉴权 Session 的结构超集视图:expires 为工具侧 Session 结构兼容保留
-export type ChatSession = { user: SessionUser; expires: string };
+export type ChatSession = {
+  user: SessionUser;
+  expires: string;
+  // connected 模式下由服务端会话适配器注入，不进入浏览器可读数据。
+  platform?: {
+    issuer: string;
+    subject: string;
+    token: string;
+  };
+};

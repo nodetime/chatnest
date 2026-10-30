@@ -26,10 +26,10 @@ export type PlatformReportInput = {
 };
 
 export interface PlatformBillingClient {
-  dispatch(input: {
+  dispatch: (input: {
     attemptId: string;
     operationId: string;
-  }): Promise<PlatformDispatchResult>;
-  report(input: PlatformReportInput): Promise<void>;
-  reserve(input: PlatformReserveInput): Promise<PlatformReserveResult>;
+  }) => Promise<PlatformDispatchResult>;
+  report: (input: PlatformReportInput) => Promise<void>;
+  reserve: (input: PlatformReserveInput) => Promise<PlatformReserveResult>;
 }

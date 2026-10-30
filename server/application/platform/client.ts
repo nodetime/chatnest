@@ -3,7 +3,6 @@ import { z } from "zod";
 import type {
   PlatformBillingClient,
   PlatformDispatchResult,
-  PlatformReportInput,
   PlatformReserveInput,
   PlatformReserveResult,
 } from "./protocol";
@@ -25,12 +24,14 @@ export type PlatformClientOptions = {
 };
 
 export class PlatformHttpError extends Error {
-  constructor(
-    public readonly status: number,
-    public readonly code: string,
-  ) {
+  readonly status: number;
+  readonly code: string;
+
+  constructor(status: number, code: string) {
     super(`Platform request failed: ${status} ${code}`);
     this.name = "PlatformHttpError";
+    this.status = status;
+    this.code = code;
   }
 }
 
@@ -40,16 +41,17 @@ async function request<T>(
   path: string,
   body: unknown,
   idempotencyKey: string,
-  schema: z.ZodType<T>,
+  schema: z.ZodType<T>
 ): Promise<T> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? 5000);
+  const timeout = setTimeout(
+    () => controller.abort(),
+    options.timeoutMs ?? 5000
+  );
   try {
     const url = new URL(path, options.baseUrl);
     const response = await (options.fetcher ?? fetch)(url, {
-      method,
-      redirect: "error",
-      signal: controller.signal,
+      body: JSON.stringify(body),
       headers: {
         Authorization: `Bearer ${options.serviceToken}`,
         "Content-Type": "application/json",
@@ -57,7 +59,9 @@ async function request<T>(
         "X-Platform-User-Token": options.userToken,
         "X-Request-Id": randomUUID(),
       },
-      body: JSON.stringify(body),
+      method,
+      redirect: "error",
+      signal: controller.signal,
     });
     const payload = (await response.json()) as unknown;
     if (!response.ok) {
@@ -74,27 +78,17 @@ async function request<T>(
 }
 
 export function createPlatformBillingClient(
-  options: PlatformClientOptions,
+  options: PlatformClientOptions
 ): PlatformBillingClient {
   return {
-    async reserve(input: PlatformReserveInput): Promise<PlatformReserveResult> {
-      return request(
-        options,
-        "POST",
-        "/api/platform/v1/operations/reserve",
-        input,
-        `${input.operationId}:reserve`,
-        reserveResponseSchema,
-      );
-    },
-    async dispatch(input): Promise<PlatformDispatchResult> {
+    dispatch(input): Promise<PlatformDispatchResult> {
       return request(
         options,
         "POST",
         `/api/platform/v1/operations/${encodeURIComponent(input.operationId)}/dispatch`,
         input,
         `${input.operationId}:dispatch`,
-        dispatchResponseSchema,
+        dispatchResponseSchema
       );
     },
     async report(input) {
@@ -104,7 +98,17 @@ export function createPlatformBillingClient(
         `/api/platform/v1/operations/${encodeURIComponent(input.operationId)}/report`,
         input,
         `${input.operationId}:report`,
-        z.object({ state: z.string().min(1) }),
+        z.object({ state: z.string().min(1) })
+      );
+    },
+    reserve(input: PlatformReserveInput): Promise<PlatformReserveResult> {
+      return request(
+        options,
+        "POST",
+        "/api/platform/v1/operations/reserve",
+        input,
+        `${input.operationId}:reserve`,
+        reserveResponseSchema
       );
     },
   };

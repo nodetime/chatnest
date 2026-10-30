@@ -1,5 +1,6 @@
 import { createMCPClient, type MCPClient } from "@ai-sdk/mcp";
 import { dynamicTool, type ToolSet } from "ai";
+import { currentExecutionPermit } from "@/server/application/chat/tool-billing";
 import {
   abortable,
   closeManagedClient,
@@ -101,10 +102,37 @@ export async function createAgentRuntime(
                 ...(server.managed ? { maxRetries: 0 } : {}),
                 transport: {
                   fetch: server.managed
-                    ? guardedFetch({ headers, url }, process.env, runSignal)
+                    ? guardedFetch(
+                        { headers, url },
+                        process.env,
+                        runSignal,
+                        (input, init) => {
+                          const permit = currentExecutionPermit();
+                          const requestHeaders = new Headers(init?.headers);
+                          if (permit) {
+                            requestHeaders.set(
+                              "X-Porta-Execution-Permit",
+                              permit
+                            );
+                          }
+                          return fetch(input, {
+                            ...init,
+                            headers: requestHeaders,
+                          });
+                        }
+                      )
                     : (input, init) =>
                         fetch(input, {
                           ...init,
+                          headers: {
+                            ...Object.fromEntries(new Headers(init?.headers)),
+                            ...(currentExecutionPermit()
+                              ? {
+                                  "X-Porta-Execution-Permit":
+                                    currentExecutionPermit(),
+                                }
+                              : {}),
+                          },
                           // Do not let redirects evade endpoint policy or move credentials.
                           redirect: "error",
                           signal: AbortSignal.any([
@@ -170,7 +198,7 @@ export async function createAgentRuntime(
                             ...options,
                             abortSignal: callSignal,
                           }),
-                        callSignal,
+                        callSignal
                       );
                     output = await (evidence.billToolCall
                       ? evidence.billToolCall({

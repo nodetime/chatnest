@@ -1,9 +1,10 @@
-import type { ToolIdentity } from "@/server/domain/billing/types";
+import { AsyncLocalStorage } from "node:async_hooks";
 import type {
   PlatformBillingClient,
   PlatformReportInput,
   PlatformReserveInput,
 } from "@/server/application/platform/protocol";
+import type { ToolIdentity } from "@/server/domain/billing/types";
 
 export type BillingExecutionContext = {
   attemptId: string;
@@ -15,11 +16,11 @@ export type BillingExecutionContext = {
 };
 
 type OperationStore = {
-  claimSending(input: {
+  claimSending: (input: {
     attemptId: string;
     operationId: string;
-  }): Promise<boolean>;
-  create(input: BillingExecutionContext): Promise<void>;
+  }) => Promise<boolean>;
+  create: (input: BillingExecutionContext) => Promise<void>;
 };
 
 type ToolBillingOptions = {
@@ -30,10 +31,25 @@ type ToolBillingOptions = {
 
 export type AroundToolCall = <T>(
   context: BillingExecutionContext,
-  next: () => Promise<T>,
+  next: () => Promise<T>
 ) => Promise<T>;
 
-function assertConnected(options: ToolBillingOptions): asserts options is ToolBillingOptions & {
+const permitStorage = new AsyncLocalStorage<string>();
+
+export function currentExecutionPermit(): string | undefined {
+  return permitStorage.getStore();
+}
+
+export function withExecutionPermit<T>(
+  permit: string,
+  next: () => Promise<T>
+): Promise<T> {
+  return permitStorage.run(permit, next);
+}
+
+function assertConnected(
+  options: ToolBillingOptions
+): asserts options is ToolBillingOptions & {
   operations: OperationStore;
   platform: PlatformBillingClient;
 } {
@@ -43,13 +59,15 @@ function assertConnected(options: ToolBillingOptions): asserts options is ToolBi
 }
 
 export function createToolBillingAroundCall(
-  options: ToolBillingOptions,
+  options: ToolBillingOptions
 ): AroundToolCall {
   return async <T>(
     context: BillingExecutionContext,
-    next: () => Promise<T>,
+    next: () => Promise<T>
   ): Promise<T> => {
-    if (options.mode === "standalone") return next();
+    if (options.mode === "standalone") {
+      return next();
+    }
     assertConnected(options);
     await options.operations.create(context);
     const reserveInput: PlatformReserveInput = {
@@ -64,7 +82,7 @@ export function createToolBillingAroundCall(
       },
     };
     await options.platform.reserve(reserveInput);
-    await options.platform.dispatch({
+    const permit = await options.platform.dispatch({
       attemptId: context.attemptId,
       operationId: context.operationId,
     });
@@ -72,10 +90,12 @@ export function createToolBillingAroundCall(
       attemptId: context.attemptId,
       operationId: context.operationId,
     });
-    if (!claimed) throw new Error("Execution attempt already claimed");
+    if (!claimed) {
+      throw new Error("Execution attempt already claimed");
+    }
     let result: T;
     try {
-      result = await next();
+      result = await withExecutionPermit(permit.permit, next);
     } catch (error) {
       const report: PlatformReportInput = {
         attemptId: context.attemptId,

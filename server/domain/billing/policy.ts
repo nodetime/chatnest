@@ -1,8 +1,5 @@
 import { z } from "zod";
-import {
-  decimalStringSchema,
-  type DecimalString,
-} from "./types";
+import { type DecimalString, decimalStringSchema } from "./types";
 
 const chargeModeSchema = z.enum(["attempt", "success"]);
 
@@ -69,16 +66,37 @@ function assertPolicyPoints(policy: ToolPricePolicy): ToolPricePolicy {
 
 export function resolveToolPrice(
   catalog: ToolPriceCatalog,
-  canonicalToolKey: string,
+  canonicalToolKey: string
 ): ToolPricePolicy | null {
-  if (!catalog || catalog.default !== "deny") {
+  if (catalog?.default !== "deny") {
     throw new Error("Tool price catalog must use default=deny");
   }
   const policy = catalog.tools[canonicalToolKey];
-  if (!policy) return null;
+  if (!policy) {
+    return null;
+  }
   return assertPolicyPoints(policy);
 }
 
 export function pointsToBigInt(points: DecimalString): bigint {
   return BigInt(points);
+}
+
+export function settleReportedUnits(
+  policy: Extract<ToolPricePolicy, { kind: "reported_unit" }>,
+  actualUnits: string
+): { actualPoints: string; overage: boolean; surplusPoints: string } {
+  if (!/^(?:0|[1-9]\d{0,18})$/.test(actualUnits)) {
+    throw new Error("actual units must be a non-negative integer string");
+  }
+  const actual = BigInt(actualUnits);
+  const cap = BigInt(policy.reserve.capUnits);
+  const pointsPerUnit = BigInt(policy.pointsPerUnit);
+  const actualPoints = actual * pointsPerUnit;
+  const reservedPoints = cap * pointsPerUnit;
+  return {
+    actualPoints: String(actualPoints),
+    overage: actual > cap,
+    surplusPoints: actual > cap ? "0" : String(reservedPoints - actualPoints),
+  };
 }

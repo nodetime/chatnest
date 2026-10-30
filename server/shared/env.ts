@@ -10,6 +10,8 @@ const envSchema = z.object({
   AGENT_CONFIG_PATH: z.string().optional(),
   BROWSER_EXECUTABLE_PATH: z.string().optional(),
   BROWSER_RUNTIME: z.string().optional(),
+  CHATNEST_CONTROL_TOKEN: z.string().optional(),
+  CHATNEST_DEPLOYMENT_ID: z.string().min(1).max(128).optional(),
   IS_DEMO: z.string().optional(),
   LOG_FILE_DIR: z.string().optional(),
   LOG_LEVEL: z.string().optional(),
@@ -20,8 +22,6 @@ const envSchema = z.object({
   PLATFORM_MODE: z.enum(["standalone", "connected"]).optional(),
   PLATFORM_SERVICE_TOKEN: z.string().optional(),
   PLATFORM_SESSION_ENCRYPTION_KEY: z.string().optional(),
-  CHATNEST_DEPLOYMENT_ID: z.string().min(1).max(128).optional(),
-  CHATNEST_CONTROL_TOKEN: z.string().optional(),
   // 数据库连接串;缺省时空串兜底,首次真正查询时才失败(与改造前行为一致)
   POSTGRES_URL: z.string().optional(),
   REDIS_URL: z.string().optional(),

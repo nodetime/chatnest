@@ -2,41 +2,42 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   resolveToolPrice,
+  settleReportedUnits,
   type ToolPriceCatalog,
 } from "@/server/domain/billing/policy";
 import {
-  transitionBillingState,
-  type BillingState,
   type BillingEvent,
+  type BillingState,
+  transitionBillingState,
 } from "@/server/domain/billing/state-machine";
 import type { DecimalString } from "@/server/domain/billing/types";
 
 const points = (value: string) => value as DecimalString;
 
 const catalog: ToolPriceCatalog = {
-  version: "2026-10-30.1",
   default: "deny",
   tools: {
-    "onebound/1688/item_search": {
-      kind: "fixed_call",
-      points: points("2"),
-      unit: "call",
-      chargeMode: "attempt",
-    },
-    "native_mcp/alibaba1688_product/find_product": {
-      kind: "reported_unit",
-      unit: "record",
-      pointsPerUnit: points("1"),
-      reserve: { strategy: "fixed_cap", capUnits: points("5") },
-      overage: "manual_review",
-      chargeMode: "success",
-    },
     "crossref/works/get_work": {
       kind: "included",
       points: "0",
       unit: "call",
     },
+    "native_mcp/alibaba1688_product/find_product": {
+      chargeMode: "success",
+      kind: "reported_unit",
+      overage: "manual_review",
+      pointsPerUnit: points("1"),
+      reserve: { capUnits: points("5"), strategy: "fixed_cap" },
+      unit: "record",
+    },
+    "onebound/1688/item_search": {
+      chargeMode: "attempt",
+      kind: "fixed_call",
+      points: points("2"),
+      unit: "call",
+    },
   },
+  version: "2026-10-30.1",
 };
 
 test("resolves different fixed, metered, included and denied tool policies", () => {
@@ -63,10 +64,10 @@ test("rejects malformed points policy at runtime", () => {
         ...catalog,
         tools: {
           broken: {
+            chargeMode: "attempt",
             kind: "fixed_call",
             points: "-1",
             unit: "call",
-            chargeMode: "attempt",
           },
         },
       } as unknown as ToolPriceCatalog,
@@ -79,7 +80,7 @@ test("accepts only legal billing state transitions", () => {
   const events: BillingEvent[] = [
     { type: "reserve" },
     { type: "dispatch" },
-    { type: "receipt", dispatchEvidence: "response", actualPoints: "2" },
+    { actualPoints: "2", dispatchEvidence: "response", type: "receipt" },
     { type: "settle" },
   ];
   let state: BillingState = "idle";
@@ -89,11 +90,29 @@ test("accepts only legal billing state transitions", () => {
   assert.equal(state, "settled");
   assert.equal(
     transitionBillingState("dispatching", {
-      type: "receipt",
-      dispatchEvidence: "not_dispatched",
       actualPoints: "0",
+      dispatchEvidence: "not_dispatched",
+      type: "receipt",
     }),
     "released"
   );
   assert.throws(() => transitionBillingState("settled", { type: "dispatch" }));
+});
+
+test("settles reported units against a cap and exposes overage without auto-charging", () => {
+  const policy = catalog.tools["native_mcp/alibaba1688_product/find_product"];
+  assert.equal(policy?.kind, "reported_unit");
+  if (policy?.kind !== "reported_unit") {
+    return;
+  }
+  assert.deepEqual(settleReportedUnits(policy, "3"), {
+    actualPoints: "3",
+    overage: false,
+    surplusPoints: "2",
+  });
+  assert.deepEqual(settleReportedUnits(policy, "8"), {
+    actualPoints: "8",
+    overage: true,
+    surplusPoints: "0",
+  });
 });
