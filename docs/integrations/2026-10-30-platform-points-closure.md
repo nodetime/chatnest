@@ -59,3 +59,9 @@ Payload 业务仓库已接入：`/Users/nako/Documents/ChatGPT/NexaZ/heymoro-sta
 - 模型收费策略键为 `model/<modelId>`，工具收费策略键为 Porta canonical key；两类步骤可以配置不同 `pointsPerCall`。
 - `GET /api/platform/v1/sessions/:sessionGroupId` 和 ChatNest `GET /api/chat/billing` 均返回 totals + steps，步骤包含 reserve/capture/state/outcome/receipt。
 - connected 模式下缺少 Payload 用户 token 会 fail-closed；不会降级为 standalone 或免费模型调用。
+
+### 本次三方实际链路输出
+
+- ChatNest 的真实 `PlatformBillingClient` / AOP 直连 Payload `127.0.0.1:3000`，再把 Porta permit 带到 `127.0.0.1:33383`。
+- 同一 `sessionGroupId=chatnest-real-e2e-1` 完成 `model/chat-model=3` 与 `onebound/1688/item_search=2` 两步；`totals.reservedPoints=5`、`totals.capturedPoints=5`。
+- 两步均为 `settled` / `response`；工具步骤收到签名 Porta receipt，Payload session details 可逐步查看扣费明细。
