@@ -117,6 +117,14 @@ export type SendMessageInput = {
 export type SendMessageDeps = {
   chats: ChatRepository;
   messages: MessageRepository;
+  toolBilling?: (input: {
+    args: unknown;
+    canonicalToolKey: string;
+    chatId: string;
+    next: () => Promise<unknown>;
+    toolCallId: string;
+    userId: string;
+  }) => Promise<unknown>;
 };
 
 const HEALTH_CHECK_DELAY_MS = 9000;
@@ -419,6 +427,17 @@ export async function sendMessage(
             onSource: (source) =>
               dataStream.write({ data: source, type: "data-mcp-source" }),
             skills: taskCapabilities.skills,
+            billToolCall: deps.toolBilling
+              ? ({ args, canonicalToolKey, next, toolCallId }) =>
+                  deps.toolBilling?.({
+                    args,
+                    canonicalToolKey,
+                    chatId: id,
+                    next,
+                    toolCallId,
+                    userId: user.id,
+                  }) ?? next()
+              : undefined,
           }
         );
         if (supportsTools) {
