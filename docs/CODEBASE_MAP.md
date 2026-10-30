@@ -27,11 +27,13 @@ server/
 
 ## 关键子系统(现路径)
 
-**持久化**:`server/infrastructure/persistence/drizzle/` —— schema.ts(中文注释纪律)、migrations/、migrate.ts(`pnpm db:migrate`)、client.ts(共享连接,不加 server-only:白名单 tsx 测试直连此链)、仓储覆盖 chat/message/user/vote/document/suggestion/model-settings/mcp-settings/billing。billing 新增 external identity、execution operation/receipt、settlement outbox，单次 attempt CAS 与账务命令恢复不重放供应商调用。保留不变量:advisory lock 版本化文档写入、结果表保护拒绝、chat 级联删除+资产清理、replace* 事务并发基线。`pnpm build` 先跑迁移再构建(禁止本地执行)。
+**持久化**:`server/infrastructure/persistence/drizzle/` —— schema.ts(中文注释纪律)、migrations/、migrate.ts(`pnpm db:migrate`)、client.ts(共享连接,不加 server-only:白名单 tsx 测试直连此链)、仓储覆盖 chat/message/user/vote/document/suggestion/model-settings/mcp-settings/billing。billing 新增 external identity、execution operation/receipt、settlement outbox，单次 attempt CAS 与账务命令恢复不重放供应商调用；execution operation 还保存 sessionGroupId、stepIndex、modelId，用于模型/工具会话账务明细。保留不变量:advisory lock 版本化文档写入、结果表保护拒绝、chat 级联删除+资产清理、replace* 事务并发基线。`pnpm build` 先跑迁移再构建(禁止本地执行)。
 
 **模型网关**:`server/application/ai/` —— model-connection/model-service/model-context/providers/prompts + model-settings/{runtime,handler,service,network,probe}(加密 ModelSettings 行/AAD/CAS,DNS 钉扎 HTTPS 探测,可选部署侧 MODEL_DNS_OVERRIDES 精确域名公网 pin(仍保留 TLS/地址校验,dns-pins.test.ts 回归);目录 schema 在 domain/model/settings-schema.ts,仓储在 drizzle)。模型目录(chatModels/isDemo/titleModel)在 `domain/model/models.ts`。
 
 **Agent 运行时**:`server/infrastructure/mcp/` —— runtime.ts(每任务配置快照/HTTP MCP 客户端/工具发现/审批门)、config.ts(默认 agent.json + AGENT_CONFIG_PATH)、skills.ts(技能发现)。配置数据 agent.json 与技能快照(含 Porta)同层;`next.config.ts` NFT 种子指向这些路径。
+
+**积分 AOP**:`server/application/chat/tool-billing.ts` 包住 Porta 工具调用，`model-billing.ts` 通过 AI SDK `wrapLanguageModel` 包住每个模型 provider request；两者都经 `platform/execution-gate.ts` 生成 operation 并落本地 CAS。`app/(chat)/api/billing` 读取 Payload 的 sessionGroup totals/steps。
 
 **MCP 管理**:`server/application/mcp/`(api/service/security/runtime-config/projection 等 + 测试),类型/schema/editor 在 `domain/mcp/`;加密经 `shared/settings-crypto`;`/api/agent/mcp` 与 mcp-connections/mcp-editor UI 消费。
 
