@@ -65,3 +65,4 @@ Payload 业务仓库已接入：`/Users/nako/Documents/ChatGPT/NexaZ/heymoro-sta
 - ChatNest 的真实 `PlatformBillingClient` / AOP 直连 Payload `127.0.0.1:3000`，再把 Porta permit 带到 `127.0.0.1:33383`。
 - 同一 `sessionGroupId=chatnest-real-e2e-1` 完成 `model/chat-model=3` 与 `onebound/1688/item_search=2` 两步；`totals.reservedPoints=5`、`totals.capturedPoints=5`。
 - 两步均为 `settled` / `response`；工具步骤收到签名 Porta receipt，Payload session details 可逐步查看扣费明细。
+- 单步结束后 `billingSessions.status` 自动变为 `completed`；若存在 `unknown`，则保留 `reconcile_pending`，不提前标记完成。
