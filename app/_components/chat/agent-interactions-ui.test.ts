@@ -124,11 +124,11 @@ test("Provider导航和卸载中止捕获的旧SDK请求，旧交互句柄既不
     const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript');
     const {Chat:SDKChat}=require('@ai-sdk/react');
     const jsx=(type,props,key)=>({type,props,key});
-    let pathname='/chat/A',cursor=0,generated=0;const slots=[],pendingEffects=[],requests=[],instances=[];
+    let pathname='/chat/A',cursor=0,generated=0;const slots=[],pendingEffects=[],requests=[],instances=[],finishHandlers=[];
     const same=(a,b)=>a&&b&&a.length===b.length&&a.every((value,index)=>Object.is(value,b[index]));
     const memo=(fn,deps)=>{const index=cursor++;if(!slots[index]||!same(slots[index].deps,deps))slots[index]={deps,value:fn()};return slots[index].value;};
     const react={createContext:()=>({Provider:'provider'}),useContext:()=>null,useRef:initial=>{const index=cursor++;return slots[index]??(slots[index]={current:initial});},useState:initial=>{const index=cursor++;if(!slots[index])slots[index]={value:typeof initial==='function'?initial():initial};return [slots[index].value,value=>{slots[index].value=typeof value==='function'?value(slots[index].value):value;}];},useMemo:memo,useCallback:(fn,deps)=>memo(()=>fn,deps),useEffect:(fn,deps)=>{const index=cursor++;if(!slots[index]||!same(slots[index].deps,deps)){const previous=slots[index];slots[index]={deps,cleanup:previous?.cleanup};pendingEffects.push(()=>{previous?.cleanup?.();slots[index].cleanup=fn();});}}};
-    class Chat extends SDKChat {constructor(options){super(options);instances.push(this);}}
+    class Chat extends SDKChat {constructor(options){super(options);instances.push(this);finishHandlers.push(options.onFinish);}}
     class Transport {
       async sendMessages(request){
         const record={id:request.chatId,signal:request.abortSignal,aborted:false};requests.push(record);
@@ -136,15 +136,29 @@ test("Provider导航和卸载中止捕获的旧SDK请求，旧交互句柄既不
       }
       async reconnectToStream(){return null;}
     }
-    const models={selectableModelIds:['fixture'],defaultModelId:'fixture'},chats=new Map();
+    const models={selectableModelIds:['fixture'],defaultModelId:'fixture'},chats=new Map(),serverChats=new Map();
     const swr=url=>{if(url?.includes('/api/models'))return {data:models};if(url?.includes('/api/messages')){if(!chats.has(url))chats.set(url,{messages:[],visibility:'private',isReadonly:false});return {data:chats.get(url),isLoading:false,mutate:()=>Promise.resolve()};}return {data:[]};};
     const stream={setDataStream(){},setWaitingStatus(){}};const router={push(){}};
-    const modules={react,'react/jsx-runtime':{jsx,jsxs:jsx},'@ai-sdk/react':{Chat,useChat:({chat})=>({messages:chat.messages,setMessages:value=>{chat.messages=typeof value==='function'?value(chat.messages):value;},sendMessage:chat.sendMessage,status:chat.status,stop:chat.stop,regenerate:chat.regenerate,resumeStream:chat.resumeStream,addToolApprovalResponse:chat.addToolApprovalResponse,error:chat.error,clearError:chat.clearError})},ai:{DefaultChatTransport:Transport},'next/navigation':{usePathname:()=>pathname,useRouter:()=>router},swr:{__esModule:true,default:swr,useSWRConfig:()=>({mutate:()=>Promise.resolve()})},'swr/infinite':{unstable_serialize:()=>''},'@/app/_components/chat/chat-title':{projectChatTitle:()=> 'Fixture'},'@/app/_components/chat/data-stream-provider':{useDataStream:()=>stream},'@/app/_components/chat/sidebar-history':{getChatHistoryPaginationKey:()=>''},'@/app/_components/chat/toast':{toast(){}},'@/app/_hooks/use-auto-resume':{useAutoResume(){}},'@/app/_hooks/use-chat-draft':{useChatDraft:()=>react.useState('')},'@/app/_lib/utils':{generateUUID:()=> 'id-'+(++generated),fetcher(){},fetchWithErrorHandlers(){throw new Error('Unexpected network');}},'@/server/domain/model/models':{DEFAULT_CHAT_MODEL:'fixture'}};
+    const modules={react,'react/jsx-runtime':{jsx,jsxs:jsx},'@ai-sdk/react':{Chat,useChat:({chat})=>({messages:chat.messages,setMessages:value=>{chat.messages=typeof value==='function'?value(chat.messages):value;},sendMessage:chat.sendMessage,status:chat.status,stop:chat.stop,regenerate:chat.regenerate,resumeStream:chat.resumeStream,addToolApprovalResponse:chat.addToolApprovalResponse,error:chat.error,clearError:chat.clearError})},ai:{DefaultChatTransport:Transport},'next/navigation':{usePathname:()=>pathname,useRouter:()=>router},swr:{__esModule:true,default:swr,useSWRConfig:()=>({mutate:(key,update,options)=>{if(typeof update==="function"&&chats.has(key))chats.set(key,update(chats.get(key)));if(options?.revalidate===true&&serverChats.has(key)){assert.equal(update,undefined,"invalidate the old approval before fetching");chats.set(key,serverChats.get(key));}return Promise.resolve();}})},'swr/infinite':{unstable_serialize:()=>''},'@/app/_components/chat/chat-title':{projectChatTitle:()=> 'Fixture'},'@/app/_components/chat/data-stream-provider':{useDataStream:()=>stream},'@/app/_components/chat/sidebar-history':{getChatHistoryPaginationKey:()=>''},'@/app/_components/chat/toast':{toast(){}},'@/app/_hooks/use-auto-resume':{useAutoResume(){}},'@/app/_hooks/use-chat-draft':{useChatDraft:()=>react.useState('')},'@/app/_lib/utils':{generateUUID:()=> 'id-'+(++generated),fetcher(){},fetchWithErrorHandlers(){throw new Error('Unexpected network');}},'@/server/domain/model/models':{DEFAULT_CHAT_MODEL:'fixture'}};
     const output={exports:{}};vm.runInNewContext(ts.transpileModule(fs.readFileSync('app/_hooks/use-active-chat.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText,{module:output,exports:output.exports,require:name=>modules[name]??require(name),process:{env:{}},window:{addEventListener(){},removeEventListener(){},location:{search:''},history:{replaceState(){}}},document:{cookie:''},URLSearchParams,sessionStorage:{removeItem(){}}});
     const render=path=>{pathname=path;cursor=0;const tree=output.exports.ActiveChatProvider({children:null,ownerId:'fixture'});pendingEffects.splice(0).forEach(effect=>effect());return tree.props.value;};
     const tick=()=>new Promise(resolve=>setTimeout(resolve,0));
     (async()=>{
-      const a=render('/chat/A'),oldA=instances[0];const pendingA=a.sendMessage({role:'user',parts:[{type:'text',text:'A'}]});await tick();assert.equal(requests[0].id,'A');
+      const a=render('/chat/A'),oldA=instances[0];
+      const key='/api/messages?chatId=A', cached=chats.get(key);
+      const stale=[{id:'approval',role:'assistant',parts:[{type:'dynamic-tool',toolCallId:'tool',state:'approval-requested'}]}];
+      const completed=[{id:'approval',role:'assistant',parts:[{type:'dynamic-tool',toolCallId:'tool',state:'output-available'},{type:'text',text:'result saved'}]}];
+      chats.set(key,{...cached,messages:stale});
+      finishHandlers[0]({messages:completed,finishReason:'stop',isAbort:true});
+      assert.equal(chats.get(key).messages,stale,'an aborted stream must not replace persisted cache');
+      serverChats.set(key,{...cached,messages:completed});
+      finishHandlers[0]({messages:completed,finishReason:'stop'});
+      assert.equal(chats.get(key).messages,completed,'ordinary stream completion must replace an old approval snapshot before sidebar reopen');
+      finishHandlers[0]({messages:stale,finishReason:'tool-calls'});
+      assert.equal(chats.get(key).messages,completed,'a replay acknowledgement must never overwrite the saved tool result');
+      assert.equal(chats.get(key).visibility,'private');
+      chats.set(key,cached);
+      const pendingA=a.sendMessage({role:'user',parts:[{type:'text',text:'A'}]});await tick();assert.equal(requests[0].id,'A');
       const b=render('/chat/B');await tick();assert.equal(requests[0].aborted,true,'navigation must abort the captured old A stream');await pendingA;
       const pendingB=b.sendMessage({role:'user',parts:[{type:'text',text:'B'}]});await tick();assert.equal(requests[1].id,'B');assert.equal(requests[1].aborted,false);
       await a.stop();await a.sendMessage({role:'user',parts:[{type:'text',text:'stale'}]});await assert.rejects(a.addToolApprovalResponse({id:'stale',approved:true}));await assert.rejects(a.answerAskUser({messageId:'a',toolCallId:'ask',output:{status:'cancelled',answers:{}}}));assert.equal(requests.length,2);assert.equal(requests[1].aborted,false,'old stop handler cannot abort B');
@@ -153,6 +167,13 @@ test("Provider导航和卸载中止捕获的旧SDK请求，旧交互句柄既不
       const pendingFreshA=freshA.sendMessage({role:'user',parts:[{type:'text',text:'fresh A'}]});await tick();assert.equal(requests.length,3);assert.equal(requests[2].aborted,false);
       slots.forEach(slot=>slot?.cleanup?.());await pendingFreshA;assert.equal(requests[2].aborted,true,'provider unmount aborts its captured current request');
       const lateUnmountSend=freshA.sendMessage({role:'user',parts:[{type:'text',text:'after unmount'}]});await tick();assert.equal(requests.length,3,'unmounted handles cannot start another request');await lateUnmountSend;await assert.rejects(freshA.addToolApprovalResponse({id:'unmounted',approved:true}));
+      const idle=render('/chat/C');assert.equal(idle.agentPaused,false);
+      idle.startNewChat();render('/chat');
+      assert.equal(render('/chat/C').agentPaused,false,'leaving a completed chat must not create a Continue task action');
+      const deliberatelyStopped=render('/chat/C');await deliberatelyStopped.stop();
+      deliberatelyStopped.startNewChat();render('/chat');
+      assert.equal(render('/chat/C').agentPaused,true,'an explicit stop still retains the pause');
+      assert.equal(requests.length,3,'navigation and reopening cannot send another request');
       process.stdout.write('ASYNC_DONE');
     })().catch(error=>{console.error(error);process.exitCode=1;});
   `);

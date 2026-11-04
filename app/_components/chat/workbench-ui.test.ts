@@ -24,7 +24,7 @@ function renderActivity(
     const {SessionContext}=require('next-auth/react');
     const { ToolActivity } = require('./app/_components/chat/tool-activity.tsx');
     global.fetch = () => { throw new Error('Unexpected network access'); };
-    const info = { skills: [{ name: 'fixture-skill', displayName: '调查方法', shortDescription: '技能说明只在详情中' }], servers: [{toolAliases:[{alias:'fixture__search',name:'search',serverName:'Fixture'}]}] };
+    const info = { skills: [{ name: 'fixture-skill', displayName: '调查方法', shortDescription: '技能说明只在详情中' }], servers: [{toolAliases:[{alias:'fixture__search',name:'search',serverName:'Fixture'},{alias:'fixture__product',name:'onebound_1688_item_get',serverName:'Fixture'}]}] };
     const value = { provider: () => new Map(), fallback: { [unstable_serialize(['/api/agent','fixture-owner'])]: info }, revalidateOnMount: false, revalidateOnFocus: false };
     process.stdout.write(renderToStaticMarkup(React.createElement(SessionContext.Provider,{value:{data:{user:{id:'fixture-owner'}},status:'authenticated'}},React.createElement(SWRConfig, { value }, React.createElement(ToolActivity, {
       part: ${JSON.stringify(part)}, approve: () => { throw new Error('SSR must not approve'); }, isReadonly: ${isReadonly}, isRunning: ${isRunning}
@@ -955,6 +955,24 @@ test("approval presents a human action summary while raw arguments are reachable
   });
   assert.match(unknown, /fixture__custom_alias/);
   assert.doesNotMatch(unknown, /只读操作|安全操作/);
+});
+
+test("product lookup approval shows the action and product number, not the protocol keys", () => {
+  const part = {
+    ...success,
+    approval: { id: "fixture-approval" },
+    input: { agent: "1", num_iid: "001" },
+    state: "approval-requested",
+    toolName: "fixture__product",
+  };
+  const html = renderActivity(part);
+  assert.match(html, /查询商品详情/);
+  assert.match(html, /商品编号/);
+  assert.match(html, /001/);
+  assert.match(html, /查看调用详情/);
+  assert.match(html, /分销代发价/);
+  assert.doesNotMatch(html, />agent<|num_iid|onebound_1688_item_get/);
+  assert.match(renderCallDetails(part), /num_iid/);
 });
 
 test("artifact and table actions keep readable 36px targets without leaking table controls to the viewer", () => {

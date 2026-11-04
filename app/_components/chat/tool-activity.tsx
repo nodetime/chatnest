@@ -58,6 +58,7 @@ export function ToolActivity({
 }) {
   const { data: info } = useAgentInfo();
   const {
+    approvalInput,
     name,
     title,
     context: inputContext,
@@ -306,7 +307,7 @@ export function ToolActivity({
               )}
               <ToolResultPreview
                 parameters
-                preview={projectResult(part.input, "parameters")}
+                preview={projectResult(approvalInput, "parameters")}
               />
               <p className="text-xs text-muted-foreground">
                 完整参数保留在查看调用详情中。

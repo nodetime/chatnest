@@ -41,9 +41,10 @@ export async function proxy(request: NextRequest) {
     return nextWithTrace();
   }
 
-  // Admin APIs own their authorization and return 401/403, never create guest sessions.
+  // These APIs own authorization; message reads also support public sharing.
   if (
     pathname === "/api/health/ready" ||
+    pathname === "/api/messages" ||
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/api/admin/")
   ) {

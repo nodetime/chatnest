@@ -274,14 +274,24 @@ export function ActiveChatProvider({
       finishReason,
       messages: finishedMessages,
     }) => {
-      lastSendFailure.current =
+      const failed =
         isAbort ||
         isError ||
         isDisconnect ||
         !finishReason ||
-        finishReason === "error"
-          ? new Error("本轮未完成，草稿已保留。")
-          : undefined;
+        finishReason === "error";
+      lastSendFailure.current = failed
+        ? new Error("本轮未完成，草稿已保留。")
+        : undefined;
+      if (!failed) {
+        // A duplicate approval may finish without returning the saved result.
+        // Drop the old card and reload the authoritative conversation.
+        mutate(
+          `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/messages?chatId=${chatId}`,
+          undefined,
+          { revalidate: true }
+        );
+      }
       const snapshot = regenerationSnapshot.current;
       // useChat forwards old-instance callbacks through its latest callback refs.
       // The stored question UUID identifies the originating turn, not just the current URL.
@@ -292,21 +302,9 @@ export function ActiveChatProvider({
             item.role === "user" && item.id === snapshot.messages.at(-2)?.id
         )
       ) {
-        if (
-          isAbort ||
-          isError ||
-          isDisconnect ||
-          !finishReason ||
-          finishReason === "error"
-        ) {
+        if (failed) {
           setMessages(snapshot.messages);
         } else {
-          mutate(
-            `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/messages?chatId=${chatId}`,
-            (current: Record<string, unknown> | undefined) =>
-              current ? { ...current, messages: finishedMessages } : current,
-            { revalidate: false }
-          );
           const answerId = snapshot.messages.at(-1)?.id;
           mutate<Vote[]>(
             `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/vote?chatId=${chatId}`,
@@ -508,8 +506,15 @@ export function ActiveChatProvider({
   }, [chatId, messages, status, clearError, regenerate, setMessages]);
 
   const startNewChat = useCallback(() => {
+    if (chatInstanceRef.current !== activeInstance) {
+      return;
+    }
     pendingTask.current = null;
-    stop();
+    // Navigating away releases this instance; it is not a user pause.
+    const gate = interactionGate.current;
+    gate.released = true;
+    gate.revision += 1;
+    sdkStop();
     clearError();
     setSearchMode("auto");
     newChatIdRef.current = generateUUID();
@@ -524,7 +529,16 @@ export function ActiveChatProvider({
     }
     refreshNewChat((revision) => revision + 1);
     router.push("/chat");
-  }, [router, setMessages, stop, clearError, setInput, ownerId, isNewChat]);
+  }, [
+    activeInstance,
+    clearError,
+    isNewChat,
+    ownerId,
+    router,
+    sdkStop,
+    setInput,
+    setMessages,
+  ]);
   const startTask = useCallback(
     (draft: TaskDraft, useWeb: boolean) => {
       const text = buildTaskMessage(draft);

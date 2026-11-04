@@ -51,6 +51,7 @@ export function projectToolIdentity(
   const match = aliases.find((item) => item.alias === name);
   // Exact conventional operations only; unknown operations keep their real name.
   const knownActions: Record<string, string> = {
+    onebound_1688_item_get: "查询商品详情",
     search: "搜索资料",
     search_web: "搜索资料",
     "search.web": "搜索资料",
@@ -86,7 +87,23 @@ export function projectToolIdentity(
     (value): value is string =>
       typeof value === "string" && value.trim().length > 0 && value !== title
   );
+  const productLookup = match?.name === "onebound_1688_item_get";
+  const approvalInput =
+    productLookup && input
+      ? {
+          商品编号: input.num_iid,
+          ...(input.agent === undefined || input.agent === null
+            ? {}
+            : {
+                价格选项:
+                  String(input.agent) === "1"
+                    ? "分销代发价"
+                    : "已指定，见调用详情",
+              }),
+        }
+      : part.input;
   return {
+    approvalInput,
     context: skill || (match && !knownAction) ? undefined : context,
     kind:
       knownAction === "搜索资料"
@@ -95,7 +112,7 @@ export function projectToolIdentity(
           ? "web"
           : "tool",
     name,
-    nativeName: match?.name,
+    nativeName: productLookup ? undefined : match?.name,
     origin: match?.serverName,
     skillLoaded: Boolean(skill),
     title,
