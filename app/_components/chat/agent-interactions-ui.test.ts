@@ -42,15 +42,13 @@ test("TaskProgress 使用 AI Elements Task 与真实快照计数；空计划不�
   assert.equal(empty, "");
 });
 
-test("hook 暴露真实回答/继续/停止门控；Ask 发送显式等待网络，transport 仅传精简输出", () => {
+test("hook 暴露真实回答和停止门控；Ask 发送显式等待网络，transport 仅传精简输出", () => {
   const source = readFileSync(
     new URL("../../_hooks/use-active-chat.tsx", import.meta.url),
     "utf8"
   );
   for (const name of [
     "answerAskUser",
-    "continueAgent",
-    "agentPaused",
     "taskProgress",
     "compactInteractionResponses",
     "shouldContinueAgent",
@@ -58,6 +56,7 @@ test("hook 暴露真实回答/继续/停止门控；Ask 发送显式等待网络
   ]) {
     assert.ok(source.includes(name), name);
   }
+  assert.doesNotMatch(source, /continueAgent|请继续刚才未完成的任务/);
   assert.match(source, /await origin\.addToolOutput/);
   assert.match(source, /await origin\.sendMessage/);
   assert.match(source, /gate\.paused = true/);
@@ -132,7 +131,7 @@ test("Provider导航和卸载中止捕获的旧SDK请求，旧交互句柄既不
     class Transport {
       async sendMessages(request){
         const record={id:request.chatId,signal:request.abortSignal,aborted:false};requests.push(record);
-        return new ReadableStream({start(controller){request.abortSignal.addEventListener('abort',()=>{record.aborted=true;controller.error(new DOMException('Stopped','AbortError'));},{once:true});controller.enqueue({type:'start',messageId:'answer-'+requests.length});controller.enqueue({type:'text-start',id:'text'});controller.enqueue({type:'text-delta',id:'text',delta:'pending'});}});
+        return new ReadableStream({start(controller){request.abortSignal.addEventListener('abort',()=>{record.aborted=true;controller.error(new DOMException('Stopped','AbortError'));},{once:true});controller.enqueue({type:'start',messageId:'answer-'+requests.length});controller.enqueue({type:'text-start',id:'text'});if(request.chatId==='D')return;controller.enqueue({type:'text-delta',id:'text',delta:'pending'});}});
       }
       async reconnectToStream(){return null;}
     }
@@ -167,13 +166,35 @@ test("Provider导航和卸载中止捕获的旧SDK请求，旧交互句柄既不
       const pendingFreshA=freshA.sendMessage({role:'user',parts:[{type:'text',text:'fresh A'}]});await tick();assert.equal(requests.length,3);assert.equal(requests[2].aborted,false);
       slots.forEach(slot=>slot?.cleanup?.());await pendingFreshA;assert.equal(requests[2].aborted,true,'provider unmount aborts its captured current request');
       const lateUnmountSend=freshA.sendMessage({role:'user',parts:[{type:'text',text:'after unmount'}]});await tick();assert.equal(requests.length,3,'unmounted handles cannot start another request');await lateUnmountSend;await assert.rejects(freshA.addToolApprovalResponse({id:'unmounted',approved:true}));
-      const idle=render('/chat/C');assert.equal(idle.agentPaused,false);
-      idle.startNewChat();render('/chat');
-      assert.equal(render('/chat/C').agentPaused,false,'leaving a completed chat must not create a Continue task action');
-      const deliberatelyStopped=render('/chat/C');await deliberatelyStopped.stop();
-      deliberatelyStopped.startNewChat();render('/chat');
-      assert.equal(render('/chat/C').agentPaused,true,'an explicit stop still retains the pause');
-      assert.equal(requests.length,3,'navigation and reopening cannot send another request');
+      const stopped=render('/chat/C');
+      const pendingStop=stopped.sendMessage({role:'user',parts:[{type:'text',text:'before explicit stop'}]});await tick();
+      assert.equal(requests.length,4);await stopped.stop();await pendingStop;
+      assert.equal(requests[3].aborted,true,'the explicit stop still aborts the stream');
+      assert.equal(stopped.getSendError(),undefined,'a deliberate stop after a partial reply does not restore the already sent draft');
+      assert.equal(requests.length,4,'stop must not send a synthetic message');
+      assert.equal(typeof stopped.continueAgent,'undefined');
+      const next=stopped.sendMessage({role:'user',parts:[{type:'text',text:'my next instruction'}]});await tick();
+      assert.equal(requests.length,5);assert.equal(requests[4].aborted,false,'the composer can start a new explicit turn');
+      await stopped.stop();await next;
+      stopped.startNewChat();render('/chat');render('/chat/C');
+      assert.equal(requests.length,5,'navigation and reopening cannot send another request');
+      const notStarted=render('/chat/D');const unsent=notStarted.sendMessage({role:'user',parts:[{type:'text',text:'draft without response'}]});await tick();
+      assert.equal(requests.length,6);await notStarted.stop();await unsent;
+      assert.ok(notStarted.getSendError(),'before receiving a reply, preserve the draft');
+      const {submitEditedMessage}=require('./app/_components/chat/message-editor.tsx');
+      const editing=render('/chat/E');
+      const oldPrompt={id:'old-prompt',role:'user',parts:[{type:'text',text:'original prompt'}]};
+      const snapshot=[oldPrompt,{id:'old-answer',role:'assistant',parts:[{type:'text',text:'original answer'}]}];
+      editing.setMessages(snapshot);
+      let editDraft='edited text';
+      const edit=submitEditedMessage({message:oldPrompt,text:editDraft,snapshot,setMessages:editing.setMessages,regenerate:editing.regenerate,getSendError:editing.getSendError,isCurrent:()=>true,setInput:update=>{editDraft=update(editDraft);}});
+      await tick();
+      assert.equal(requests.length,7);
+      assert.equal(instances.at(-1).messages.at(-1).parts[0].text,'pending','editing already streamed a partial reply');
+      await editing.stop();
+      await assert.rejects(edit,/草稿已保留/);
+      assert.deepEqual(instances.at(-1).messages,snapshot,'stopping an edit restores the original saved turn');
+      assert.equal(editDraft,'edited text','stopping an edit preserves its unsaved draft');
       process.stdout.write('ASYNC_DONE');
     })().catch(error=>{console.error(error);process.exitCode=1;});
   `);

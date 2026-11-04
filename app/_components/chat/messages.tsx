@@ -5,19 +5,15 @@ import {
   ConversationScrollButton,
 } from "@/app/_components/ai-elements/conversation";
 import type { ChatMessage } from "@/app/_lib/types";
-import { hasPendingInteraction } from "@/server/domain/message/agent-interactions";
 import { prepareRegeneration } from "@/server/domain/message/message-turn";
 import type { Vote } from "@/server/domain/vote/types";
-import { AgentPauseNotice } from "./agent-pause-notice";
 import type { AnswerAskUser } from "./ask-user";
 import { useDataStream } from "./data-stream-provider";
 import { Greeting } from "./greeting";
 import { PreviewMessage, ThinkingMessage } from "./message";
 
 type MessagesProps = {
-  agentPaused?: boolean;
   suppressLatestRunFailure?: boolean;
-  onContinue?: () => Promise<void>;
   answerAskUser?: AnswerAskUser;
   reviseAskUser?: AnswerAskUser;
   addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
@@ -39,9 +35,7 @@ function PureMessages({
   addToolApprovalResponse,
   answerAskUser,
   reviseAskUser,
-  agentPaused = false,
   suppressLatestRunFailure = false,
-  onContinue,
   chatId,
   status,
   votes,
@@ -108,13 +102,6 @@ function PureMessages({
             <ThinkingMessage />
           )}
 
-          {!!agentPaused && !isReadonly && !!onContinue && (
-            <AgentPauseNotice
-              key={chatId}
-              onContinue={onContinue}
-              pending={hasPendingInteraction(messages)}
-            />
-          )}
           <div className="h-2 shrink-0" />
         </ConversationContent>
         <ConversationScrollButton

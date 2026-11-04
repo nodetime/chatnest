@@ -49,8 +49,6 @@ export function ChatShell() {
     addToolApprovalResponse,
     answerAskUser,
     reviseAskUser,
-    agentPaused,
-    continueAgent,
     input,
     setInput,
     visibilityType,
@@ -263,14 +261,12 @@ export function ChatShell() {
             {!isEmpty && (
               <Messages
                 addToolApprovalResponse={addToolApprovalResponse}
-                agentPaused={agentPaused}
                 answerAskUser={answerAskUser}
                 chatId={chatId}
                 isArtifactVisible={isArtifactVisible}
                 isLoading={isLoading}
                 isReadonly={isReadonly}
                 messages={messages}
-                onContinue={continueAgent}
                 onEditMessage={handleEditMessage}
                 onRegenerateAnswer={regenerateAnswer}
                 regenerate={regenerate}

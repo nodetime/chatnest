@@ -64,13 +64,26 @@ test("failed tool summary separates raw error evidence and active approval suppr
 
 test("failed turns keep canonical previews without a separate continue action or fabricated user request", () => {
   clientScript(`${harness}
-    const {Messages}=load('app/_components/chat/messages.tsx',{...base,'@/app/_components/ai-elements/conversation':{Conversation:'conversation',ConversationContent:'content',ConversationScrollButton:'scroll'},'@/server/domain/message/message-turn':{prepareRegeneration:()=>false},'./data-stream-provider':{useDataStream:()=>({})},'./greeting':{Greeting:'greeting'},'./message':{PreviewMessage:'message',ThinkingMessage:'thinking'},'./agent-pause-notice':{AgentPauseNotice:'paused'},'@/server/domain/message/agent-interactions':{hasPendingInteraction:()=>false},'./runtime-recovery':{RuntimeRecovery:'recovery'}});
+    const {Messages}=load('app/_components/chat/messages.tsx',{...base,'@/app/_components/ai-elements/conversation':{Conversation:'conversation',ConversationContent:'content',ConversationScrollButton:'scroll'},'@/server/domain/message/message-turn':{prepareRegeneration:()=>false},'./data-stream-provider':{useDataStream:()=>({})},'./greeting':{Greeting:'greeting'},'./message':{PreviewMessage:'message',ThinkingMessage:'thinking'},'@/server/domain/message/agent-interactions':{hasPendingInteraction:()=>false},'./runtime-recovery':{RuntimeRecovery:'recovery'}});
     const messages=[{id:'old',role:'assistant',parts:[part]},{id:'latest',role:'assistant',parts:[{type:'data-run-status',data:{state:'failed'}}]}];
     const props={messages,chatId:'chat',status:'error',isReadonly:false,sendMessage:()=>{throw new Error('No synthetic user messages');}};
     let tree=Messages(props);let previews=nodes(tree).filter(n=>n.type==='message');assert.equal(previews[0].props.canApprove,false);assert.equal(previews[1].props.canApprove,true);assert.equal(previews[0].key,'old');assert.equal(previews[1].props.message,messages[1]);
     assert.equal(nodes(tree).filter(n=>n.type==='recovery').length,0,'No extra recovery panel beneath the assistant');
     tree=Messages({...props,suppressLatestRunFailure:true});previews=nodes(tree).filter(n=>n.type==='message');assert.equal(previews[0].props.hideRunFailure,false);assert.equal(previews[1].props.hideRunFailure,true,'transient error owns only the newest failed turn');
     for(const extra of [{status:'submitted'},{status:'streaming'},{isReadonly:true}]){tree=Messages({...props,...extra});previews=nodes(tree).filter(n=>n.type==='message');assert.ok(previews.every(n=>n.props.canApprove===false));assert.ok(!nodes(tree).some(n=>n.type==='recovery'));}
+  `);
+});
+
+test("after a stop, partial output and the original approval remain without a second action", () => {
+  clientScript(`${harness}
+    const {Messages}=load('app/_components/chat/messages.tsx',{...base,'@/app/_components/ai-elements/conversation':{Conversation:'conversation',ConversationContent:'content',ConversationScrollButton:'scroll'},'@/server/domain/message/message-turn':{prepareRegeneration:()=>false},'./data-stream-provider':{useDataStream:()=>({})},'./greeting':{Greeting:'greeting'},'./message':{PreviewMessage:'message',ThinkingMessage:'thinking'},'./agent-pause-notice':{AgentPauseNotice:'paused'}});
+    const partial={id:'assistant',role:'assistant',parts:[{type:'text',text:'Partial reply'},part]};
+    const tree=Messages({messages:[partial],chatId:'chat',status:'ready',isReadonly:false,agentPaused:true,onContinue:()=>{throw new Error('No synthetic continuation');}});
+    const rendered=nodes(tree);
+    const message=rendered.find(n=>n.type==='message');
+    assert.equal(message.props.message,partial);
+    assert.equal(message.props.canApprove,true);
+    assert.ok(!rendered.some(n=>n.type==='paused'));
   `);
 });
 

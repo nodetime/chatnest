@@ -35,7 +35,6 @@ import {
   type AskUserOutput,
   compactInteractionResponses,
   deriveTaskProgress,
-  hasPendingInteraction,
   hasSavedAskResponse,
   interactionResponseSignature,
   shouldContinueAgent,
@@ -72,8 +71,6 @@ type ActiveChatContextValue = {
     toolCallId: string;
     output: AskUserOutput;
   }) => Promise<void>;
-  continueAgent: () => Promise<void>;
-  agentPaused: boolean;
   taskProgress: TodoPlan | null;
   input: string;
   setInput: Dispatch<SetStateAction<string>>;
@@ -162,6 +159,7 @@ export function ActiveChatProvider({
     answerPending: false,
     chatId,
     manual: false,
+    newUserTurn: false,
     paused: false,
     released: false,
     revision: 0,
@@ -172,14 +170,13 @@ export function ActiveChatProvider({
       answerPending: false,
       chatId,
       manual: false,
+      newUserTurn: false,
       paused: false,
       released: false,
       revision: 0,
       sentSignature: "",
     };
   }
-  const [pausedChatId, setPausedChatId] = useState<string | null>(null);
-  const agentPaused = pausedChatId === chatId;
   const [searchMode, setSearchMode] = useState<"auto" | "web">("auto");
   const searchModeRef = useRef(searchMode);
   searchModeRef.current = searchMode;
@@ -272,6 +269,7 @@ export function ActiveChatProvider({
       isError,
       isDisconnect,
       finishReason,
+      message: finishedMessage,
       messages: finishedMessages,
     }) => {
       const failed =
@@ -280,9 +278,28 @@ export function ActiveChatProvider({
         isDisconnect ||
         !finishReason ||
         finishReason === "error";
-      lastSendFailure.current = failed
-        ? new Error("本轮未完成，草稿已保留。")
-        : undefined;
+      // Only a new prompt is already stored when a partial reply arrives.
+      // An interrupted edit still needs to restore the saved turn and draft.
+      const stoppedAfterReply =
+        isAbort &&
+        !isError &&
+        !isDisconnect &&
+        interactionGate.current.paused &&
+        interactionGate.current.newUserTurn &&
+        finishedMessage.parts.some((part) => {
+          if (part.type === "text" || part.type === "reasoning") {
+            return Boolean(part.text.trim());
+          }
+          return (
+            part.type === "file" ||
+            part.type === "dynamic-tool" ||
+            part.type.startsWith("tool-")
+          );
+        });
+      lastSendFailure.current =
+        failed && !stoppedAfterReply
+          ? new Error("本轮未完成，草稿已保留。")
+          : undefined;
       if (!failed) {
         // A duplicate approval may finish without returning the saved result.
         // Drop the old card and reload the authoritative conversation.
@@ -391,10 +408,17 @@ export function ActiveChatProvider({
           ? (chatOptionsRef.current.sendAutomaticallyWhen?.(event) ?? false)
           : false,
       transport: {
-        reconnectToStream: (request) =>
-          chatOptionsRef.current.transport.reconnectToStream(request),
-        sendMessages: (request) =>
-          chatOptionsRef.current.transport.sendMessages(request),
+        reconnectToStream: (request) => {
+          interactionGate.current.newUserTurn = false;
+          return chatOptionsRef.current.transport.reconnectToStream(request);
+        },
+        sendMessages: (request) => {
+          interactionGate.current.newUserTurn =
+            request.trigger === "submit-message" &&
+            !("trigger" in (request.body ?? {})) &&
+            request.messages.at(-1)?.role === "user";
+          return chatOptionsRef.current.transport.sendMessages(request);
+        },
       },
     });
     chatInstanceRef.current = instance;
@@ -437,7 +461,6 @@ export function ActiveChatProvider({
     }
     gate.paused = true;
     gate.revision += 1;
-    setPausedChatId(chatId);
     await sdkStop();
   }, [activeInstance, chatId, sdkStop]);
 
@@ -453,7 +476,6 @@ export function ActiveChatProvider({
       }
       gate.paused = false;
       gate.revision += 1;
-      setPausedChatId(null);
       await sdkSendMessage(message, options);
     },
     [activeInstance, chatId, sdkSendMessage]
@@ -473,7 +495,6 @@ export function ActiveChatProvider({
       }
       // 新的明确允许/拒绝是用户交互；解除暂停，但绝不替用户生成批准决定。
       gate.paused = false;
-      setPausedChatId(null);
       await sdkAddToolApprovalResponse(response);
     },
     [activeInstance, chatId, sdkAddToolApprovalResponse]
@@ -715,7 +736,6 @@ export function ActiveChatProvider({
         }
         gate.manual = false;
         gate.paused = false;
-        setPausedChatId(null);
         origin.clearError();
         // 即使本轮还有其它 Ask/审批，也显式提交当前答案，由服务端保存并决定是否等待。
         await origin.sendMessage();
@@ -817,34 +837,6 @@ export function ActiveChatProvider({
     [activeInstance, chatId, isReadonly, sendMessage]
   );
 
-  const continueAgent = useCallback(async () => {
-    const origin = activeInstance;
-    if (
-      isReadonly ||
-      interactionGate.current.released ||
-      origin?.id !== chatId ||
-      chatInstanceRef.current !== origin ||
-      origin.status === "streaming" ||
-      origin.status === "submitted"
-    ) {
-      return;
-    }
-    if (hasPendingInteraction(origin.messages)) {
-      throw new Error("请先回答或跳过提问，并完成待处理的工具确认。");
-    }
-    await sendMessage({
-      parts: [
-        {
-          text: "请继续刚才未完成的任务。先核对已有工具结果与可能的副作用，不要盲目重放操作；自行判断下一步，需要信息时向我提问，需要授权的工具请重新请求确认。",
-          type: "text",
-        },
-      ],
-      role: "user",
-    });
-    if (origin.error) {
-      throw origin.error;
-    }
-  }, [activeInstance, chatId, isReadonly, sendMessage]);
   const taskProgress = useMemo(() => deriveTaskProgress(messages), [messages]);
 
   const { data: votes } = useSWR<Vote[]>(
@@ -863,13 +855,11 @@ export function ActiveChatProvider({
   const value = useMemo<ActiveChatContextValue>(
     () => ({
       addToolApprovalResponse,
-      agentPaused,
       answerAskUser,
       capabilitySelection,
       chatId,
       chatTitle,
       clearError,
-      continueAgent,
       currentModelId,
       error,
       getSendError,
@@ -904,8 +894,6 @@ export function ActiveChatProvider({
       capabilitySelection,
       setCapabilitySelection,
       reviseAskUser,
-      continueAgent,
-      agentPaused,
       taskProgress,
       chatId,
       chatTitle,

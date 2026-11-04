@@ -99,7 +99,7 @@ const hookHarness = `
     '../ai-elements/tool':{Tool:'tool',ToolHeader:'header',ToolContent:'content',ToolInput:'input',ToolOutput:'output'},
     '@/app/_components/ai-elements/task':{Task:'task',TaskTrigger:'task-trigger',TaskContent:'task-content'},
     './tool-activity':{ToolActivity:'step'},
-    './agent-pause-notice':{AgentPauseNotice:'paused'},'@/server/domain/message/agent-interactions':{hasPendingInteraction:()=>false},'./runtime-recovery':{RuntimeRecovery:'recovery'},
+    '@/server/domain/message/agent-interactions':{hasPendingInteraction:()=>false},'./runtime-recovery':{RuntimeRecovery:'recovery'},
     './tool-call-details':{ToolCallDetails:'call-details'},
     './attachment-read-result':require('./app/_components/chat/attachment-read-result.tsx'),
     './activity-groups':require('./app/_components/chat/activity-groups.ts'),

@@ -9,6 +9,10 @@
 - 账户用例与仓储在 server/application/account 和 server/infrastructure/persistence/drizzle/account-repository.ts；结算 worker 入口为 scripts/platform-settlement-worker.mjs。账户删除通知独立投递。
 - 0018 删除 0017 的告警投递表，并撤除旧 webhook、内部 API 和 /admin/alerts；结算告警只输出结构化进程日志。
 
+## 会话停止
+
+停止由输入区触发，`use-active-chat.tsx` 中止当前流并拦住自动续跑。消息区保留已有回复和原审批卡，不再渲染额外的续跑横栏，也不代发用户消息；用户可以手动发送下一条消息。
+
 ## 顶层结构
 
 一级目录:`app server public docs deploy tests scripts`(隐藏 `.github .claude .agents`)。四层 DDD 的接口层 = `app/`(route/proxy/actions),`server/` 一级仅五项:
