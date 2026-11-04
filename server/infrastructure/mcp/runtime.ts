@@ -14,6 +14,7 @@ import {
   guardedFetch,
 } from "@/server/application/mcp/network";
 import {
+  canonicalToolKey,
   type RuntimeConfig,
   type RuntimeServer,
   readRuntimeConfig,
@@ -172,10 +173,10 @@ export async function createAgentRuntime(
               remote._meta && typeof remote._meta === "object"
                 ? (remote._meta as Record<string, unknown>)["porta/native"]
                 : undefined;
-            const canonicalToolKey =
+            const billingToolKey =
               nativeMeta && typeof nativeMeta === "object"
                 ? `native_mcp/${String((nativeMeta as Record<string, unknown>).service)}/${String((nativeMeta as Record<string, unknown>).name)}`
-                : `${server.id}/${name}`;
+                : canonicalToolKey(server, name);
             serverTools[alias] = dynamicTool({
               description: `${server.name}: ${remote.description ?? name}`,
               execute: (input, options) => {
@@ -203,7 +204,7 @@ export async function createAgentRuntime(
                     output = await (evidence.billToolCall
                       ? evidence.billToolCall({
                           args: input,
-                          canonicalToolKey,
+                          canonicalToolKey: billingToolKey,
                           next: execute,
                           toolCallId: options.toolCallId,
                         })

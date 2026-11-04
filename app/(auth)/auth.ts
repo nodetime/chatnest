@@ -3,6 +3,7 @@ import NextAuth, { type DefaultSession } from "next-auth";
 import type { DefaultJWT } from "next-auth/jwt";
 import Credentials from "next-auth/providers/credentials";
 import { DUMMY_PASSWORD } from "@/app/_lib/constants";
+import { resolveSessionRevision } from "@/server/application/account/session-revision";
 import { getUseCases } from "@/server/composition";
 import { authConfig } from "./auth.config";
 
@@ -26,6 +27,7 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT extends DefaultJWT {
     id: string;
+    sessionRevision?: number;
     type: UserType;
   }
 }
@@ -38,10 +40,27 @@ export const {
 } = NextAuth({
   ...authConfig,
   callbacks: {
-    jwt({ token, user }) {
+    async jwt({ token, user }) {
       if (user) {
         token.id = user.id as string;
         token.type = user.type;
+      }
+
+      if (token.type === "regular" && token.id) {
+        try {
+          const revision = await resolveSessionRevision({
+            read: getUseCases().users.getSessionRevision,
+            tokenRevision: token.sessionRevision,
+            userId: token.id,
+          });
+          if (revision === null) {
+            return null;
+          }
+          token.sessionRevision = revision;
+        } catch {
+          // A stale or unverifiable account must fail closed instead of retaining access.
+          return null;
+        }
       }
 
       return token;

@@ -13,6 +13,7 @@ export type RequestToolBillingInput = {
   mode: "connected" | "standalone";
   repository?: BillingRepository;
   userId: string;
+  organizationId?: string;
 };
 
 export function createRequestToolBilling(input: RequestToolBillingInput) {
@@ -36,6 +37,7 @@ export function createRequestToolBilling(input: RequestToolBillingInput) {
               userId: input.userId,
             }),
           enqueueSettlement: input.repository.enqueueSettlement,
+          markSettled: input.repository.markSettled,
           saveReceipt: input.repository.saveReceipt,
         }
       : undefined,
@@ -53,6 +55,7 @@ export function createRequestToolBilling(input: RequestToolBillingInput) {
         attemptId: randomUUID(),
         canonicalToolKey: call.canonicalToolKey,
         operationId: randomUUID(),
+        organizationId: input.organizationId,
         runId: input.runId,
         sessionGroupId: input.chatId,
         stepIndex: (() => {

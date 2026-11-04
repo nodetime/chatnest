@@ -77,9 +77,9 @@ until [ "$(docker inspect -f '{{.State.Health.Status}}' chatnest-postgres)" = "h
 ### 第 5 步:数据库迁移
 
 ```bash
-pnpm db:migrate
+MIGRATION_POSTGRES_URL=postgres://chatnest:chatnest@127.0.0.1:55432/chatnest pnpm db:migrate
 ```
-预期:输出 `Migrations completed`(幂等,重复执行无害)。失败:检查 `.env.local` 的 POSTGRES_URL、看 `docker logs chatnest-postgres`。
+预期:输出 `Migrations completed`(幂等,重复执行无害)。失败:检查显式 MIGRATION_POSTGRES_URL(不从运行 POSTGRES_URL 回退)、看 `docker logs chatnest-postgres`。
 
 ### 第 6 步:启动 dev(绑定全部网卡)
 

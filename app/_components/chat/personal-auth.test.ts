@@ -55,6 +55,13 @@ test("login destinations are allowlisted and cannot navigate outside the app", (
     for(const value of [null,'','//attacker.example','https://attacker.example','/\\\\attacker.example','/%2f%2fattacker.example','/chat/private-id','/?section=connections&next=//attacker.example','/?section=skills#fragment','/?section=connections%0a']){
       assert.equal(authReturnPath(value),'/');assert.equal(authPageHref('/login',value),'/login');
     }
+    for(const path of ['/billing','/usage','/organizations','/account','/account/billing','/account/usage','/account/organizations']){
+      assert.equal(authReturnPath(path),path);
+      assert.equal(authPageHref('/login',path),'/login?next='+encodeURIComponent(path));
+    }
+    for(const path of ['/admin','/admin/billing','/admin/connections','/admin/models','/admin/storage']){
+      assert.equal(authReturnPath(path),path);
+    }
   `);
 });
 
@@ -104,6 +111,36 @@ test("direct personal links require login before guest creation and preserve the
         const result=await mod.exports.proxy({nextUrl:url,url:url.href,headers:new Headers()});
         if(token?.type==='regular')assert.equal(result.headers.get('location'),'https://chat.example/?section=skills');
         else assert.equal(result.status,200,'public auth page must not create guest or drop next');
+      }
+    }})().catch(error=>{console.error(error);process.exitCode=1});
+  `);
+});
+
+test("account pages and APIs stay out of the guest workspace boundary", () => {
+  run(`
+    const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript');
+    const {NextResponse}=require('next/server');
+    (async()=>{for(const token of [null,{email:'guest-1',type:'guest'},{email:'account@example.test',type:'regular'}]){
+      const modules={'next/server':{NextResponse},'next-auth/jwt':{getToken:async()=>token},uuid:{v7:()=> 'trace'},'@/server/shared/auth-cookies':{usesSecureAuthCookies:()=>false}};
+      const mod={exports:{}};
+      vm.runInNewContext(ts.transpileModule(fs.readFileSync('proxy.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports:mod.exports,module:mod,process:{env:{}},URL,Headers,Response,require:n=>n in modules?modules[n]:require(n.startsWith('@/')?process.cwd()+'/'+n.slice(2):n)});
+      for(const path of ['/billing','/usage','/organizations','/account','/account/billing','/account/usage','/account/organizations']){
+        const url=new URL('https://chat.example'+path);
+        const result=await mod.exports.proxy({nextUrl:url,url:url.href,headers:new Headers()});
+        if(token?.type==='regular')assert.equal(result.status,200);
+        else {const target=new URL(result.headers.get('location'));assert.equal(target.pathname,'/login');assert.equal(target.searchParams.get('next'),path)}
+      }
+      for(const path of ['/admin','/admin/billing']){
+        const url=new URL('https://chat.example'+path);
+        const result=await mod.exports.proxy({nextUrl:url,url:url.href,headers:new Headers()});
+        if(token?.type==='regular')assert.equal(result.status,200);
+        else {const target=new URL(result.headers.get('location'));assert.equal(target.pathname,'/login');assert.equal(target.searchParams.get('next'),path)}
+      }
+      for(const path of ['/api/billing','/api/billing/plans','/api/organizations','/api/organizations/1/members']){
+        const url=new URL('https://chat.example'+path);
+        const result=await mod.exports.proxy({nextUrl:url,url:url.href,headers:new Headers()});
+        if(token?.type==='regular')assert.equal(result.status,200);
+        else {assert.equal(result.status,401);assert.deepEqual(await result.json(),{code:'UNAUTHORIZED'})}
       }
     }})().catch(error=>{console.error(error);process.exitCode=1});
   `);

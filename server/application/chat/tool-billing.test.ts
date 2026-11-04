@@ -65,6 +65,83 @@ test("connected tool billing reserves, dispatches, claims sending and reports on
   ]);
 });
 
+test("connected tool billing forwards Porta receipts from MCP _meta", async () => {
+  let reported: { executionReceipt?: unknown } | undefined;
+  const around = createToolBillingAroundCall({
+    mode: "connected",
+    operations: {
+      claimSending: async () => true,
+      create: async () => undefined,
+    },
+    platform: {
+      dispatch: async () => ({ permit: "permit" }),
+      report: (input) => {
+        reported = input;
+        return Promise.resolve();
+      },
+      reserve: async () => ({ holdId: "hold-1", reservedPoints: "2" }),
+    },
+  });
+  await around(context, async () => ({
+    _meta: { "porta/executionReceipt": { receiptId: "receipt-meta" } },
+    ok: true,
+  }));
+  assert.deepEqual(reported?.executionReceipt, {
+    receiptId: "receipt-meta",
+  });
+});
+
+test("connected tool billing marks the local operation settled after report", async () => {
+  let settledOperationId: string | undefined;
+  const around = createToolBillingAroundCall({
+    mode: "connected",
+    operations: {
+      claimSending: async () => true,
+      create: async () => undefined,
+      markSettled: ({ operationId }) => {
+        settledOperationId = operationId;
+        return Promise.resolve();
+      },
+    },
+    platform: {
+      dispatch: async () => ({ permit: "permit" }),
+      report: async () => undefined,
+      reserve: async () => ({ holdId: "hold-1", reservedPoints: "2" }),
+    },
+  });
+
+  await around(context, async () => ({ ok: true }));
+  assert.equal(settledOperationId, "operation-1");
+});
+
+test("connected tool billing forwards native Porta receipts nested in _meta.porta", async () => {
+  let reported: { executionReceipt?: unknown } | undefined;
+  const around = createToolBillingAroundCall({
+    mode: "connected",
+    operations: {
+      claimSending: async () => true,
+      create: async () => undefined,
+    },
+    platform: {
+      dispatch: async () => ({ permit: "permit" }),
+      report: (input) => {
+        reported = input;
+        return Promise.resolve();
+      },
+      reserve: async () => ({ holdId: "hold-1", reservedPoints: "2" }),
+    },
+  });
+  await around(context, async () => ({
+    _meta: {
+      porta: { executionReceipt: { receiptId: "receipt-native-meta" } },
+    },
+    ok: true,
+  }));
+  assert.deepEqual(reported?.executionReceipt, {
+    receiptId: "receipt-native-meta",
+  });
+});
+
 test("connected mode never falls back to unmetered when platform reserve fails", async () => {
   let calls = 0;
   const around = createToolBillingAroundCall({

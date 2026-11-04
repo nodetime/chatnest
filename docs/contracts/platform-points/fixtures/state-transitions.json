@@ -1,0 +1,52 @@
+{
+  "fixture": "state-transitions",
+  "apiVersion": "v1",
+  "schemaRevision": "2026-11-03.15",
+  "chatnest": {
+    "allowed": [
+      ["ready", "sending"],
+      ["sending", "sent"],
+      ["sent", "settled"],
+      ["ready", "failed"],
+      ["sending", "reconcile_pending"],
+      ["sent", "reconcile_pending"]
+    ],
+    "forbidden": [
+      ["settled", "sending"],
+      ["failed", "sending"],
+      ["settled", "settled"]
+    ]
+  },
+  "payload": {
+    "allowed": [
+      ["reserved", "dispatched"],
+      ["dispatched", "settled"],
+      ["reserved", "released"],
+      ["dispatched", "reconcile_pending"],
+      ["reconcile_pending", "settled"],
+      ["reconcile_pending", "released"],
+      ["reconcile_pending", "overage_pending"]
+    ],
+    "forbidden": [
+      ["settled", "reserved"],
+      ["released", "dispatched"],
+      ["settled", "settled"]
+    ]
+  },
+  "payment": {
+    "allowed": [
+      ["created", "pending"],
+      ["pending", "completed"],
+      ["pending", "failed"],
+      ["pending", "expired"],
+      ["pending", "canceled"],
+      ["completed", "refunded"],
+      ["completed", "partially_refunded"]
+    ],
+    "forbidden": [
+      ["failed", "completed"],
+      ["expired", "completed"],
+      ["refunded", "completed"]
+    ]
+  }
+}

@@ -2,6 +2,12 @@
 
 > 模块现状的权威地图:改结构必看、必更(AGENTS.md 纪律 6)。分层演变史与逐轮裁决见 [01_架构决策/20261025101500_DDD分层待办P1-P4.md](01_架构决策/20261025101500_DDD分层待办P1-P4.md);逐轮功能验证记录见 `docs/superpowers/plans/`。
 
+## ChatNest 迁移与运行入口
+
+- 0009–0010 对齐执行记录与结算 outbox；0011–0016 对齐账户偏好、会话修订和删除通知。迁移身份与运行账号分离。
+- 账户用例与仓储在 server/application/account 和 server/infrastructure/persistence/drizzle/account-repository.ts；结算 worker 入口为 scripts/platform-settlement-worker.mjs。账户删除通知独立投递。
+- 0017 引入告警投递历史，worker、内部 API 和 /admin/alerts 共同使用。
+
 ## 顶层结构
 
 一级目录:`app server public docs deploy tests scripts`(隐藏 `.github .claude .agents`)。四层 DDD 的接口层 = `app/`(route/proxy/actions),`server/` 一级仅五项:

@@ -1,0 +1,4263 @@
+{
+  "$defs": {
+    "AdminPaymentAttention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "amountCents",
+        "createdAt",
+        "currency",
+        "eventType",
+        "failureReason",
+        "status",
+        "paymentEventId"
+      ],
+      "properties": {
+        "amountCents": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
+        },
+        "currency": {
+          "type": ["string", "null"],
+          "maxLength": 16
+        },
+        "eventType": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "failureReason": {
+          "type": ["string", "null"],
+          "maxLength": 200
+        },
+        "status": {
+          "type": "string",
+          "enum": ["failed", "received", "processing", "refund_due"]
+        },
+        "paymentEventId": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        }
+      }
+    },
+    "AdminBillingOverview": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "adminRole",
+        "balancePoints",
+        "capturedPoints",
+        "operationCount",
+        "organizationBalancePoints",
+        "payment",
+        "paymentAttention",
+        "paymentCases",
+        "personalBalancePoints",
+        "policyCount",
+        "reconcilePending",
+        "recentOperations",
+        "states",
+        "nextCursor",
+        "walletAccounting"
+      ],
+      "properties": {
+        "adminRole": {
+          "type": "string",
+          "enum": ["admin", "operator"]
+        },
+        "adminId": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "balancePoints": {
+          "type": ["string", "null"],
+          "pattern": "^(?:0|[1-9][0-9]{0,63})(?:\\.[0-9]{1,6})?$"
+        },
+        "capturedPoints": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]{0,63})(?:\\.[0-9]{1,6})?$"
+        },
+        "nextCursor": {
+          "type": ["string", "null"],
+          "maxLength": 256
+        },
+        "operationCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "organizationBalancePoints": {
+          "type": ["string", "null"],
+          "pattern": "^(?:0|[1-9][0-9]{0,63})(?:\\.[0-9]{1,6})?$"
+        },
+        "organizationWalletCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "payment": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "failed",
+            "ignored",
+            "inboxCount",
+            "processed",
+            "processing",
+            "received",
+            "refundDue",
+            "successRate",
+            "webhookLagSeconds"
+          ],
+          "properties": {
+            "failed": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "ignored": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "inboxCount": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "processed": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "processing": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "received": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "refundDue": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "successRate": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "webhookLagSeconds": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "paymentAttention": {
+          "type": "array",
+          "maxItems": 20,
+          "items": {
+            "$ref": "#/$defs/AdminPaymentAttention"
+          }
+        },
+        "paymentCases": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["total", "dueSoonOrOverdue", "withGap", "items"],
+          "properties": {
+            "total": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "dueSoonOrOverdue": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "withGap": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "items": {
+              "type": "array",
+              "maxItems": 20,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "sourcePaymentEventId",
+                  "checkoutId",
+                  "caseCount",
+                  "dueAt",
+                  "reviewRequired",
+                  "disputedPoints",
+                  "refundGapPoints",
+                  "disputeGapPoints"
+                ],
+                "properties": {
+                  "sourcePaymentEventId": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 2147483647
+                  },
+                  "checkoutId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "caseCount": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "dueAt": {
+                    "type": ["string", "null"],
+                    "format": "date-time",
+                    "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
+                  },
+                  "reviewRequired": {
+                    "type": "boolean"
+                  },
+                  "disputedPoints": {
+                    "$ref": "#/$defs/CheckoutPointAmount"
+                  },
+                  "refundGapPoints": {
+                    "$ref": "#/$defs/CheckoutPointAmount"
+                  },
+                  "disputeGapPoints": {
+                    "$ref": "#/$defs/CheckoutPointAmount"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "personalBalancePoints": {
+          "type": ["string", "null"],
+          "pattern": "^(?:0|[1-9][0-9]{0,63})(?:\\.[0-9]{1,6})?$"
+        },
+        "policyCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "recentOperations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "attemptId",
+              "canonicalToolKey",
+              "capturedPoints",
+              "createdAt",
+              "operationId",
+              "reservedPoints",
+              "sessionGroupId",
+              "state",
+              "subjectType",
+              "updatedAt"
+            ],
+            "properties": {
+              "attemptId": {
+                "type": "string"
+              },
+              "canonicalToolKey": {
+                "type": "string"
+              },
+              "capturedPoints": {
+                "type": "string"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
+              },
+              "operationId": {
+                "type": "string"
+              },
+              "reservedPoints": {
+                "type": "string"
+              },
+              "sessionGroupId": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string",
+                "enum": [
+                  "reserved",
+                  "dispatched",
+                  "settled",
+                  "released",
+                  "reconcile_pending",
+                  "overage_pending"
+                ]
+              },
+              "subjectType": {
+                "type": "string",
+                "enum": ["model", "tool"]
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
+              }
+            }
+          },
+          "maxItems": 100
+        },
+        "reconcilePending": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "states": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "requestId": {
+          "type": "string"
+        },
+        "walletAccounting": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["active", "staged", "frozen", "missing", "invalid"],
+          "properties": {
+            "active": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "staged": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "frozen": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "missing": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "invalid": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          }
+        }
+      }
+    },
+    "IdentityExchangeRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["audience", "issuer", "subject"],
+      "properties": {
+        "audience": {
+          "type": "string",
+          "enum": ["platform-billing"]
+        },
+        "issuer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "subject": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "displayName": {
+          "type": "string",
+          "maxLength": 256
+        }
+      }
+    },
+    "OperationReserveRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operationId", "attemptId", "subjectType", "sessionGroupId"],
+      "properties": {
+        "operationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "attemptId": {
+          "$ref": "#/$defs/AttemptId"
+        },
+        "sessionGroupId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "stepIndex": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "subjectType": {
+          "type": "string",
+          "enum": ["model", "tool"]
+        },
+        "subjectId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "canonicalToolKey": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "modelId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "billingDimensions": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "policyRevision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "organizationId": {
+          "type": ["string", "number", "null"],
+          "maxLength": 64
+        },
+        "runId": {
+          "type": "string"
+        },
+        "tool": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["provider", "platform", "api"],
+          "properties": {
+            "provider": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "platform": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "api": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          }
+        }
+      }
+    },
+    "OperationReserveResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["holdId", "reservedPoints"],
+      "properties": {
+        "holdId": {
+          "type": "string"
+        },
+        "priceVersion": {
+          "type": "string"
+        },
+        "reservedPoints": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+        },
+        "requestId": {
+          "type": "string"
+        }
+      }
+    },
+    "OperationDispatchResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["permit"],
+      "properties": {
+        "permit": {
+          "type": "string",
+          "minLength": 1
+        },
+        "requestId": {
+          "type": "string"
+        }
+      }
+    },
+    "OperationReportRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operationId", "attemptId", "outcome"],
+      "properties": {
+        "operationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "attemptId": {
+          "$ref": "#/$defs/AttemptId"
+        },
+        "outcome": {
+          "type": "string",
+          "enum": ["response", "failed", "unknown"]
+        },
+        "usage": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": {
+            "inputTokens": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "outputTokens": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          }
+        },
+        "executionReceipt": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ExecutionReceipt"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "ExecutionReceipt": {
+      "type": "object",
+      "required": [
+        "receiptId",
+        "operationId",
+        "attemptId",
+        "canonicalToolKey",
+        "dispatchEvidence",
+        "outcome",
+        "httpStatus",
+        "receiptRevision",
+        "supplierUnits"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "receiptId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "operationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "attemptId": {
+          "$ref": "#/$defs/AttemptId"
+        },
+        "canonicalToolKey": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "dispatchEvidence": {
+          "enum": ["not_dispatched", "started", "response", "unknown"]
+        },
+        "outcome": {
+          "enum": [
+            "response",
+            "timeout",
+            "cancelled",
+            "network_error",
+            "response_too_large"
+          ]
+        },
+        "httpStatus": {
+          "type": ["integer", "null"],
+          "minimum": 100,
+          "maximum": 599
+        },
+        "supplierUnits": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "maxLength": 128
+          },
+          "propertyNames": {
+            "type": "string",
+            "maxLength": 128
+          }
+        },
+        "receiptRevision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "signature": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        }
+      }
+    },
+    "OperationReportResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state"],
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "settled",
+            "reconcile_pending",
+            "released",
+            "overage_pending"
+          ]
+        },
+        "requestId": {
+          "type": "string"
+        }
+      }
+    },
+    "CheckoutStatus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "checkoutId",
+        "status",
+        "organizationId",
+        "amountCents",
+        "currency",
+        "creditedPoints",
+        "refundedPoints",
+        "refundAttention",
+        "plan",
+        "createdAt",
+        "updatedAt",
+        "priceVersion",
+        "requestId",
+        "refundRecovery",
+        "paymentPosition"
+      ],
+      "properties": {
+        "refundAttention": {
+          "type": "string",
+          "enum": ["none", "pending", "review_required"]
+        },
+        "paymentPosition": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": [
+            "reviewRequired",
+            "spendablePoints",
+            "restrictedPoints",
+            "heldPoints",
+            "consumedPoints",
+            "expiredPoints",
+            "disputedPoints"
+          ],
+          "properties": {
+            "reviewRequired": {
+              "type": "boolean"
+            },
+            "spendablePoints": {
+              "$ref": "#/$defs/CheckoutPointAmount"
+            },
+            "restrictedPoints": {
+              "$ref": "#/$defs/CheckoutPointAmount"
+            },
+            "heldPoints": {
+              "$ref": "#/$defs/CheckoutPointAmount"
+            },
+            "consumedPoints": {
+              "$ref": "#/$defs/CheckoutPointAmount"
+            },
+            "expiredPoints": {
+              "$ref": "#/$defs/CheckoutPointAmount"
+            },
+            "disputedPoints": {
+              "$ref": "#/$defs/CheckoutPointAmount"
+            }
+          }
+        },
+        "checkoutId": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "created",
+            "pending",
+            "completed",
+            "failed",
+            "expired",
+            "canceled",
+            "partially_refunded",
+            "refunded"
+          ]
+        },
+        "organizationId": {
+          "type": ["integer", "null"],
+          "minimum": 1
+        },
+        "amountCents": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "currency": {
+          "type": "string"
+        },
+        "priceVersion": {
+          "type": ["string", "null"]
+        },
+        "creditedPoints": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+        },
+        "refundedPoints": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+        },
+        "plan": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["slug", "name", "monthlyPoints"],
+          "properties": {
+            "slug": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "monthlyPoints": {
+              "type": "string",
+              "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+            }
+          }
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
+        },
+        "requestId": {
+          "type": "string"
+        },
+        "refundRecovery": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "decisions": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 2147483647
+                },
+                "recoveredPoints": {
+                  "$ref": "#/$defs/SessionAggregatePoints"
+                },
+                "availablePoints": {
+                  "$ref": "#/$defs/SessionAggregatePoints"
+                },
+                "expiredPoints": {
+                  "$ref": "#/$defs/SessionAggregatePoints"
+                }
+              },
+              "required": [
+                "decisions",
+                "recoveredPoints",
+                "availablePoints",
+                "expiredPoints"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "CheckoutPointAmount": {
+      "type": "string",
+      "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+    },
+    "PaymentWebhook": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["providerEventId", "eventType"],
+      "properties": {
+        "eventType": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^(?![\\s\\S]*[\\u0000\\uD800-\\uDFFF])(?=[\\s\\S]*\\S)[\\s\\S]+$"
+        },
+        "amountCents": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Za-z]{3}$"
+        },
+        "userId": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "organizationId": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "checkoutId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^(?![\\s\\S]*[\\u0000\\uD800-\\uDFFF])(?=[\\s\\S]*\\S)[\\s\\S]+$"
+        },
+        "refundId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^(?![\\s\\S]*[\\u0000\\uD800-\\uDFFF])(?=[\\s\\S]*\\S)[\\s\\S]+$"
+        },
+        "providerAccount": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![\\s\\S]*[\\u0000\\uD800-\\uDFFF])(?=[\\s\\S]*\\S)[\\s\\S]+$"
+        },
+        "signature": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048,
+          "pattern": "^(?![\\s\\S]*[\\u0000\\uD800-\\uDFFF])(?=[\\s\\S]*\\S)[\\s\\S]+$"
+        },
+        "occurredAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
+        },
+        "providerEventId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![\\s\\S]*[\\u0000\\uD800-\\uDFFF])(?=[\\s\\S]*\\S)[\\s\\S]+$"
+        },
+        "points": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+            },
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          ]
+        },
+        "refundedGrantPoints": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+            },
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          ]
+        },
+        "grossAmountMinor": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "refundAmountMinor": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "customerRef": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![\\s\\S]*[\\u0000\\uD800-\\uDFFF])(?=[\\s\\S]*\\S)[\\s\\S]+$"
+        },
+        "subscriptionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^(?![\\s\\S]*[\\u0000\\uD800-\\uDFFF])(?=[\\s\\S]*\\S)[\\s\\S]+$"
+        },
+        "planSlug": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^(?![\\s\\S]*[\\u0000\\uD800-\\uDFFF])(?=[\\s\\S]*\\S)[\\s\\S]+$"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["trialing", "active", "past_due", "canceled", "incomplete"]
+        },
+        "currentPeriodStart": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "currentPeriodEnd": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cancelAtPeriodEnd": {
+          "type": "boolean"
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "description": "Generic provider input. Unknown fields and legacy aliases rejected; metadata remains opaque JSON. Conditional subscription requirements checked by the sole normalizer against PaymentSubscriptionFacts."
+    },
+    "Error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message", "requestId"],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "requestId": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        },
+        "details": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "BillingOperation": {
+      "type": "object",
+      "required": [
+        "operationId",
+        "attemptId",
+        "state",
+        "priceVersion",
+        "reservedPoints"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "operationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "attemptId": {
+          "$ref": "#/$defs/AttemptId"
+        },
+        "sessionGroupId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "stepIndex": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "subjectType": {
+          "enum": ["model", "tool"]
+        },
+        "canonicalToolKey": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "modelId": {
+          "type": ["string", "null"],
+          "maxLength": 256
+        },
+        "holdId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "state": {
+          "enum": [
+            "reserved",
+            "dispatched",
+            "settled",
+            "released",
+            "reconcile_pending",
+            "overage_pending"
+          ]
+        },
+        "priceVersion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "reservedPoints": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+        },
+        "capturedPoints": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+        },
+        "releasedPoints": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+        },
+        "policyRevision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "outcome": {
+          "type": ["string", "null"]
+        },
+        "receiptId": {
+          "type": ["string", "null"],
+          "maxLength": 128
+        },
+        "usage": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": {
+            "inputTokens": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "outputTokens": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      }
+    },
+    "NormalizedPaymentEvent": {
+      "type": "object",
+      "required": ["provider", "eventId", "eventType"],
+      "additionalProperties": false,
+      "description": "Validated JSON-safe core facts produced by the sole provider normalizer. points is exact signed decimal text; runtime converts only this field to bigint pointUnits. Not a raw provider webhook or proof of provider settlement.",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^(?![\\s\\S]*[\\u0000\\uD800-\\uDFFF])(?=[\\s\\S]*\\S)[\\s\\S]+$"
+        },
+        "eventId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![\\s\\S]*[\\u0000\\uD800-\\uDFFF])(?=[\\s\\S]*\\S)[\\s\\S]+$"
+        },
+        "eventType": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^(?![\\s\\S]*[\\u0000\\uD800-\\uDFFF])(?=[\\s\\S]*\\S)[\\s\\S]+$"
+        },
+        "amountCents": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
+        },
+        "userId": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "organizationId": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "checkoutId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^(?![\\s\\S]*[\\u0000\\uD800-\\uDFFF])(?=[\\s\\S]*\\S)[\\s\\S]+$"
+        },
+        "refundId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^(?![\\s\\S]*[\\u0000\\uD800-\\uDFFF])(?=[\\s\\S]*\\S)[\\s\\S]+$"
+        },
+        "providerPaymentId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![\\s\\S]*[\\u0000\\uD800-\\uDFFF])(?=[\\s\\S]*\\S)[\\s\\S]+$"
+        },
+        "providerAccount": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![\\s\\S]*[\\u0000\\uD800-\\uDFFF])(?=[\\s\\S]*\\S)[\\s\\S]+$"
+        },
+        "signature": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048,
+          "pattern": "^(?![\\s\\S]*[\\u0000\\uD800-\\uDFFF])(?=[\\s\\S]*\\S)[\\s\\S]+$"
+        },
+        "points": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$|^-(?:0\\.[0-9]{1,6}|[1-9][0-9]{0,18}(?:\\.[0-9]{1,6})?)$"
+        },
+        "occurredAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
+        },
+        "subscription": {
+          "$ref": "#/$defs/PaymentSubscriptionFacts"
+        },
+        "refund": {
+          "type": "object",
+          "required": ["chargeId", "state", "amountMinor"],
+          "additionalProperties": false,
+          "properties": {
+            "chargeId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^(?![\\s\\S]*[\\u0000\\uD800-\\uDFFF])(?=[\\s\\S]*\\S)[\\s\\S]+$"
+            },
+            "state": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "requires_action",
+                "succeeded",
+                "failed",
+                "canceled"
+              ]
+            },
+            "amountMinor": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          }
+        }
+      }
+    },
+    "ExecutionPermit": {
+      "type": "object",
+      "required": [
+        "protocolVersion",
+        "platformId",
+        "deploymentId",
+        "operationId",
+        "attemptId",
+        "canonicalToolKey",
+        "priceVersion",
+        "reservedPoints",
+        "chargeMode",
+        "keyId",
+        "issuedAt",
+        "expiresAt",
+        "signature"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "protocolVersion": {
+          "const": "v1"
+        },
+        "platformId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "deploymentId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "operationId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "attemptId": {
+          "$ref": "#/$defs/AttemptId"
+        },
+        "canonicalToolKey": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "priceVersion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "reservedPoints": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+        },
+        "chargeMode": {
+          "enum": ["attempt", "success"]
+        },
+        "keyId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "issuedAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
+        },
+        "signature": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        }
+      }
+    },
+    "PlanSummary": {
+      "type": "object",
+      "properties": {
+        "slug": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "monthlyPoints": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+        }
+      },
+      "required": ["slug", "name", "monthlyPoints"],
+      "additionalProperties": false
+    },
+    "PlatformPlan": {
+      "type": "object",
+      "properties": {
+        "slug": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "monthlyPoints": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+        },
+        "priceCents": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "currency": {
+          "type": "string"
+        },
+        "priceVersion": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "active": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "slug",
+        "name",
+        "monthlyPoints",
+        "priceCents",
+        "currency",
+        "priceVersion",
+        "active"
+      ],
+      "additionalProperties": false
+    },
+    "PlansResponse": {
+      "type": "object",
+      "properties": {
+        "balancePoints": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+        },
+        "spendablePoints": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+        },
+        "restrictedPoints": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+        },
+        "currency": {
+          "const": "USD"
+        },
+        "plans": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PlatformPlan"
+          },
+          "maxItems": 100
+        },
+        "organizationId": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "requestId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "balancePoints",
+        "spendablePoints",
+        "restrictedPoints",
+        "currency",
+        "plans",
+        "organizationId",
+        "requestId"
+      ],
+      "additionalProperties": false
+    },
+    "Subscription": {
+      "type": "object",
+      "properties": {
+        "subscriptionId": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["trialing", "active", "past_due", "canceled", "incomplete"]
+        },
+        "plan": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PlanSummary"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "currentPeriodStart": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "currentPeriodEnd": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cancelAtPeriodEnd": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "subscriptionId",
+        "provider",
+        "status",
+        "plan",
+        "currentPeriodStart",
+        "currentPeriodEnd",
+        "cancelAtPeriodEnd"
+      ],
+      "additionalProperties": false
+    },
+    "SubscriptionsResponse": {
+      "type": "object",
+      "properties": {
+        "organizationId": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "subscriptions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Subscription"
+          },
+          "maxItems": 100
+        },
+        "requestId": {
+          "type": "string"
+        }
+      },
+      "required": ["organizationId", "subscriptions", "requestId"],
+      "additionalProperties": false
+    },
+    "CheckoutIntentRequest": {
+      "type": "object",
+      "properties": {
+        "planSlug": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "organizationId": {
+          "$ref": "#/$defs/OrganizationScope"
+        },
+        "idempotencyKey": {
+          "$ref": "#/$defs/IdempotencyKey"
+        }
+      },
+      "required": ["planSlug"],
+      "additionalProperties": false
+    },
+    "CheckoutIntentResponse": {
+      "type": "object",
+      "properties": {
+        "checkoutId": {
+          "type": "string"
+        },
+        "checkoutUrl": {
+          "type": "string",
+          "pattern": "^https?:\\x2f\\x2f[^\\s]+$"
+        },
+        "organizationId": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "plan": {
+          "$ref": "#/$defs/PlatformPlan"
+        },
+        "requestId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "checkoutId",
+        "checkoutUrl",
+        "organizationId",
+        "plan",
+        "requestId"
+      ],
+      "additionalProperties": false
+    },
+    "Organization": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "name": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "status": {
+          "const": "active"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["owner", "admin", "member"]
+        },
+        "balancePoints": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+        }
+      },
+      "required": ["id", "name", "slug", "status", "role", "balancePoints"],
+      "additionalProperties": false
+    },
+    "OrganizationsResponse": {
+      "type": "object",
+      "properties": {
+        "organizations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Organization"
+          },
+          "maxItems": 1000
+        },
+        "requestId": {
+          "type": "string"
+        }
+      },
+      "required": ["organizations", "requestId"],
+      "additionalProperties": false
+    },
+    "CreateOrganizationRequest": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "slug": {
+          "type": "string",
+          "maxLength": 120
+        }
+      },
+      "required": ["name"],
+      "additionalProperties": false
+    },
+    "CreateOrganizationResponse": {
+      "type": "object",
+      "properties": {
+        "organization": {
+          "$ref": "#/$defs/Organization"
+        },
+        "requestId": {
+          "type": "string"
+        }
+      },
+      "required": ["organization", "requestId"],
+      "additionalProperties": false
+    },
+    "OrganizationMember": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "email": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "role": {
+          "type": "string",
+          "enum": ["owner", "admin", "member"]
+        },
+        "active": {
+          "type": "boolean"
+        }
+      },
+      "required": ["userId", "name", "email", "role", "active"],
+      "additionalProperties": false
+    },
+    "OrganizationMembersResponse": {
+      "type": "object",
+      "properties": {
+        "members": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/OrganizationMember"
+          },
+          "maxItems": 1000
+        },
+        "requestId": {
+          "type": "string"
+        }
+      },
+      "required": ["members", "requestId"],
+      "additionalProperties": false
+    },
+    "AddOrganizationMemberRequest": {
+      "type": "object",
+      "properties": {
+        "userId": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[1-9][0-9]*$",
+              "maxLength": 16
+            },
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          ]
+        }
+      },
+      "required": ["userId"],
+      "additionalProperties": false
+    },
+    "AddOrganizationMemberResponse": {
+      "type": "object",
+      "properties": {
+        "member": {
+          "type": "object",
+          "properties": {
+            "userId": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "role": {
+              "const": "member"
+            },
+            "active": {
+              "const": true
+            }
+          },
+          "required": ["userId", "role", "active"],
+          "additionalProperties": false
+        },
+        "requestId": {
+          "type": "string"
+        }
+      },
+      "required": ["member", "requestId"],
+      "additionalProperties": false
+    },
+    "SessionSummary": {
+      "type": "object",
+      "properties": {
+        "sessionGroupId": {
+          "type": "string"
+        },
+        "chatId": {
+          "type": "string"
+        },
+        "organizationId": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "runId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "active",
+            "completed",
+            "reconcile_pending",
+            "overage_pending"
+          ]
+        },
+        "stepsCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "reservedPoints": {
+          "$ref": "#/$defs/SessionAggregatePoints"
+        },
+        "capturedPoints": {
+          "$ref": "#/$defs/SessionAggregatePoints"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
+        }
+      },
+      "required": [
+        "sessionGroupId",
+        "chatId",
+        "organizationId",
+        "runId",
+        "status",
+        "stepsCount",
+        "reservedPoints",
+        "capturedPoints",
+        "createdAt"
+      ],
+      "additionalProperties": false
+    },
+    "SessionsResponse": {
+      "type": "object",
+      "properties": {
+        "balancePoints": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+        },
+        "sessions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SessionSummary"
+          },
+          "maxItems": 100
+        },
+        "requestId": {
+          "type": "string"
+        }
+      },
+      "required": ["balancePoints", "sessions", "requestId"],
+      "additionalProperties": false
+    },
+    "PublicExecutionReceipt": {
+      "type": "object",
+      "properties": {
+        "dispatchEvidence": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "httpStatus": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "outcome": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "receiptId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "receiptRevision": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "supplierUnits": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "additionalProperties": {
+            "type": "string",
+            "maxLength": 128
+          }
+        }
+      },
+      "required": [
+        "dispatchEvidence",
+        "httpStatus",
+        "outcome",
+        "receiptId",
+        "receiptRevision"
+      ],
+      "additionalProperties": false
+    },
+    "SessionStep": {
+      "type": "object",
+      "properties": {
+        "operationId": {
+          "type": "string"
+        },
+        "attemptId": {
+          "$ref": "#/$defs/AttemptId"
+        },
+        "subjectType": {
+          "type": "string",
+          "enum": ["model", "tool"]
+        },
+        "canonicalToolKey": {
+          "type": "string"
+        },
+        "modelId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "stepIndex": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "reserved",
+            "dispatched",
+            "settled",
+            "released",
+            "reconcile_pending",
+            "overage_pending"
+          ]
+        },
+        "reservedPoints": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+        },
+        "capturedPoints": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+        },
+        "outcome": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "usage": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "inputTokens": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "outputTokens": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": ["inputTokens", "outputTokens"],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "executionReceipt": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PublicExecutionReceipt"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
+        }
+      },
+      "required": [
+        "operationId",
+        "attemptId",
+        "subjectType",
+        "canonicalToolKey",
+        "modelId",
+        "stepIndex",
+        "state",
+        "reservedPoints",
+        "capturedPoints",
+        "outcome",
+        "usage",
+        "executionReceipt",
+        "createdAt",
+        "updatedAt"
+      ],
+      "additionalProperties": false
+    },
+    "SessionDetailsResponse": {
+      "type": "object",
+      "properties": {
+        "session": {
+          "type": "object",
+          "properties": {
+            "sessionGroupId": {
+              "type": "string"
+            },
+            "chatId": {
+              "type": "string"
+            },
+            "runId": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "organizationId": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "active",
+                "completed",
+                "reconcile_pending",
+                "overage_pending"
+              ]
+            }
+          },
+          "required": [
+            "sessionGroupId",
+            "chatId",
+            "runId",
+            "organizationId",
+            "status"
+          ],
+          "additionalProperties": false
+        },
+        "totals": {
+          "type": "object",
+          "properties": {
+            "reservedPoints": {
+              "$ref": "#/$defs/SessionAggregatePoints"
+            },
+            "capturedPoints": {
+              "$ref": "#/$defs/SessionAggregatePoints"
+            }
+          },
+          "required": ["reservedPoints", "capturedPoints"],
+          "additionalProperties": false
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SessionStep"
+          },
+          "maxItems": 1000
+        },
+        "requestId": {
+          "type": "string"
+        },
+        "page": {
+          "$ref": "#/$defs/SessionPage"
+        }
+      },
+      "required": ["session", "totals", "steps", "requestId", "page"],
+      "additionalProperties": false
+    },
+    "ExpireWalletGrantsResponse": {
+      "type": "object",
+      "properties": {
+        "expired": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "requestId": {
+          "type": "string"
+        }
+      },
+      "required": ["expired", "requestId"],
+      "additionalProperties": false
+    },
+    "IdentityExchangeResponse": {
+      "type": "object",
+      "properties": {
+        "token": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
+        },
+        "issuer": {
+          "type": "string"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "audience": {
+          "const": "platform-billing"
+        },
+        "scope": {
+          "type": "array",
+          "items": {
+            "const": "platform:billing"
+          },
+          "minItems": 1,
+          "maxItems": 1
+        },
+        "requestId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "token",
+        "expiresAt",
+        "issuer",
+        "subject",
+        "audience",
+        "scope",
+        "requestId"
+      ],
+      "additionalProperties": false
+    },
+    "IdentityDeactivateRequest": {
+      "type": "object",
+      "properties": {
+        "issuer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "subject": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      },
+      "required": ["issuer", "subject"],
+      "additionalProperties": false
+    },
+    "IdentityDeactivateResponse": {
+      "type": "object",
+      "properties": {
+        "deactivated": {
+          "type": "boolean"
+        },
+        "requestId": {
+          "type": "string"
+        }
+      },
+      "required": ["deactivated", "requestId"],
+      "additionalProperties": false
+    },
+    "AdminCapabilityResponse": {
+      "type": "object",
+      "properties": {
+        "adminId": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "allowed": {
+          "const": true
+        },
+        "role": {
+          "type": "string",
+          "enum": ["admin", "operator"]
+        },
+        "requestId": {
+          "type": "string"
+        }
+      },
+      "required": ["adminId", "allowed", "role", "requestId"],
+      "additionalProperties": false
+    },
+    "AuditProjection": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "action": {
+          "type": "string"
+        },
+        "actorId": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "actorIssuer": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "actorSubject": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "beforeState": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {},
+              "required": [],
+              "additionalProperties": true
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "afterState": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {},
+              "required": [],
+              "additionalProperties": true
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "correlationId": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
+        },
+        "ipAddress": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "requestId": {
+          "type": "string"
+        },
+        "resourceId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "resourceType": {
+          "type": "string"
+        },
+        "result": {
+          "type": "string"
+        },
+        "summary": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {},
+              "required": [],
+              "additionalProperties": true
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
+        },
+        "userAgent": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "action",
+        "actorId",
+        "actorIssuer",
+        "actorSubject",
+        "beforeState",
+        "afterState",
+        "correlationId",
+        "createdAt",
+        "ipAddress",
+        "requestId",
+        "resourceId",
+        "resourceType",
+        "result",
+        "summary",
+        "updatedAt",
+        "userAgent"
+      ],
+      "additionalProperties": false
+    },
+    "AuditListResponse": {
+      "type": "object",
+      "properties": {
+        "audits": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/AuditProjection"
+          },
+          "maxItems": 100
+        },
+        "hasMore": {
+          "type": "boolean"
+        },
+        "nextCursor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "viewerAdminId": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "requestId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "audits",
+        "hasMore",
+        "nextCursor",
+        "viewerAdminId",
+        "requestId"
+      ],
+      "additionalProperties": false
+    },
+    "AuditExportRequest": {
+      "type": "object",
+      "properties": {
+        "count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "scope": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "AuditExportResponse": {
+      "type": "object",
+      "properties": {
+        "recorded": {
+          "const": true
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "requestId": {
+          "type": "string"
+        }
+      },
+      "required": ["recorded", "count", "requestId"],
+      "additionalProperties": false
+    },
+    "BillingApproval": {
+      "type": "object",
+      "properties": {
+        "approvalId": {
+          "type": "string"
+        },
+        "action": {
+          "type": "string",
+          "enum": [
+            "reconcile",
+            "wallet_adjust",
+            "refund_recovery",
+            "dispute_review"
+          ]
+        },
+        "resourceId": {
+          "type": "string"
+        },
+        "decision": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "mutationHash": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "requestedRevision": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "requestedBy": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "approvedBy": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "approved", "consumed", "rejected", "expired"]
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
+        },
+        "approvedAt": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "consumedAt": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "deltaPoints": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^-?(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "organizationId": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "recoverySnapshot": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RefundRecoverySnapshot"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "disputeReviewSnapshot": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DisputeReviewSnapshot"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "approvalId",
+        "action",
+        "resourceId",
+        "decision",
+        "mutationHash",
+        "requestedRevision",
+        "reason",
+        "requestedBy",
+        "approvedBy",
+        "status",
+        "expiresAt",
+        "approvedAt",
+        "consumedAt",
+        "deltaPoints",
+        "organizationId",
+        "recoverySnapshot",
+        "disputeReviewSnapshot"
+      ],
+      "additionalProperties": false
+    },
+    "ApprovalListResponse": {
+      "type": "object",
+      "properties": {
+        "approvals": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/BillingApproval"
+          },
+          "maxItems": 100
+        },
+        "hasMore": {
+          "type": "boolean"
+        },
+        "nextCursor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "viewerAdminId": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "requestId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "approvals",
+        "hasMore",
+        "nextCursor",
+        "viewerAdminId",
+        "requestId"
+      ],
+      "additionalProperties": false
+    },
+    "ApprovalResponse": {
+      "type": "object",
+      "properties": {
+        "approval": {
+          "$ref": "#/$defs/BillingApproval"
+        },
+        "requestId": {
+          "type": "string"
+        }
+      },
+      "required": ["approval", "requestId"],
+      "additionalProperties": false
+    },
+    "ApprovalRequest": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "action": {
+              "const": "reconcile"
+            },
+            "resourceId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "revision": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "reason": {
+              "type": "string",
+              "description": "Business handler trims first, then requires UTF-16 length3..500. Raw padding is allowed within the independent transport budget."
+            },
+            "decision": {
+              "type": "string",
+              "enum": ["capture_reserved", "release_reserved", "charge_overage"]
+            }
+          },
+          "required": [
+            "action",
+            "resourceId",
+            "revision",
+            "reason",
+            "decision"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "action": {
+              "const": "wallet_adjust"
+            },
+            "resourceId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[1-9][0-9]{0,15}$"
+            },
+            "reason": {
+              "type": "string",
+              "description": "Business handler trims first, then requires UTF-16 length3..500. Raw padding is allowed within the independent transport budget."
+            },
+            "deltaPoints": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "pattern": "^-?(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+                },
+                {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                }
+              ]
+            },
+            "organizationId": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[1-9][0-9]{0,15}$"
+                },
+                {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": ["action", "resourceId", "reason", "deltaPoints"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "action": {
+              "const": "refund_recovery"
+            },
+            "resourceId": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,9}$",
+              "maxLength": 10
+            },
+            "reason": {
+              "type": "string",
+              "description": "Business handler trims first, then requires UTF-16 length3..500. Raw padding is allowed within the independent transport budget."
+            },
+            "disposition": {
+              "const": "customer_elected_original_entitlement"
+            },
+            "customerResolutionReference": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 200
+            }
+          },
+          "required": [
+            "action",
+            "resourceId",
+            "reason",
+            "disposition",
+            "customerResolutionReference"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "action": {
+              "const": "dispute_review"
+            },
+            "resourceId": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]{0,9}$",
+              "maxLength": 10
+            },
+            "reason": {
+              "type": "string",
+              "description": "Business handler trims first, then requires UTF-16 length3..500. Raw padding is allowed within the independent transport budget."
+            },
+            "evidenceReference": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 200,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{2,199}$",
+              "description": "Opaque internal case or evidence reference; not a URL or customer data."
+            }
+          },
+          "required": ["action", "resourceId", "reason", "evidenceReference"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "ReconcileRequest": {
+      "type": "object",
+      "properties": {
+        "decision": {
+          "type": "string",
+          "enum": ["capture_reserved", "release_reserved", "charge_overage"]
+        },
+        "approvalId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": ["decision"],
+      "additionalProperties": false
+    },
+    "ReconcileResponse": {
+      "type": "object",
+      "properties": {
+        "operationId": {
+          "type": "string"
+        },
+        "decision": {
+          "type": "string",
+          "enum": ["capture_reserved", "release_reserved", "charge_overage"]
+        },
+        "state": {
+          "type": "string",
+          "enum": ["settled", "released"]
+        },
+        "capturedPoints": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+        },
+        "requestId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "operationId",
+        "decision",
+        "state",
+        "capturedPoints",
+        "requestId"
+      ],
+      "additionalProperties": false
+    },
+    "WalletAdjustmentRequest": {
+      "type": "object",
+      "properties": {
+        "deltaPoints": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "description": "Business handler trims first, then requires length 3..500; raw wire padding is accepted."
+        },
+        "organizationId": {
+          "type": ["string", "number", "null"]
+        },
+        "idempotencyKey": {
+          "$ref": "#/$defs/IdempotencyKey"
+        },
+        "approvalId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      },
+      "required": ["deltaPoints", "reason"],
+      "additionalProperties": false
+    },
+    "WalletAdjustmentEntry": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "operationId": {
+          "type": "string"
+        },
+        "sessionGroupId": {
+          "type": "string"
+        },
+        "user": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "organization": {
+          "type": ["integer", "null"],
+          "minimum": 1
+        },
+        "eventType": {
+          "const": "adjustment"
+        },
+        "deltaPoints": {
+          "type": "string",
+          "pattern": "^-?(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+        },
+        "balanceAfter": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+        },
+        "idempotencyKey": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
+        }
+      },
+      "required": [
+        "id",
+        "operationId",
+        "sessionGroupId",
+        "user",
+        "organization",
+        "eventType",
+        "deltaPoints",
+        "balanceAfter",
+        "idempotencyKey",
+        "createdAt",
+        "updatedAt"
+      ],
+      "additionalProperties": false
+    },
+    "WalletAdjustmentResponse": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "idempotencyKey": {
+              "type": "string"
+            },
+            "balancePoints": {
+              "type": "string",
+              "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+            },
+            "entry": {
+              "$ref": "#/$defs/WalletAdjustmentEntry"
+            },
+            "requestId": {
+              "type": "string"
+            }
+          },
+          "required": ["idempotencyKey", "balancePoints", "entry", "requestId"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "idempotencyKey": {
+              "type": "string"
+            },
+            "duplicate": {
+              "const": true
+            },
+            "entry": {
+              "$ref": "#/$defs/WalletAdjustmentEntry"
+            },
+            "requestId": {
+              "type": "string"
+            }
+          },
+          "required": ["idempotencyKey", "duplicate", "entry", "requestId"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "PaymentEventResponse": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": ["processed", "ignored"]
+            },
+            "eventId": {
+              "type": "string",
+              "description": "Supplier event ID, not the inbox database primary key."
+            }
+          },
+          "required": ["status", "eventId"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "status": {
+              "const": "processed"
+            },
+            "eventId": {
+              "type": "string",
+              "description": "Supplier event ID, not the inbox database primary key."
+            },
+            "paymentId": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "subscriptionId": {
+              "type": "string"
+            },
+            "subscriptionStatus": {
+              "type": "string",
+              "enum": [
+                "trialing",
+                "active",
+                "past_due",
+                "canceled",
+                "incomplete"
+              ]
+            }
+          },
+          "required": [
+            "status",
+            "eventId",
+            "paymentId",
+            "subscriptionId",
+            "subscriptionStatus"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "status": {
+              "const": "ignored"
+            },
+            "eventId": {
+              "type": "string",
+              "description": "Supplier event ID, not the inbox database primary key."
+            },
+            "paymentId": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "required": ["status", "eventId", "paymentId", "reason"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "status": {
+              "const": "processed"
+            },
+            "eventId": {
+              "type": "string",
+              "description": "Supplier event ID, not the inbox database primary key."
+            },
+            "paymentId": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "organizationId": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "balancePoints": {
+              "type": "string",
+              "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+            }
+          },
+          "required": [
+            "status",
+            "eventId",
+            "paymentId",
+            "organizationId",
+            "balancePoints"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "PaymentReplayResponse": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/PaymentEventResponse"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": ["processed", "ignored"]
+            },
+            "eventId": {
+              "type": "string",
+              "description": "Supplier event ID, not the inbox database primary key."
+            },
+            "replayed": {
+              "const": false
+            }
+          },
+          "required": ["status", "eventId", "replayed"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "PaymentError": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "eventId": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "requestId": {
+          "type": "string"
+        }
+      },
+      "required": ["code"],
+      "additionalProperties": false
+    },
+    "PaymentReplayRequest": {
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "eventId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      },
+      "required": ["provider", "eventId"],
+      "additionalProperties": false
+    },
+    "PaymentReconcileRequest": {
+      "type": "object",
+      "properties": {
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "PaymentReconcileResponse": {
+      "type": "object",
+      "properties": {
+        "caseRisk": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["total", "dueSoonOrOverdue", "withGap"],
+          "properties": {
+            "total": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "dueSoonOrOverdue": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "withGap": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "reconciled": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "staleBefore": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "eventId": {
+                "type": "string"
+              },
+              "status": {
+                "type": "integer",
+                "minimum": 100,
+                "maximum": 599
+              }
+            },
+            "required": ["eventId", "status"],
+            "additionalProperties": false
+          },
+          "maxItems": 100
+        },
+        "failed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        }
+      },
+      "required": ["caseRisk", "reconciled", "staleBefore", "events", "failed"],
+      "additionalProperties": false
+    },
+    "StripeWebhookRequest": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![\\s\\S]*[\\u0000\\uD800-\\uDFFF])(?=[\\s\\S]*\\S)[\\s\\S]+$"
+        },
+        "type": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^(?![\\s\\S]*[\\u0000\\uD800-\\uDFFF])(?=[\\s\\S]*\\S)[\\s\\S]+$"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "object": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256,
+                  "pattern": "^(?![\\s\\S]*[\\u0000\\uD800-\\uDFFF])(?=[\\s\\S]*\\S)[\\s\\S]+$"
+                },
+                "object": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128,
+                  "pattern": "^(?![\\s\\S]*[\\u0000\\uD800-\\uDFFF])(?=[\\s\\S]*\\S)[\\s\\S]+$"
+                },
+                "status": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128,
+                  "pattern": "^(?![\\s\\S]*[\\u0000\\uD800-\\uDFFF])(?=[\\s\\S]*\\S)[\\s\\S]+$"
+                },
+                "mode": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128,
+                  "pattern": "^(?![\\s\\S]*[\\u0000\\uD800-\\uDFFF])(?=[\\s\\S]*\\S)[\\s\\S]+$"
+                },
+                "payment_status": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128,
+                  "pattern": "^(?![\\s\\S]*[\\u0000\\uD800-\\uDFFF])(?=[\\s\\S]*\\S)[\\s\\S]+$"
+                },
+                "payment_intent": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 256,
+                      "pattern": "^(?![\\s\\S]*[\\u0000\\uD800-\\uDFFF])(?=[\\s\\S]*\\S)[\\s\\S]+$"
+                    },
+                    {
+                      "type": "object",
+                      "required": ["id", "object"],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256,
+                          "pattern": "^(?![\\s\\S]*[\\u0000\\uD800-\\uDFFF])(?=[\\s\\S]*\\S)[\\s\\S]+$"
+                        },
+                        "object": {
+                          "const": "payment_intent"
+                        }
+                      },
+                      "additionalProperties": true
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "amount": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "amount_total": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "amount_received": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "amount_capturable": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "amount_captured": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "amount_refunded": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "paid": {
+                  "type": "boolean"
+                },
+                "captured": {
+                  "type": "boolean"
+                },
+                "currency": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z]{3}$"
+                },
+                "metadata": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "additionalProperties": true
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "client_reference_id": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128,
+                      "pattern": "^(?![\\s\\S]*[\\u0000\\uD800-\\uDFFF])(?=[\\s\\S]*\\S)[\\s\\S]+$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "charge": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 256,
+                      "pattern": "^(?![\\s\\S]*[\\u0000\\uD800-\\uDFFF])(?=[\\s\\S]*\\S)[\\s\\S]+$"
+                    },
+                    {
+                      "type": "object",
+                      "required": ["id", "object"],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256,
+                          "pattern": "^(?![\\s\\S]*[\\u0000\\uD800-\\uDFFF])(?=[\\s\\S]*\\S)[\\s\\S]+$"
+                        },
+                        "object": {
+                          "const": "charge"
+                        },
+                        "payment_intent": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 256,
+                              "pattern": "^(?![\\s\\S]*[\\u0000\\uD800-\\uDFFF])(?=[\\s\\S]*\\S)[\\s\\S]+$"
+                            },
+                            {
+                              "type": "object",
+                              "required": ["id", "object"],
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 256,
+                                  "pattern": "^(?![\\s\\S]*[\\u0000\\uD800-\\uDFFF])(?=[\\s\\S]*\\S)[\\s\\S]+$"
+                                },
+                                "object": {
+                                  "const": "payment_intent"
+                                }
+                              },
+                              "additionalProperties": true
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "additionalProperties": true
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [],
+              "additionalProperties": true
+            }
+          },
+          "required": ["object"],
+          "additionalProperties": true
+        },
+        "amountCents": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Za-z]{3}$"
+        },
+        "userId": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "organizationId": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "checkoutId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^(?![\\s\\S]*[\\u0000\\uD800-\\uDFFF])(?=[\\s\\S]*\\S)[\\s\\S]+$"
+        },
+        "refundId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^(?![\\s\\S]*[\\u0000\\uD800-\\uDFFF])(?=[\\s\\S]*\\S)[\\s\\S]+$"
+        },
+        "providerAccount": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![\\s\\S]*[\\u0000\\uD800-\\uDFFF])(?=[\\s\\S]*\\S)[\\s\\S]+$"
+        },
+        "signature": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048,
+          "pattern": "^(?![\\s\\S]*[\\u0000\\uD800-\\uDFFF])(?=[\\s\\S]*\\S)[\\s\\S]+$"
+        },
+        "occurredAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
+        },
+        "points": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+            },
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          ]
+        },
+        "refundedGrantPoints": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+            },
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          ]
+        },
+        "grossAmountMinor": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "refundAmountMinor": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "customerRef": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![\\s\\S]*[\\u0000\\uD800-\\uDFFF])(?=[\\s\\S]*\\S)[\\s\\S]+$"
+        },
+        "subscriptionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^(?![\\s\\S]*[\\u0000\\uD800-\\uDFFF])(?=[\\s\\S]*\\S)[\\s\\S]+$"
+        },
+        "planSlug": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^(?![\\s\\S]*[\\u0000\\uD800-\\uDFFF])(?=[\\s\\S]*\\S)[\\s\\S]+$"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["trialing", "active", "past_due", "canceled", "incomplete"]
+        },
+        "currentPeriodStart": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "currentPeriodEnd": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cancelAtPeriodEnd": {
+          "type": "boolean"
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "account": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![\\s\\S]*[\\u0000\\uD800-\\uDFFF])(?=[\\s\\S]*\\S)[\\s\\S]+$"
+        },
+        "created": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 253402300799
+        }
+      },
+      "required": ["id", "type", "data", "created"],
+      "additionalProperties": true
+    },
+    "ProviderWebhookRequest": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PaymentWebhook"
+        },
+        {
+          "$ref": "#/$defs/StripeWebhookRequest"
+        }
+      ]
+    },
+    "PortaReceiptStatusResponse": {
+      "type": "object",
+      "properties": {
+        "attemptId": {
+          "$ref": "#/$defs/AttemptId"
+        },
+        "dispatchEvidence": {
+          "type": "string",
+          "enum": ["not_dispatched", "started", "response", "unknown"]
+        },
+        "receiptId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "state": {
+          "type": "string",
+          "enum": ["pending", "complete", "not_dispatched"]
+        }
+      },
+      "required": ["attemptId", "dispatchEvidence", "receiptId", "state"],
+      "additionalProperties": false
+    },
+    "PortaError": {
+      "type": "object",
+      "required": ["porta_error"],
+      "additionalProperties": false,
+      "properties": {
+        "porta_error": {
+          "type": "object",
+          "required": ["code", "message"],
+          "additionalProperties": false,
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "SessionPage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["limit", "hasMore", "totalSteps", "nextCursor"],
+      "properties": {
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        },
+        "hasMore": {
+          "type": "boolean"
+        },
+        "totalSteps": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "nextCursor": {
+          "type": ["string", "null"],
+          "maxLength": 512
+        }
+      }
+    },
+    "SessionAggregatePoints": {
+      "type": "string",
+      "pattern": "^(?:0|[1-9][0-9]{0,63})(?:\\.[0-9]{1,6})?$",
+      "description": "Aggregate only: up to 64 integer digits; individual wallet/operation limits unchanged."
+    },
+    "OverviewDate": {
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "date",
+          "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])$",
+          "maxLength": 10
+        },
+        {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,3})?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+          "maxLength": 64
+        }
+      ]
+    },
+    "OrganizationScopeQuery": {
+      "type": "string",
+      "pattern": "^(?:|[1-9][0-9]{0,15})$",
+      "description": "Empty explicitly selects personal scope; otherwise a canonical positive organization ID (business validates safe integer)."
+    },
+    "OrganizationScope": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/OrganizationScopeQuery"
+        },
+        {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "IdempotencyKey": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[\\x21-\\x7e]+$",
+      "description": "Opaque printable ASCII HTTP transport key; no whitespace, raw user text or Unicode header encoding."
+    },
+    "RequestId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "AttemptId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^(?!\\.{1,2}(?![\\s\\S]))[^\\u0000\\uD800-\\uDFFF]+$"
+    },
+    "PaymentSubscriptionFacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["subscriptionId", "planSlug", "status"],
+      "properties": {
+        "subscriptionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^(?![\\s\\S]*[\\u0000\\uD800-\\uDFFF])(?=[\\s\\S]*\\S)[\\s\\S]+$"
+        },
+        "planSlug": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^(?![\\s\\S]*[\\u0000\\uD800-\\uDFFF])(?=[\\s\\S]*\\S)[\\s\\S]+$"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["trialing", "active", "past_due", "canceled", "incomplete"]
+        },
+        "currentPeriodStart": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "currentPeriodEnd": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cancelAtPeriodEnd": {
+          "type": "boolean"
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "RefundRecoverySnapshot": {
+      "type": "object",
+      "properties": {
+        "paymentEventId": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "refundEventId": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "checkoutIntentId": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "grantId": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "accountId": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "userId": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "checkoutId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "providerPaymentId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "chargeId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "refundId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "failureBalanceTransactionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "originalBalanceTransactionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "organizationId": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "providerAccount": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
+        },
+        "livemode": {
+          "type": "boolean"
+        },
+        "amountMinor": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]{0,15})$"
+        },
+        "capturedMinor": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]{0,15})$"
+        },
+        "grossRefundMinor": {
+          "$ref": "#/$defs/AggregateMinorUnits"
+        },
+        "priorRecoveryMinor": {
+          "$ref": "#/$defs/AggregateMinorUnits"
+        },
+        "targetBeforePoints": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+        },
+        "targetAfterPoints": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+        },
+        "recoveredPoints": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+        },
+        "availablePoints": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+        },
+        "expiredPoints": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+        },
+        "expiredAvailablePoints": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+        },
+        "walletDeltaPoints": {
+          "type": "string",
+          "pattern": "^-?(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+        },
+        "originalExpiresAt": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "walletVersion": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "grantVersion": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "checkoutRevision": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
+        },
+        "coveredEvents": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 200,
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2147483647
+              },
+              "payloadHash": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              }
+            },
+            "required": ["id", "payloadHash"],
+            "additionalProperties": false
+          }
+        },
+        "factSetHash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "providerEvidenceHash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "providerState": {
+          "type": "string",
+          "enum": ["failed", "canceled"]
+        },
+        "failureReason": {
+          "type": "string",
+          "pattern": "^[a-z_]{1,128}$"
+        },
+        "disposition": {
+          "const": "customer_elected_original_entitlement"
+        },
+        "customerResolutionReference": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 200
+        },
+        "evidenceRetrievedAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
+        },
+        "providerRequestId": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "lossPosition": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "disputeTargetBeforePoints": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+                },
+                "disputeTargetAfterPoints": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+                },
+                "refundFundedAfterPoints": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+                },
+                "disputeFundedAfterPoints": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+                },
+                "refundGapAfterPoints": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+                },
+                "disputeGapAfterPoints": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+                },
+                "transferredToDisputePoints": {
+                  "type": "string",
+                  "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+                },
+                "reviewRequired": {
+                  "type": "boolean"
+                },
+                "movements": {
+                  "type": "array",
+                  "maxItems": 8,
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "from": {
+                        "enum": ["available", "refunded", "disputed", "expired"]
+                      },
+                      "to": {
+                        "enum": ["available", "refunded", "disputed", "expired"]
+                      },
+                      "points": {
+                        "type": "string",
+                        "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+                      }
+                    },
+                    "required": ["from", "to", "points"],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "disputeTargetBeforePoints",
+                "disputeTargetAfterPoints",
+                "refundFundedAfterPoints",
+                "disputeFundedAfterPoints",
+                "refundGapAfterPoints",
+                "disputeGapAfterPoints",
+                "transferredToDisputePoints",
+                "reviewRequired",
+                "movements"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "paymentEventId",
+        "refundEventId",
+        "checkoutIntentId",
+        "grantId",
+        "accountId",
+        "userId",
+        "checkoutId",
+        "providerPaymentId",
+        "chargeId",
+        "refundId",
+        "failureBalanceTransactionId",
+        "originalBalanceTransactionId",
+        "organizationId",
+        "providerAccount",
+        "currency",
+        "livemode",
+        "amountMinor",
+        "capturedMinor",
+        "grossRefundMinor",
+        "priorRecoveryMinor",
+        "targetBeforePoints",
+        "targetAfterPoints",
+        "recoveredPoints",
+        "availablePoints",
+        "expiredPoints",
+        "expiredAvailablePoints",
+        "walletDeltaPoints",
+        "originalExpiresAt",
+        "walletVersion",
+        "grantVersion",
+        "checkoutRevision",
+        "coveredEvents",
+        "factSetHash",
+        "providerEvidenceHash",
+        "providerState",
+        "failureReason",
+        "disposition",
+        "customerResolutionReference",
+        "evidenceRetrievedAt",
+        "providerRequestId",
+        "lossPosition"
+      ],
+      "additionalProperties": false
+    },
+    "BillingApprovalExecutionRequest": {
+      "type": "object",
+      "properties": {
+        "approvalId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      },
+      "required": ["approvalId"],
+      "additionalProperties": false
+    },
+    "BillingApprovalExecutionResponse": {
+      "type": "object",
+      "properties": {
+        "approval": {
+          "$ref": "#/$defs/BillingApproval"
+        },
+        "duplicate": {
+          "type": "boolean"
+        },
+        "requestId": {
+          "$ref": "#/$defs/RequestId"
+        }
+      },
+      "required": ["approval", "duplicate", "requestId"],
+      "additionalProperties": false
+    },
+    "AggregateMinorUnits": {
+      "type": "string",
+      "pattern": "^(?:0|[1-9][0-9]{0,63})$",
+      "description": "Aggregate only, BigInt minor units; each captured/refund amount remains a safe integer."
+    },
+    "DisputeReviewSnapshot": {
+      "type": "object",
+      "properties": {
+        "sourcePaymentEventId": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "coverageHash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "caseCount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        },
+        "checkoutId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "checkoutIntentId": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "grantId": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "organizationId": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "grantVersion": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "refundTargetPoints": {
+          "$ref": "#/$defs/CheckoutPointAmount"
+        },
+        "disputeTargetPoints": {
+          "$ref": "#/$defs/CheckoutPointAmount"
+        },
+        "spendablePoints": {
+          "$ref": "#/$defs/CheckoutPointAmount"
+        },
+        "evidenceReference": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 200,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{2,199}$",
+          "description": "Opaque internal case or evidence reference; not a URL or customer data."
+        },
+        "expiresAt": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "sourcePaymentEventId",
+        "coverageHash",
+        "caseCount",
+        "checkoutId",
+        "checkoutIntentId",
+        "grantId",
+        "organizationId",
+        "grantVersion",
+        "refundTargetPoints",
+        "disputeTargetPoints",
+        "spendablePoints",
+        "evidenceReference",
+        "expiresAt"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

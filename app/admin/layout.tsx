@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { AdminShell } from "@/app/_components/admin/admin-shell";
 import { auth } from "@/app/(auth)/auth";
-import { requirePlatformAdmin } from "@/server/application/admin/access";
+import { resolvePlatformAdmin } from "@/server/application/admin/access";
 
 export const metadata: Metadata = {
   title: "数知探AI · 管理后台",
@@ -23,7 +23,9 @@ export default function AdminLayout({
 
 async function AuthorizedAdmin({ children }: { children: React.ReactNode }) {
   const session = await auth();
-  requirePlatformAdmin(session?.user, notFound);
+  if (!(await resolvePlatformAdmin(session?.user))) {
+    notFound();
+  }
   return (
     <AdminShell
       identity={{

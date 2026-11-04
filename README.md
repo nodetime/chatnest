@@ -20,7 +20,7 @@
 ```sh
 corepack pnpm install --frozen-lockfile
 corepack pnpm exec playwright install chromium
-corepack pnpm db:migrate
+MIGRATION_POSTGRES_URL=postgres://chatnest:chatnest@127.0.0.1:55432/chatnest corepack pnpm db:migrate
 corepack pnpm dev --hostname 127.0.0.1 --port 3003
 ```
 
@@ -95,7 +95,7 @@ You will need to use the environment variables [defined in `deploy/.env.example`
 
 ```bash
 pnpm install
-pnpm db:migrate # Setup database or apply latest database changes
+pnpm db:migrate # Set MIGRATION_POSTGRES_URL before migrating
 pnpm dev
 ```
 

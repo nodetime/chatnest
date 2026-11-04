@@ -1,0 +1,29 @@
+{
+  "artifacts": {
+    "server/application/platform/contract-version.ts": "e6eb8f6ed5486391be8b22e06f0b7121e98c07696f613c53d0c9d3392fd12b15",
+    "docs/contracts/platform-points/openapi.yaml": "a715f269d796dd098aad4e610ac7548731089e36f83e18bc1a9408b0247eb808",
+    "docs/contracts/platform-points/fixtures/canonical-json-vectors.json": "15ac6126a69d0aff1e8e52d629c277a8b9b9d4c050ee27b886252fde0b7e3a29",
+    "docs/contracts/platform-points/fixtures/model-success.json": "150bbdaf3cc5e202b9a00b54a0f605a4b1eb94b2e49bd7f967388b517754fd79",
+    "docs/contracts/platform-points/fixtures/negative-cases.json": "690d4ff0f94289aaf221bd86e19dda22c179241af4cda13b0d4861e107be7abf",
+    "docs/contracts/platform-points/fixtures/payment-completed.json": "9ec9f2222f807eec4fa141c4bd235b76c1562a11c742d45d112468127bbb7c27",
+    "docs/contracts/platform-points/fixtures/payment-refund.json": "49b6351360e4855d60e57722acb6a3d4e905481cdedcf4efcef11af2bfb8c05c",
+    "docs/contracts/platform-points/fixtures/state-transitions.json": "7e232f04f0deaf90c644401020ad8f4d463d816944645942a990a5308876e9d0",
+    "docs/contracts/platform-points/fixtures/tool-success.json": "681cf45f7b214b95272571df7e741f78ff84ce718523b42c7ac759a80b3fe4b9",
+    "docs/contracts/platform-points/source.json": "cda21bc39b0473d2e6a555bed785932e554e3b1752fdf3bd0d3dca184873ec51",
+    "docs/contracts/platform-points/manifest.json": "df43476695fa47ba0f9ec7db69c493c8f37d8d5af063b234a0eb59c7ae710a70",
+    "docs/contracts/platform-points/contract.schema.json": "64dda4c9f363e596d21b253c5b4ce45349eebc9d59fbc5bf261ded9b4ebb1d71",
+    "docs/contracts/platform-points/schemas/operation.json": "a0ecbc7b6e3906ffe032fb0356bdfc0b741ab0cd37dfe0be3362396cf204abc6",
+    "docs/contracts/platform-points/schemas/payment-event.json": "dd93918d22a9514fb15dda4b9f1c28bb43d75671108c433d64b2e48c94ab29b5",
+    "docs/contracts/platform-points/schemas/permit.json": "af5e76bba8044eb3e40f8997c9cc07065243bf0dca008f9a6edcbd6659b1b5b2",
+    "docs/contracts/platform-points/schemas/receipt.json": "9bfacc56cf22640a6b15b5c1097cae264a6245b43d030c0ae28e1b353d217213",
+    "server/application/platform/generated/schemas.ts": "22624dc30e6b4534f38f26b448ed478200c31f9dc5a8bed2df5b8f5659e80966",
+    "server/application/platform/generated/types.ts": "c8352bf4390b2e60fe5eef4c6b75cb0b429f38889cee5d431a9b3e8ec94d0967",
+    "server/application/platform/generated/signatures.ts": "9cf535352506ab9ac3dd3143ef780e699d2cdc604714216fcc2b5c4955acce0c",
+    "server/application/platform/generated/routes.ts": "e61c6ef1635bee64eb864d8a5e1a9ad0df906e45bf2524183c49ba2ae146740c",
+    "server/application/platform/generated/wire.ts": "a5caf92968a7c7ab6a9a1a61b6a949db206219d9647da709328ccec4cc78caf0",
+    "scripts/generated/payment-recovery-schema.mjs": "fe403939c1575c3c2f5971b3d47f9e6251e859890ee97a1fe0ac693be9a41211",
+    "scripts/ci/check-contract-artifacts.mjs": "d35eb15debbe249098a39c7d27ee7a9ec5489611683ba5c469febcd21a36527c"
+  },
+  "sourceDigest": "d658af5c124ad8064501df2c2555ff19d123ba336ab87d42800aec7bc096415c",
+  "target": "chatnest"
+}

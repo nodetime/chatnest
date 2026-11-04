@@ -1,0 +1,79 @@
+{
+  "fixture": "negative-cases",
+  "apiVersion": "v1",
+  "schemaRevision": "2026-11-03.15",
+  "cases": [
+    {
+      "id": "insufficient-balance",
+      "operationId": "op_negative_balance_001",
+      "request": {
+        "subjectType": "tool",
+        "canonicalToolKey": "onebound/1688/item_search",
+        "requestedPoints": "2.000000",
+        "availablePoints": "1.000000"
+      },
+      "expected": {
+        "httpStatus": 409,
+        "code": "INSUFFICIENT_POINTS",
+        "supplierCallCount": 0,
+        "state": "rejected"
+      }
+    },
+    {
+      "id": "platform-unavailable",
+      "operationId": "op_negative_platform_001",
+      "expected": {
+        "httpStatus": 503,
+        "code": "PLATFORM_UNAVAILABLE",
+        "supplierCallCount": 0,
+        "state": "not_started"
+      }
+    },
+    {
+      "id": "permit-replay",
+      "operationId": "op_negative_replay_001",
+      "attemptId": "att_negative_replay_001",
+      "expected": {
+        "httpStatus": 409,
+        "code": "PERMIT_REPLAYED",
+        "supplierCallCountAfterReplay": 0
+      }
+    },
+    {
+      "id": "report-timeout",
+      "operationId": "op_negative_report_001",
+      "expected": {
+        "code": "SETTLEMENT_PENDING",
+        "chatnestState": "settlement_pending",
+        "retryScope": "report_only",
+        "businessCallRetry": false
+      }
+    },
+    {
+      "id": "duplicate-webhook",
+      "providerEventId": "evt_duplicate_001",
+      "expected": {
+        "code": "ALREADY_PROCESSED",
+        "newLedgerEntries": 0
+      }
+    },
+    {
+      "id": "organization-disabled",
+      "expected": {
+        "httpStatus": 403,
+        "code": "FEATURE_DISABLED",
+        "organizationApiRequests": 0
+      }
+    },
+    {
+      "id": "payment-subject-mismatch",
+      "checkoutId": "checkout_fixture_001",
+      "expected": {
+        "httpStatus": 409,
+        "code": "PAYMENT_SUBJECT_MISMATCH",
+        "newLedgerEntries": 0,
+        "newWalletGrants": 0
+      }
+    }
+  ]
+}

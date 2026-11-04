@@ -1,45 +1,62 @@
+import { cookies } from "next/headers";
+import { z } from "zod";
 import { auth } from "@/app/(auth)/auth";
-import { createPlatformBillingClient } from "@/server/application/platform/client";
-import { exchangePlatformIdentity } from "@/server/application/platform/identity";
-import { getEnv } from "@/server/shared/env";
+import {
+  PlatformHttpError,
+  platformResponseError,
+} from "@/server/application/platform/client";
+import {
+  platformPathSchema,
+  platformQuerySchema,
+} from "@/server/application/platform/generated/wire";
+import {
+  parsePlatformQuery,
+  resolveBrowserOrganizationScope,
+} from "@/server/application/platform/request-validation";
+import { createUserPlatformClient } from "@/server/application/platform/user-client";
+import { getEnv, organizationsEnabled } from "@/server/shared/env";
 
+const querySchema = z.union([
+  platformQuerySchema("billingListSessions").omit({ limit: true }),
+  platformQuerySchema("billingDetails").extend({
+    sessionGroupId: platformPathSchema("billingDetails").shape.sessionGroupId,
+  }),
+]);
 export async function GET(request: Request) {
   const session = await auth();
   if (!session?.user) {
     return Response.json({ code: "UNAUTHORIZED" }, { status: 401 });
   }
-  const { searchParams } = new URL(request.url);
-  const sessionGroupId = searchParams.get("sessionGroupId") || "";
-  if (!sessionGroupId) {
-    return Response.json({ code: "SESSION_GROUP_REQUIRED" }, { status: 400 });
-  }
-  const env = getEnv();
-  if (
-    env.PLATFORM_MODE !== "connected" ||
-    !env.PLATFORM_BASE_URL ||
-    !env.PLATFORM_SERVICE_TOKEN
-  ) {
-    return Response.json({ code: "PLATFORM_NOT_CONNECTED" }, { status: 503 });
-  }
-  let exchanged: Awaited<ReturnType<typeof exchangePlatformIdentity>>;
   try {
-    exchanged = await exchangePlatformIdentity({
-      baseUrl: env.PLATFORM_BASE_URL,
-      issuer: env.PLATFORM_USER_ISSUER ?? "chatnest",
-      serviceToken: env.PLATFORM_SERVICE_TOKEN,
-      subject: session.user.id,
-    });
-  } catch {
-    return Response.json(
-      { code: "PLATFORM_IDENTITY_EXCHANGE_FAILED" },
-      { status: 503 }
+    const query = parsePlatformQuery(
+      querySchema,
+      new URL(request.url).searchParams
     );
+    const organizationId =
+      "sessionGroupId" in query
+        ? undefined
+        : resolveBrowserOrganizationScope(
+            query.organizationId,
+            organizationsEnabled(getEnv()),
+            (await cookies()).get("chatnest-organization-id")?.value
+          );
+    const client = await createUserPlatformClient(session.user);
+    if ("sessionGroupId" in query) {
+      if (!client?.sessionDetails) {
+        throw new PlatformHttpError(503, "PLATFORM_NOT_CONNECTED");
+      }
+      return Response.json(
+        await client.sessionDetails(query.sessionGroupId, {
+          cursor: query.cursor,
+          limit: query.limit,
+        })
+      );
+    }
+    if (!client?.sessionList) {
+      throw new PlatformHttpError(503, "PLATFORM_NOT_CONNECTED");
+    }
+    return Response.json(await client.sessionList(organizationId));
+  } catch (error) {
+    return platformResponseError(error, "BILLING_READ_FAILED");
   }
-  const client = createPlatformBillingClient({
-    baseUrl: env.PLATFORM_BASE_URL,
-    serviceToken: env.PLATFORM_SERVICE_TOKEN,
-    userToken: exchanged.token,
-  });
-  const details = await client.sessionDetails?.(sessionGroupId);
-  return Response.json(details);
 }

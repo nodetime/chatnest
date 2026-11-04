@@ -11,6 +11,7 @@ export type BillingExecutionContext = {
   billingDimensions?: Record<string, boolean | number | string>;
   canonicalToolKey: string;
   operationId: string;
+  organizationId?: string;
   sessionGroupId?: string;
   runId?: string;
   stepIndex?: number;
@@ -32,6 +33,7 @@ type OperationStore = {
     operationId: string;
     payload: unknown;
   }) => Promise<void>;
+  markSettled?: (input: { operationId: string }) => Promise<void>;
   saveReceipt?: (input: {
     attemptId: string;
     operationId: string;
@@ -82,6 +84,7 @@ async function reportOrEnqueue(
 ) {
   try {
     await platform.report(input);
+    await operations.markSettled?.({ operationId: input.operationId });
   } catch (error) {
     await operations.enqueueSettlement?.({
       command: "report",
@@ -111,6 +114,7 @@ export function createToolBillingAroundCall(
       canonicalToolKey: context.canonicalToolKey,
       modelId: context.modelId,
       operationId: context.operationId,
+      organizationId: context.organizationId,
       runId: context.runId,
       sessionGroupId: context.sessionGroupId ?? context.subjectId,
       stepIndex: context.stepIndex,
@@ -146,11 +150,26 @@ export function createToolBillingAroundCall(
       await reportOrEnqueue(options.operations, options.platform, report);
       throw error;
     }
-    const receipt =
+    const receipt = (
       result && typeof result === "object"
-        ? (result as { executionReceipt?: { receiptId?: string } })
-            .executionReceipt
-        : undefined;
+        ? (() => {
+            const value = result as {
+              executionReceipt?: unknown;
+              _meta?: Record<string, unknown>;
+            };
+            const meta = value._meta;
+            const portaMeta =
+              meta?.porta && typeof meta.porta === "object"
+                ? (meta.porta as Record<string, unknown>)
+                : undefined;
+            return (
+              value.executionReceipt ??
+              meta?.["porta/executionReceipt"] ??
+              portaMeta?.executionReceipt
+            );
+          })()
+        : undefined
+    ) as { receiptId?: string } | undefined;
     if (receipt?.receiptId) {
       await options.operations.saveReceipt?.({
         attemptId: context.attemptId,
@@ -161,9 +180,9 @@ export function createToolBillingAroundCall(
     }
     await reportOrEnqueue(options.operations, options.platform, {
       attemptId: context.attemptId,
+      executionReceipt: receipt,
       operationId: context.operationId,
       outcome: "response",
-      receipt,
     });
     return result;
   };

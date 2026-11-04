@@ -1,0 +1,2 @@
+ALTER TABLE "settlement_outbox" DROP CONSTRAINT "settlement_outbox_state";--> statement-breakpoint
+ALTER TABLE "settlement_outbox" ADD CONSTRAINT "settlement_outbox_state" CHECK ("settlement_outbox"."state" in ('pending','processing','succeeded','failed','dead_letter'));

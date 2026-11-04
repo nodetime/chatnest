@@ -285,6 +285,12 @@ importers:
       '@vercel/nft':
         specifier: 1.11.0
         version: 1.11.0
+      ajv:
+        specifier: 8.20.0
+        version: 8.20.0
+      ajv-formats:
+        specifier: 3.0.1
+        version: 3.0.1(ajv@8.20.0)
       babel-plugin-react-compiler:
         specifier: ^1.0.0
         version: 1.0.0
@@ -315,6 +321,9 @@ importers:
       ultracite:
         specifier: ^7.8.4
         version: 7.9.0(eslint@10.6.0(jiti@2.7.0))(typescript@5.8.2)
+      yaml:
+        specifier: 2.9.0
+        version: 2.9.0
 
 packages:
 

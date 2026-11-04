@@ -68,3 +68,18 @@ export function runtimeToolAlias(server: RuntimeServer, name: string) {
     name
   );
 }
+
+/**
+ * Billing identity is the provider's stable API path, not the UI alias exposed
+ * to the model. Porta's MCP catalog uses snake_case names while its billing
+ * contract keeps the documented `onebound/1688/...` identity.
+ */
+export function canonicalToolKey(server: RuntimeServer, name: string) {
+  if (server.id === "porta") {
+    const onebound = /^onebound_(\d+)_(.+)$/.exec(name);
+    if (onebound) {
+      return `onebound/${onebound[1]}/${onebound[2]}`;
+    }
+  }
+  return `${server.id}/${name}`;
+}

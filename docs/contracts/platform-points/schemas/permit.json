@@ -1,0 +1,89 @@
+{
+  "$id": "platform-points/permit",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "protocolVersion",
+    "platformId",
+    "deploymentId",
+    "operationId",
+    "attemptId",
+    "canonicalToolKey",
+    "priceVersion",
+    "reservedPoints",
+    "chargeMode",
+    "keyId",
+    "issuedAt",
+    "expiresAt",
+    "signature"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "protocolVersion": {
+      "const": "v1"
+    },
+    "platformId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "deploymentId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "operationId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "attemptId": {
+      "$ref": "#/$defs/AttemptId"
+    },
+    "canonicalToolKey": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512
+    },
+    "priceVersion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "reservedPoints": {
+      "type": "string",
+      "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+    },
+    "chargeMode": {
+      "enum": ["attempt", "success"]
+    },
+    "keyId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "issuedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
+    },
+    "expiresAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$"
+    },
+    "signature": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+    }
+  },
+  "$defs": {
+    "AttemptId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^(?!\\.{1,2}(?![\\s\\S]))[^\\u0000\\uD800-\\uDFFF]+$"
+    }
+  }
+}

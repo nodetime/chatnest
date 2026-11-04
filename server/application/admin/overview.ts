@@ -1,6 +1,6 @@
 import "server-only";
 import {
-  authorizeManagement,
+  authorizeManagementAsync,
   type Environment,
   SettingsError,
 } from "@/server/application/mcp/security";
@@ -68,7 +68,7 @@ export function createOverviewHandler({
   return async (request: Request) => {
     const headers = { "Cache-Control": "private, no-store" };
     try {
-      authorizeManagement(await session(), request, false, env);
+      await authorizeManagementAsync(await session(), request, false, env);
       const [toolsResult, storageResult, modelResult] = await Promise.all([
         readiness(tools, "工具配置暂时读取失败。"),
         readiness(storage, "存储配置暂时读取失败。"),

@@ -12,5 +12,6 @@
     "priceVersion": "2026-10-30.1",
     "protocolVersion": "v1",
     "reservedPoints": "2"
-  }
+  },
+  "schemaRevision": "2026-11-03.15"
 }

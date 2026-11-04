@@ -288,9 +288,31 @@ function upDatabase() {
 
 function migrate() {
   log("迁移", "执行 pnpm db:migrate(幂等)");
-  const result = run("corepack", ["pnpm", "db:migrate"], { stdio: "inherit" });
+  // 仅迁移本地开发库：开发 compose 的明确 DBA 身份，不从运行 URL 回退或推导。
+  const text = readFileSync(ENV_LOCAL, "utf8");
+  const localUrl = "postgres://chatnest:chatnest@127.0.0.1:55432/chatnest";
+  const declarations =
+    text.match(/^\s*(?:export\s+)?POSTGRES_URL\s*=.*$/gm) ?? [];
+  if (
+    declarations.length !== 1 ||
+    declarations[0].trim() !== `POSTGRES_URL=${localUrl}` ||
+    (process.env.POSTGRES_URL !== undefined &&
+      process.env.POSTGRES_URL !== localUrl)
+  ) {
+    guide([
+      "dev:up 仅支持明确的本地开发库；其他目标请在独立迁移环境运行 pnpm db:migrate。",
+    ]);
+    process.exit(1);
+  }
+  const result = run("corepack", ["pnpm", "db:migrate"], {
+    env: { ...process.env, MIGRATION_POSTGRES_URL: localUrl },
+    stdio: "inherit",
+  });
   if (result.status !== 0) {
-    log("迁移", "[失败] 请检查 POSTGRES_URL 与 docker logs chatnest-postgres");
+    log(
+      "迁移",
+      "[失败] 请检查本地迁移身份 MIGRATION_POSTGRES_URL 与 docker logs chatnest-postgres"
+    );
     process.exit(1);
   }
 }

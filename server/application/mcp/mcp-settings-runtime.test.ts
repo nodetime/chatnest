@@ -5,6 +5,7 @@ import { test } from "node:test";
 import type { MCPClient } from "@ai-sdk/mcp";
 import { capabilityServers } from "@/server/application/mcp/projection";
 import {
+  canonicalToolKey,
   mergeManagedConfig,
   toolAlias,
 } from "@/server/application/mcp/runtime-config";
@@ -32,6 +33,24 @@ test("native dot/128 names have stable bounded aliases, legacy aliases preserved
     }).success,
     true
   );
+});
+
+test("Porta MCP names map to the documented billing identity", () => {
+  const [server] = agentConfigSchema.parse({
+    servers: [
+      {
+        allowedTools: ["onebound_1688_item_search"],
+        id: "porta",
+        name: "Porta",
+        url: "https://porta.example/mcp",
+      },
+    ],
+  }).servers;
+  assert.equal(
+    canonicalToolKey(server, "onebound_1688_item_search"),
+    "onebound/1688/item_search"
+  );
+  assert.equal(canonicalToolKey(server, "custom_tool"), "porta/custom_tool");
 });
 test("new tasks snapshot enabled managed tools, all require approval, prior task unaffected, legacy stays intact", async () => {
   const file = agentConfigSchema.parse({ servers: [] });

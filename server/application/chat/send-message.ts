@@ -110,6 +110,7 @@ export type SendMessageInput = {
   body: SendMessageBody;
   // 平台层已鉴权的会话视图:业务只消费 user,expires 为工具侧 Session 结构兼容保留
   session: ChatSession;
+  organizationId?: string;
   ip?: string;
   requestHints: RequestHints;
   signal: AbortSignal;
@@ -128,6 +129,7 @@ export type SendMessageDeps = {
   }) => Promise<unknown>;
   toolBillingFactory?: (input: {
     chatId: string;
+    organizationId?: string;
     runId: string;
     session: ChatSession;
     userId: string;
@@ -142,6 +144,7 @@ export type SendMessageDeps = {
   modelBillingFactory?: (input: {
     chatId: string;
     modelId: string;
+    organizationId?: string;
     runId: string;
     session: ChatSession;
     stepIndex: () => number;
@@ -351,6 +354,7 @@ export async function sendMessage(
   const runFailure = createRunFailureReporter();
   const requestToolBilling = deps.toolBillingFactory?.({
     chatId: id,
+    organizationId: input.organizationId,
     runId: message?.id ?? id,
     session,
     userId: user.id,
@@ -358,6 +362,7 @@ export async function sendMessage(
   const requestModelBilling = deps.modelBillingFactory?.({
     chatId: id,
     modelId: chatModel,
+    organizationId: input.organizationId,
     runId: message?.id ?? id,
     session,
     stepIndex: (() => {

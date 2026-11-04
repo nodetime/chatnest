@@ -110,6 +110,7 @@ export async function validateImage(bytes: Buffer, declared: string) {
 }
 export async function readBoundedBody(request: Request, limit: number) {
   if (Number(request.headers.get("content-length")) > limit) {
+    request.body?.cancel().catch(() => undefined);
     throw new UploadError(413, "请求内容过大。");
   }
   if (!request.body) {
@@ -127,7 +128,8 @@ export async function readBoundedBody(request: Request, limit: number) {
       }
       size += value.length;
       if (size > limit) {
-        await reader.cancel();
+        // Cancellation is best-effort; a hostile source must not hide or delay 413.
+        reader.cancel().catch(() => undefined);
         throw new UploadError(413, "请求内容过大。");
       }
       chunks.push(value);

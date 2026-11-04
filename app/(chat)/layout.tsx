@@ -10,7 +10,7 @@ import { LandingDraftReceiver } from "@/app/_components/landing/draft-receiver";
 import { HomeEntry } from "@/app/_components/landing/home-entry";
 import { SidebarInset } from "@/app/_components/ui/sidebar";
 import { ActiveChatProvider } from "@/app/_hooks/use-active-chat";
-import { isPlatformAdmin } from "@/server/application/admin/access";
+import { getEnv, organizationsEnabled } from "@/server/shared/env";
 import { auth } from "../(auth)/auth";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -40,7 +40,7 @@ async function SidebarShell({ children }: { children: React.ReactNode }) {
           defaultOpen={!isCollapsed}
         >
           <AppSidebar
-            isPlatformAdmin={isPlatformAdmin(session?.user)}
+            showOrganizations={organizationsEnabled(getEnv())}
             user={session?.user}
           />
           <SidebarInset>

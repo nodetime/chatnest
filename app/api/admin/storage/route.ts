@@ -6,7 +6,7 @@ import {
   testStorage,
 } from "@/server/application/uploads/service";
 import {
-  authorizeUploadRequest,
+  authorizeUploadRequestAsync,
   uploadErrorResponse,
 } from "@/server/shared/uploads/security";
 import {
@@ -15,7 +15,12 @@ import {
 } from "@/server/shared/uploads/validation";
 export async function GET(request: Request) {
   try {
-    authorizeUploadRequest((await auth())?.user, request, false, true);
+    await authorizeUploadRequestAsync(
+      (await auth())?.user,
+      request,
+      false,
+      true
+    );
     return Response.json(await storageStatus(), {
       headers: { "Cache-Control": "private, no-store" },
     });
@@ -25,7 +30,7 @@ export async function GET(request: Request) {
 }
 export async function POST(request: Request) {
   try {
-    const userId = authorizeUploadRequest(
+    const userId = await authorizeUploadRequestAsync(
       (await auth())?.user,
       request,
       true,

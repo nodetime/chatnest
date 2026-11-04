@@ -3,7 +3,7 @@ import { ZodError } from "zod";
 import { actionSchema, MAX_BODY_BYTES } from "@/server/domain/mcp/schema";
 import type { ServerConfig } from "@/server/infrastructure/mcp/config";
 import {
-  authorizeManagement,
+  authorizeManagementAsync,
   type Environment,
   SettingsError,
 } from "./security";
@@ -45,7 +45,7 @@ export function createManagementHandler({
   file,
   service,
   env = process.env,
-  authorize = authorizeManagement,
+  authorize = authorizeManagementAsync,
 }: {
   session: () => Promise<{ id?: string; type?: string } | null | undefined>;
   file: () => Promise<ServerConfig[]>;
@@ -54,12 +54,17 @@ export function createManagementHandler({
     "get" | "test" | "mutate"
   >;
   env?: Environment;
-  authorize?: typeof authorizeManagement;
+  authorize?: (
+    user: { id?: string; type?: string } | null | undefined,
+    request: Request,
+    write: boolean,
+    env: Environment
+  ) => Promise<string> | string;
 }) {
   return async (request: Request) => {
     const headers = { "Cache-Control": "private, no-store" };
     try {
-      const userId = authorize(
+      const userId = await authorize(
         await session(),
         request,
         request.method !== "GET",

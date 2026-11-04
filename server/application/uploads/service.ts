@@ -423,6 +423,19 @@ export async function cleanupDeletedChatAssets(chatId: string) {
   }
 }
 
+export async function cleanupDeletedAssetIds(ids: string[]) {
+  let failed = 0;
+  for (const id of ids) {
+    try {
+      // biome-ignore lint/performance/noAwaitInLoops: Bounded sequential I/O avoids concurrent storage pressure during retention cleanup.
+      await finishDeletion(id);
+    } catch {
+      failed += 1;
+    }
+  }
+  return { failed };
+}
+
 // Tool-only boundary: current authenticated chat owner AND actual committed message association.
 // A draft URL, public asset, forged file part or caller-provided chatId is not evidence of association.
 export async function readAttachmentAsset(

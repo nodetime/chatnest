@@ -1,0 +1,15 @@
+[Unit]
+Description=ChatNest platform settlement worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/srv/chatnest
+EnvironmentFile=/etc/chatnest/worker.env
+ExecStartPre=/usr/bin/node /srv/chatnest/scripts/ci/production-gate.mjs --production --worker
+ExecStart=/usr/bin/node /srv/chatnest/scripts/platform-settlement-worker.mjs
+User=chatnest
+Group=chatnest
+NoNewPrivileges=true
+PrivateTmp=true

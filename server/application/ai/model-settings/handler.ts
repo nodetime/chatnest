@@ -1,7 +1,7 @@
 import "server-only";
 import { ZodError } from "zod";
 import {
-  authorizeManagement,
+  authorizeManagementAsync,
   SettingsError,
 } from "@/server/application/mcp/security";
 import {
@@ -19,7 +19,7 @@ export function createModelSettingsHandler({
   return async (request: Request) => {
     const headers = { "Cache-Control": "private, no-store" };
     try {
-      const userId = authorizeManagement(
+      const userId = await authorizeManagementAsync(
         await session(),
         request,
         request.method !== "GET"
