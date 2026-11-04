@@ -123,32 +123,20 @@ test("账户 retention worker 批量大小有明确边界", () => {
   }
 });
 
-test("worker alert and payment recovery settings have bounded contracts", () => {
+test("worker and payment recovery settings have bounded contracts", () => {
   const env = process.env as Record<string, string | undefined>;
   const saved = {
-    alertUrl: env.CHATNEST_ALERT_WEBHOOK_URL,
     paymentBatch: env.PAYMENT_RECONCILE_BATCH_SIZE,
     timeout: env.CHATNEST_WORKER_TIMEOUT_MS,
   };
   try {
-    env.CHATNEST_ALERT_WEBHOOK_URL = "https://alerts.example.test/chatnest";
     env.CHATNEST_WORKER_TIMEOUT_MS = "30000";
     env.PAYMENT_RECONCILE_BATCH_SIZE = "25";
-    assert.equal(
-      getEnv().CHATNEST_ALERT_WEBHOOK_URL,
-      "https://alerts.example.test/chatnest"
-    );
     assert.equal(getEnv().CHATNEST_WORKER_TIMEOUT_MS, 30_000);
     assert.equal(getEnv().PAYMENT_RECONCILE_BATCH_SIZE, 25);
     env.CHATNEST_WORKER_TIMEOUT_MS = "999";
     assert.throws(() => getEnv(), /CHATNEST_WORKER_TIMEOUT_MS/);
   } finally {
-    if (saved.alertUrl === undefined) {
-      // biome-ignore lint/performance/noDelete: 还原测试环境必须真正移除变量
-      delete env.CHATNEST_ALERT_WEBHOOK_URL;
-    } else {
-      env.CHATNEST_ALERT_WEBHOOK_URL = saved.alertUrl;
-    }
     if (saved.paymentBatch === undefined) {
       // biome-ignore lint/performance/noDelete: 还原测试环境必须真正移除变量
       delete env.PAYMENT_RECONCILE_BATCH_SIZE;

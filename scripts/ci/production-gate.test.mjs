@@ -40,7 +40,6 @@ const valid = {
   ACCOUNT_DELETION_NOTIFICATION_WEBHOOK_URL:
     "https://notify.example.test/deletion",
   AI_GATEWAY_API_KEY: "gateway-key",
-  CHATNEST_ALERT_WEBHOOK_URL: "https://alerts.example.test/chatnest",
   CHATNEST_BASE_URL: "https://chat.example.test",
   CHATNEST_CONTROL_TOKEN: "control-token",
   MCP_SETTINGS_ENCRYPTION_KEY: "mcp-key",
@@ -65,26 +64,24 @@ test("production gate accepts complete non-loopback configuration", async () => 
 test("production gate rejects loopback endpoints", async () => {
   const result = await run({
     ...valid,
-    CHATNEST_ALERT_WEBHOOK_URL: "http://127.0.0.1:8123/alert",
+    CHATNEST_BASE_URL: "http://127.0.0.1:8123/alert",
   });
   assert.equal(result.code, 1);
   assert.equal(result.value.ok, false);
   assert.ok(
-    result.value.failures.includes(
-      "CHATNEST_ALERT_WEBHOOK_URL_MUST_BE_PUBLIC_HTTPS"
-    )
+    result.value.failures.includes("CHATNEST_BASE_URL_MUST_BE_PUBLIC_HTTPS")
   );
 });
 
 for (const mode of ["core", "worker"]) {
-  test(`${mode} gate rejects an IPv6 loopback alert receiver over HTTPS`, async () => {
+  test(`${mode} gate rejects an IPv6 loopback base URL over HTTPS`, async () => {
     const result = await run(
-      { ...valid, CHATNEST_ALERT_WEBHOOK_URL: "https://[::1]:8123/alert" },
+      { ...valid, CHATNEST_BASE_URL: "https://[::1]:8123/alert" },
       mode === "worker" ? ["--production", "--worker"] : ["--production"]
     );
     assert.equal(result.code, 1);
     assert.deepEqual(result.value.failures, [
-      "CHATNEST_ALERT_WEBHOOK_URL_MUST_BE_PUBLIC_HTTPS",
+      "CHATNEST_BASE_URL_MUST_BE_PUBLIC_HTTPS",
     ]);
   });
 }
@@ -150,10 +147,9 @@ test("non-production invocation is observational and does not require secrets", 
   assert.deepEqual(result.value.failures, []);
 });
 
-test("worker gate requires only deployment and alert controls", async () => {
+test("worker gate requires only deployment controls", async () => {
   const result = await run(
     {
-      CHATNEST_ALERT_WEBHOOK_URL: "https://alerts.example.test/chatnest",
       CHATNEST_BASE_URL: "https://chat.example.test",
       CHATNEST_CONTROL_TOKEN: "control-token",
       NODE_ENV: "production",

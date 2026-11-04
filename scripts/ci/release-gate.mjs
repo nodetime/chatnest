@@ -36,7 +36,6 @@ const productionGate = file("scripts/ci/production-gate.mjs");
 const settlementWorker = file("scripts/platform-settlement-worker.mjs");
 const productionAcceptance = file("scripts/production-acceptance.mjs");
 const modelAcceptance = file("scripts/model-gateway-acceptance.mjs");
-const alertAcceptance = file("scripts/alert-sink-acceptance.mjs");
 file("server/infrastructure/persistence/drizzle/migrate.ts");
 
 has("script.productionGate", productionGate, /--production/);
@@ -47,11 +46,6 @@ has(
   /PLATFORM_BASE_URL|billing\/health/
 );
 has("script.modelAcceptance", modelAcceptance, /models|chat\/completions/);
-has(
-  "script.alertAcceptance",
-  alertAcceptance,
-  /worker_failed|billing_attention/
-);
 
 has(
   "service.execStartPre",
@@ -90,7 +84,6 @@ has("timer.unit", timer, /Unit=settlement-worker\.service/);
 for (const name of [
   "CHATNEST_BASE_URL",
   "CHATNEST_CONTROL_TOKEN",
-  "CHATNEST_ALERT_WEBHOOK_URL",
   "CHATNEST_WORKER_TIMEOUT_MS",
   "CHATNEST_SETTLEMENT_MAX_ATTEMPTS",
   "PLATFORM_MODE",
@@ -113,7 +106,6 @@ for (const heading of [
   "log rotation",
   "rollback",
   "model gateway",
-  "alert sink",
   "provider refund",
   "payment gate",
 ]) {
@@ -133,7 +125,6 @@ try {
     "db:migrate",
     "billing:acceptance",
     "model:acceptance",
-    "alert:acceptance",
     "payment:gate",
   ]) {
     const ok = typeof scripts[name] === "string" && scripts[name].length > 0;
@@ -146,7 +137,7 @@ try {
   failures.push("PACKAGE_JSON_INVALID");
 }
 
-if (!workerEnv.includes("TOKEN") || !workerEnv.includes("DEPLOYMENT_ID")) {
+if (!workerEnv.includes("TOKEN")) {
   warnings.push("WORKER_ENV_EXAMPLE_SHOULD_USE_PLACEHOLDERS");
 }
 

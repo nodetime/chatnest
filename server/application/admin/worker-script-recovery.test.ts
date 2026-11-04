@@ -8,17 +8,6 @@ import {
 } from "node:http";
 import { test } from "node:test";
 
-type AlertPayload = {
-  details?: {
-    paymentRecovery?:
-      | { skipped: true }
-      | { failed: number; reconciled: number };
-    reasons?: string[];
-    settlement?: { deadLettered: number; failed: number };
-  };
-  kind?: string;
-};
-
 function listen(
   handler: (request: IncomingMessage, response: ServerResponse) => void
 ) {
@@ -37,19 +26,7 @@ function listen(
   });
 }
 
-async function readBody(request: IncomingMessage) {
-  const chunks: Buffer[] = [];
-  for await (const chunk of request) {
-    chunks.push(Buffer.from(chunk));
-  }
-  return Buffer.concat(chunks).toString("utf8");
-}
-
-function runWorker(
-  baseUrl: string,
-  alertUrl: string,
-  extraEnv: Record<string, string> = {}
-) {
+function runWorker(baseUrl: string, extraEnv: Record<string, string> = {}) {
   return new Promise<{ code: number | null; stderr: string; stdout: string }>(
     (resolve, reject) => {
       const child = spawn(
@@ -58,7 +35,6 @@ function runWorker(
         {
           cwd: process.cwd(),
           env: {
-            CHATNEST_ALERT_WEBHOOK_URL: alertUrl,
             CHATNEST_BASE_URL: baseUrl,
             CHATNEST_CONTROL_TOKEN: "control-secret",
             CHATNEST_WORKER_TIMEOUT_MS: "3000",
@@ -82,134 +58,6 @@ function runWorker(
   );
 }
 
-test("worker alerts on an internal route failure without leaking credentials or response data", async (t) => {
-  let alertPayload: AlertPayload | undefined;
-  const sink = await listen(async (request, response) => {
-    if (request.url === "/alert") {
-      alertPayload = JSON.parse(await readBody(request));
-      response.writeHead(204).end();
-      return;
-    }
-    response.writeHead(404).end();
-  });
-  const app = await listen((_request, response) => {
-    response.writeHead(503, { "Content-Type": "application/json" });
-    response.end(
-      JSON.stringify({ code: "OUTBOX_UNAVAILABLE", secret: "upstream-secret" })
-    );
-  });
-  t.after(async () => {
-    await app.close();
-    await sink.close();
-  });
-
-  const result = await runWorker(app.url, `${sink.url}/alert`);
-
-  assert.equal(result.code, 1);
-  assert.match(result.stderr, /WORKER_FAILED/);
-  assert.equal(alertPayload?.kind, "worker_failed");
-  const serialized = JSON.stringify(alertPayload);
-  assert.ok(serialized);
-  assert.doesNotMatch(
-    serialized,
-    /control-secret|upstream-secret|OUTBOX_UNAVAILABLE/
-  );
-});
-
-test("worker alerts bounded dead-letter attention and exits non-zero", async (t) => {
-  let alertPayload: AlertPayload | undefined;
-  const sink = await listen(async (request, response) => {
-    if (request.url === "/alert") {
-      alertPayload = JSON.parse(await readBody(request));
-      response.writeHead(204).end();
-      return;
-    }
-    response.writeHead(404).end();
-  });
-  const app = await listen((request, response) => {
-    if (request.url === "/api/internal/billing/outbox") {
-      response.writeHead(200, { "Content-Type": "application/json" });
-      response.end(
-        JSON.stringify({
-          deadLettered: 1,
-          expired: 0,
-          failed: 1,
-          processed: 1,
-          succeeded: 0,
-        })
-      );
-      return;
-    }
-    if (request.url?.startsWith("/api/internal/account/")) {
-      response.writeHead(200, { "Content-Type": "application/json" });
-      response.end(
-        JSON.stringify({
-          failed: 0,
-          inspected: 0,
-          purged: 0,
-          sent: 0,
-          skipped: 0,
-        })
-      );
-      return;
-    }
-    response.writeHead(404).end();
-  });
-  t.after(async () => {
-    await app.close();
-    await sink.close();
-  });
-
-  const result = await runWorker(app.url, `${sink.url}/alert`);
-
-  assert.equal(result.code, 1);
-  assert.equal(alertPayload?.kind, "billing_attention");
-  assert.deepEqual(alertPayload?.details?.reasons, [
-    "settlement_dead_letter",
-    "settlement_failed",
-  ]);
-  assert.deepEqual(alertPayload?.details?.paymentRecovery, { skipped: true });
-  assert.deepEqual(alertPayload?.details?.settlement, {
-    deadLettered: 1,
-    failed: 1,
-  });
-  const serialized = JSON.stringify(alertPayload);
-  assert.ok(serialized);
-  assert.doesNotMatch(serialized, /control-secret|upstream-secret/);
-});
-
-test("worker_failed makes non-2xx and timeout delivery failures observable without sink secrets", async (t) => {
-  for (const failure of ["http503", "timeout"] as const) {
-    // biome-ignore lint/performance/noAwaitInLoops: each case owns and tears down its loopback services.
-    await t.test(failure, { timeout: 12_000 }, async (context) => {
-      const app = await listen((_request, response) => {
-        response.writeHead(503, { "Content-Type": "application/json" });
-        response.end(JSON.stringify({ detail: "app-body-secret" }));
-      });
-      const sink = await listen((_request, response) => {
-        if (failure === "http503") {
-          response.writeHead(503).end("sink-body-secret");
-        }
-      });
-      context.after(async () => {
-        await app.close();
-        await sink.close();
-      });
-      const result = await runWorker(
-        app.url,
-        `${sink.url}/alert?token=sink-url-secret`
-      );
-      assert.equal(result.code, 1);
-      assert.match(result.stderr, /WORKER_FAILED/);
-      assert.match(result.stderr, /BILLING_ALERT_DELIVERY_FAILED/);
-      assert.doesNotMatch(
-        result.stderr + result.stdout,
-        /app-body-secret|sink-body-secret|sink-url-secret|control-secret/
-      );
-    });
-  }
-});
-
 test("payment recovery reports per-event failures and rejects invented healthy summaries", async (t) => {
   for (const scenario of [
     "current",
@@ -222,11 +70,6 @@ test("payment recovery reports per-event failures and rejects invented healthy s
   ] as const) {
     // biome-ignore lint/performance/noAwaitInLoops: isolated loopback fixture lifecycle.
     await t.test(scenario, async (context) => {
-      let alert: unknown;
-      const sink = await listen(async (request, response) => {
-        alert = JSON.parse(await readBody(request));
-        response.writeHead(204).end();
-      });
       const app = await listen((request, response) => {
         const empty =
           scenario === "healthy" ||
@@ -269,33 +112,22 @@ test("payment recovery reports per-event failures and rejects invented healthy s
       });
       context.after(async () => {
         await app.close();
-        await sink.close();
       });
-      const result = await runWorker(app.url, sink.url, {
+      const result = await runWorker(app.url, {
         PLATFORM_BASE_URL: app.url,
         PLATFORM_MODE: "connected",
         PLATFORM_SERVICE_TOKEN: "service-canary",
       });
       if (scenario === "case-risk") {
         assert.equal(result.code, 0);
-        assert.deepEqual(alert, {
-          details: {
-            paymentRecovery: {
-              caseRisk: { dueSoonOrOverdue: 1, total: 2, withGap: 1 },
-              failed: 0,
-              reconciled: 0,
-            },
-            reasons: ["payment_case_due", "payment_case_gap"],
-            settlement: { deadLettered: 0, failed: 0 },
-          },
-          kind: "billing_attention",
-          source: "chatnest-settlement-worker",
+        assert.deepEqual(JSON.parse(result.stderr), {
+          code: "BILLING_ATTENTION",
+          reasons: ["payment_case_due", "payment_case_gap"],
         });
         return;
       }
       if (scenario === "healthy") {
         assert.equal(result.code, 0);
-        assert.equal(alert, undefined);
         assert.equal(result.stderr, "");
         assert.deepEqual(JSON.parse(result.stdout).paymentRecovery, {
           caseRisk: { dueSoonOrOverdue: 0, total: 0, withGap: 0 },
@@ -307,9 +139,8 @@ test("payment recovery reports per-event failures and rejects invented healthy s
         return;
       }
       assert.equal(result.code, 1);
-      const serialized = JSON.stringify(alert);
       assert.match(
-        serialized,
+        result.stderr,
         scenario === "current"
           ? /payment_recovery_failed/
           : /payment_recovery_invalid/
@@ -321,47 +152,53 @@ test("payment recovery reports per-event failures and rejects invented healthy s
         assert.match(result.stderr, /WORKER_FAILED/);
       }
       assert.doesNotMatch(
-        serialized + result.stdout + result.stderr,
+        result.stdout + result.stderr,
         /private-canary|service-canary|control-secret/
       );
     });
   }
 });
 
-test("retryable settlement or grant failure exits non-zero even when alert history and sink succeed, then recovers", async (t) => {
+test("retryable settlement failure logs attention and exits non-zero, then recovers", async (t) => {
   let failed = 1;
-  let sinkEvents = 0;
-  const history: string[] = [];
-  const sink = await listen(async (request, response) => {
-    const alert = JSON.parse(await readBody(request)) as AlertPayload;
-    assert.deepEqual(alert.details?.reasons, ["settlement_failed"]);
-    sinkEvents += 1;
-    response.writeHead(204).end();
-  });
-  const app = await listen(async (request, response) => {
-    if (request.url === "/api/internal/billing/alert-events") {
-      history.push(JSON.parse(await readBody(request)).outcome);
-    }
+  const app = await listen((request, response) => {
     response.writeHead(200, { "Content-Type": "application/json" });
     response.end(
       JSON.stringify(
         request.url === "/api/internal/billing/outbox"
-          ? { deadLettered: 0, expired: 0, failed, processed: 0, succeeded: 0 }
-          : { failed: 0, inspected: 0, purged: 0, sent: 0, skipped: 0 }
+          ? { deadLettered: 0, failed, processed: 0, succeeded: 0 }
+          : { failed: 0, skipped: 0 }
       )
     );
   });
-  t.after(async () => {
-    await app.close();
-    await sink.close();
-  });
-  const failure = await runWorker(app.url, sink.url);
+  t.after(app.close);
+  const failure = await runWorker(app.url);
   assert.equal(failure.code, 1);
-  assert.doesNotMatch(failure.stderr, /ALERT_HISTORY|ALERT_DELIVERY/);
-  assert.deepEqual(history, ["pending", "delivered"]);
-  assert.equal(sinkEvents, 1);
+  assert.deepEqual(JSON.parse(failure.stderr), {
+    code: "BILLING_ATTENTION",
+    reasons: ["settlement_failed"],
+  });
   failed = 0;
-  const recovery = await runWorker(app.url, sink.url);
+  const recovery = await runWorker(app.url);
   assert.equal(recovery.code, 0);
-  assert.equal(sinkEvents, 1);
+  assert.equal(recovery.stderr, "");
+});
+
+test("worker logs failure without posting alerts or maintaining alert history", async (t) => {
+  const requests: string[] = [];
+  const app = await listen((request, response) => {
+    requests.push(request.url ?? "");
+    response.writeHead(503, { "Content-Type": "application/json" });
+    response.end('{"secret":"must-not-enter-logs"}');
+  });
+  t.after(app.close);
+  const result = await runWorker(app.url, {
+    CHATNEST_ALERT_WEBHOOK_URL: `${app.url}/unused-webhook`,
+  });
+  assert.equal(result.code, 1);
+  assert.deepEqual(requests, ["/api/internal/billing/outbox"]);
+  assert.deepEqual(JSON.parse(result.stderr), {
+    code: "WORKER_FAILED",
+    reason: "settlement_route_failed",
+  });
 });

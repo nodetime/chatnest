@@ -61,8 +61,8 @@ test("deletion queue is admin-only, server-scoped and preserves billing facts", 
   assert.match(acceptance, /manifest\.json/);
   assert.match(workerScript, /payments\/reconcile/);
   assert.match(workerScript, /PAYMENT_RECONCILE_BATCH_SIZE/);
-  assert.match(workerScript, /CHATNEST_ALERT_WEBHOOK_URL/);
-  assert.match(workerScript, /BILLING_ALERT_DELIVERY_FAILED/);
-  assert.match(workerScript, /sendAlert\("worker_failed"/);
+  assert.match(workerScript, /WORKER_FAILED/);
+  assert.match(workerScript, /BILLING_ATTENTION/);
+  assert.doesNotMatch(workerScript, /sendAlert|alert-events/);
   assert.match(workerScript, /reason:.*timeout/);
 });

@@ -45,9 +45,7 @@ export async function proxy(request: NextRequest) {
   if (
     pathname === "/api/health/ready" ||
     pathname.startsWith("/api/auth") ||
-    pathname.startsWith("/api/admin/") ||
-    pathname === "/api/internal/billing/alert-events" ||
-    pathname === "/api/internal/billing/alert-events/retention"
+    pathname.startsWith("/api/admin/")
   ) {
     return nextWithTrace();
   }

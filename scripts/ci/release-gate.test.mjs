@@ -26,7 +26,7 @@ test("release gate accepts the checked-in deployment contract", () => {
   const output = JSON.parse(result.stdout);
   assert.equal(output.ok, true);
   assert.equal(output.failureCount, 0);
-  assert.equal(output.checkCount, 48);
+  assert.equal(output.checkCount, 44);
 });
 
 test("release gate fails closed when a deployment contract is missing", (t) => {
@@ -50,7 +50,6 @@ test("release gate fails closed when a deployment contract is missing", (t) => {
     "scripts/platform-settlement-worker.mjs",
     "scripts/production-acceptance.mjs",
     "scripts/model-gateway-acceptance.mjs",
-    "scripts/alert-sink-acceptance.mjs",
     "server/infrastructure/persistence/drizzle/migrate.ts",
   ]) {
     cpSync(join(process.cwd(), relative), join(root, relative));

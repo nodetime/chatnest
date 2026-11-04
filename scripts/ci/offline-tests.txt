@@ -112,10 +112,6 @@ scripts/ci/check-contract-artifacts.test.mjs
 scripts/ci/contract-routes.test.mjs
 server/application/platform/contract-wire.test.ts
 scripts/ci/payment-recovery-result.test.mjs
-server/application/admin/alerts.test.ts
-app/_components/admin/admin-alerts.test.ts
-server/application/admin/alert-history.test.ts
-scripts/ci/alert-history-worker.test.mjs
 app/(account)/account/usage/usage-pagination.test.ts
 
 server/application/admin/billing-routes.test.ts

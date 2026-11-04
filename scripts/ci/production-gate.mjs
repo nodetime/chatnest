@@ -58,7 +58,6 @@ if (production && paymentMode) {
   }
 } else if (production && workerMode) {
   requireHttps("CHATNEST_BASE_URL", failures);
-  requireHttps("CHATNEST_ALERT_WEBHOOK_URL", failures);
   requireValue("CHATNEST_CONTROL_TOKEN", failures);
   if (process.env.PLATFORM_MODE === "connected") {
     requireHttps("PLATFORM_BASE_URL", failures);
@@ -73,7 +72,6 @@ if (production && paymentMode) {
   }
   requireHttps("PLATFORM_BASE_URL", failures);
   requireHttps("CHATNEST_BASE_URL", failures);
-  requireHttps("CHATNEST_ALERT_WEBHOOK_URL", failures);
   requireHttps("OPENAI_BASE_URL", failures);
   requireValue("PLATFORM_SERVICE_TOKEN", failures);
   requireValue("CHATNEST_CONTROL_TOKEN", failures);

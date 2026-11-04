@@ -1,9 +1,7 @@
 // biome-ignore-all lint/performance/noAwaitInLoops: cross-repository state transitions and viewports are intentionally sequential.
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { once } from "node:events";
 import { readFileSync, writeFileSync } from "node:fs";
-import { createServer } from "node:http";
 import {
   type APIResponse,
   type BrowserContext,
@@ -24,91 +22,66 @@ import {
   SubscriptionsResponseSchema,
 } from "../server/application/platform/generated/schemas";
 import { createUserPlatformClient } from "../server/application/platform/user-client";
-import { alertHistoryPageSchema } from "../server/shared/alert-history";
 import {
   isOwnedChatnestRuntime,
   isOwnedPayloadRuntime,
 } from "./owned-payload-runtime.mjs";
 import type { ConnectedFixture } from "./platform-connected-seed";
 
-async function runCaseAlertWorker(base: string, protectedOrder: string) {
-  const bodies: string[] = [];
-  let status = 503;
-  const sink = createServer(async (request, response) => {
-    const chunks: Buffer[] = [];
-    for await (const chunk of request) {
-      chunks.push(Buffer.from(chunk));
-    }
-    bodies.push(Buffer.concat(chunks).toString("utf8"));
-    response.writeHead(status).end();
-  });
-  sink.listen(0, "127.0.0.1");
-  await once(sink, "listening");
-  try {
-    const address = sink.address();
-    assert(address && typeof address === "object");
-    for (const expected of [503, 204]) {
-      status = expected;
-      const result = await new Promise<{ code: number; stdout: string }>(
-        (resolve, reject) => {
-          execFile(
-            process.execPath,
-            ["scripts/platform-settlement-worker.mjs"],
-            {
-              env: {
-                ...process.env,
-                CHATNEST_ALERT_WEBHOOK_URL: `http://127.0.0.1:${address.port}/case-alert`,
-                CHATNEST_BASE_URL: base,
-                CHATNEST_WORKER_TIMEOUT_MS: "45000",
-                PAYMENT_RECONCILE_BATCH_SIZE: "1",
-              },
-              timeout: 60_000,
-            },
-            (error, stdout) => {
-              if (error && typeof error.code !== "number") {
-                reject(new Error("OWNED_CASE_ALERT_WORKER_ABORTED"));
-              } else {
-                resolve({
-                  code: typeof error?.code === "number" ? error.code : 0,
-                  stdout,
-                });
-              }
-            }
-          );
+async function checkWorkerRiskLog(base: string, protectedOrder: string) {
+  const result = await new Promise<{
+    code: number;
+    stdout: string;
+    stderr: string;
+  }>((resolve, reject) => {
+    execFile(
+      process.execPath,
+      ["scripts/platform-settlement-worker.mjs"],
+      {
+        env: {
+          ...process.env,
+          CHATNEST_BASE_URL: base,
+          CHATNEST_WORKER_TIMEOUT_MS: "45000",
+          PAYMENT_RECONCILE_BATCH_SIZE: "1",
+        },
+        timeout: 60_000,
+      },
+      (error, stdout, stderr) => {
+        if (error && typeof error.code !== "number") {
+          reject(new Error("OWNED_WORKER_ABORTED"));
+        } else {
+          resolve({
+            code: typeof error?.code === "number" ? error.code : 0,
+            stderr,
+            stdout,
+          });
         }
-      );
-      const summary = JSON.parse(result.stdout);
-      const recovery = PaymentReconcileResponseSchema.parse(
-        summary.paymentRecovery
-      );
-      assert(recovery.caseRisk.dueSoonOrOverdue >= 1);
-      assert(recovery.caseRisk.withGap >= 1);
-      if (expected === 503 || recovery.failed > 0) {
-        assert.equal(result.code, 1);
-      } else {
-        assert.equal(result.code, 0);
       }
-      assert.equal(bodies.length, expected === 503 ? 1 : 2);
-      const raw = bodies.at(-1);
-      assert(raw);
-      const alert = JSON.parse(raw);
-      assert.equal(alert.kind, "billing_attention");
-      assert(alert.details.reasons.includes("payment_case_due"));
-      assert(alert.details.reasons.includes("payment_case_gap"));
-      assert.deepEqual(
-        alert.details.paymentRecovery.caseRisk,
-        recovery.caseRisk
-      );
-      assert(!raw.includes(protectedOrder));
-      assert(
-        !raw.includes(process.env.CHATNEST_CONTROL_TOKEN ?? "invalid-fixture")
-      );
-      assert(
-        !raw.includes(process.env.PLATFORM_SERVICE_TOKEN ?? "invalid-fixture")
-      );
+    );
+  });
+  const summary = JSON.parse(result.stdout);
+  const recovery = PaymentReconcileResponseSchema.parse(
+    summary.paymentRecovery
+  );
+  assert(recovery.caseRisk.dueSoonOrOverdue >= 1);
+  assert(recovery.caseRisk.withGap >= 1);
+  const failed =
+    recovery.failed > 0 ||
+    summary.settlement.failed > 0 ||
+    summary.settlement.deadLettered > 0;
+  assert.equal(result.code, failed ? 1 : 0);
+  const event = JSON.parse(result.stderr);
+  assert.equal(event.code, "BILLING_ATTENTION");
+  assert(event.reasons.includes("payment_case_due"));
+  assert(event.reasons.includes("payment_case_gap"));
+  for (const secret of [
+    protectedOrder,
+    process.env.CHATNEST_CONTROL_TOKEN,
+    process.env.PLATFORM_SERVICE_TOKEN,
+  ]) {
+    if (secret) {
+      assert(!result.stderr.includes(secret));
     }
-  } finally {
-    await new Promise<void>((resolve) => sink.close(() => resolve()));
   }
 }
 
@@ -951,20 +924,6 @@ async function main() {
       fullPage: true,
       path: `${process.env.CONNECTED_ACCEPTANCE_ARTIFACTS}/payment-open-cases-390.png`,
     });
-    const alerts = await json(
-      await a.context.request.get(`${base}/api/admin/alerts`)
-    );
-    assert.equal(alerts.payment.status, "available");
-    assert(alerts.payment.data.caseRisk.dueSoonOrOverdue >= 1);
-    assert(!JSON.stringify(alerts).includes(caseCheckout));
-    await a.page.goto(`${base}/admin/alerts`);
-    await expect(
-      a.page.getByText("案件已逾期或 24 小时内到期", { exact: true })
-    ).toBeVisible();
-    await a.page.screenshot({
-      fullPage: true,
-      path: `${process.env.CONNECTED_ACCEPTANCE_ARTIFACTS}/payment-case-alerts-390.png`,
-    });
     const restrictedPlans = PlansResponseSchema.parse(
       await json(
         await a.context.request.get(`${base}/api/billing/plans?organizationId=`)
@@ -1253,36 +1212,7 @@ async function main() {
       );
     }
     assert(fixture.paymentCaseGapCheckout);
-    await runCaseAlertWorker(base, fixture.paymentCaseGapCheckout);
-    const alertSnapshot = await json(
-      await a.context.request.get(`${base}/api/admin/alerts`)
-    );
-    assert.equal(alertSnapshot.alertHistory.status, "available");
-    const riskHistory = alertHistoryPageSchema
-      .parse(alertSnapshot.alertHistory.data)
-      .items.filter(
-        (event) =>
-          event.reasons.includes("payment_case_due") &&
-          event.reasons.includes("payment_case_gap")
-      );
-    assert.deepEqual(
-      riskHistory.map(({ httpStatus, outcome }) => ({ httpStatus, outcome })),
-      [
-        { httpStatus: 204, outcome: "delivered" },
-        { httpStatus: 503, outcome: "failed" },
-      ]
-    );
-    await a.page.goto(`${base}/admin/alerts`);
-    await expect(
-      a.page.getByText("支付案件有额度缺口", { exact: true })
-    ).toHaveCount(2);
-    await expect(
-      a.page.getByText("接收端HTTP接受（HTTP 204）", { exact: false })
-    ).toBeVisible();
-    await a.page.screenshot({
-      fullPage: true,
-      path: `${process.env.CONNECTED_ACCEPTANCE_ARTIFACTS}/payment-case-alert-delivery-390.png`,
-    });
+    await checkWorkerRiskLog(base, fixture.paymentCaseGapCheckout);
     assert(fixture.disputeReviewCheckout);
     const reviewCheckout = encodeURIComponent(fixture.disputeReviewCheckout);
     const reviewStatusPath = `${base}/api/billing/checkout/status?checkoutId=${reviewCheckout}`;
@@ -1407,7 +1337,7 @@ async function main() {
         modelAcceptance: false,
         observations,
         organizationBalance: "7",
-        paymentCaseAlertDelivery: "loopback503-recorded/204-recorded/visible",
+        paymentCaseWorkerLog: "attention-reasons-only",
         personalBalance: "30",
         providerAcceptance: false,
         publicDisputeReview:

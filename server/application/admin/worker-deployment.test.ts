@@ -31,9 +31,9 @@ test("settlement worker timer is persistent and runs once per minute", () => {
   assert.match(timer, /Persistent=true/);
 });
 
-test("settlement worker uses environment-provided controls and bounded alerts", () => {
+test("settlement worker uses environment-provided controls and structured diagnostics", () => {
   assert.match(worker, /CHATNEST_CONTROL_TOKEN/);
   assert.match(worker, /CHATNEST_WORKER_TIMEOUT_MS/);
-  assert.match(worker, /CHATNEST_ALERT_WEBHOOK_URL/);
+  assert.match(worker, /WORKER_FAILED/);
   assert.doesNotMatch(worker, /console\.log\([^)]*controlToken/);
 });

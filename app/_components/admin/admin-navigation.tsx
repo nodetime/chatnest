@@ -2,7 +2,6 @@
 // Adapted upstream NavMain/NavLinkItem composition; see THIRD_PARTY_NOTICES.md.
 import {
   Banknote,
-  BellRing,
   BrainCircuit,
   HardDrive,
   LayoutDashboard,
@@ -24,7 +23,6 @@ import {
 
 export const adminLinks = [
   { href: "/admin", icon: LayoutDashboard, label: "概览" },
-  { href: "/admin/alerts", icon: BellRing, label: "告警" },
   { href: "/admin/models", icon: BrainCircuit, label: "模型" },
   { href: "/admin/connections", icon: Plug, label: "工具连接" },
   { href: "/admin/storage", icon: HardDrive, label: "文件存储" },
@@ -32,7 +30,7 @@ export const adminLinks = [
   { href: "/admin/accounts", icon: UserRound, label: "账户与数据" },
 ];
 const adminGroups = [
-  { hrefs: ["/admin", "/admin/alerts"], label: "运营" },
+  { hrefs: ["/admin"], label: "运营" },
   {
     hrefs: ["/admin/models", "/admin/connections", "/admin/storage"],
     label: "平台能力",

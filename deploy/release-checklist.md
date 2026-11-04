@@ -17,9 +17,9 @@ C 端用户、Admin 和后台仍使用现有页面与业务授权；角色隔离
 ## 1. Preflight
 
 1. 在 release checkout 执行 `pnpm release:gate`。
-2. 使用 secret manager 注入发布配置，再执行 `pnpm production:gate` 与 `pnpm production:worker:gate`。正式告警接收地址是两个门禁的必填项；地址通过静态检查后，仍须单独验接收和值班回执。支付默认关闭：无 checkout 时核心门禁只提示 `PAYMENT_CAPABILITY_DISABLED`；仅启用支付时才执行并要求通过 `pnpm payment:gate`（payment gate）。
+2. 使用 secret manager 注入发布配置，再执行 `pnpm production:gate` 与 `pnpm production:worker:gate`。告警不作为应用配置门槛；后台异常由运行环境采集进程日志。支付默认关闭：无 checkout 时核心门禁只提示 `PAYMENT_CAPABILITY_DISABLED`；仅启用支付时才执行并要求通过 `pnpm payment:gate`（payment gate）。
 3. 确认构建产物、数据库迁移版本和回滚版本均已记录；生产门禁失败时停止发布。
-4. 确认本地可重复的模型网关、告警 sink 和 provider refund acceptance 脚本存在；这些脚本只能作为契约/故障路径检查，不能替代真实外部证据。
+4. 确认本地可重复的模型网关和 provider refund acceptance 脚本存在；这些脚本只能作为契约/故障路径检查，不能替代真实外部证据。
 
 ## 2. 备份与迁移
 
@@ -45,14 +45,13 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now settlement-worker.timer
 ```
 
-worker 以 `chatnest` 用户运行，启动前由 `production-gate.mjs --production --worker` 阻断缺失配置、loopback endpoint 和未接告警 sink 的发布。
+worker 以 `chatnest` 用户运行，启动前由 `production-gate.mjs --production --worker` 阻断缺失配置和 loopback endpoint 的发布。
 
 ## 4. 健康与证据
 
 1. 先检查 timer/service 状态，再调用带 control token 的 billing health endpoint。
 2. 运行 connected acceptance，保存 operation、ledger、reconcile、dead-letter 和审计导出证据。
-3. 触发一次可恢复失败，确认 retry、告警、恢复和审计链均可追溯；失败不等同于成功验收。
-4. 正式告警使用发布候选环境和已确认的值班接收端，约定窗口内用现有 worker 触发一次演练告警。核对同一窗口与告警类型的 worker 记录、接收端事件编号，以及值班人员的确认时间与处置记录。接收端 HTTP 2xx 仅表示投递成功，不等同于值班确认。未取得两份回执不标记验收通过，不在正式账务数据上制造失败。
+3. 触发一次可恢复失败，确认重试、结构化日志、退出码和恢复；失败不等同于成功验收。
 
 ## 5. Log rotation / retention
 
@@ -64,15 +63,13 @@ worker 以 `chatnest` 用户运行，启动前由 `production-gate.mjs --product
 1. 停止 timer，保留失败服务日志与数据库备份。
 2. 切回上一个已验收 release；不得用手工删除账务行修复迁移。
 3. 仅在 schema 向后兼容且值班确认后执行必要的 migration rollback/forward-fix。
-4. 再次执行 health、connected acceptance 和告警确认，记录 rollback 结果。
+4. 再次执行 health、connected acceptance 并检查 worker 日志，记录 rollback 结果。
 
 ## 7. 未覆盖的外部证据
 
-模型网关（model gateway）、正式告警 sink（alert sink）、真实支付 provider 退款/拒付回执（provider refund）仍需外部 sandbox/值班输入；支付 gate 只阻断充值/退款能力，不阻断核心模型、工具和账务运行；本清单只把发布步骤和阻断条件固定下来。
+模型网关（model gateway）和真实支付 provider 退款/拒付回执（provider refund）仍需外部环境验收；支付 gate 只阻断充值/退款能力，不阻断核心模型、工具和账务运行；本清单只把发布步骤和阻断条件固定下来。
 
-### 告警历史数据库与worker
+### Worker 日志
 
-- 先应用Drizzle迁移0017，再部署记录API、Admin投影与worker；验证表/字段/约束中文注释和timestamptz。
-- 内部写入与retention均使用控制token，不接受浏览器guest跳转；代理返回401。token-bearing fetch与sink拒绝redirect。
-- 每轮worker有界清理500条30天前记录；配置systemd timer频率与历史量预算，确认清理吞吐，不能以列表过滤替代物理保留策略。
-- 监控固定码ALERT_HISTORY_RECORD_FAILED与ALERT_HISTORY_RETENTION_FAILED；记录失败不抑制原sink，但导致worker非零。API不可用期间无磁盘spool，不宣称无丢失审计。
+- 结算 worker 用标准输出和标准错误输出 JSON；重点关注 `WORKER_FAILED`、`BILLING_ATTENTION` 和退出码。运行环境按现有日志采集链路配置查询和通知，应用不发告警 webhook、不写告警历史表、不要求值班回执。
+- ChatNest 迁移 `0018_drop_alert_delivery_events` 删除旧告警投递表及其中记录，不删除业务账务数据，已有 0017 不回写。在批准窗口先停止旧 worker、按现有流程备份，再应用 0018 并启动新版本；需要回滚到仍依赖旧表的版本时，先按备份恢复流程处理，不能直接切回旧 worker。

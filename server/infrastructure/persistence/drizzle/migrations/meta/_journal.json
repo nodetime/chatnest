@@ -127,6 +127,13 @@
       "when": 1793590600000,
       "tag": "0017_alert_delivery_events",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1793781100000,
+      "tag": "0018_drop_alert_delivery_events",
+      "breakpoints": true
     }
   ]
 }

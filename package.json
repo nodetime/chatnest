@@ -24,7 +24,6 @@
     "db:up": "drizzle-kit up",
     "billing:worker": "node scripts/platform-settlement-worker.mjs",
     "billing:acceptance": "node scripts/production-acceptance.mjs",
-    "alert:acceptance": "node scripts/alert-sink-acceptance.mjs",
     "model:acceptance": "tsx --conditions=react-server scripts/model-gateway-acceptance.mjs",
     "payment:gate": "node scripts/ci/production-gate.mjs --production --payment",
     "production:gate": "node scripts/ci/production-gate.mjs --production",
@@ -35,8 +34,7 @@
     "test": "export PLAYWRIGHT=True && node node_modules/@playwright/test/cli.js test",
     "contract:check": "node scripts/ci/check-contract-artifacts.mjs",
     "contract:runtime": "tsx --test scripts/ci/contract-runtime.test.ts",
-    "contract:http:acceptance": "tsx scripts/ci/contract-http-acceptance.ts",
-    "alert:history:acceptance": "bash scripts/run-alert-history-acceptance.sh"
+    "contract:http:acceptance": "tsx scripts/ci/contract-http-acceptance.ts"
   },
   "dependencies": {
     "@ai-sdk/mcp": "2.0.7",

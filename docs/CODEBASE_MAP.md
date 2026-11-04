@@ -6,7 +6,7 @@
 
 - 0009–0010 对齐执行记录与结算 outbox；0011–0016 对齐账户偏好、会话修订和删除通知。迁移身份与运行账号分离。
 - 账户用例与仓储在 server/application/account 和 server/infrastructure/persistence/drizzle/account-repository.ts；结算 worker 入口为 scripts/platform-settlement-worker.mjs。账户删除通知独立投递。
-- 0017 引入告警投递历史，worker、内部 API 和 /admin/alerts 共同使用。
+- 0018 删除 0017 的告警投递表，并撤除旧 webhook、内部 API 和 /admin/alerts；结算告警只输出结构化进程日志。
 
 ## 顶层结构
 

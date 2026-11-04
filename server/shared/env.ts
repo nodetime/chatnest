@@ -31,9 +31,7 @@ const envSchema = z.object({
   AGENT_CONFIG_PATH: z.string().optional(),
   BROWSER_EXECUTABLE_PATH: z.string().optional(),
   BROWSER_RUNTIME: z.string().optional(),
-  CHATNEST_ALERT_WEBHOOK_URL: z.string().url().optional(),
   CHATNEST_CONTROL_TOKEN: z.string().optional(),
-  CHATNEST_DEPLOYMENT_ID: z.string().min(1).max(128).optional(),
   CHATNEST_SETTLEMENT_BATCH_SIZE: z.coerce
     .number()
     .int()

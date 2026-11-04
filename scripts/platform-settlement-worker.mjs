@@ -1,4 +1,3 @@
-import { deliverAlert } from "./alert-history.mjs";
 import { normalizePaymentRecovery } from "./payment-recovery-result.mjs";
 
 const baseUrl = process.env.CHATNEST_BASE_URL;
@@ -21,19 +20,6 @@ const timeout = setTimeout(
   () => controller.abort(),
   Number(process.env.CHATNEST_WORKER_TIMEOUT_MS || 30_000)
 );
-function sendAlert(kind, details) {
-  return deliverAlert({
-    alertUrl: process.env.CHATNEST_ALERT_WEBHOOK_URL,
-    baseUrl,
-    controlToken,
-    details,
-    kind,
-    onHistoryFailure: () => {
-      console.error(JSON.stringify({ code: "ALERT_HISTORY_RECORD_FAILED" }));
-      process.exitCode = 1;
-    },
-  });
-}
 try {
   const response = await fetch(
     new URL("/api/internal/billing/outbox", baseUrl),
@@ -155,31 +141,9 @@ try {
     }
   }
   if (alertReasons.length > 0) {
-    try {
-      const alerted = await sendAlert("billing_attention", {
-        paymentRecovery: paymentRecovery.skipped
-          ? { skipped: true }
-          : {
-              caseRisk: paymentRecovery.caseRisk,
-              failed: paymentRecovery.failed,
-              reconciled: paymentRecovery.reconciled,
-            },
-        reasons: alertReasons,
-        settlement: {
-          deadLettered: Number(payload.deadLettered || 0),
-          failed: Number(payload.failed || 0),
-        },
-      });
-      if (process.env.CHATNEST_ALERT_WEBHOOK_URL && !alerted) {
-        console.error(
-          JSON.stringify({ code: "BILLING_ALERT_DELIVERY_FAILED" })
-        );
-        process.exitCode = 1;
-      }
-    } catch {
-      console.error(JSON.stringify({ code: "BILLING_ALERT_DELIVERY_FAILED" }));
-      process.exitCode = 1;
-    }
+    console.warn(
+      JSON.stringify({ code: "BILLING_ATTENTION", reasons: alertReasons })
+    );
   }
   if (
     Number(payload.deadLettered || 0) > 0 ||
@@ -196,33 +160,7 @@ try {
     failureDetails.reason = error.reason;
   }
   console.error(JSON.stringify({ code: "WORKER_FAILED", ...failureDetails }));
-  try {
-    const delivered = await sendAlert("worker_failed", failureDetails);
-    if (process.env.CHATNEST_ALERT_WEBHOOK_URL && !delivered) {
-      console.error(JSON.stringify({ code: "BILLING_ALERT_DELIVERY_FAILED" }));
-    }
-  } catch {
-    console.error(JSON.stringify({ code: "BILLING_ALERT_DELIVERY_FAILED" }));
-  }
   process.exitCode = 1;
 } finally {
   clearTimeout(timeout);
-  try {
-    const result = await fetch(
-      new URL("/api/internal/billing/alert-events/retention", baseUrl),
-      {
-        headers: { "x-chatnest-control-token": controlToken },
-        method: "POST",
-        redirect: "error",
-        signal: AbortSignal.timeout(5000),
-      }
-    );
-    if (!result.ok) {
-      console.error(JSON.stringify({ code: "ALERT_HISTORY_RETENTION_FAILED" }));
-      process.exitCode = 1;
-    }
-  } catch {
-    console.error(JSON.stringify({ code: "ALERT_HISTORY_RETENTION_FAILED" }));
-    process.exitCode = 1;
-  }
 }

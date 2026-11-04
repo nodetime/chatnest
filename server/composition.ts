@@ -1,6 +1,5 @@
 import { sendDeletionNotification } from "@/server/application/account/notification-worker";
 import { createAccountSettingsService } from "@/server/application/account/settings";
-import { createAdminAlertsService } from "@/server/application/admin/alerts";
 import { deleteChat } from "@/server/application/chat/delete-chat";
 import { wrapModelWithBilling } from "@/server/application/chat/model-billing";
 import {
@@ -21,7 +20,6 @@ import {
 import { readAgentConfig } from "@/server/infrastructure/mcp/config";
 import { discoverSkills } from "@/server/infrastructure/mcp/skills";
 import { accountRepository } from "@/server/infrastructure/persistence/drizzle/account-repository";
-import { alertHistoryRepository } from "@/server/infrastructure/persistence/drizzle/alert-history-repository";
 import { billingRepository } from "@/server/infrastructure/persistence/drizzle/billing-repository";
 import { chatRepository } from "@/server/infrastructure/persistence/drizzle/chat-repository";
 import { documentRepository } from "@/server/infrastructure/persistence/drizzle/document-repository";
@@ -64,30 +62,6 @@ function buildUseCases() {
       repository: accountRepository,
       retentionLimit: env.ACCOUNT_RETENTION_BATCH_SIZE,
     }),
-    admin: {
-      alertsSnapshot: createAdminAlertsService({
-        readHistory: alertHistoryRepository.list,
-        readPaymentOverview:
-          env.PLATFORM_MODE === "connected" &&
-          env.PLATFORM_BASE_URL &&
-          env.PLATFORM_SERVICE_TOKEN
-            ? (subject) =>
-                createPlatformBillingClient({
-                  adminIdentity: {
-                    issuer: env.PLATFORM_USER_ISSUER ?? "chatnest",
-                    subject,
-                  },
-                  baseUrl: env.PLATFORM_BASE_URL as string,
-                  serviceToken: env.PLATFORM_SERVICE_TOKEN as string,
-                  timeoutMs: 5000,
-                }).adminOverview?.({ limit: 1 }) ?? Promise.resolve(undefined)
-            : undefined,
-        readSettlement: () => billingRepository.getSettlementHealth?.(),
-        webhookConfigured: Boolean(env.CHATNEST_ALERT_WEBHOOK_URL),
-      }).snapshot,
-      purgeAlertHistory: alertHistoryRepository.purge,
-      recordAlertEvent: alertHistoryRepository.record,
-    },
     // ---- P3 域门面(平台层只读/受控写)----
     // agent 基础设施门面(R3 豁免点):配置读取与技能发现是外部世界 IO,平台层经此进入
     agent: {
