@@ -135,10 +135,22 @@ test("Provider导航和卸载中止捕获的旧SDK请求，旧交互句柄既不
       }
       async reconnectToStream(){return null;}
     }
-    const models={selectableModelIds:['fixture'],defaultModelId:'fixture'},chats=new Map(),serverChats=new Map();
+    const models={selectableModelIds:['fixture'],defaultModelId:'fixture'},chats=new Map(),serverChats=new Map(),historyRefreshes=[];
     const swr=url=>{if(url?.includes('/api/models'))return {data:models};if(url?.includes('/api/messages')){if(!chats.has(url))chats.set(url,{messages:[],visibility:'private',isReadonly:false});return {data:chats.get(url),isLoading:false,mutate:()=>Promise.resolve()};}return {data:[]};};
     const stream={setDataStream(){},setWaitingStatus(){}};const router={push(){}};
-    const modules={react,'react/jsx-runtime':{jsx,jsxs:jsx},'@ai-sdk/react':{Chat,useChat:({chat})=>({messages:chat.messages,setMessages:value=>{chat.messages=typeof value==='function'?value(chat.messages):value;},sendMessage:chat.sendMessage,status:chat.status,stop:chat.stop,regenerate:chat.regenerate,resumeStream:chat.resumeStream,addToolApprovalResponse:chat.addToolApprovalResponse,error:chat.error,clearError:chat.clearError})},ai:{DefaultChatTransport:Transport},'next/navigation':{usePathname:()=>pathname,useRouter:()=>router},swr:{__esModule:true,default:swr,useSWRConfig:()=>({mutate:(key,update,options)=>{if(typeof update==="function"&&chats.has(key))chats.set(key,update(chats.get(key)));if(options?.revalidate===true&&serverChats.has(key)){assert.equal(update,undefined,"invalidate the old approval before fetching");chats.set(key,serverChats.get(key));}return Promise.resolve();}})},'swr/infinite':{unstable_serialize:()=>''},'@/app/_components/chat/chat-title':{projectChatTitle:()=> 'Fixture'},'@/app/_components/chat/data-stream-provider':{useDataStream:()=>stream},'@/app/_components/chat/sidebar-history':{getChatHistoryPaginationKey:()=>''},'@/app/_components/chat/toast':{toast(){}},'@/app/_hooks/use-auto-resume':{useAutoResume(){}},'@/app/_hooks/use-chat-draft':{useChatDraft:()=>react.useState('')},'@/app/_lib/utils':{generateUUID:()=> 'id-'+(++generated),fetcher(){},fetchWithErrorHandlers(){throw new Error('Unexpected network');}},'@/server/domain/model/models':{DEFAULT_CHAT_MODEL:'fixture'}};
+    const inFlightGets=new Set();
+    const mutateSWR=(key,update,options)=>{
+      if(typeof update==='function'&&chats.has(key))chats.set(key,update(chats.get(key)));
+      if(chats.has(key)&&typeof options?.revalidate==='boolean'){
+        assert.equal(update,undefined,'invalidate the old approval before fetching');
+        const subscribed=key==='/api/messages?chatId='+pathname.split('/').at(-1);
+        historyRefreshes.push({key,revalidate:options.revalidate,subscribed});
+        if(options.revalidate)inFlightGets.delete(key);
+        chats.set(key,options.revalidate&&subscribed?serverChats.get(key):undefined);
+      }
+      return Promise.resolve();
+    };
+    const modules={react,'react/jsx-runtime':{jsx,jsxs:jsx},'@ai-sdk/react':{Chat,useChat:({chat})=>({messages:chat.messages,setMessages:value=>{chat.messages=typeof value==='function'?value(chat.messages):value;},sendMessage:chat.sendMessage,status:chat.status,stop:chat.stop,regenerate:chat.regenerate,resumeStream:chat.resumeStream,addToolApprovalResponse:chat.addToolApprovalResponse,error:chat.error,clearError:chat.clearError})},ai:{DefaultChatTransport:Transport},'next/navigation':{usePathname:()=>pathname,useRouter:()=>router},swr:{__esModule:true,default:swr,useSWRConfig:()=>({mutate:mutateSWR})},'swr/infinite':{unstable_serialize:()=>''},'@/app/_components/chat/chat-title':{projectChatTitle:()=> 'Fixture'},'@/app/_components/chat/data-stream-provider':{useDataStream:()=>stream},'@/app/_components/chat/sidebar-history':{getChatHistoryPaginationKey:()=>''},'@/app/_components/chat/toast':{toast(){}},'@/app/_hooks/use-auto-resume':{useAutoResume(){}},'@/app/_hooks/use-chat-draft':{useChatDraft:()=>react.useState('')},'@/app/_lib/utils':{generateUUID:()=> 'id-'+(++generated),fetcher(){},fetchWithErrorHandlers(){throw new Error('Unexpected network');}},'@/server/domain/model/models':{DEFAULT_CHAT_MODEL:'fixture'}};
     const output={exports:{}};vm.runInNewContext(ts.transpileModule(fs.readFileSync('app/_hooks/use-active-chat.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText,{module:output,exports:output.exports,require:name=>modules[name]??require(name),process:{env:{}},window:{addEventListener(){},removeEventListener(){},location:{search:''},history:{replaceState(){}}},document:{cookie:''},URLSearchParams,sessionStorage:{removeItem(){}}});
     const render=path=>{pathname=path;cursor=0;const tree=output.exports.ActiveChatProvider({children:null,ownerId:'fixture'});pendingEffects.splice(0).forEach(effect=>effect());return tree.props.value;};
     const tick=()=>new Promise(resolve=>setTimeout(resolve,0));
@@ -166,6 +178,10 @@ test("Provider导航和卸载中止捕获的旧SDK请求，旧交互句柄既不
       const pendingFreshA=freshA.sendMessage({role:'user',parts:[{type:'text',text:'fresh A'}]});await tick();assert.equal(requests.length,3);assert.equal(requests[2].aborted,false);
       slots.forEach(slot=>slot?.cleanup?.());await pendingFreshA;assert.equal(requests[2].aborted,true,'provider unmount aborts its captured current request');
       const lateUnmountSend=freshA.sendMessage({role:'user',parts:[{type:'text',text:'after unmount'}]});await tick();assert.equal(requests.length,3,'unmounted handles cannot start another request');await lateUnmountSend;await assert.rejects(freshA.addToolApprovalResponse({id:'unmounted',approved:true}));
+      const stoppedKey='/api/messages?chatId=C';
+      const priorHistory={...cached,messages:stale};
+      chats.set(stoppedKey,priorHistory);
+      serverChats.set(stoppedKey,priorHistory);
       const stopped=render('/chat/C');
       const pendingStop=stopped.sendMessage({role:'user',parts:[{type:'text',text:'before explicit stop'}]});await tick();
       assert.equal(requests.length,4);await stopped.stop();await pendingStop;
@@ -175,8 +191,21 @@ test("Provider导航和卸载中止捕获的旧SDK请求，旧交互句柄既不
       assert.equal(typeof stopped.continueAgent,'undefined');
       const next=stopped.sendMessage({role:'user',parts:[{type:'text',text:'my next instruction'}]});await tick();
       assert.equal(requests.length,5);assert.equal(requests[4].aborted,false,'the composer can start a new explicit turn');
-      await stopped.stop();await next;
-      stopped.startNewChat();render('/chat');render('/chat/C');
+      chats.set(stoppedKey,priorHistory);
+      inFlightGets.add(stoppedKey);
+      const stopping=stopped.stop();
+      const stoppedMessages=instances.at(-1).messages;
+      assert.equal(stoppedMessages.at(-1).parts[0].text,'pending','stop leaves the partial response visible');
+      stopped.startNewChat();render('/chat');
+      assert.equal(chats.get(stoppedKey),undefined,'leaving after Stop must invalidate even before the old SDK finishes');
+      assert.equal(inFlightGets.has(stoppedKey),false,'the reopened GET must not dedupe against a stale request');
+      assert.deepEqual(historyRefreshes.at(-1),{key:stoppedKey,revalidate:true,subscribed:false},'clear old requests after the old history subscription leaves');
+      await stopping;await next;
+      assert.equal(render('/chat/C').messages.length,0,'the reopened SDK must not hydrate a stale approval before the history response');
+      // The history GET returns only after navigation and server-side persistence.
+      chats.set(stoppedKey,{...priorHistory,messages:stoppedMessages});
+      render('/chat/C');
+      assert.deepEqual(instances.at(-1).messages,stoppedMessages,'the reopened conversation adopts authoritative history');
       assert.equal(requests.length,5,'navigation and reopening cannot send another request');
       const notStarted=render('/chat/D');const unsent=notStarted.sendMessage({role:'user',parts:[{type:'text',text:'draft without response'}]});await tick();
       assert.equal(requests.length,6);await notStarted.stop();await unsent;

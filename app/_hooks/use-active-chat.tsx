@@ -218,19 +218,16 @@ export function ActiveChatProvider({
     `research:draft:${ownerId}:${isNewChat ? "new" : chatId}`
   );
   const [showCreditCardAlert, setShowCreditCardAlert] = useState(false);
+  const messagesKey = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/messages?chatId=${chatId}`;
 
   const {
     data: chatData,
     isLoading,
     error: loadError,
     mutate: reloadChat,
-  } = useSWR(
-    isNewChat
-      ? null
-      : `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/messages?chatId=${chatId}`,
-    fetcher,
-    { revalidateOnFocus: false }
-  );
+  } = useSWR(isNewChat ? null : messagesKey, fetcher, {
+    revalidateOnFocus: false,
+  });
 
   const initialMessages: ChatMessage[] = isNewChat
     ? []
@@ -278,13 +275,12 @@ export function ActiveChatProvider({
         isDisconnect ||
         !finishReason ||
         finishReason === "error";
+      const stoppedByUser =
+        isAbort && !isError && !isDisconnect && interactionGate.current.paused;
       // Only a new prompt is already stored when a partial reply arrives.
       // An interrupted edit still needs to restore the saved turn and draft.
       const stoppedAfterReply =
-        isAbort &&
-        !isError &&
-        !isDisconnect &&
-        interactionGate.current.paused &&
+        stoppedByUser &&
         interactionGate.current.newUserTurn &&
         finishedMessage.parts.some((part) => {
           if (part.type === "text" || part.type === "reasoning") {
@@ -301,13 +297,8 @@ export function ActiveChatProvider({
           ? new Error("本轮未完成，草稿已保留。")
           : undefined;
       if (!failed) {
-        // A duplicate approval may finish without returning the saved result.
-        // Drop the old card and reload the authoritative conversation.
-        mutate(
-          `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/messages?chatId=${chatId}`,
-          undefined,
-          { revalidate: true }
-        );
+        // A successful approval may only acknowledge a replay.
+        mutate(messagesKey, undefined, { revalidate: true });
       }
       const snapshot = regenerationSnapshot.current;
       // useChat forwards old-instance callbacks through its latest callback refs.
@@ -444,11 +435,16 @@ export function ActiveChatProvider({
       // 生命周期清理必须中止此 effect 捕获的实例。导航 render 已切换 ref，
       // 面向旧按钮的 stop 门控会拒绝旧实例，因此清理不经过该交互入口。
       // 同时失效卸载后的处理器及等待中的回答，阻止其随后启动另一轮请求。
+      if (gate.paused) {
+        // The old history subscription has left. Invalidate its snapshot and
+        // in-flight GET without refetching a turn that may still be saving.
+        mutate(messagesKey, undefined, { revalidate: true });
+      }
       gate.released = true;
       gate.revision += 1;
       activeInstance.stop();
     };
-  }, [activeInstance]);
+  }, [activeInstance, messagesKey, mutate]);
 
   const stop = useCallback(async () => {
     const gate = interactionGate.current;
