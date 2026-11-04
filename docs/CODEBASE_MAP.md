@@ -4,6 +4,7 @@
 
 ## ChatNest 迁移与运行入口
 
+- 本地使用 PostgreSQL 和 `pnpm dev`；根目录 `Dockerfile` 的 `app` 与 `migrator` 只用于[容器交付](../deploy/docker-handoff.md)。
 - 0009–0010 对齐执行记录与结算 outbox；0011–0016 对齐账户偏好、会话修订和删除通知。迁移身份与运行账号分离。
 - 账户用例与仓储在 server/application/account 和 server/infrastructure/persistence/drizzle/account-repository.ts；结算 worker 入口为 scripts/platform-settlement-worker.mjs。账户删除通知独立投递。
 - 0018 删除 0017 的告警投递表，并撤除旧 webhook、内部 API 和 /admin/alerts；结算告警只输出结构化进程日志。

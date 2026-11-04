@@ -15,16 +15,25 @@
 
 ## 本地运行
 
-复制 `deploy/.env.example` 为本地 `.env.local`，设置 `AUTH_SECRET`、`POSTGRES_URL`。完成迁移与管理员/加密主密钥配置后，可在 `/admin/models` 管理模型地址、Key、默认/开放模型并测试连接，无需反复改环境变量；详见 [模型配置](docs/integrations/model-settings.md)。首次启动也支持环境变量配置模型连接。OpenAI 兼容接口使用 `MODEL_PROVIDER=openai`、`OPENAI_API_KEY`、`OPENAI_BASE_URL`、`OPENAI_MODEL`；不需要 Gateway Key。要启用内置浏览器，设置 `BROWSER_RUNTIME=local`，并安装匹配版本的 Chromium。
+本机直接用 Node.js 22 和 `pnpm dev`，不需要构建应用镜像。以下用仓库自带的本地 PostgreSQL；已有开发库时，只需把下面的数据库地址换成自己的本地库。
 
 ```sh
 corepack pnpm install --frozen-lockfile
-corepack pnpm exec playwright install chromium
-MIGRATION_POSTGRES_URL=postgres://chatnest:chatnest@127.0.0.1:55432/chatnest corepack pnpm db:migrate
+docker volume create chatnest-postgres-data
+docker compose -f deploy/docker-compose.dev.yml up -d --wait postgres
+export POSTGRES_URL=postgres://chatnest:chatnest@127.0.0.1:55432/chatnest
+export AUTH_SECRET="$(openssl rand -hex 32)"
+export AUTH_URL=http://127.0.0.1:3003
+export PLATFORM_MODE=standalone
+MIGRATION_POSTGRES_URL="$POSTGRES_URL" corepack pnpm db:migrate
 corepack pnpm dev --hostname 127.0.0.1 --port 3003
 ```
 
+打开 http://127.0.0.1:3003/register 注册；`GET /api/health/ready` 返回 200 即表示数据库就绪。启动和注册不需要模型、支付或供应商凭据。要发送聊天消息，再按 [模型配置](docs/integrations/model-settings.md) 设置模型；要用内置浏览器，再设置 `BROWSER_RUNTIME=local` 并安装 Chromium（`corepack pnpm exec playwright install chromium`）。日常开发可把自己的本地变量放在 `.env.local`，重启时保留同一个 `AUTH_SECRET`，以免现有会话失效。
+
 `.env.local`、实际密钥、日志与本地截图不提交。完整配置、验证记录、上游更新方式及功能边界见 [DEVELOPMENT.md](docs/DEVELOPMENT.md)。当前任务在会话内运行，没有后台持久任务保证；知识产权调查交付的是待核验线索。
+
+应用和迁移镜像的构建、配置及运维交付见 [Docker 交付说明](deploy/docker-handoff.md)；本地开发仍直接运行 `pnpm dev`。
 
 <details>
 <summary>上游 Vercel Chatbot 模板说明</summary>
