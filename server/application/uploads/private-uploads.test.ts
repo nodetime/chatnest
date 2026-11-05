@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import {
+  chmod,
   mkdtemp,
   readFile,
   realpath,
@@ -64,6 +66,32 @@ test("private driver preserves bytes and rejects symlinks/path locators with pri
     await assert.rejects(() => readFile(join(root, id)));
     await symlink("/etc/passwd", join(root, id));
     await assert.rejects(() => store.read(id, 1024 * 1024));
+  } finally {
+    await rm(root, { force: true, recursive: true });
+  }
+});
+test("restored storage refuses group-readable directories and files before serving bytes", async () => {
+  const { LocalUploadStore } = await import(
+    "@/server/infrastructure/uploads/local-store"
+  );
+  const root = await realpath(
+    await mkdtemp(join(tmpdir(), "private-restore-"))
+  );
+  const id = "11111111-1111-4111-8111-111111111111";
+  const other = "22222222-2222-4222-8222-222222222222";
+  try {
+    const store = new LocalUploadStore(root);
+    await store.write(id, png);
+    await chmod(root, 0o750);
+    await assert.rejects(() => store.write(other, png));
+    await assert.rejects(() => store.read(id, png.length));
+    await chmod(root, 0o700);
+    await chmod(join(root, id), 0o640);
+    await assert.rejects(() => store.read(id, png.length));
+    const hash = createHash("sha256").update(png).digest("hex");
+    await assert.rejects(() => store.verify(id, png.length, hash));
+    await chmod(join(root, id), 0o600);
+    assert.deepEqual(await store.read(id, png.length), png);
   } finally {
     await rm(root, { force: true, recursive: true });
   }
@@ -139,6 +167,90 @@ test("multipart input is stream bounded before parsing and rejects duplicate fil
       })
     )
   );
+});
+test("an idle upload read returns 408 even when cancellation never completes", async (t) => {
+  const { readBoundedBody, UploadError } = await import(
+    "@/server/shared/uploads/validation"
+  );
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  let cancelled = false;
+  const body = new ReadableStream<Uint8Array>({
+    cancel() {
+      cancelled = true;
+      return new Promise<void>(() => undefined);
+    },
+  });
+  const init = { body, duplex: "half", method: "POST" };
+  const pending = readBoundedBody(new Request("http://localhost", init), 64, {
+    idleTimeoutMs: 30,
+  });
+  const result = assert.rejects(
+    pending,
+    (error) => error instanceof UploadError && error.status === 408
+  );
+  t.mock.timers.tick(30);
+  if (!cancelled) {
+    t.mock.timers.reset();
+    throw new Error("idle upload stream was not cancelled");
+  }
+  await result;
+});
+test("upload progress restarts the idle budget until EOF", async (t) => {
+  const { readBoundedBody } = await import(
+    "@/server/shared/uploads/validation"
+  );
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  let stream!: ReadableStreamDefaultController<Uint8Array>;
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      stream = controller;
+    },
+  });
+  const init = { body, duplex: "half", method: "POST" };
+  const pending = readBoundedBody(new Request("http://localhost", init), 64, {
+    idleTimeoutMs: 30,
+  });
+  t.mock.timers.tick(20);
+  stream.enqueue(Uint8Array.of(1));
+  await Promise.resolve();
+  t.mock.timers.tick(20);
+  stream.enqueue(Uint8Array.of(2));
+  stream.close();
+  assert.deepEqual(await pending, Buffer.from([1, 2]));
+});
+
+test("only the self-authenticating upload endpoint skips the Next proxy", async () => {
+  const { unstable_doesMiddlewareMatch } = await import(
+    "next/experimental/testing/server"
+  );
+  const { config } = await import("@/proxy");
+  const match = (path: string) =>
+    unstable_doesMiddlewareMatch({ config, url: `http://localhost${path}` });
+  assert.equal(match("/api/files/upload"), false);
+  assert.equal(match("/api/files/upload/?x=1"), false);
+  assert.equal(match("/api/files/upload-other"), true);
+  assert.equal(match("/api/files/123"), true);
+  assert.equal(match("/api/chat"), true);
+  assert.equal(match("/api/admin/storage"), true);
+});
+test("download capacity is held until consumption, cancellation, or stalled response expiry", async (t) => {
+  const { DownloadCapacity, downloadBody } = await import(
+    "@/server/domain/attachment/capacity"
+  );
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const capacity = new DownloadCapacity(8);
+  const first = downloadBody(Uint8Array.of(1, 2, 3, 4, 5), capacity.take(5));
+  assert.throws(() => capacity.take(4), { status: 429 });
+  await first.cancel();
+  const finished = downloadBody(Uint8Array.of(6, 7), capacity.take(8));
+  assert.deepEqual(
+    new Uint8Array(await new Response(finished).arrayBuffer()),
+    Uint8Array.of(6, 7)
+  );
+  const stalled = downloadBody(Uint8Array.of(8), capacity.take(8));
+  t.mock.timers.tick(30_000);
+  await assert.rejects(stalled.getReader().read(), /下载超时/);
+  capacity.take(8)();
 });
 test("generation admission is synchronous, A B A invalidates stale completions and cancellation", async () => {
   const { UploadAdmission } = await import(

@@ -108,7 +108,11 @@ export async function validateImage(bytes: Buffer, declared: string) {
   }
   return mime;
 }
-export async function readBoundedBody(request: Request, limit: number) {
+export async function readBoundedBody(
+  request: Request,
+  limit: number,
+  { idleTimeoutMs }: { idleTimeoutMs?: number } = {}
+) {
   if (Number(request.headers.get("content-length")) > limit) {
     request.body?.cancel().catch(() => undefined);
     throw new UploadError(413, "请求内容过大。");
@@ -119,10 +123,27 @@ export async function readBoundedBody(request: Request, limit: number) {
   const reader = request.body.getReader();
   const chunks: Uint8Array[] = [];
   let size = 0;
+  let stalled = false;
+  let idleTimer: ReturnType<typeof setTimeout> | undefined;
+  const startIdleTimer = () => {
+    if (idleTimeoutMs === undefined) {
+      return;
+    }
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => {
+      stalled = true;
+      // Cancel resolves the pending read without waiting for the source cleanup.
+      reader.cancel().catch(() => undefined);
+    }, idleTimeoutMs);
+  };
   try {
+    startIdleTimer();
     for (;;) {
       // biome-ignore lint/performance/noAwaitInLoops: Bounded sequential I/O prevents concurrent memory and transaction pressure.
       const { value, done } = await reader.read();
+      if (stalled) {
+        throw new UploadError(408, "上传长时间未收到数据，请重试。");
+      }
       if (done) {
         break;
       }
@@ -133,14 +154,20 @@ export async function readBoundedBody(request: Request, limit: number) {
         throw new UploadError(413, "请求内容过大。");
       }
       chunks.push(value);
+      if (value.length) {
+        startIdleTimer();
+      }
     }
   } finally {
+    clearTimeout(idleTimer);
     reader.releaseLock();
   }
   return Buffer.concat(chunks, size);
 }
 export async function readUploadForm(request: Request) {
-  const bytes = await readBoundedBody(request, MAX_REQUEST_BYTES);
+  const bytes = await readBoundedBody(request, MAX_REQUEST_BYTES, {
+    idleTimeoutMs: 30_000,
+  });
   let form: FormData;
   try {
     form = await new Response(bytes, {

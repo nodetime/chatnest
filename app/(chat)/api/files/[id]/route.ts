@@ -1,5 +1,8 @@
 import { auth } from "@/app/(auth)/auth";
-import { deleteDraft, readAsset } from "@/server/application/uploads/service";
+import {
+  deleteDraft,
+  readAssetForDownload,
+} from "@/server/application/uploads/service";
 import {
   authorizeUploadRequest,
   uploadErrorResponse,
@@ -10,8 +13,8 @@ export async function GET(request: Request, context: Context) {
   try {
     const userId = authorizeUploadRequest((await auth())?.user, request, false);
     const { id } = await context.params;
-    const asset = await readAsset(id, userId);
-    return new Response(new Uint8Array(asset.bytes), {
+    const asset = await readAssetForDownload(id, userId, request.signal);
+    return new Response(asset.body, {
       headers: {
         "Cache-Control": "private, no-store",
         "Content-Disposition": `${asset.mime.startsWith("image/") ? "inline" : "attachment"}; filename="attachment"; filename*=UTF-8''${encodeURIComponent(asset.name).replace(/['()*]/g, (c) => `%${c.charCodeAt(0).toString(16)}`)}`,

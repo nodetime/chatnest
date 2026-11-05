@@ -1,6 +1,10 @@
 import "server-only";
 import { createHash, randomUUID } from "node:crypto";
 import {
+  downloadBody,
+  downloadCapacity,
+} from "@/server/domain/attachment/capacity";
+import {
   ATTACHMENT_MIMES,
   type DocumentExtraction,
   isImageMime,
@@ -126,8 +130,12 @@ export async function configureStorage(
 }
 // Cheap admission avoids monopolizing the parser for disabled/cross-chat/full storage.
 // The reservation transaction below repeats every mutable check with derived bytes under LOCK.
-async function preflightUpload(ownerId: string, chatId: string, size: number) {
-  storageDirectory();
+async function preflightUpload(
+  ownerId: string,
+  chatId: string,
+  size: number,
+  local: LocalUploadStore
+) {
   const limits = quotaLimits();
   if (!Number.isSafeInteger(size) || size < 1 || size > MAX_DOCUMENT_BYTES) {
     throw new UploadError(400, "附件必须非空且不超过 64 MiB。");
@@ -155,13 +163,16 @@ async function preflightUpload(ownerId: string, chatId: string, size: number) {
   if (quota.drafts >= MAX_IMAGES) {
     throw new UploadError(400, "本会话已有 15 个未发送附件，请先移除或发送。");
   }
+  // A bad restored volume must fail before parsing or reserving bytes in PostgreSQL.
+  await local.checkDirectory();
 }
 export async function registerUpload(
   ownerId: string,
   chatId: string,
   file: File
 ) {
-  await preflightUpload(ownerId, chatId, file.size);
+  const local = store();
+  await preflightUpload(ownerId, chatId, file.size, local);
   const bytes = Buffer.from(await file.arrayBuffer());
   const mime = await validateAttachment(bytes, file.type, file.name);
   const extraction = isImageMime(mime)
@@ -177,7 +188,6 @@ export async function registerUpload(
     name = safeDisplayName(file.name),
     sha256 = createHash("sha256").update(bytes).digest("hex");
   const limits = quotaLimits();
-  const local = store();
   await purgeExpiredDrafts(10);
   await sql.begin(async (tx) => {
     await tx`SELECT pg_advisory_xact_lock(${LOCK})`;
@@ -302,25 +312,49 @@ export async function readAssetForContext(
     totalSegments: asset.extraction?.segments.length,
   };
 }
-export async function readAsset(id: string, userId: string, chatId?: string) {
-  const asset = await authorizedAsset(id, userId, chatId);
-  let bytes: Buffer;
+async function verifiedBytes(
+  id: string,
+  asset: { size: number; sha256: string }
+) {
   try {
-    bytes = await store().read(id, asset.size);
+    const bytes = await store().read(id, asset.size);
     if (createHash("sha256").update(bytes).digest("hex") !== asset.sha256) {
       throw new Error("hash mismatch");
     }
+    return bytes;
   } catch {
     // biome-ignore lint/style/useErrorCause: Sanitize this boundary error; underlying errors may contain private paths or request content.
     throw new UploadError(410, "附件已失效，请重新上传。");
   }
+}
+export async function readAsset(id: string, userId: string, chatId?: string) {
+  const asset = await authorizedAsset(id, userId, chatId);
   return {
-    bytes,
+    bytes: await verifiedBytes(id, asset),
     extraction: asset.extraction ?? undefined,
     mime: asset.mime,
     name: asset.name,
     size: asset.size,
   };
+}
+export async function readAssetForDownload(
+  id: string,
+  userId: string,
+  signal: AbortSignal
+) {
+  const asset = await authorizedAsset(id, userId);
+  const release = downloadCapacity.take(asset.size);
+  try {
+    return {
+      body: downloadBody(await verifiedBytes(id, asset), release, signal),
+      mime: asset.mime,
+      name: asset.name,
+      size: asset.size,
+    };
+  } catch (error) {
+    release();
+    throw error;
+  }
 }
 async function finishDeletion(id: string) {
   await store().delete(id);

@@ -13,6 +13,14 @@
 
 停止由输入区触发，`use-active-chat.tsx` 中止当前流并拦住自动续跑。消息区保留已有回复和原审批卡，不再渲染额外的续跑横栏，也不代发用户消息；用户可以手动发送下一条消息。
 
+## ChatNest 私有上传恢复
+
+原 Admin 存储页、C 端上传/下载与附件关联继续共用 `server/application/uploads/service.ts` 和 `server/infrastructure/uploads/local-store.ts`。现有本地驱动拒绝非运行用户归属及组／其他用户可访问的卷根或文件；坏卷在解析和预留前失败，不自动 chmod，也没有新增对象存储适配。配对恢复验收见现有发布清单。
+
+仅 `POST /api/files/upload` 的路径避开 Next proxy 的请求体克隆，由原 route 自己完成认证、同源检查、trace 回显及并发准入；`server/shared/uploads/validation.ts` 在文件表单读取时启用 30 秒无数据超时，不改变其他读体调用。
+
+下载 `GET /api/files/:id` 在原归属判断后、磁盘读取前保留文件大小对应的下载预算。先核对完整 SHA-256，再按 64 KiB 分块返回同一份已验证数据；每进程最多保留 128 MiB 下载原件，EOF、取消或连续 30 秒下游未拉取释放预算。模型上下文仍走原 `readAsset`，不借用 HTTP 下载预算。
+
 ## 顶层结构
 
 一级目录:`app server public docs deploy tests scripts`(隐藏 `.github .claude .agents`)。四层 DDD 的接口层 = `app/`(route/proxy/actions),`server/` 一级仅五项:
