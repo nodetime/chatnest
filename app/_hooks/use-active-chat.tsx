@@ -196,6 +196,7 @@ export function ActiveChatProvider({
     answerPending: false,
     chatId,
     expectedHistory: undefined as ExpectedHistory | undefined,
+    historyChanged: false,
     manual: false,
     newUserTurn: false,
     paused: false,
@@ -208,6 +209,7 @@ export function ActiveChatProvider({
       answerPending: false,
       chatId,
       expectedHistory: undefined,
+      historyChanged: false,
       manual: false,
       newUserTurn: false,
       paused: false,
@@ -355,8 +357,10 @@ export function ActiveChatProvider({
           ? new Error("本轮未完成，草稿已保留。")
           : undefined;
       if (!failed) {
-        // A successful approval may only acknowledge a replay.
-        mutate(messagesKey, undefined, { revalidate: true });
+        // Revalidate without blanking the active snapshot. Clearing it here
+        // can unmount the composer before its successful send clears the draft.
+        interactionGate.current.historyChanged = true;
+        mutate(messagesKey);
       }
       const snapshot = regenerationSnapshot.current;
       // useChat forwards old-instance callbacks through its latest callback refs.
@@ -494,7 +498,7 @@ export function ActiveChatProvider({
       // 生命周期清理必须中止此 effect 捕获的实例。导航 render 已切换 ref，
       // 面向旧按钮的 stop 门控会拒绝旧实例，因此清理不经过该交互入口。
       // 同时失效卸载后的处理器及等待中的回答，阻止其随后启动另一轮请求。
-      if (gate.paused || gate.expectedHistory) {
+      if (gate.paused || gate.expectedHistory || gate.historyChanged) {
         if (gate.expectedHistory) {
           for (const [id, pending] of pendingHistory.current) {
             if (pending.until <= Date.now()) {

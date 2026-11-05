@@ -131,24 +131,29 @@ test("Provider导航和卸载中止捕获的旧SDK请求，旧交互句柄既不
     class Transport {
       async sendMessages(request){
         const record={id:request.chatId,signal:request.abortSignal,aborted:false};requests.push(record);
-        return new ReadableStream({start(controller){request.abortSignal.addEventListener('abort',()=>{record.aborted=true;controller.error(new DOMException('Stopped','AbortError'));},{once:true});if(request.chatId==='G'){controller.enqueue({type:'data-run-status',id:'run-status',data:{state:'failed'}});controller.enqueue({type:'error',errorText:'model rejected'});controller.close();return;}controller.enqueue({type:'start',messageId:'answer-'+requests.length});controller.enqueue({type:'text-start',id:'text'});if(request.chatId==='D')return;controller.enqueue({type:'text-delta',id:'text',delta:'pending'});}});
+        return new ReadableStream({start(controller){request.abortSignal.addEventListener('abort',()=>{record.aborted=true;controller.error(new DOMException('Stopped','AbortError'));},{once:true});if(request.chatId==='G'){controller.enqueue({type:'data-run-status',id:'run-status',data:{state:'failed'}});controller.enqueue({type:'error',errorText:'model rejected'});controller.close();return;}controller.enqueue({type:'start',messageId:'answer-'+requests.length});controller.enqueue({type:'text-start',id:'text'});if(request.chatId==='D')return;controller.enqueue({type:'text-delta',id:'text',delta:'pending'});if(request.chatId==='H'){controller.enqueue({type:'text-end',id:'text'});controller.enqueue({type:'finish',finishReason:'stop'});controller.close();}}});
       }
       async reconnectToStream(){return null;}
     }
     const models={selectableModelIds:['fixture'],defaultModelId:'fixture'},chats=new Map(),serverChats=new Map(),historyRefreshes=[];
     const reads=[],historyErrors=new Map();let heldHistoryRead;
     const reloaders=new Map();
-    const swr=url=>{if(url?.includes('/api/models'))return {data:models};if(url?.includes('/api/messages')){if(!chats.has(url))chats.set(url,{messages:[],visibility:'private',isReadonly:false});if(!reloaders.has(url))reloaders.set(url,async()=>{reads.push(url);if(heldHistoryRead)await heldHistoryRead;const value=serverChats.get(url);chats.set(url,value);return value;});return {data:chats.get(url),isLoading:false,error:historyErrors.get(url),mutate:reloaders.get(url)};}return {data:[]};};
+    const swr=url=>{if(url?.includes('/api/models'))return {data:models};if(url?.includes('/api/messages')){if(!chats.has(url))chats.set(url,{messages:[],visibility:'private',isReadonly:false});if(!reloaders.has(url))reloaders.set(url,async()=>{reads.push(url);if(heldHistoryRead)await heldHistoryRead;const value=serverChats.get(url);chats.set(url,value);return value;});return {data:chats.get(url),isLoading:delayRevalidation&&!chats.get(url),error:historyErrors.get(url),mutate:reloaders.get(url)};}return {data:[]};};
     const stream={setDataStream(){},setWaitingStatus(){}};const router={push(){}};
-    const inFlightGets=new Set();
-    const mutateSWR=(key,update,options)=>{
+    const inFlightGets=new Set();let delayRevalidation=false;
+    const mutateSWR=(...args)=>{
+      const [key,update,options]=args;
+      if(args.length===1&&chats.has(key)){
+        if(!delayRevalidation)chats.set(key,serverChats.get(key));
+        return Promise.resolve();
+      }
       if(typeof update==='function'&&chats.has(key))chats.set(key,update(chats.get(key)));
       if(chats.has(key)&&typeof options?.revalidate==='boolean'){
         assert.equal(update,undefined,'invalidate the old approval before fetching');
         const subscribed=key==='/api/messages?chatId='+pathname.split('/').at(-1);
         historyRefreshes.push({key,revalidate:options.revalidate,subscribed});
         if(options.revalidate)inFlightGets.delete(key);
-        chats.set(key,options.revalidate&&subscribed?serverChats.get(key):undefined);
+        chats.set(key,options.revalidate&&subscribed&&!delayRevalidation?serverChats.get(key):undefined);
       }
       return Promise.resolve();
     };
@@ -170,9 +175,16 @@ test("Provider导航和卸载中止捕获的旧SDK请求，旧交互句柄既不
       finishHandlers[0]({messages:stale,finishReason:'tool-calls'});
       assert.equal(chats.get(key).messages,completed,'a replay acknowledgement must never overwrite the saved tool result');
       assert.equal(chats.get(key).visibility,'private');
+      delayRevalidation=true;
+      finishHandlers[0]({messages:completed,finishReason:'stop'});
+      assert.equal(render('/chat/A').isReadonly,false,'the post-send history GET must not unmount the composer before it clears the submitted draft');
+      assert.equal(chats.get(key).messages,completed,'keep the active chat snapshot while the success revalidation is pending');
+      delayRevalidation=false;
       chats.set(key,cached);
       const pendingA=a.sendMessage({role:'user',parts:[{type:'text',text:'A'}]});await tick();assert.equal(requests[0].id,'A');
       const b=render('/chat/B');await tick();assert.equal(requests[0].aborted,true,'navigation must abort the captured old A stream');await pendingA;
+      assert.equal(chats.get(key),undefined,'leaving clears the old snapshot and pending GET before sidebar reopening');
+      chats.set(key,cached);
       const pendingB=b.sendMessage({role:'user',parts:[{type:'text',text:'B'}]});await tick();assert.equal(requests[1].id,'B');assert.equal(requests[1].aborted,false);
       await a.stop();await a.sendMessage({role:'user',parts:[{type:'text',text:'stale'}]});await assert.rejects(a.addToolApprovalResponse({id:'stale',approved:true}));await assert.rejects(a.answerAskUser({messageId:'a',toolCallId:'ask',output:{status:'cancelled',answers:{}}}));assert.equal(requests.length,2);assert.equal(requests[1].aborted,false,'old stop handler cannot abort B');
       const freshA=render('/chat/A');await tick();await pendingB;assert.equal(requests[1].aborted,true);assert.notEqual(instances[2],oldA,'returning to A creates a fresh SDK instance');
@@ -287,6 +299,31 @@ test("Provider导航和卸载中止捕获的旧SDK请求，旧交互句柄既不
       render('/chat/G');
       assert.deepEqual(instances.at(-1).messages,persistedFailure.messages,'GET accepts the persisted failed turn even when the assistant ID differs from the SDK ID');
       assert.equal(requests.length,requestsBeforeFailure+1,'reopening a failed turn must not replay the message');
+
+      const successKey='/api/messages?chatId=H';
+      chats.set(successKey,{...cached,messages:[]});
+      const successful=render('/chat/H');
+      const beforeSuccess=requests.length;
+      const {completeDraftSubmission}=require('./server/domain/attachment/client-admission.ts');
+      let draft='one successful send';
+      delayRevalidation=true;
+      await completeDraftSubmission(
+        ()=>successful.sendMessage({role:'user',parts:[{type:'text',text:draft}]}),
+        successful.getSendError,
+        ()=>!render('/chat/H').isReadonly,
+        ()=>{draft='';}
+      );
+      assert.equal(draft,'','successful send clears its draft even during delayed history revalidation');
+      const saved=instances.at(-1).messages;
+      assert.equal(saved.at(-1).parts[0].text,'pending');
+      serverChats.set(successKey,{...cached,messages:saved});
+      render('/chat');
+      assert.equal(chats.get(successKey),undefined,'leaving invalidates the old snapshot');
+      chats.set(successKey,serverChats.get(successKey));
+      delayRevalidation=false;
+      render('/chat/H');
+      assert.deepEqual(instances.at(-1).messages,saved);
+      assert.equal(requests.length,beforeSuccess+1,'completed send and sidebar reopen must result in exactly one chat POST');
       process.stdout.write('ASYNC_DONE');
     })().catch(error=>{console.error(error);process.exitCode=1;});
   `);
