@@ -131,7 +131,7 @@ test("Provider导航和卸载中止捕获的旧SDK请求，旧交互句柄既不
     class Transport {
       async sendMessages(request){
         const record={id:request.chatId,signal:request.abortSignal,aborted:false};requests.push(record);
-        return new ReadableStream({start(controller){request.abortSignal.addEventListener('abort',()=>{record.aborted=true;controller.error(new DOMException('Stopped','AbortError'));},{once:true});controller.enqueue({type:'start',messageId:'answer-'+requests.length});controller.enqueue({type:'text-start',id:'text'});if(request.chatId==='D')return;controller.enqueue({type:'text-delta',id:'text',delta:'pending'});}});
+        return new ReadableStream({start(controller){request.abortSignal.addEventListener('abort',()=>{record.aborted=true;controller.error(new DOMException('Stopped','AbortError'));},{once:true});if(request.chatId==='G'){controller.enqueue({type:'data-run-status',id:'run-status',data:{state:'failed'}});controller.enqueue({type:'error',errorText:'model rejected'});controller.close();return;}controller.enqueue({type:'start',messageId:'answer-'+requests.length});controller.enqueue({type:'text-start',id:'text'});if(request.chatId==='D')return;controller.enqueue({type:'text-delta',id:'text',delta:'pending'});}});
       }
       async reconnectToStream(){return null;}
     }
@@ -263,6 +263,30 @@ test("Provider导航和卸载中止捕获的旧SDK请求，旧交互句柄既不
       assert.equal(denied.loadError,forbidden);
       assert.equal(denied.isReadonly,true);
       assert.equal(instances.at(-1).messages.length,0,'a denied final GET must not restore cached history or approvals');
+      const failureKey='/api/messages?chatId=G';
+      chats.set(failureKey,priorHistory);
+      serverChats.set(failureKey,priorHistory);
+      const failure=render('/chat/G');
+      const requestsBeforeFailure=requests.length;
+      await failure.sendMessage({role:'user',parts:[{type:'text',text:'one failed send'}]});
+      assert.ok(failure.getSendError());
+      const failedMessages=instances.at(-1).messages;
+      const failedUser=failedMessages.findLast(message=>message.role==='user');
+      assert.ok(failedUser?.id);
+      assert.equal(failedMessages.at(-1).parts.at(-1).type,'data-run-status');
+      render('/chat');
+      assert.equal(chats.get(failureKey),undefined,'leaving a reported failed turn must clear stale sidebar history');
+      render('/chat/G');
+      const beforeSave={...priorHistory,messages:[...stale,failedUser]};
+      chats.set(failureKey,beforeSave);
+      serverChats.set(failureKey,beforeSave);
+      assert.equal(render('/chat/G').isReadonly,true,'the first GET must not restore an old approval before the failed assistant saves');
+      const persistedFailure={...beforeSave,messages:[...beforeSave.messages,{...failedMessages.at(-1),id:'server-assistant-id'}]};
+      serverChats.set(failureKey,persistedFailure);
+      await new Promise(resolve=>setTimeout(resolve,300));
+      render('/chat/G');
+      assert.deepEqual(instances.at(-1).messages,persistedFailure.messages,'GET accepts the persisted failed turn even when the assistant ID differs from the SDK ID');
+      assert.equal(requests.length,requestsBeforeFailure+1,'reopening a failed turn must not replay the message');
       process.stdout.write('ASYNC_DONE');
     })().catch(error=>{console.error(error);process.exitCode=1;});
   `);

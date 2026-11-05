@@ -41,6 +41,7 @@ import {
   type TodoPlan,
   validateAskUserOutput,
 } from "@/server/domain/message/agent-interactions";
+import { hasRunFailure } from "@/server/domain/message/run-failure";
 import {
   buildTaskMessage,
   type TaskDraft,
@@ -95,9 +96,27 @@ type ActiveChatContextValue = {
 
 const ActiveChatContext = createContext<ActiveChatContextValue | null>(null);
 
-const STOPPED_HISTORY_WAIT_MS = 3000;
-const STOPPED_HISTORY_RECHECK_MS = 250;
-type StoppedReply = { id: string; until: number };
+const PENDING_HISTORY_WAIT_MS = 3000;
+const PENDING_HISTORY_RECHECK_MS = 250;
+type ExpectedHistory = { id: string; kind: "reply" | "failure"; until: number };
+
+function historyContainsTurn(
+  history: ChatMessage[],
+  expected: ExpectedHistory
+) {
+  if (expected.kind === "reply") {
+    return history.some(({ id }) => id === expected.id);
+  }
+  // A failed stream may end before sending the server assistant ID.
+  const start = history.findIndex(
+    (message) => message.role === "user" && message.id === expected.id
+  );
+  return (
+    start >= 0 &&
+    history[start + 1] !== undefined &&
+    hasRunFailure(history[start + 1])
+  );
+}
 
 function hasReplyContent(message: ChatMessage) {
   return message.parts.some((part) => {
@@ -172,29 +191,29 @@ export function ActiveChatProvider({
     [chatId]
   );
 
-  const stoppedHistory = useRef(new Map<string, StoppedReply>());
+  const pendingHistory = useRef(new Map<string, ExpectedHistory>());
   const interactionGate = useRef({
     answerPending: false,
     chatId,
+    expectedHistory: undefined as ExpectedHistory | undefined,
     manual: false,
     newUserTurn: false,
     paused: false,
     released: false,
     revision: 0,
     sentSignature: "",
-    stoppedReply: undefined as StoppedReply | undefined,
   });
   if (interactionGate.current.chatId !== chatId) {
     interactionGate.current = {
       answerPending: false,
       chatId,
+      expectedHistory: undefined,
       manual: false,
       newUserTurn: false,
       paused: false,
       released: false,
       revision: 0,
       sentSignature: "",
-      stoppedReply: undefined,
     };
   }
   const [searchMode, setSearchMode] = useState<"auto" | "web">("auto");
@@ -256,16 +275,14 @@ export function ActiveChatProvider({
     revalidateOnFocus: false,
   });
 
-  const stoppedReply = stoppedHistory.current.get(chatId);
-  const awaitingStoppedReply =
+  const expectedHistory = pendingHistory.current.get(chatId);
+  const awaitingHistory =
     !isNewChat &&
     !loadError &&
-    stoppedReply !== undefined &&
-    !chatData?.messages.some(({ id }) => id === stoppedReply.id);
+    expectedHistory !== undefined &&
+    !(chatData && historyContainsTurn(chatData.messages, expectedHistory));
   const initialMessages: ChatMessage[] =
-    isNewChat || loadError || awaitingStoppedReply
-      ? []
-      : (chatData?.messages ?? []);
+    isNewChat || loadError || awaitingHistory ? [] : (chatData?.messages ?? []);
   const visibility: VisibilityType = isNewChat
     ? "private"
     : (chatData?.visibility ?? "private");
@@ -277,6 +294,22 @@ export function ActiveChatProvider({
     id: chatId,
     messages: initialMessages,
     onData: (dataPart) => {
+      if (
+        dataPart.type === "data-run-status" &&
+        dataPart.data.state === "failed"
+      ) {
+        const gate = interactionGate.current;
+        const userMessage = chatInstanceRef.current?.messages.findLast(
+          ({ role }) => role === "user"
+        );
+        if (gate.newUserTurn && userMessage) {
+          gate.expectedHistory = {
+            id: userMessage.id,
+            kind: "failure",
+            until: Date.now() + PENDING_HISTORY_WAIT_MS,
+          };
+        }
+      }
       if (dataPart.type === "data-chat-title") {
         setLiveTitle({ chatId, title: dataPart.data });
       }
@@ -429,6 +462,7 @@ export function ActiveChatProvider({
           return chatOptionsRef.current.transport.reconnectToStream(request);
         },
         sendMessages: (request) => {
+          interactionGate.current.expectedHistory = undefined;
           interactionGate.current.newUserTurn =
             request.trigger === "submit-message" &&
             !("trigger" in (request.body ?? {})) &&
@@ -460,9 +494,14 @@ export function ActiveChatProvider({
       // 生命周期清理必须中止此 effect 捕获的实例。导航 render 已切换 ref，
       // 面向旧按钮的 stop 门控会拒绝旧实例，因此清理不经过该交互入口。
       // 同时失效卸载后的处理器及等待中的回答，阻止其随后启动另一轮请求。
-      if (gate.paused) {
-        if (gate.stoppedReply) {
-          stoppedHistory.current.set(activeInstance.id, gate.stoppedReply);
+      if (gate.paused || gate.expectedHistory) {
+        if (gate.expectedHistory) {
+          for (const [id, pending] of pendingHistory.current) {
+            if (pending.until <= Date.now()) {
+              pendingHistory.current.delete(id);
+            }
+          }
+          pendingHistory.current.set(activeInstance.id, gate.expectedHistory);
         }
         // The old history subscription has left. Invalidate its snapshot and
         // in-flight GET without refetching a turn that may still be saving.
@@ -492,15 +531,10 @@ export function ActiveChatProvider({
       last?.role === "assistant" &&
       hasReplyContent(last)
     ) {
-      const now = Date.now();
-      for (const [id, pending] of stoppedHistory.current) {
-        if (pending.until <= now) {
-          stoppedHistory.current.delete(id);
-        }
-      }
-      gate.stoppedReply = {
+      gate.expectedHistory = {
         id: last.id,
-        until: now + STOPPED_HISTORY_WAIT_MS,
+        kind: "reply",
+        until: Date.now() + PENDING_HISTORY_WAIT_MS,
       };
     }
     await sdkStop();
@@ -651,14 +685,14 @@ export function ActiveChatProvider({
       if (chatInstanceRef.current !== activeInstance) {
         return;
       }
-      stoppedHistory.current.delete(chatId);
+      pendingHistory.current.delete(chatId);
       hydratedInstance.current = activeInstance;
       setMessages(history);
     };
-    const until = stoppedReply?.until ?? 0;
+    const until = expectedHistory?.until ?? 0;
     const remaining = until - Date.now();
     if (
-      !awaitingStoppedReply ||
+      !awaitingHistory ||
       finishedHistoryWait === activeInstance ||
       remaining <= 0
     ) {
@@ -666,7 +700,7 @@ export function ActiveChatProvider({
       return;
     }
 
-    // The first GET can arrive before the aborted stream finishes saving.
+    // The first GET can arrive before the finished stream saves its history.
     // Recheck only history, never replay the user's message or approval.
     let cancelled = false;
     let checking = false;
@@ -703,7 +737,7 @@ export function ActiveChatProvider({
         } else {
           schedule();
         }
-      }, STOPPED_HISTORY_RECHECK_MS);
+      }, PENDING_HISTORY_RECHECK_MS);
     };
     schedule();
     return () => {
@@ -713,7 +747,7 @@ export function ActiveChatProvider({
     };
   }, [
     activeInstance,
-    awaitingStoppedReply,
+    awaitingHistory,
     chatData?.messages,
     chatId,
     finishedHistoryWait,
@@ -721,7 +755,7 @@ export function ActiveChatProvider({
     loadError,
     reloadChat,
     setMessages,
-    stoppedReply,
+    expectedHistory,
   ]);
 
   const prevChatIdRef = useRef(chatId);
@@ -786,13 +820,13 @@ export function ActiveChatProvider({
   }, [sendMessage, chatId]);
 
   useAutoResume({
-    autoResume: !isNewChat && !!chatData && !loadError && !awaitingStoppedReply,
+    autoResume: !isNewChat && !!chatData && !loadError && !awaitingHistory,
     initialMessages,
     resumeStream,
     setMessages,
   });
 
-  const isHistoryLoading = !isNewChat && (isLoading || awaitingStoppedReply);
+  const isHistoryLoading = !isNewChat && (isLoading || awaitingHistory);
   const isReadonly =
     !isNewChat &&
     (isHistoryLoading || Boolean(loadError) || (chatData?.isReadonly ?? false));

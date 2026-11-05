@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { wrapLanguageModel } from "ai";
+import { APICallError, wrapLanguageModel } from "ai";
 import type { PlatformBillingClient } from "@/server/application/platform/protocol";
 import type { BillingRepository } from "@/server/domain/billing/repository";
 
@@ -105,6 +105,21 @@ function normalizeUsage(value: unknown) {
   return { inputTokens, outputTokens };
 }
 
+function modelRateLimit(error: unknown) {
+  if (!APICallError.isInstance(error) || error.statusCode !== 429) {
+    return;
+  }
+  // The provider rejected this request. Do not let the SDK open another hold
+  // for the same step, or treat this known rejection as an ambiguous send.
+  return new APICallError({
+    isRetryable: false,
+    message: "模型服务暂时拒绝请求（429），请稍后重试。",
+    requestBodyValues: undefined,
+    statusCode: 429,
+    url: error.url,
+  });
+}
+
 export function wrapModelWithBilling(
   model: unknown,
   options: ModelBillingOptions
@@ -129,7 +144,13 @@ export function wrapModelWithBilling(
           // Do not send a second, conflicting unknown report for the same
           // operation; only provider failures have an unknown outcome.
           if (!providerCompleted) {
-            await report(options, operation, "unknown").catch(() => undefined);
+            const limited = modelRateLimit(error);
+            await report(
+              options,
+              operation,
+              limited ? "failed" : "unknown"
+            ).catch(() => undefined);
+            throw limited ?? error;
           }
           throw error;
         }
@@ -138,7 +159,7 @@ export function wrapModelWithBilling(
         const operation = await prepare(options);
         let reported = false;
         let usage: { inputTokens?: number; outputTokens?: number } | undefined;
-        const settle = async (outcome: "response" | "unknown") => {
+        const settle = async (outcome: "response" | "failed" | "unknown") => {
           if (reported) {
             return;
           }
@@ -168,8 +189,9 @@ export function wrapModelWithBilling(
           );
           return { ...result, stream };
         } catch (error) {
-          await settle("unknown").catch(() => undefined);
-          throw error;
+          const limited = modelRateLimit(error);
+          await settle(limited ? "failed" : "unknown").catch(() => undefined);
+          throw limited ?? error;
         }
       },
     },

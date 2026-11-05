@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { generateText, streamText } from "ai";
+import { APICallError, generateText, streamText } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
 import { wrapModelWithBilling } from "@/server/application/chat/model-billing";
 
@@ -219,4 +219,67 @@ test("model billing reports usage from AI SDK finish-step streams", async () => 
       usage: { inputTokens: 12, outputTokens: 7 },
     },
   ]);
+});
+
+test("one billed turn reports a provider 429 once as a known failure without SDK retry", async () => {
+  let calls = 0;
+  let reservations = 0;
+  const reports: string[] = [];
+  const model = wrapModelWithBilling(
+    new MockLanguageModelV4({
+      doStream: () => {
+        calls += 1;
+        return Promise.reject(
+          new APICallError({
+            message: "rate limited",
+            requestBodyValues: undefined,
+            statusCode: 429,
+            url: "https://gateway.invalid/v1/responses",
+          })
+        );
+      },
+    }),
+    {
+      chatId: "chat-rate-limit",
+      client: {
+        dispatch: () => Promise.resolve({ permit: "permit" }),
+        report: ({ outcome }) => {
+          reports.push(outcome);
+          return Promise.resolve();
+        },
+        reserve: () => {
+          reservations += 1;
+          return Promise.resolve({ holdId: "hold", reservedPoints: "2" });
+        },
+      },
+      modelId: "chat-model",
+      repository: {
+        claimSending: () => Promise.resolve(true),
+        createOperation: () => Promise.resolve(),
+        enqueueSettlement: () => Promise.resolve(),
+        saveReceipt: () => Promise.resolve(),
+      },
+      runId: "run-rate-limit",
+      stepIndex: () => 0,
+      userId: "user-rate-limit",
+    }
+  );
+
+  let streamError: unknown;
+  const result = streamText({
+    model,
+    onError({ error }) {
+      streamError = error;
+    },
+    prompt: "hello",
+  });
+  for await (const _part of result.fullStream) {
+    // Drain the SDK stream to observe its default retry behavior.
+  }
+  assert.equal(calls, 1);
+  assert.equal(reservations, 1);
+  assert.deepEqual(reports, ["failed"]);
+  assert.ok(APICallError.isInstance(streamError));
+  assert.equal(streamError.statusCode, 429);
+  assert.equal(streamError.isRetryable, false);
 });
