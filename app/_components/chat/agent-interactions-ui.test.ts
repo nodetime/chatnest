@@ -136,7 +136,9 @@ test("Provider导航和卸载中止捕获的旧SDK请求，旧交互句柄既不
       async reconnectToStream(){return null;}
     }
     const models={selectableModelIds:['fixture'],defaultModelId:'fixture'},chats=new Map(),serverChats=new Map(),historyRefreshes=[];
-    const swr=url=>{if(url?.includes('/api/models'))return {data:models};if(url?.includes('/api/messages')){if(!chats.has(url))chats.set(url,{messages:[],visibility:'private',isReadonly:false});return {data:chats.get(url),isLoading:false,mutate:()=>Promise.resolve()};}return {data:[]};};
+    const reads=[],historyErrors=new Map();let heldHistoryRead;
+    const reloaders=new Map();
+    const swr=url=>{if(url?.includes('/api/models'))return {data:models};if(url?.includes('/api/messages')){if(!chats.has(url))chats.set(url,{messages:[],visibility:'private',isReadonly:false});if(!reloaders.has(url))reloaders.set(url,async()=>{reads.push(url);if(heldHistoryRead)await heldHistoryRead;const value=serverChats.get(url);chats.set(url,value);return value;});return {data:chats.get(url),isLoading:false,error:historyErrors.get(url),mutate:reloaders.get(url)};}return {data:[]};};
     const stream={setDataStream(){},setWaitingStatus(){}};const router={push(){}};
     const inFlightGets=new Set();
     const mutateSWR=(key,update,options)=>{
@@ -151,7 +153,7 @@ test("Provider导航和卸载中止捕获的旧SDK请求，旧交互句柄既不
       return Promise.resolve();
     };
     const modules={react,'react/jsx-runtime':{jsx,jsxs:jsx},'@ai-sdk/react':{Chat,useChat:({chat})=>({messages:chat.messages,setMessages:value=>{chat.messages=typeof value==='function'?value(chat.messages):value;},sendMessage:chat.sendMessage,status:chat.status,stop:chat.stop,regenerate:chat.regenerate,resumeStream:chat.resumeStream,addToolApprovalResponse:chat.addToolApprovalResponse,error:chat.error,clearError:chat.clearError})},ai:{DefaultChatTransport:Transport},'next/navigation':{usePathname:()=>pathname,useRouter:()=>router},swr:{__esModule:true,default:swr,useSWRConfig:()=>({mutate:mutateSWR})},'swr/infinite':{unstable_serialize:()=>''},'@/app/_components/chat/chat-title':{projectChatTitle:()=> 'Fixture'},'@/app/_components/chat/data-stream-provider':{useDataStream:()=>stream},'@/app/_components/chat/sidebar-history':{getChatHistoryPaginationKey:()=>''},'@/app/_components/chat/toast':{toast(){}},'@/app/_hooks/use-auto-resume':{useAutoResume(){}},'@/app/_hooks/use-chat-draft':{useChatDraft:()=>react.useState('')},'@/app/_lib/utils':{generateUUID:()=> 'id-'+(++generated),fetcher(){},fetchWithErrorHandlers(){throw new Error('Unexpected network');}},'@/server/domain/model/models':{DEFAULT_CHAT_MODEL:'fixture'}};
-    const output={exports:{}};vm.runInNewContext(ts.transpileModule(fs.readFileSync('app/_hooks/use-active-chat.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText,{module:output,exports:output.exports,require:name=>modules[name]??require(name),process:{env:{}},window:{addEventListener(){},removeEventListener(){},location:{search:''},history:{replaceState(){}}},document:{cookie:''},URLSearchParams,sessionStorage:{removeItem(){}}});
+    const output={exports:{}};vm.runInNewContext(ts.transpileModule(fs.readFileSync('app/_hooks/use-active-chat.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText,{module:output,exports:output.exports,require:name=>modules[name]??require(name),process:{env:{}},setTimeout,clearTimeout,window:{addEventListener(){},removeEventListener(){},location:{search:''},history:{replaceState(){}}},document:{cookie:''},URLSearchParams,sessionStorage:{removeItem(){}}});
     const render=path=>{pathname=path;cursor=0;const tree=output.exports.ActiveChatProvider({children:null,ownerId:'fixture'});pendingEffects.splice(0).forEach(effect=>effect());return tree.props.value;};
     const tick=()=>new Promise(resolve=>setTimeout(resolve,0));
     (async()=>{
@@ -202,9 +204,23 @@ test("Provider导航和卸载中止捕获的旧SDK请求，旧交互句柄既不
       assert.deepEqual(historyRefreshes.at(-1),{key:stoppedKey,revalidate:true,subscribed:false},'clear old requests after the old history subscription leaves');
       await stopping;await next;
       assert.equal(render('/chat/C').messages.length,0,'the reopened SDK must not hydrate a stale approval before the history response');
-      // The history GET returns only after navigation and server-side persistence.
-      chats.set(stoppedKey,{...priorHistory,messages:stoppedMessages});
+      // The first GET was authoritative but began before the stopped reply was saved.
+      chats.set(stoppedKey,priorHistory);
+      const waiting=render('/chat/C');
+      assert.equal(waiting.isReadonly,true,'while the stopped reply is still saving, old approvals must not be actionable');
+      assert.equal(instances.at(-1).messages.length,0,'do not hydrate the pre-save snapshot');
+      await new Promise(resolve=>setTimeout(resolve,300));
+      assert.equal(instances.at(-1).messages.length,0,'a retry that still precedes the save cannot hydrate stale history');
+      let releaseHistoryRead;
+      heldHistoryRead=new Promise(resolve=>{releaseHistoryRead=resolve;});
+      await new Promise(resolve=>setTimeout(resolve,2800));
+      assert.equal(instances.at(-1).messages.length,0,'deadline must not lock in old history while the final GET is still pending');
+      serverChats.set(stoppedKey,{...priorHistory,messages:stoppedMessages});
+      releaseHistoryRead();
+      heldHistoryRead=undefined;
+      await tick();
       render('/chat/C');
+      assert.ok(reads.filter(key=>key===stoppedKey).length>=2,'reopen should retry the same read-only history endpoint while the reply is saving');
       assert.deepEqual(instances.at(-1).messages,stoppedMessages,'the reopened conversation adopts authoritative history');
       assert.equal(requests.length,5,'navigation and reopening cannot send another request');
       const notStarted=render('/chat/D');const unsent=notStarted.sendMessage({role:'user',parts:[{type:'text',text:'draft without response'}]});await tick();
@@ -224,6 +240,29 @@ test("Provider导航和卸载中止捕获的旧SDK请求，旧交互句柄既不
       await assert.rejects(edit,/草稿已保留/);
       assert.deepEqual(instances.at(-1).messages,snapshot,'stopping an edit restores the original saved turn');
       assert.equal(editDraft,'edited text','stopping an edit preserves its unsaved draft');
+      const deniedKey='/api/messages?chatId=F';
+      chats.set(deniedKey,priorHistory);
+      serverChats.set(deniedKey,priorHistory);
+      const toBeDenied=render('/chat/F');
+      const deniedRun=toBeDenied.sendMessage({role:'user',parts:[{type:'text',text:'access revoked during save'}]});
+      await tick();
+      await toBeDenied.stop();await deniedRun;
+      render('/chat');
+      render('/chat/F');
+      chats.set(deniedKey,priorHistory);
+      render('/chat/F');
+      let releaseDeniedRead;
+      heldHistoryRead=new Promise(resolve=>{releaseDeniedRead=resolve;});
+      await new Promise(resolve=>setTimeout(resolve,3100));
+      const forbidden=new Error('HTTP 403');
+      historyErrors.set(deniedKey,forbidden);
+      releaseDeniedRead();
+      heldHistoryRead=undefined;
+      await tick();
+      const denied=render('/chat/F');
+      assert.equal(denied.loadError,forbidden);
+      assert.equal(denied.isReadonly,true);
+      assert.equal(instances.at(-1).messages.length,0,'a denied final GET must not restore cached history or approvals');
       process.stdout.write('ASYNC_DONE');
     })().catch(error=>{console.error(error);process.exitCode=1;});
   `);

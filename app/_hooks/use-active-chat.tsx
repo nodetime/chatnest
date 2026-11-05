@@ -95,6 +95,23 @@ type ActiveChatContextValue = {
 
 const ActiveChatContext = createContext<ActiveChatContextValue | null>(null);
 
+const STOPPED_HISTORY_WAIT_MS = 3000;
+const STOPPED_HISTORY_RECHECK_MS = 250;
+type StoppedReply = { id: string; until: number };
+
+function hasReplyContent(message: ChatMessage) {
+  return message.parts.some((part) => {
+    if (part.type === "text" || part.type === "reasoning") {
+      return Boolean(part.text.trim());
+    }
+    return (
+      part.type === "file" ||
+      part.type === "dynamic-tool" ||
+      part.type.startsWith("tool-")
+    );
+  });
+}
+
 function extractChatId(pathname: string): string | null {
   const match = pathname.match(/\/chat\/([^/]+)/);
   return match ? match[1] : null;
@@ -155,6 +172,7 @@ export function ActiveChatProvider({
     [chatId]
   );
 
+  const stoppedHistory = useRef(new Map<string, StoppedReply>());
   const interactionGate = useRef({
     answerPending: false,
     chatId,
@@ -164,6 +182,7 @@ export function ActiveChatProvider({
     released: false,
     revision: 0,
     sentSignature: "",
+    stoppedReply: undefined as StoppedReply | undefined,
   });
   if (interactionGate.current.chatId !== chatId) {
     interactionGate.current = {
@@ -175,6 +194,7 @@ export function ActiveChatProvider({
       released: false,
       revision: 0,
       sentSignature: "",
+      stoppedReply: undefined,
     };
   }
   const [searchMode, setSearchMode] = useState<"auto" | "web">("auto");
@@ -218,6 +238,8 @@ export function ActiveChatProvider({
     `research:draft:${ownerId}:${isNewChat ? "new" : chatId}`
   );
   const [showCreditCardAlert, setShowCreditCardAlert] = useState(false);
+  const [finishedHistoryWait, setFinishedHistoryWait] =
+    useState<Chat<ChatMessage> | null>(null);
   const messagesKey = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/messages?chatId=${chatId}`;
 
   const {
@@ -225,13 +247,25 @@ export function ActiveChatProvider({
     isLoading,
     error: loadError,
     mutate: reloadChat,
-  } = useSWR(isNewChat ? null : messagesKey, fetcher, {
+  } = useSWR<{
+    isReadonly: boolean;
+    messages: ChatMessage[];
+    title?: string;
+    visibility: VisibilityType;
+  }>(isNewChat ? null : messagesKey, fetcher, {
     revalidateOnFocus: false,
   });
 
-  const initialMessages: ChatMessage[] = isNewChat
-    ? []
-    : (chatData?.messages ?? []);
+  const stoppedReply = stoppedHistory.current.get(chatId);
+  const awaitingStoppedReply =
+    !isNewChat &&
+    !loadError &&
+    stoppedReply !== undefined &&
+    !chatData?.messages.some(({ id }) => id === stoppedReply.id);
+  const initialMessages: ChatMessage[] =
+    isNewChat || loadError || awaitingStoppedReply
+      ? []
+      : (chatData?.messages ?? []);
   const visibility: VisibilityType = isNewChat
     ? "private"
     : (chatData?.visibility ?? "private");
@@ -282,16 +316,7 @@ export function ActiveChatProvider({
       const stoppedAfterReply =
         stoppedByUser &&
         interactionGate.current.newUserTurn &&
-        finishedMessage.parts.some((part) => {
-          if (part.type === "text" || part.type === "reasoning") {
-            return Boolean(part.text.trim());
-          }
-          return (
-            part.type === "file" ||
-            part.type === "dynamic-tool" ||
-            part.type.startsWith("tool-")
-          );
-        });
+        hasReplyContent(finishedMessage);
       lastSendFailure.current =
         failed && !stoppedAfterReply
           ? new Error("本轮未完成，草稿已保留。")
@@ -436,6 +461,9 @@ export function ActiveChatProvider({
       // 面向旧按钮的 stop 门控会拒绝旧实例，因此清理不经过该交互入口。
       // 同时失效卸载后的处理器及等待中的回答，阻止其随后启动另一轮请求。
       if (gate.paused) {
+        if (gate.stoppedReply) {
+          stoppedHistory.current.set(activeInstance.id, gate.stoppedReply);
+        }
         // The old history subscription has left. Invalidate its snapshot and
         // in-flight GET without refetching a turn that may still be saving.
         mutate(messagesKey, undefined, { revalidate: true });
@@ -457,6 +485,24 @@ export function ActiveChatProvider({
     }
     gate.paused = true;
     gate.revision += 1;
+    const last = activeInstance.messages.at(-1);
+    if (
+      activeInstance.status === "streaming" &&
+      gate.newUserTurn &&
+      last?.role === "assistant" &&
+      hasReplyContent(last)
+    ) {
+      const now = Date.now();
+      for (const [id, pending] of stoppedHistory.current) {
+        if (pending.until <= now) {
+          stoppedHistory.current.delete(id);
+        }
+      }
+      gate.stoppedReply = {
+        id: last.id,
+        until: now + STOPPED_HISTORY_WAIT_MS,
+      };
+    }
     await sdkStop();
   }, [activeInstance, chatId, sdkStop]);
 
@@ -589,18 +635,94 @@ export function ActiveChatProvider({
     }
   }, [status, setWaitingStatus]);
 
-  const hydratedChatId = useRef<string | null>(isNewChat ? chatId : null);
+  const hydratedInstance = useRef<Chat<ChatMessage> | null>(null);
 
   useEffect(() => {
     if (isNewChat) {
-      hydratedChatId.current = chatId;
+      hydratedInstance.current = activeInstance;
       return;
     }
-    if (chatData?.messages && hydratedChatId.current !== chatId) {
-      hydratedChatId.current = chatId;
-      setMessages(chatData.messages);
+    const history = chatData?.messages;
+    if (!history || loadError || hydratedInstance.current === activeInstance) {
+      return;
     }
-  }, [chatId, chatData?.messages, setMessages, isNewChat]);
+
+    const hydrate = () => {
+      if (chatInstanceRef.current !== activeInstance) {
+        return;
+      }
+      stoppedHistory.current.delete(chatId);
+      hydratedInstance.current = activeInstance;
+      setMessages(history);
+    };
+    const until = stoppedReply?.until ?? 0;
+    const remaining = until - Date.now();
+    if (
+      !awaitingStoppedReply ||
+      finishedHistoryWait === activeInstance ||
+      remaining <= 0
+    ) {
+      hydrate();
+      return;
+    }
+
+    // The first GET can arrive before the aborted stream finishes saving.
+    // Recheck only history, never replay the user's message or approval.
+    let cancelled = false;
+    let checking = false;
+    let recheck: ReturnType<typeof setTimeout>;
+    const deadline = setTimeout(() => {
+      // Adopt the last in-flight response before exposing the older snapshot.
+      if (!checking) {
+        setFinishedHistoryWait(activeInstance);
+      }
+    }, remaining);
+    const schedule = () => {
+      recheck = setTimeout(async () => {
+        if (
+          cancelled ||
+          chatInstanceRef.current !== activeInstance ||
+          hydratedInstance.current === activeInstance
+        ) {
+          return;
+        }
+        if (Date.now() >= until) {
+          setFinishedHistoryWait(activeInstance);
+          return;
+        }
+        checking = true;
+        await reloadChat().catch(() => undefined);
+        checking = false;
+        if (cancelled || chatInstanceRef.current !== activeInstance) {
+          return;
+        }
+        if (Date.now() >= until) {
+          // SWR mutate may return cached data even after a denied GET.
+          // Let the render/effect inspect loadError before adopting history.
+          setFinishedHistoryWait(activeInstance);
+        } else {
+          schedule();
+        }
+      }, STOPPED_HISTORY_RECHECK_MS);
+    };
+    schedule();
+    return () => {
+      cancelled = true;
+      clearTimeout(deadline);
+      clearTimeout(recheck);
+    };
+  }, [
+    activeInstance,
+    awaitingStoppedReply,
+    chatData?.messages,
+    chatId,
+    finishedHistoryWait,
+    isNewChat,
+    loadError,
+    reloadChat,
+    setMessages,
+    stoppedReply,
+  ]);
 
   const prevChatIdRef = useRef(chatId);
   useEffect(() => {
@@ -664,15 +786,16 @@ export function ActiveChatProvider({
   }, [sendMessage, chatId]);
 
   useAutoResume({
-    autoResume: !isNewChat && !!chatData,
+    autoResume: !isNewChat && !!chatData && !loadError && !awaitingStoppedReply,
     initialMessages,
     resumeStream,
     setMessages,
   });
 
-  const isReadonly = isNewChat
-    ? false
-    : isLoading || Boolean(loadError) || (chatData?.isReadonly ?? false);
+  const isHistoryLoading = !isNewChat && (isLoading || awaitingStoppedReply);
+  const isReadonly =
+    !isNewChat &&
+    (isHistoryLoading || Boolean(loadError) || (chatData?.isReadonly ?? false));
 
   const answerAskUser = useCallback(
     async ({
@@ -860,7 +983,7 @@ export function ActiveChatProvider({
       error,
       getSendError,
       input,
-      isLoading: !isNewChat && isLoading,
+      isLoading: isHistoryLoading,
       isReadonly,
       loadError,
       messages,
@@ -913,8 +1036,7 @@ export function ActiveChatProvider({
       setInput,
       visibility,
       isReadonly,
-      isNewChat,
-      isLoading,
+      isHistoryLoading,
       votes,
       currentModelId,
       showCreditCardAlert,
