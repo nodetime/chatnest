@@ -76,6 +76,7 @@ server/
 
 - 一键闭环 `pnpm dev:up`(脚本 `.claude/skills/dev-env/scripts/dev-env-loop.mjs`:体检/装指引 -> .env.local -> compose PG(127.0.0.1:55432,命名卷) -> 迁移 -> 启动);收尾 `pnpm dev:down`。
 - 进程工具 `scripts/governance/dev-env.mjs` 仅三能:nics / 绑 0.0.0.0:3003 启动 / 优雅杀;入口 `pnpm dev:nics|start|stop`。
+- 项目技能双向复制 `copy-skills` 同时存放于 `.claude/skills/copy-skills` 与 `.agents/skills/copy-skills`，使用真实目录副本；运行技能内 `scripts/copy-skills.mjs --from claude|codex` 默认比对，`--apply` 复制，`--overwrite` 才覆盖差异，目标独有内容保留。复制器测试仅从 `.claude` 路径显式加入离线白名单；`dev-env` 同样提供两端实际副本。
 
 ## 个人能力与本次使用（2026-10-27）
 

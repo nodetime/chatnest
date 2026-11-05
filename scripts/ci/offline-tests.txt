@@ -73,3 +73,5 @@ app/_components/landing/home.test.ts
 server/infrastructure/persistence/drizzle/connection.test.ts
 
 server/infrastructure/persistence/drizzle/connection-db.test.ts
+
+.claude/skills/copy-skills/scripts/copy-skills.test.mjs
