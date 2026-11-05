@@ -257,17 +257,36 @@ export async function registerUpload(
     url: assetRef(id),
   };
 }
-async function authorizedAsset(id: string, userId: string, chatId?: string) {
+async function authorizedAsset(
+  id: string,
+  userId: string,
+  {
+    chatId,
+    includeExtraction = true,
+  }: { chatId?: string; includeExtraction?: boolean } = {}
+) {
   if (!UUID_PATTERN.test(id)) {
     throw new UploadError(404, "附件不存在。");
   }
   const [asset] = await sql<
-    (Asset & {
+    (Pick<
+      Asset,
+      | "chatId"
+      | "extraction"
+      | "mime"
+      | "name"
+      | "ownerId"
+      | "sha256"
+      | "size"
+      | "state"
+    > & {
       chatOwnerId: string | null;
       visibility: string | null;
       associated: boolean;
     })[]
-  >`SELECT a.*,c.user_id AS "chatOwnerId",c."visibility",EXISTS(SELECT 1 FROM upload_asset_messages am JOIN messages m ON m."id"=am.message_id WHERE am.asset_id=a."id" AND m.chat_id=a.chat_id AND m."parts"::jsonb @> ${sql.json([{ type: "file", url: assetRef(id) }])}::jsonb) AS associated FROM upload_assets a LEFT JOIN chats c ON c."id"=a.chat_id WHERE a."id"=${id}`;
+  >`SELECT a.chat_id,a.owner_id,a."state",a."name",a."mime",a."size",a."sha256",
+    CASE WHEN ${includeExtraction}::boolean THEN a.extraction ELSE NULL END AS extraction,
+    c.user_id AS "chatOwnerId",c."visibility",EXISTS(SELECT 1 FROM upload_asset_messages am JOIN messages m ON m."id"=am.message_id WHERE am.asset_id=a."id" AND m.chat_id=a.chat_id AND m."parts"::jsonb @> ${sql.json([{ type: "file", url: assetRef(id) }])}::jsonb) AS associated FROM upload_assets a LEFT JOIN chats c ON c."id"=a.chat_id WHERE a."id"=${id}`;
   if (
     !asset ||
     !mayReadAsset(asset, userId) ||
@@ -282,7 +301,7 @@ export async function readAssetForContext(
   userId: string,
   chatId: string
 ) {
-  const asset = await authorizedAsset(id, userId, chatId);
+  const asset = await authorizedAsset(id, userId, { chatId });
   if (isImageMime(asset.mime)) {
     return readAsset(id, userId, chatId);
   }
@@ -328,7 +347,7 @@ async function verifiedBytes(
   }
 }
 export async function readAsset(id: string, userId: string, chatId?: string) {
-  const asset = await authorizedAsset(id, userId, chatId);
+  const asset = await authorizedAsset(id, userId, { chatId });
   return {
     bytes: await verifiedBytes(id, asset),
     extraction: asset.extraction ?? undefined,
@@ -337,12 +356,19 @@ export async function readAsset(id: string, userId: string, chatId?: string) {
     size: asset.size,
   };
 }
+export async function readAssetMetadata(id: string, userId: string) {
+  const { mime, name, size } = await authorizedAsset(id, userId, {
+    includeExtraction: false,
+  });
+  return { mime, name, size };
+}
+
 export async function readAssetForDownload(
   id: string,
   userId: string,
   signal: AbortSignal
 ) {
-  const asset = await authorizedAsset(id, userId);
+  const asset = await authorizedAsset(id, userId, { includeExtraction: false });
   const release = downloadCapacity.take(asset.size);
   try {
     return {

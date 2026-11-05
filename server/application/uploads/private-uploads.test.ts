@@ -252,6 +252,101 @@ test("download capacity is held until consumption, cancellation, or stalled resp
   await assert.rejects(stalled.getReader().read(), /下载超时/);
   capacity.take(8)();
 });
+
+test("private attachment HEAD uses authorized metadata even with no download capacity or stored body", async () => {
+  const { execFileSync } = await import("node:child_process");
+  const root = await realpath(await mkdtemp(join(tmpdir(), "private-head-")));
+  try {
+    execFileSync(
+      process.execPath,
+      [
+        "--conditions=react-server",
+        "--import",
+        "tsx",
+        "-e",
+        String.raw`
+          const assert = require("node:assert/strict");
+          const { createHash } = require("node:crypto");
+          const Module = require("node:module");
+          const { autoImplementMethods } = require("next/dist/server/route-modules/app-route/helpers/auto-implement-methods");
+          const id = "11111111-1111-4111-8111-111111111111";
+          const bytes = Buffer.from("private attachment");
+          const asset = {
+            id, ownerId: "owner", chatId: "chat", chatOwnerId: "owner",
+            state: "used", visibility: "private", associated: true,
+            mime: "text/plain", name: "样本.txt", size: bytes.length,
+            sha256: createHash("sha256").update(bytes).digest("hex"),
+          };
+          let user = { id: "owner", type: "regular" };
+          const sql = async (strings, ...values) => {
+            assert.match(strings.join(" "), /FROM upload_assets/);
+            return values.includes(id) ? [asset] : [];
+          };
+          sql.json = JSON.stringify;
+          // Only the external identity and database boundaries are fixtures.
+          const load = Module._load;
+          Module._load = function (name, ...args) {
+            if (name === "@/app/(auth)/auth") return { auth: async () => ({ user }) };
+            if (name === "@/server/infrastructure/persistence/drizzle/connection") {
+              return { getDatabaseClient: () => sql };
+            }
+            return load.call(this, name, ...args);
+          };
+          const methods = autoImplementMethods(require("./app/(chat)/api/files/[id]/route.ts"));
+          const { downloadCapacity } = require("./server/domain/attachment/capacity");
+          const { MAX_DOCUMENT_BYTES } = require("./server/domain/attachment/document-types");
+          const { LocalUploadStore } = require("./server/infrastructure/uploads/local-store");
+          const request = (method) => methods[method](
+            new Request("http://localhost/api/files/" + id, { method }),
+            { params: Promise.resolve({ id }) }
+          );
+          (async () => {
+            const release = downloadCapacity.take(2 * MAX_DOCUMENT_BYTES);
+            let head;
+            try {
+              head = await request("HEAD");
+              assert.equal(head.status, 200, "HEAD must not take the GET download budget");
+              assert.equal(head.body, null);
+              assert.equal(head.headers.get("content-length"), String(bytes.length));
+              assert.equal(head.headers.get("content-type"), "text/plain");
+              assert.equal(head.headers.get("cache-control"), "private, no-store");
+              assert.match(head.headers.get("content-disposition"), /%E6%A0%B7%E6%9C%AC\.txt$/);
+            } finally {
+              release();
+            }
+            user = { id: "outsider", type: "regular" };
+            const denied = await request("HEAD");
+            assert.equal(denied.status, 404);
+            assert.equal(denied.body, null);
+            assert.equal(denied.headers.has("content-disposition"), false);
+            user = undefined;
+            const signedOut = await request("HEAD");
+            assert.equal(signedOut.status, 401);
+            assert.equal(signedOut.body, null);
+            user = { id: "owner", type: "regular" };
+            await new LocalUploadStore(process.env.UPLOAD_STORAGE_DIR).write(id, bytes);
+            const get = await request("GET");
+            assert.equal(get.status, 200);
+            assert.deepEqual([...get.headers], [...head.headers]);
+            assert.deepEqual(Buffer.from(await get.arrayBuffer()), bytes);
+            downloadCapacity.take(2 * MAX_DOCUMENT_BYTES)();
+          })().catch((error) => { console.error(error); process.exitCode = 1; });
+        `,
+      ],
+      {
+        env: {
+          HOME: process.env.HOME,
+          NODE_ENV: "test",
+          PATH: process.env.PATH,
+          UPLOAD_STORAGE_DIR: root,
+        },
+        timeout: 10_000,
+      }
+    );
+  } finally {
+    await rm(root, { force: true, recursive: true });
+  }
+});
 test("generation admission is synchronous, A B A invalidates stale completions and cancellation", async () => {
   const { UploadAdmission } = await import(
     "@/server/domain/attachment/client-admission"

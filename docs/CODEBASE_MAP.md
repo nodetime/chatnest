@@ -19,7 +19,7 @@
 
 仅 `POST /api/files/upload` 的路径避开 Next proxy 的请求体克隆，由原 route 自己完成认证、同源检查、trace 回显及并发准入；`server/shared/uploads/validation.ts` 在文件表单读取时启用 30 秒无数据超时，不改变其他读体调用。
 
-下载 `GET /api/files/:id` 在原归属判断后、磁盘读取前保留文件大小对应的下载预算。先核对完整 SHA-256，再按 64 KiB 分块返回同一份已验证数据；每进程最多保留 128 MiB 下载原件，EOF、取消或连续 30 秒下游未拉取释放预算。模型上下文仍走原 `readAsset`，不借用 HTTP 下载预算。
+下载 `GET /api/files/:id` 在原归属判断后、磁盘读取前保留文件大小对应的下载预算。先核对完整 SHA-256，再按 64 KiB 分块返回同一份已验证数据；每进程最多保留 128 MiB 下载原件，EOF、取消或连续 30 秒下游未拉取释放预算。模型上下文仍走原 `readAsset`，不借用 HTTP 下载预算。 `HEAD /api/files/:id` 复用读取授权与响应头，只查询元数据，不读取原件或占用下载预算。
 
 ## 顶层结构
 
