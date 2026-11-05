@@ -1,9 +1,13 @@
 import { AsyncLocalStorage } from "node:async_hooks";
+import {
+  reportOrEnqueue,
+  reserveAndDispatch,
+} from "@/server/application/platform/attempt-settlement";
 import type {
   PlatformBillingClient,
-  PlatformReportInput,
   PlatformReserveInput,
 } from "@/server/application/platform/protocol";
+import type { BillingRepository } from "@/server/domain/billing/repository";
 import type { ToolIdentity } from "@/server/domain/billing/types";
 
 export type BillingExecutionContext = {
@@ -21,26 +25,13 @@ export type BillingExecutionContext = {
   tool?: ToolIdentity;
 };
 
-type OperationStore = {
-  claimSending: (input: {
-    attemptId: string;
-    operationId: string;
-  }) => Promise<boolean>;
-  create: (input: BillingExecutionContext) => Promise<void>;
-  enqueueSettlement?: (input: {
-    command: "cancel" | "reconcile" | "report";
-    idempotencyKey: string;
-    operationId: string;
-    payload: unknown;
-  }) => Promise<void>;
-  markSettled?: (input: { operationId: string }) => Promise<void>;
-  saveReceipt?: (input: {
-    attemptId: string;
-    operationId: string;
-    payload: unknown;
-    receiptId: string;
-  }) => Promise<void>;
-};
+type OperationStore = Pick<
+  BillingRepository,
+  "claimSending" | "enqueueSettlement" | "markSettled"
+> &
+  Partial<Pick<BillingRepository, "saveReceipt">> & {
+    create: (input: BillingExecutionContext) => Promise<void>;
+  };
 
 type ToolBillingOptions = {
   mode: "connected" | "standalone";
@@ -77,25 +68,6 @@ function assertConnected(
   }
 }
 
-async function reportOrEnqueue(
-  operations: OperationStore,
-  platform: PlatformBillingClient,
-  input: PlatformReportInput
-) {
-  try {
-    await platform.report(input);
-    await operations.markSettled?.({ operationId: input.operationId });
-  } catch (error) {
-    await operations.enqueueSettlement?.({
-      command: "report",
-      idempotencyKey: `${input.operationId}:report`,
-      operationId: input.operationId,
-      payload: input,
-    });
-    throw error;
-  }
-}
-
 export function createToolBillingAroundCall(
   options: ToolBillingOptions
 ): AroundToolCall {
@@ -126,26 +98,19 @@ export function createToolBillingAroundCall(
         provider: "unknown",
       },
     };
-    await options.platform.reserve(reserveInput);
-    const permit = await options.platform.dispatch({
-      attemptId: context.attemptId,
-      operationId: context.operationId,
-    });
-    const claimed = await options.operations.claimSending({
-      attemptId: context.attemptId,
-      operationId: context.operationId,
-    });
-    if (!claimed) {
-      throw new Error("Execution attempt already claimed");
-    }
+    const permit = await reserveAndDispatch(
+      options.operations,
+      options.platform,
+      reserveInput
+    );
     let result: T;
     try {
       result = await withExecutionPermit(permit.permit, next);
     } catch (error) {
-      const report: PlatformReportInput = {
+      const report = {
         attemptId: context.attemptId,
         operationId: context.operationId,
-        outcome: "unknown",
+        outcome: "unknown" as const,
       };
       await reportOrEnqueue(options.operations, options.platform, report);
       throw error;

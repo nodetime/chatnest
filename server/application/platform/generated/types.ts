@@ -114,7 +114,7 @@ export type OperationDispatchResponse = { permit: string; requestId?: string };
 export type OperationReportRequest = {
   operationId: string;
   attemptId: string;
-  outcome: "response" | "failed" | "unknown";
+  outcome: "response" | "failed" | "unknown" | "not_dispatched";
   usage?: { inputTokens?: number; outputTokens?: number } | null;
   executionReceipt?: {
     receiptId: string;

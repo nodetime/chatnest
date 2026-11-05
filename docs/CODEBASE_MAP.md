@@ -52,7 +52,7 @@ server/
 
 **Agent 运行时**:`server/infrastructure/mcp/` —— runtime.ts(每任务配置快照/HTTP MCP 客户端/工具发现/审批门)、config.ts(默认 agent.json + AGENT_CONFIG_PATH)、skills.ts(技能发现)。配置数据 agent.json 与技能快照(含 Porta)同层;`next.config.ts` NFT 种子指向这些路径。
 
-**积分 AOP**:`server/application/chat/tool-billing.ts` 包住 Porta 工具调用，`model-billing.ts` 通过 AI SDK `wrapLanguageModel` 包住每个模型 provider request；两者都经 `platform/execution-gate.ts` 生成 operation 并落本地 CAS。`app/(chat)/api/billing` 读取 Payload 的 sessionGroup totals/steps。
+**积分 AOP**:`server/application/chat/tool-billing.ts` 包住 Porta 工具调用，`model-billing.ts` 通过 AI SDK `wrapLanguageModel` 包住每个模型 provider request；两者在 `server/application/platform/attempt-settlement.ts` 共享本地 CAS、预留、放行和失败入队；确认未派发时用原内部 report 释放，流断开无完成证据时进入原对账。`app/(chat)/api/billing` 读取 Payload 的 sessionGroup totals/steps。
 
 **MCP 管理**:`server/application/mcp/`(api/service/security/runtime-config/projection 等 + 测试),类型/schema/editor 在 `domain/mcp/`;加密经 `shared/settings-crypto`;`/api/agent/mcp` 与 mcp-connections/mcp-editor UI 消费。
 

@@ -506,7 +506,8 @@
         },
         "outcome": {
           "type": "string",
-          "enum": ["response", "failed", "unknown"]
+          "enum": ["response", "failed", "unknown", "not_dispatched"],
+          "description": "not_dispatched is accepted only by the internal report endpoint and releases the hold without charging, even if the permit was issued."
         },
         "usage": {
           "type": ["object", "null"],

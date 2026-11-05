@@ -20,7 +20,7 @@ test("standalone tool billing is explicitly unmetered and calls next once", asyn
   assert.equal(calls, 1);
 });
 
-test("connected tool billing reserves, dispatches, claims sending and reports once", async () => {
+test("connected tool billing claims sending, reserves, dispatches and reports once", async () => {
   const events: string[] = [];
   let calls = 0;
   const around = createToolBillingAroundCall({
@@ -34,6 +34,7 @@ test("connected tool billing reserves, dispatches, claims sending and reports on
         events.push("ready");
         return Promise.resolve();
       },
+      enqueueSettlement: () => Promise.resolve(),
     },
     platform: {
       dispatch: () => {
@@ -58,9 +59,9 @@ test("connected tool billing reserves, dispatches, claims sending and reports on
   assert.equal(calls, 1);
   assert.deepEqual(events, [
     "ready",
+    "sending",
     "reserve",
     "dispatch",
-    "sending",
     "report",
   ]);
 });
@@ -72,6 +73,7 @@ test("connected tool billing forwards Porta receipts from MCP _meta", async () =
     operations: {
       claimSending: async () => true,
       create: async () => undefined,
+      enqueueSettlement: () => Promise.resolve(),
     },
     platform: {
       dispatch: async () => ({ permit: "permit" }),
@@ -98,6 +100,7 @@ test("connected tool billing marks the local operation settled after report", as
     operations: {
       claimSending: async () => true,
       create: async () => undefined,
+      enqueueSettlement: () => Promise.resolve(),
       markSettled: ({ operationId }) => {
         settledOperationId = operationId;
         return Promise.resolve();
@@ -121,6 +124,7 @@ test("connected tool billing forwards native Porta receipts nested in _meta.port
     operations: {
       claimSending: async () => true,
       create: async () => undefined,
+      enqueueSettlement: () => Promise.resolve(),
     },
     platform: {
       dispatch: async () => ({ permit: "permit" }),
@@ -149,6 +153,7 @@ test("connected mode never falls back to unmetered when platform reserve fails",
     operations: {
       claimSending: async () => true,
       create: async () => undefined,
+      enqueueSettlement: () => Promise.resolve(),
     },
     platform: {
       dispatch: () => Promise.resolve({ permit: "never" }),
@@ -173,6 +178,7 @@ test("a losing sending CAS does not call the supplier or report", async () => {
     operations: {
       claimSending: () => Promise.resolve(false),
       create: () => Promise.resolve(),
+      enqueueSettlement: () => Promise.resolve(),
     },
     platform: {
       dispatch: async () => ({ permit: "permit" }),
@@ -191,4 +197,36 @@ test("a losing sending CAS does not call the supplier or report", async () => {
     /already claimed/
   );
   assert.deepEqual(events, []);
+});
+
+test("tool dispatch failure releases the same attempt without invoking the supplier", async () => {
+  const reports: unknown[] = [];
+  const around = createToolBillingAroundCall({
+    mode: "connected",
+    operations: {
+      claimSending: async () => true,
+      create: async () => undefined,
+      enqueueSettlement: () => Promise.resolve(),
+    },
+    platform: {
+      dispatch: () => Promise.reject(new Error("lost permit response")),
+      report: async () => assert.fail("non-internal report used"),
+      reportInternal: (input) => {
+        reports.push(input);
+        return Promise.resolve();
+      },
+      reserve: async () => ({ holdId: "hold-1", reservedPoints: "2" }),
+    },
+  });
+  await assert.rejects(
+    around(context, async () => assert.fail("supplier called")),
+    /lost permit response/
+  );
+  assert.deepEqual(reports, [
+    {
+      attemptId: context.attemptId,
+      operationId: context.operationId,
+      outcome: "not_dispatched",
+    },
+  ]);
 });

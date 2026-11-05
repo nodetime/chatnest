@@ -13,8 +13,10 @@ test("settlement worker claims and reports pending commands without replaying su
       dispatch: async () => ({ permit: "unused" }),
       expireWalletGrants: async () => ({ expired: 0, requestId: "fixture" }),
       report: async () => undefined,
-      reportInternal: () => {
-        events.push("report");
+      reportInternal: (input) => {
+        events.push(
+          `report:${input.operationId}:${input.attemptId}:${input.outcome}`
+        );
         return Promise.resolve();
       },
       reserve: async () => ({ holdId: "unused", reservedPoints: "1" }),
@@ -37,7 +39,7 @@ test("settlement worker claims and reports pending commands without replaying su
           payload: {
             attemptId: "attempt-1",
             operationId: "operation-1",
-            outcome: "unknown" as const,
+            outcome: "not_dispatched" as const,
           },
         },
       ],
@@ -51,7 +53,10 @@ test("settlement worker claims and reports pending commands without replaying su
     processed: 1,
     succeeded: 1,
   });
-  assert.deepEqual(events, ["report", "finish:succeeded"]);
+  assert.deepEqual(events, [
+    "report:operation-1:attempt-1:not_dispatched",
+    "finish:succeeded",
+  ]);
 });
 
 test("settlement worker backs off failed retries from the persisted attempt count", async () => {

@@ -28,6 +28,7 @@ test("HTTP platform fixture closes a fixed Porta-style tool charge exactly once"
         events.push("ready");
         return Promise.resolve();
       },
+      enqueueSettlement: async () => undefined,
     },
     platform: client,
   });

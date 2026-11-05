@@ -1,5 +1,10 @@
 import { randomUUID } from "node:crypto";
+import type { LanguageModelV4StreamPart } from "@ai-sdk/provider";
 import { APICallError, wrapLanguageModel } from "ai";
+import {
+  reportOrEnqueue,
+  reserveAndDispatch,
+} from "@/server/application/platform/attempt-settlement";
 import type { PlatformBillingClient } from "@/server/application/platform/protocol";
 import type { BillingRepository } from "@/server/domain/billing/repository";
 
@@ -31,7 +36,7 @@ async function prepare(options: ModelBillingOptions) {
     subjectType: "model",
     userId: options.userId,
   });
-  await options.client.reserve({
+  await reserveAndDispatch(options.repository, options.client, {
     attemptId,
     canonicalToolKey,
     modelId: options.modelId,
@@ -44,38 +49,20 @@ async function prepare(options: ModelBillingOptions) {
     subjectType: "model",
     tool: { api: options.modelId, platform: "model", provider: "model" },
   });
-  await options.client.dispatch({ attemptId, operationId });
-  const claimed = await options.repository.claimSending({
-    attemptId,
-    operationId,
-  });
-  if (!claimed) {
-    throw new Error("Model execution attempt already claimed");
-  }
   return { attemptId, operationId };
 }
 
-async function report(
+function report(
   options: ModelBillingOptions,
   operation: { attemptId: string; operationId: string },
   outcome: "response" | "failed" | "unknown",
   usage?: { inputTokens?: number; outputTokens?: number }
 ) {
-  const input = { ...operation, outcome, ...(usage ? { usage } : {}) };
-  try {
-    await options.client.report(input);
-    await options.repository.markSettled?.({
-      operationId: operation.operationId,
-    });
-  } catch (error) {
-    await options.repository.enqueueSettlement({
-      command: "report",
-      idempotencyKey: `${operation.operationId}:report`,
-      operationId: operation.operationId,
-      payload: input,
-    });
-    throw error;
-  }
+  return reportOrEnqueue(options.repository, options.client, {
+    ...operation,
+    outcome,
+    ...(usage ? { usage } : {}),
+  });
 }
 
 function normalizeUsage(value: unknown) {
@@ -126,7 +113,7 @@ export function wrapModelWithBilling(
 ) {
   return wrapLanguageModel({
     middleware: {
-      wrapGenerate: async ({ doGenerate }: any): Promise<any> => {
+      wrapGenerate: async ({ doGenerate }) => {
         const operation = await prepare(options);
         let providerCompleted = false;
         try {
@@ -136,7 +123,7 @@ export function wrapModelWithBilling(
             options,
             operation,
             "response",
-            normalizeUsage((result as unknown as Record<string, unknown>).usage)
+            normalizeUsage(result.usage)
           );
           return result;
         } catch (error) {
@@ -155,44 +142,81 @@ export function wrapModelWithBilling(
           throw error;
         }
       },
-      wrapStream: async ({ doStream }: any): Promise<any> => {
+      wrapStream: async ({ doStream }) => {
         const operation = await prepare(options);
+        let result: Awaited<ReturnType<typeof doStream>>;
+        try {
+          result = await doStream();
+        } catch (error) {
+          const limited = modelRateLimit(error);
+          await report(
+            options,
+            operation,
+            limited ? "failed" : "unknown"
+          ).catch(() => undefined);
+          throw limited ?? error;
+        }
+
+        const reader = result.stream.getReader();
         let reported = false;
-        let usage: { inputTokens?: number; outputTokens?: number } | undefined;
-        const settle = async (outcome: "response" | "failed" | "unknown") => {
+        let completed = false;
+        let failed = false;
+        let usage: ReturnType<typeof normalizeUsage>;
+        const settle = (outcome: "response" | "unknown") => {
           if (reported) {
             return;
           }
           reported = true;
-          await report(options, operation, outcome, usage);
-        };
-        try {
-          const result = await doStream();
-          const stream = result.stream.pipeThrough(
-            new TransformStream({
-              async flush() {
-                await settle("response");
-              },
-              transform(chunk, controller) {
-                // AI SDK emits `finish-step` for provider stream usage and
-                // `finish` with the aggregate `totalUsage`. Older providers
-                // may still put usage directly on `finish`, so accept all
-                // three shapes before settling token-priced operations.
-                if (chunk?.type === "finish-step") {
-                  usage = normalizeUsage(chunk.usage);
-                } else if (chunk?.type === "finish") {
-                  usage = normalizeUsage(chunk.usage ?? chunk.totalUsage);
-                }
-                controller.enqueue(chunk);
-              },
-            })
+          return report(
+            options,
+            operation,
+            outcome,
+            outcome === "response" ? usage : undefined
           );
-          return { ...result, stream };
-        } catch (error) {
-          const limited = modelRateLimit(error);
-          await settle(limited ? "failed" : "unknown").catch(() => undefined);
-          throw limited ?? error;
-        }
+        };
+        const stream = new ReadableStream<LanguageModelV4StreamPart>(
+          {
+            async cancel(reason) {
+              // Cancel can race a pending read. Record the outcome first; the
+              // terminal guard also covers the resulting read rejection.
+              const settlement = settle("unknown");
+              await Promise.allSettled([reader.cancel(reason), settlement]);
+            },
+            async pull(controller) {
+              let part: ReadableStreamReadResult<LanguageModelV4StreamPart>;
+              try {
+                part = await reader.read();
+              } catch (error) {
+                await settle("unknown")?.catch(() => undefined);
+                controller.error(error);
+                return;
+              }
+              if (reported) {
+                return; // A downstream cancellation won the race.
+              }
+              if (part.done) {
+                await settle(completed && !failed ? "response" : "unknown");
+                controller.close();
+                return;
+              }
+              if (part.value.type === "error") {
+                failed = true;
+              } else if (part.value.type === "finish") {
+                const { unified, raw } = part.value.finishReason;
+                // OpenAI also emits a synthetic finish at bare SSE EOF. Its
+                // default "other" without a raw reason is not completion.
+                completed =
+                  unified !== "error" &&
+                  (unified !== "other" || raw !== undefined);
+                failed ||= !completed;
+                usage = normalizeUsage(part.value.usage);
+              }
+              controller.enqueue(part.value);
+            },
+          },
+          { highWaterMark: 0 }
+        );
+        return { ...result, stream };
       },
     },
     model: model as never,

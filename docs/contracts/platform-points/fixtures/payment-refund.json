@@ -1,7 +1,7 @@
 {
   "fixture": "payment-refund",
   "apiVersion": "v1",
-  "schemaRevision": "2026-11-03.15",
+  "schemaRevision": "2026-11-05.16",
   "webhook": {
     "providerEventId": "evt_refund_fixture_001",
     "eventType": "charge.refunded",

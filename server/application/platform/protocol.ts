@@ -19,6 +19,7 @@ import type {
   ExpireWalletGrantsResponse,
   PlatformPlan as GeneratedPlatformPlan,
   OperationDispatchResponse,
+  OperationReportRequest,
   OperationReserveResponse,
   Organization,
   OrganizationMembersResponse,
@@ -57,7 +58,7 @@ export type PlatformReportInput = {
   attemptId: string;
   executionReceipt?: unknown;
   operationId: string;
-  outcome: "response" | "failed" | "unknown";
+  outcome: OperationReportRequest["outcome"];
   usage?: {
     inputTokens?: number;
     outputTokens?: number;

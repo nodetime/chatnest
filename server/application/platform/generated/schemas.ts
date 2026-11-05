@@ -485,6 +485,7 @@ export const OperationReportRequestSchema = z
         z.literal("response"),
         z.literal("failed"),
         z.literal("unknown"),
+        z.literal("not_dispatched"),
       ])
     ),
     usage: z

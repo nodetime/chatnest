@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { createOpenAI } from "@ai-sdk/openai";
 import { APICallError, generateText, streamText } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
 import { wrapModelWithBilling } from "@/server/application/chat/model-billing";
@@ -57,9 +58,9 @@ test("model billing wraps one provider request and groups it as a session step",
   assert.equal(result.text, "ok");
   assert.deepEqual(events, [
     "create:model:chat-1",
+    "sending",
     "reserve:chat-1:model",
     "dispatch",
-    "sending",
     "report:response",
   ]);
 });
@@ -282,4 +283,191 @@ test("one billed turn reports a provider 429 once as a known failure without SDK
   assert.ok(APICallError.isInstance(streamError));
   assert.equal(streamError.statusCode, 429);
   assert.equal(streamError.isRetryable, false);
+});
+
+function billingFailureFixture() {
+  const reports: unknown[] = [];
+  const queued: unknown[] = [];
+  const options = {
+    chatId: "failure-chat",
+    client: {
+      dispatch: async () => ({ permit: "permit" }),
+      report: (input: unknown) => {
+        reports.push(input);
+        return Promise.resolve();
+      },
+      reportInternal: (input: unknown) => {
+        reports.push(input);
+        return Promise.resolve();
+      },
+      reserve: async () => ({ holdId: "hold", reservedPoints: "3" }),
+    },
+    modelId: "fixture",
+    repository: {
+      claimSending: async () => true,
+      createOperation: async () => undefined,
+      enqueueSettlement: (input: unknown) => {
+        queued.push(input);
+        return Promise.resolve();
+      },
+      saveReceipt: async () => undefined,
+    },
+    runId: "failure-run",
+    stepIndex: () => 0,
+    userId: "failure-user",
+  };
+  return { options, queued, reports };
+}
+
+test("a dispatch failure queues release of the same unstarted model attempt", async () => {
+  const { options, queued } = billingFailureFixture();
+  let ids: { attemptId: string; operationId: string } | undefined;
+  options.client.dispatch = () =>
+    Promise.reject(new Error("dispatch unavailable"));
+  options.client.reportInternal = () =>
+    Promise.reject(new Error("report unavailable"));
+  const model = wrapModelWithBilling(
+    new MockLanguageModelV4({
+      doStream: async () => assert.fail("upstream called"),
+    }),
+    {
+      ...options,
+      repository: {
+        ...options.repository,
+        createOperation: (input) => {
+          ids = { attemptId: input.attemptId, operationId: input.operationId };
+          return Promise.resolve();
+        },
+      },
+    }
+  );
+  await assert.rejects(
+    Promise.resolve(model.doStream({ prompt: [] })),
+    /dispatch unavailable/
+  );
+  assert.ok(ids);
+  assert.deepEqual(queued, [
+    {
+      command: "report",
+      idempotencyKey: `${ids.operationId}:report`,
+      operationId: ids.operationId,
+      payload: { ...ids, outcome: "not_dispatched" },
+    },
+  ]);
+});
+
+for (const mode of [
+  "read-error",
+  "error-frame",
+  "cancel",
+  "eof",
+  "finish-then-error",
+  "finish-then-cancel",
+] as const) {
+  test(`an interrupted model stream reports unknown once: ${mode}`, async () => {
+    const { options, reports } = billingFailureFixture();
+    const err = new Error("upstream stream error");
+    let upstreamCancelled = false;
+    let finishSent = false;
+    const model = wrapModelWithBilling(
+      new MockLanguageModelV4({
+        doStream: {
+          stream: new ReadableStream(
+            {
+              cancel() {
+                upstreamCancelled = true;
+              },
+              pull(controller) {
+                if (mode.startsWith("finish-")) {
+                  if (finishSent) {
+                    controller.error(err);
+                  } else {
+                    finishSent = true;
+                    controller.enqueue({
+                      finishReason: { raw: "stop", unified: "stop" },
+                      type: "finish",
+                      usage: {
+                        inputTokens: {
+                          cacheRead: 0,
+                          cacheWrite: 0,
+                          noCache: 1,
+                          total: 1,
+                        },
+                        outputTokens: { reasoning: 0, text: 1, total: 1 },
+                      },
+                    });
+                  }
+                  return;
+                }
+                if (mode === "read-error") {
+                  controller.error(err);
+                }
+                if (mode === "error-frame") {
+                  controller.enqueue({ error: err, type: "error" });
+                  controller.close();
+                }
+                if (mode === "eof") {
+                  controller.close();
+                }
+              },
+            },
+            { highWaterMark: 0 }
+          ),
+        },
+      }),
+      options
+    );
+    const reader = (await model.doStream({ prompt: [] })).stream.getReader();
+    if (mode.startsWith("finish-")) {
+      assert.equal((await reader.read()).value?.type, "finish");
+    }
+    if (mode === "read-error" || mode === "finish-then-error") {
+      await assert.rejects(reader.read(), err);
+    } else if (mode === "cancel" || mode === "finish-then-cancel") {
+      await reader.cancel();
+      assert.equal(upstreamCancelled, true);
+    } else {
+      if (mode === "error-frame") {
+        assert.equal((await reader.read()).value?.type, "error");
+      }
+      assert.equal((await reader.read()).done, true);
+    }
+    assert.deepEqual(
+      reports.map((r) => (r as { outcome: string }).outcome),
+      ["unknown"],
+      mode
+    );
+  });
+}
+
+test("OpenAI EOF without a provider finish reason is not successful billing", async () => {
+  const { options, reports } = billingFailureFixture();
+  const frame = JSON.stringify({
+    choices: [
+      {
+        delta: { content: "partial", role: "assistant" },
+        finish_reason: null,
+        index: 0,
+      },
+    ],
+    created: 1_700_000_000,
+    id: "fixture",
+    model: "fixture",
+    object: "chat.completion.chunk",
+  });
+  const provider = createOpenAI({
+    apiKey: "fixture",
+    baseURL: "http://127.0.0.1:1/v1",
+    fetch: () =>
+      Promise.resolve(
+        new Response(`data: ${frame}\n\n`, {
+          headers: { "content-type": "text/event-stream" },
+        })
+      ),
+  });
+  const model = wrapModelWithBilling(provider.chat("fixture"), options);
+  const { stream } = await model.doStream({ prompt: [] });
+  await stream.pipeTo(new WritableStream());
+  assert.equal((reports[0] as { outcome: string }).outcome, "unknown");
+  assert.equal(reports.length, 1);
 });
