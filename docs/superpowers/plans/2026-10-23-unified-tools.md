@@ -1,14 +1,14 @@
-# Unified tools implementation plan
+# 统一工具实施计划
 
-> **For agentic workers:** Use subagent-driven-development; one source writer, independent reviews, root verification.
+> **供自主执行任务的代理使用：** 使用 subagent-driven-development；一名源码修改者、独立审查、主代理验证。
 
-**Goal:** Consistent usable search/MCP/skills/file interactions without changing generic Agent behavior.
-**Architecture:** Pure browser-safe projection + small result renderer composed into existing ToolActivity. Keep details and canonical identity owners intact.
-**Stack:** Existing TypeScript, React, AI Elements, shadcn/Radix; no packages.
+**目标：** 提供一致、可用的搜索/MCP/技能/文件交互，不改变通用 Agent 行为。
+**架构：** 纯粹且可安全用于浏览器的投影 + 小型结果渲染器，组合到现有 ToolActivity 中。保留详情和规范标识的原有归属。
+**技术栈：** 现有 TypeScript、React、AI Elements、shadcn/Radix；不新增包。
 
-- [x] Add focused red tests for projection and native/dynamic boundaries; inspect actual contracts, avoid guessed schema semantics.
-- [x] Implement pure presentation helper and bounded result renderer, adjust ToolActivity and exact special-tool grouping. Keep original primitive values/keys and Sheet evidence.
-- [x] Verify running, approval, denied, errors, empty/text/structured outcomes and skill resource rendering. Preserve disclosure and inspector lifetime regressions.
-- [x] Independent spec review then quality review; fix findings before acceptance.
-- [x] Root extend ignored fixture scenarios only; browser actual skill/resource + HTTP MCP + optional artifact and no-artifact flows, upload/read/save/reopen, keyboard and responsive screenshots.
-- [x] Root full safe tests/type/lint/direct isolated build; local main FF only after verification, rerun on main. Update map/lessons/acceptance; no push.
+- [x] 为投影及原生/动态边界添加定向红测试；检查实际契约，避免猜测 schema 语义。
+- [x] 实现纯展示辅助函数和有边界限制的结果渲染器，调整 ToolActivity 和精确特殊工具分组。保留原始基本类型值/键和 Sheet 证据。
+- [x] 验证运行中、审批、拒绝、错误、空/文本/结构化结果和技能资源渲染。保留展开控件和检查器生命周期回归。
+- [x] 依次进行独立规格审查和质量审查；验收前修复发现的问题。
+- [x] 主代理仅扩展已忽略的测试夹具场景；浏览器检查实际技能/资源 + HTTP MCP + 可选产物及无产物流程、上传/读取/保存/重新打开、键盘和响应式截图。
+- [x] 主代理运行完整安全测试/类型检查/lint/直接隔离构建；验证后才在本地 main 快进，并在 main 重跑。更新地图/教训/验收；不推送。

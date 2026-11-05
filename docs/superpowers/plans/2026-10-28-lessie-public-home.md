@@ -1,8 +1,8 @@
 # Lessie式C端首页实施计划
 
-**Goal:** 对齐用户截图的独立全宽首页，使用入口面向普通用户，已有通用工作台不重造。
-**Architecture:** HomeEntry分流官网与/chat，保留旧个人section；公开首页规则不扩大API权限。私有草稿交接只填原有编辑器，不自动执行。样式与示例局限于landing组件。
-**Tech Stack:** Next.js16、React19、shadcn Button/Sheet、原始BrandMark、局部CSS。
+**目标：** 对齐用户截图的独立全宽首页，使用入口面向普通用户，已有通用工作台不重造。
+**架构：** HomeEntry分流官网与/chat，保留旧个人section；公开首页规则不扩大API权限。私有草稿交接只填原有编辑器，不自动执行。样式与示例局限于landing组件。
+**技术栈：** Next.js16、React19、shadcn Button/Sheet、原始BrandMark、局部CSS。
 
 - [x] 首页/认证/草稿/路由/CSS断言先红后绿；显式离线清单仅追加首页测试文件。
 - [x] HomeEntry、/chat、proxy精确公开首页、新对话与个人回跳规范；空对话跨旧个人section不重置身份。

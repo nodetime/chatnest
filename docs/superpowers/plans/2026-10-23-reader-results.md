@@ -1,11 +1,11 @@
-# Reader-first results implementation
+# 阅读优先结果实现
 
-> Use subagent-driven-development: one source writer, independent review, root browser and final verification.
+> 使用 subagent-driven-development：一名源码修改者、独立审查、主代理浏览器检查和最终验证。
 
-- [x] Add rendering regressions that raw fields never appear in success reader UI, but remain in exact details/approval; no invented summary.
-- [x] Implement reader-first result component and quiet process rows; retain all state/identity boundaries.
-- [x] Balance default pane width and compact source presentation in result artifact, preserving data/export/save semantics.
-- [x] Independent spec and quality review, root actual browser checks (desktop/mobile/dark/keyboard and save/reopen).
-- [x] Run explicit safe suites/type/lint/isolated direct build, local main regression and source parity; document actual results without claiming visual parity.
+- [x] 添加渲染回归测试，确保原始字段绝不出现在成功结果阅读 UI 中，但仍保留在精确详情/审批中；不虚构摘要。
+- [x] 实现阅读优先结果组件和低调的过程行；保留所有状态/标识边界。
+- [x] 平衡默认面板宽度，并在结果产物中紧凑展示来源，保留数据/导出/保存语义。
+- [x] 独立规格和质量审查，主代理执行实际浏览器检查（桌面/移动端/深色/键盘及保存/重新打开）。
+- [x] 运行明确列出的安全套件/类型检查/lint/隔离直接构建、本地 main 回归和源码一致性检查；记录实际结果，不声称视觉对等。
 
-Verification details: `2026-10-23-reader-results-verification.md`.
+验证详情：`2026-10-23-reader-results-verification.md`。

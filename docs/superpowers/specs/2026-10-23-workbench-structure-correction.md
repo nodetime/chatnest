@@ -1,12 +1,12 @@
-# Workbench structure correction
+# 工作台结构修正
 
-The user rejected the previous screenshot as visually unchanged. Treat that as a failed visual acceptance, despite functional tests passing. This correction must visibly alter information hierarchy rather than only tokens.
+用户认为上一张截图在视觉上没有变化，因此否定了它。即使功能测试通过，也应视为视觉验收失败。本次修正必须明显改变信息层级，而不只是 token。
 
-- Results-first desktop proportions: default workspace68%, preserving explicit resize35–70%, sidebar preference and mobile overlay. Chat-only layout remains readable.
-- Sent documents become compact filename/format attachments, grouped within the message; the composer/upload queue keeps its real status, errors, retry/remove and image previews.
-- Row detail becomes readable content: actual record title, labelled values and exact source links. Raw JSON and technical provenance stay accessible but collapsed by default. No generated summary, fabricated grouping or inferred legal conclusion.
-- First displayed record column becomes the frozen visual anchor; keep original field values and rows. Grid canvas, cells and header have distinct surfaces. Preserve inline38px and workspace42/46px geometry.
-- Normal artifact header uses a single filename/type line; idle timestamp goes into contextual metadata. Pending save/generation/error states remain visible. Keep normal generic text/code/image/table renderers and existing switching guards.
-- Agent/runtime/approval/disclosure reconciliation remains untouched. No fixture flow in production source.
+- 结果优先的桌面比例：工作空间默认占 68%，保留显式的 35–70% 调宽范围、侧栏偏好和移动端覆盖层。仅聊天布局仍保持可读。
+- 已发送文档变为紧凑的文件名/格式附件，在消息内分组；输入框/上传队列保留真实状态、错误、重试/移除和图片预览。
+- 行详情变为可读内容：实际记录标题、带标签的值，以及精确来源链接。原始 JSON 和技术来源仍可访问，但默认收起。不生成摘要，不虚构分组，不推断法律结论。
+- 首个显示的记录列成为冻结的视觉锚点；保留原始字段值和行。网格画布、单元格和表头使用有区分的表面。保留内联 38px 及工作空间 42/46px 几何尺寸。
+- 正常产物标题栏使用单行文件名/类型；空闲时的时间戳放入上下文元数据。待保存/生成中/错误状态保持可见。保留正常通用 text/code/image/table renderer 和现有切换保护。
+- Agent/运行时/审批/展开收起协调保持不变。生产源码中不加入夹具流程。
 
-Acceptance: compare same1440×900 viewport, same conversation, same filter and records before/after; inspect both whole page and row details. Run focused behavioral tests, full explicit safe suite, type/lint checks, production build and primary regression. Tests alone are not a visual acceptance. Screenshot limitations and mock-model use must remain explicit.
+验收：在相同 1440×900 视口、相同对话、相同筛选和记录下比较前后效果；同时检查整页和行详情。运行定向行为测试、完整显式安全测试集、类型/lint 检查、生产构建和主检出目录回归。仅测试通过不能视为视觉验收。截图限制和模拟模型的使用必须明确说明。

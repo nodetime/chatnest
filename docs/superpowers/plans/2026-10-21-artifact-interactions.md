@@ -1,35 +1,35 @@
-# Artifact Interactions Implementation Plan
+# 产物交互实现计划
 
-> **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development. Steps use checkbox syntax for tracking.
+> **面向 Agent 执行者：** 必须使用 superpowers:subagent-driven-development。步骤使用复选框语法跟踪。
 
-**Goal:** Deliver cohesive tool activity and a standard multi-type artifact viewer, keeping table-specific features within table artifacts.
+**目标：** 交付连贯的工具活动展示和标准多类型产物查看器，将表格专属功能保留在表格产物内。
 
-**Architecture:** Pure presentation projections group adjacent generic tool activities without rewriting canonical messages. Existing artifact types, optional createResultTable and immutable evidence/CAS remain intact. One writer handles coupled UI surfaces serially; independent reviewers remain read-only.
+**架构：** 通过纯展示投影对相邻通用工具活动分组，不重写规范消息。现有产物类型、可选 createResultTable 及不可变证据/CAS 保持完整。一名实现者串行处理相互关联的 UI 界面；独立审查者保持只读。
 
-**Tech Stack:** Next.js, React, AI SDK UI parts, existing shadcn/Radix/Tailwind, react-data-grid.
+**技术栈：** Next.js、React、AI SDK UI 消息部分、现有 shadcn/Radix/Tailwind、react-data-grid。
 
-## Chunk 1: Activity and artifact presentation
+## 阶段 1：活动与产物展示
 
-### Task 1: Tool activity grouping
+### 任务 1：工具活动分组
 
-Files: new focused presentation helper/group component under `components/chat/`; modify `messages.tsx`, `message.tsx`, `tool-activity.tsx`; tests `tests/unit/activity-groups.test.ts`, existing `workbench-ui.test.ts` where expectations intentionally change.
+文件：在 `components/chat/` 下新增职责集中的展示辅助函数/分组组件；修改 `messages.tsx`、`message.tsx`、`tool-activity.tsx`；测试使用 `tests/unit/activity-groups.test.ts`，以及预期有意改变时的现有 `workbench-ui.test.ts`。
 
-- [x] Add failing pure tests for adjacent tool-only messages, mixed parts, user/text/reasoning/source/artifact boundaries, approval-responded denial, unfinished idle calls and aggregate state. Include same-status appended approval/failure event identities, pending-approval priority, and unchanged-event manual-choice retention. Verify failure with `env -i PATH="$PATH" HOME="$HOME" NODE_ENV=test corepack pnpm exec tsx --conditions=react-server --test tests/unit/activity-groups.test.ts`.
-- [x] Implement focused pure projections retaining message/part references and IDs. Exclude existing special renderers. Add compact disclosure group with real counts/status, timeline children and state-transition/manual-choice preservation. Keep approvals/errors visible, preserve raw details and readonly.
-- [x] Integrate without changing canonical message state, regeneration/votes or tool dispatch. Avoid nested collapsible selectors rotating unrelated icons. Test rendering and transitions; run explicit unit files and type check.
+- [x] 为相邻纯工具消息、混合消息部分、用户/文本/推理/来源/产物边界、approval-responded 拒绝、空闲未完成调用和聚合状态添加失败的纯函数测试。包含相同状态下新增审批/失败事件的身份标识、待审批优先级，以及事件不变时保留手动选择。使用 `env -i PATH="$PATH" HOME="$HOME" NODE_ENV=test corepack pnpm exec tsx --conditions=react-server --test tests/unit/activity-groups.test.ts` 验证失败。
+- [x] 实现职责集中的纯投影，保留消息/部分引用和 ID。排除现有特殊渲染器。添加紧凑折叠展开分组，展示真实数量/状态、时间线子项，并保留状态转移/手动选择。保持审批/错误可见，保留原始详情和只读状态。
+- [x] 集成时不改变规范消息状态、重新生成/投票或工具分派。避免嵌套折叠选择器旋转无关图标。测试渲染和状态转移；运行显式单元文件和类型检查。
 
-### Task 2: Standard artifact viewer
+### 任务 2：标准产物查看器
 
-Files: `workspace.tsx`, `artifact.tsx`, `document-preview.tsx`, focused artifact presentation helper if useful, `result-table.tsx`, optionally `result-table-source.tsx`; UI regression tests.
+文件：`workspace.tsx`、`artifact.tsx`、`document-preview.tsx`，有需要时添加职责集中的产物展示辅助函数，`result-table.tsx`，可选 `result-table-source.tsx`；UI 回归测试。
 
-- [x] Write failing tests for type label text/code/image/sheet, localized createResultTable title, scoped table actions, single version navigation and compact table controls. Update obsolete styling-only assertions intentionally, retaining behavioral assertions.
-- [x] Implement standard artifact header with title/type, unify secondary lifecycle metadata and avoid duplicate version navigation. Workspace tab says “产物”. Reuse renderers; table label does not introduce a backend kind or generated row values.
-- [x] Consolidate table toolbar and move nonessential text out of the data plane. Notes start closed even when saved but remain discoverable with saved-note indicator; save/status always available, history readonly. Keep source/full raw evidence drawers and all exports.
-- [x] Run targeted tests, type check, formatting and diff check. Self-review, commit implementation. No real env/model/provider calls, no `pnpm build`, no all-unit glob.
+- [x] 为文本/代码/图片/工作表类型标签、本地化 createResultTable 标题、限定范围的表格操作、单一版本导航和紧凑表格控件编写失败测试。有意更新仅涉及样式的过时断言，保留行为断言。
+- [x] 实现带标题/类型的标准产物表头，统一次级生命周期元数据，并避免重复版本导航。工作区标签页显示“产物”。复用渲染器；表格标签不引入后端类型或生成行值。
+- [x] 整合表格工具栏，将非必要文字移出数据展示区。即使有已保存备注，也默认折叠，并通过已保存备注标记使其可被发现；保存/状态始终可用，历史只读。保留来源/完整原始证据抽屉及所有导出。
+- [x] 运行定向测试、类型检查、格式化和差异检查。自查并提交实现。不使用真实环境，不进行模型/供应商调用，不运行 `pnpm build`，不使用全部单元测试通配。
 
-## Chunk 2: Independent review and root verification
+## 阶段 2：独立审查与主会话验证
 
-- [x] Read-only spec review, fix gaps through sole writer, then read-only code quality review.
-- [x] Root verifies fixture services and browser against actual running worktree; exercise tool disclosure/approval and table open/save/reopen/details/exports, plus a generic text artifact.
-- [x] Check desktop/mobile light/dark, overflow, keyboard. Take actual screenshots, not substitutes for functioning UI.
-- [x] Fast-forward primary only after root verification; rerun explicit safe suite, type check and isolated direct Next build. No push/deployment claim.
+- [x] 只读规格审查，由唯一实现者修复缺口，再进行只读代码质量审查。
+- [x] 主会话针对真实运行的工作树验证测试夹具服务和浏览器；操作工具折叠展开/审批，以及表格打开/保存/重新打开/详情/导出，并验证通用文本产物。
+- [x] 检查桌面端/移动端明暗主题、溢出和键盘操作。拍摄真实截图，不能用截图代替可正常工作的 UI。
+- [x] 只有主会话验证后才快进主检出目录；重新运行显式安全套件、类型检查和隔离的直接 Next 构建。不宣称已推送/部署。

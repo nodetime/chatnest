@@ -1,79 +1,79 @@
-# Visual MCP Settings Implementation Plan
+# 可视化 MCP 设置实现计划
 
-> **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development. Steps use checkbox syntax for tracking.
+> **面向 Agent 执行者：** 必须使用 superpowers:subagent-driven-development。步骤使用复选框语法跟踪。
 
-**Goal:** Let a workspace administrator add, discover, authorize and enable HTTP MCP services in ChatNest, without hardcoded provider tools or restarting active tasks.
+**目标：** 让工作区管理员能够在 ChatNest 中添加、发现、授权和启用 HTTP MCP 服务，无需硬编码供应商工具或重启正在执行的任务。
 
-**Architecture:** One ChatNest deployment is one shared workspace in this MVP (no invented membership model). Existing file-managed services remain read-only and compatible. New managed services persist as a revisioned AES-256-GCM encrypted PostgreSQL singleton; runtime merges enabled services into a fresh per-task config snapshot. The deployed operator sets immutable admin user IDs and trusted MCP origins in environment variables. Porta remains independent REST + MCP service.
+**架构：** 本 MVP 中，一个 ChatNest 部署即一个共享工作区（不虚构成员模型）。现有文件管理服务保持只读和兼容。新增托管服务持久化为带修订号、AES-256-GCM 加密的 PostgreSQL 单例；运行时将已启用服务合并到每个任务的新配置快照。部署运维人员在环境变量中设置不可变管理员用户 ID 和可信 MCP 源。Porta 保持为独立 REST + MCP 服务。
 
-**Tech Stack:** existing Next App Router, React/shadcn/Tailwind, @ai-sdk/mcp HTTP client, Zod, node:crypto, postgres/Drizzle, node:test/tsx.
+**技术栈：** 现有 Next App Router、React/shadcn/Tailwind、@ai-sdk/mcp HTTP 客户端、Zod、node:crypto、postgres/Drizzle、node:test/tsx。
 
-## Approved behavior and security contract
+## 已批准行为与安全契约
 
-- Existing tools tab becomes a clear compact connection list: service/name/status/tool count, add/edit/test/enable/disable/delete for administrators. Keep current theme/tokens. Ordinary users see capabilities, not connection details or admin controls.
-- Admin is a regular authenticated session whose exact immutable UUID is in `MCP_ADMIN_USER_IDS`; guest and absent IDs always deny. No implicit first-user admin. All mutation/test routes also require same-origin Origin; missing/cross-origin denied.
-- `MCP_SETTINGS_ENCRYPTION_KEY` must decode strictly to 32 random bytes (base64). No fallback key, no secrets in source, logs, errors, GET responses, model prompts or localStorage. Admin initially types a secret in the form, sends over HTTPS, then UI clears it. GET returns header names/presence only, not secret values. Query/path tokens in URLs are not reflected; edits preserve an opaque existing connection unless explicitly replaced.
-- Encryption uses fresh nonce per save, authenticated version/context/revision, rejects corrupted ciphertext/wrong key. DB stores updater UUID/time and revision; optimistic CAS prevents lost updates (409). All managed service names and endpoints/headers stored inside encrypted payload. No in-memory-only persistence.
-- `MCP_ALLOWED_ORIGINS` is a comma-separated deployment-controlled exact origin allowlist. Browser cannot modify it; no wildcards. Management requires it, no network request before policy validation; enforce it in runtime too. HTTPS only except explicit existing dev/test loopback HTTP opt-in. Reject credentials/fragments/env substitution/CRLF and dangerous transport headers. No subprocess/stdio/imported commands.
-- Allowlisted origins are operator-trusted egress destinations, including intentionally private Porta origins if explicitly configured. This is not a general arbitrary-URL proxy: document network/DNS/egress firewall responsibility, no claims of DNS-pinned public-IP validation. Per-request fetch enforces the configured endpoint origin/path and redirect:error; never forwards secrets to another destination.
-- Network/discovery bounded by timeout, tool count/name/metadata sizes, request body size, response size if feasible using bounded stream. Discovery initializes and lists tools only, never invokes a tool. Always closes client; generic sanitized failures. One initialize/list action at a time per UI.
-- Native remote names/description/inputSchema remain intact in runtime; accept legal MCP names including dots and up to 128 characters. Use a deterministic collision-resistant model-compatible alias (max 64 characters, ASCII alphanumeric/underscore/hyphen), preserving existing aliases when valid; never rename upstream calls or schema. Sanitize managed SDK discovery/execute thrown exceptions as well as isError bodies so URLs/headers do not reach model/UI; expose names/descriptions from tools/list for user selection. Every visually managed tool requires per-call approval (no autoApprove controls in this MVP), irrespective of remote annotations. No paid calls during testing.
-- Save validates/rediscover selected allowed tools server-side (or uses short-lived server-authenticated discovery proof tied to full endpoint+headers), never trust client-provided discovered list. Editing endpoint must not reuse old secrets automatically for a different destination. Header values can be kept opaque on edits; explicit replacement replaces all.
-- JSON import only supports ONE HTTP MCP connection using a clearly documented `mcpServers` URL/headers shape (no command/args); populates form, then test/select/save. Nothing executes on import. Reject ambiguous/oversized/multi-server config rather than silently dropping it.
-- Maximum 8 combined file+managed services, unique IDs; bounded headers/fields/allowlist. File collisions fail. Disabled managed entries remain visible to admin but excluded from runtime. Delete removes persisted secret. Enable/disable uses revision CAS and cannot change connection contents.
-- Runtime reads file+managed config once at new task start, then snapshots it. Existing run not mutated. Stored DB errors do not silently reuse stale in-process secrets. Absent management environment preserves deployment JSON behavior, and UI explains administrator setup requirement without leaking values. Existing file Exa auto-approval behavior preserved.
+- 现有工具标签页改为清晰紧凑的连接列表：服务/名称/状态/工具数量，以及管理员的添加/编辑/测试/启用/禁用/删除操作。保留当前主题/设计令牌。普通用户看到能力，不看到连接详情或管理控件。
+- 管理员是普通已认证会话，其精确不可变 UUID 位于 `MCP_ADMIN_USER_IDS` 中；访客和缺失 ID 一律拒绝。不隐式将首位用户设为管理员。所有变更/测试路由还要求同源 Origin；缺失/跨源均拒绝。
+- `MCP_SETTINGS_ENCRYPTION_KEY` 必须严格解码为 32 个随机字节（base64）。无回退密钥，不在源码、日志、错误、GET 响应、模型提示或 localStorage 中放置密钥。管理员首次在表单输入密钥，经 HTTPS 发送后，UI 清空它。GET 仅返回请求头名称/是否存在，不返回密钥值。URL 中的查询/路径令牌不回显；除非明确替换，否则编辑保留不透明的现有连接。
+- 加密每次保存都使用新 nonce，对版本/上下文/修订号进行认证，拒绝损坏密文/错误密钥。数据库保存更新者 UUID/时间和修订号；乐观 CAS 防止更新丢失（409）。所有托管服务名称和端点/请求头都存储在加密载荷内。不采用仅内存持久化。
+- `MCP_ALLOWED_ORIGINS` 是由部署控制、逗号分隔的精确源白名单。浏览器不能修改；不允许通配符。管理功能要求此配置，策略校验前不发起网络请求；运行时也强制执行。仅允许 HTTPS，除非显式启用现有开发/测试回环 HTTP。拒绝凭据/片段/环境变量替换/CRLF 和危险传输请求头。不使用子进程/stdio/导入命令。
+- 白名单源是运维人员信任的出站目的地，包括在显式配置后有意信任的私有 Porta 源。这不是通用任意 URL 代理：记录网络/DNS/出站防火墙责任，不宣称进行了 DNS 固定公网 IP 校验。逐请求 fetch 强制配置端点的源/路径及 redirect:error；绝不向其他目的地转发密钥。
+- 网络/发现受超时、工具数量/名称/元数据大小、请求体大小限制，并在可行时通过有界流限制响应大小。发现只初始化并列出工具，绝不调用工具。始终关闭客户端；失败采用通用脱敏信息。每个 UI 同时只允许一次初始化/列表操作。
+- 运行时保留远程原生名称/description/inputSchema；接受合法 MCP 名称，包括点号及最多 128 个字符。使用确定性、防碰撞、模型兼容别名（最多 64 个字符，ASCII 字母数字/下划线/连字符），现有别名有效时保留；绝不重命名上游调用或 schema。对托管 SDK 发现/执行抛出的异常以及 isError 响应体进行脱敏，防止 URL/请求头进入模型/UI；开放 tools/list 中的名称/说明供用户选择。所有通过可视化界面管理的工具都要求逐次调用审批（本 MVP 不提供 autoApprove 控件），无论远程注解如何。测试期间不进行付费调用。
+- 保存时在服务端校验/重新发现所选允许工具（或使用绑定完整端点+请求头、由服务端认证的短期发现证明），绝不信任客户端提供的发现列表。编辑端点时不得自动对不同目的地复用旧密钥。编辑时请求头值可以不透明保留；显式替换会替换全部值。
+- JSON 导入只支持一个 HTTP MCP 连接，采用明确记录的 `mcpServers` URL/headers 结构（不含 command/args）；填充表单后，再测试/选择/保存。导入时不执行任何内容。拒绝歧义/超大/多服务器配置，不静默丢弃。
+- 文件配置+托管配置服务合计最多 8 个，ID 唯一；请求头/字段/白名单有界。与文件配置冲突则失败。禁用的托管条目仍对管理员可见，但排除在运行时之外。删除会移除持久化密钥。启用/禁用使用修订号 CAS，不能改变连接内容。
+- 运行时仅在新任务开始时读取一次文件+托管配置，再形成快照。不修改现有运行。已存储配置的数据库错误不能静默复用进程内过期密钥。缺少管理环境配置时保留部署 JSON 行为，UI 解释需要管理员配置，但不泄露值。保留现有文件 Exa 自动审批行为。
 
-## Chunk 1: encrypted settings, discovery and API
+## 阶段 1：加密设置、发现与 API
 
-### Task 1: server boundary and persistent management
+### 任务 1：服务端边界与持久化管理
 
-**Files:** create focused modules in `lib/agent/mcp-settings/` for types/schema, admin/security, crypto, repository, service, discovery/network. Add `app/(chat)/api/agent/mcp/route.ts` and a test route if desired; modify `lib/db/schema.ts`, add `0001_mcp_settings.sql` and journal entry. Add `tests/unit/mcp-settings*.test.ts`.
+**文件：** 在 `lib/agent/mcp-settings/` 中创建职责集中的类型/schema、管理/安全、加密、仓储、服务、发现/网络模块。添加 `app/(chat)/api/agent/mcp/route.ts`，可按需添加测试路由；修改 `lib/db/schema.ts`，添加 `0001_mcp_settings.sql` 和迁移日志条目。添加 `tests/unit/mcp-settings*.test.ts`。
 
-- [x] Write failing node:test cases for admin/CSRF, strict key parsing/randomized encrypted roundtrip/tamper, input bounds, trusted origins/per-fetch policy, secret-preserving edit and different-target replacement, CAS/conflict, enable/delete, server-side allowlist validation and cleanup on discovery failure. Use injected in-memory repository and fake MCP client for focused tests; add actual isolated PostgreSQL/HTTP MCP proof separately.
-- [x] Run `corepack pnpm exec tsx --conditions=react-server --test tests/unit/mcp-settings*.test.ts` and confirm meaningful failure.
-- [x] Implement small typed modules, lazy DB connection (no dotenv / actual .env reads), migration and sanitized API responses/errors. Public projections expose only nonsensitive metadata. Inject dependencies at service/API boundary so authorization and errors are actually exercised.
-- [x] Rerun focused suite and `corepack pnpm exec tsc --noEmit`. Self-review auth, secret flow, network boundary and race handling before commit.
+- [x] 为管理员/CSRF、严格密钥解析/随机化加密往返/篡改、输入边界、可信源/逐 fetch 策略、保留密钥编辑与不同目标替换、CAS/冲突、启用/删除、服务端白名单校验及发现失败时清理编写失败的 node:test 用例。定向测试使用注入的内存仓储和假 MCP 客户端；另外添加真实隔离 PostgreSQL/HTTP MCP 证明。
+- [x] 运行 `corepack pnpm exec tsx --conditions=react-server --test tests/unit/mcp-settings*.test.ts`，确认有意义的失败。
+- [x] 实现小型类型化模块、惰性数据库连接（不使用 dotenv / 不读取真实 .env）、迁移及脱敏 API 响应/错误。公开投影仅暴露非敏感元数据。在服务/API 边界注入依赖，使授权和错误实际得到测试。
+- [x] 重新运行定向套件和 `corepack pnpm exec tsc --noEmit`。提交前自查认证、密钥流向、网络边界和竞态处理。
 
-## Chunk 2: runtime and user-facing management
+## 阶段 2：运行时与面向用户的管理
 
-### Task 2: visual tools connections and task integration
+### 任务 2：可视化工具连接与任务集成
 
-**Files:** modify `lib/agent/config.ts`, `lib/agent/runtime.ts`, `app/(chat)/api/agent/route.ts`, `hooks/use-agent-info.ts`, `components/chat/agent-library.tsx`; create small components under `components/chat/mcp-*` and client-safe types/helpers where useful. Add tests for runtime snapshot/approval plus UI checks.
+**文件：** 修改 `lib/agent/config.ts`、`lib/agent/runtime.ts`、`app/(chat)/api/agent/route.ts`、`hooks/use-agent-info.ts`、`components/chat/agent-library.tsx`；在 `components/chat/mcp-*` 下创建小组件，并按需添加客户端安全的类型/辅助函数。添加运行时快照/审批测试和 UI 检查。
 
-- [x] Write failing tests showing saved enabled config is read only by subsequent runtime; existing runtime retains old tools; disabled entries absent; all managed tools approval-gated; legacy file/env behavior unchanged; no credential projection. Include test proving discovery does NOT execute tools.
-- [x] Implement config merge without circular imports or server-only leaking into client. If native test imports of server-only modules are needed use documented react-server conditions or dependency-injected pure code; do not remove server-only safeguards to satisfy tests.
-- [x] Build accessible responsive management list and editor using existing controls. Fields: id/name/HTTPS endpoint, optional secret headers (JSON or labeled rows), enabled, discovered tool checklist. Existing connection editor keeps secret fields blank with explicit keep/replace behavior. Show no false connected state on simple saved settings. Test states: not tested/discovering/discovered/failure; saving disabled until current inputs verified. Explain service-side activation/billing separate from connection success.
-- [x] Add/edit/delete/toggle recover errors in place; request pending guards; optimistic revision conflict asks refresh and does not wipe typed secrets unexpectedly. Confirm delete. Ordinary users see readonly capabilities.
-- [x] Test responsive layout/keyboard/labels/empty/error/loading with synthetic local-only fixtures. No real provider/model calls, no real credentials.
+- [x] 编写失败测试，证明保存的启用配置只由后续运行时读取；现有运行时保留旧工具；禁用条目不存在；所有托管工具受审批保护；旧文件/环境行为不变；无凭据投影。包含证明发现不会执行工具的测试。
+- [x] 实现配置合并，不引入循环依赖，不将仅服务端代码泄露到客户端。若原生测试需要导入仅服务端模块，使用已记录的 react-server 条件或依赖注入纯代码；不能为满足测试而移除仅服务端保护。
+- [x] 使用现有控件构建支持无障碍的响应式管理列表和编辑器。字段：id/名称/HTTPS 端点、可选密钥请求头（JSON 或带标签行）、启用状态、已发现工具选择列表。现有连接编辑器保持密钥字段为空，明确提供保留/替换行为。不能仅因保存了设置就显示虚假已连接状态。测试状态：未测试/发现中/已发现/失败；当前输入未验证前禁用保存。说明服务端启用/计费与连接成功相互独立。
+- [x] 添加/编辑/删除/切换操作在原处恢复错误；保护待完成请求；乐观修订号冲突提示刷新，不意外清空已输入密钥。删除需确认。普通用户看到只读能力。
+- [x] 使用仅本地合成测试夹具测试响应式布局/键盘/标签/空状态/错误/加载。不进行真实供应商/模型调用，不使用真实凭据。
 
-## Chunk 3: independent validation and documentation
+## 阶段 3：独立验证与文档
 
-### Task 3: proof and operational documentation
+### 任务 3：证据与运维文档
 
-**Files:** `.env.example`, `docs/integrations/mcp-settings.md`, optional README small pointer. Keep this plan status accurate.
+**文件：** `.env.example`、`docs/integrations/mcp-settings.md`，可选在 README 添加简短入口。保持本计划状态准确。
 
-- [x] Document exact administrator setup (UUID lookup via trusted DB/admin procedure), key generation (`openssl rand -base64 32`), secure key backup/rotation by decrypt-and-reencrypt migration (not simply changing key), trusted-origin configuration, migration/deploy steps, legacy readonly config, single-workspace scope and next-task application. No real values.
-- [x] Independent spec review then security/quality review; sole implementation writer fixes findings and re-review.
-- [x] In primary verification checkout rerun new suites + baseline suites (porta, porta-errors, agent, message-turn, model-connection, browser, task-experience), typecheck and targeted lint; run direct Next build ONLY with isolated clean fixture environment (skip `pnpm build` migration wrapper). Isolated actual Postgres migration/CAS/encryption roundtrip and synthetic HTTP MCP discovery/runtime evidence if Docker available. No paid provider calls.
-- [x] Record exact evidence and any remaining deployment setup/manual browser gaps. Never conflate mocks with live vendor proof. Commit feature on `feat/mcp/visual-settings`, no unrequested production migration or remote merge.
+- [x] 记录精确管理员配置步骤（通过可信数据库/管理流程查询 UUID）、密钥生成（`openssl rand -base64 32`）、通过解密再加密迁移进行的安全密钥备份/轮换（不能只改密钥）、可信源配置、迁移/部署步骤、旧只读配置、单工作区范围及下一任务生效机制。不放真实值。
+- [x] 先独立规格审查，再安全/质量审查；唯一实现者修复发现并复审。
+- [x] 在主验证检出目录重新运行新套件 + 基线套件（porta、porta-errors、agent、message-turn、model-connection、browser、task-experience）、类型检查和定向 lint；只在隔离干净夹具环境中运行直接 Next 构建（跳过 `pnpm build` 迁移包装命令）。如 Docker 可用，提供隔离真实 Postgres 迁移/CAS/加密往返及合成 HTTP MCP 发现/运行时证据。不进行付费供应商调用。
+- [x] 记录精确证据及仍待完成的部署设置/手动浏览器缺口。绝不混淆 mock 与真实供应商证明。在 `feat/mcp/visual-settings` 提交功能，不进行未经请求的生产迁移或远程合并。
 
-## Execution evidence (2026-10-21, independently verified)
+## 执行证据（2026-10-21，已独立验证）
 
-- Implementer offline verification: 41 baseline + 26 MCP tests = 67/67; `tsx --conditions=react-server --test` preserves server-only guards. `tsc --noEmit`, targeted Biome on 35 changed/new TS/JSON files and `git diff --check` pass.
-- Explicit regression RED → GREEN: external JSON name normalization, request-body limit, keep-connection revision fingerprint, conflict refresh failure, native additionalProperties preservation, pending discovery cancellation/late init cleanup and received-Host CSRF regression.
-- Independent root: isolated real Postgres migrations/CAS/auth/encrypted storage, HTTP MCP initialize/list (no tools/call during test), runtime approval/native parameters/snapshot, desktop IAB CRUD and real SDK stalled initialize/list cancellation validated. Focused raw schema/received-Host probes and 390px AlertDialog cancellation/deletion also validated; the final customer-facing desktop/390×844 UI, friendly Bearer discovery/save, skills language and AlertDialog cancel/delete are independently validated; independent spec and quality reviewers approved, including the duplicate-ID correction.
-- Ordinary `pnpm build`, production migrations, vendor/model calls, push and merge were not run. A broad test discovery attempt found old integration dependencies absent (Chromium and explicit fixture DB); final offline verification explicitly enumerates the baseline suites.
+- 实现者离线验证：41 项基线 + 26 项 MCP 测试 = 67/67；`tsx --conditions=react-server --test` 保留仅服务端保护。`tsc --noEmit`、35 个变更/新增 TS/JSON 文件的定向 Biome 检查及 `git diff --check` 通过。
+- 显式回归从失败到通过：外部 JSON 名称规范化、请求体限制、保留连接的修订指纹、冲突刷新失败、原生 additionalProperties 保留、待完成发现取消/迟到初始化清理，以及接收到的 Host 的 CSRF 回归。
+- 独立主会话验证了隔离真实 Postgres 迁移/CAS/认证/加密存储、HTTP MCP initialize/list（测试时无 tools/call）、运行时审批/原生参数/快照、桌面 IAB CRUD 和真实 SDK 卡住的 initialize/list 取消。另验证了定向原始 schema/接收到的 Host 探测及 390px AlertDialog 取消/删除；最终面向客户的桌面端/390×844 UI、友好 Bearer 发现/保存、技能用语和 AlertDialog 取消/删除已独立验证；独立规格和质量审查者批准，包括重复 ID 修正。
+- 未运行普通 `pnpm build`、生产迁移、供应商/模型调用、推送或合并。一次宽泛测试发现尝试发现旧集成依赖缺失（Chromium 和显式夹具数据库）；最终离线验证明确枚举基线套件。
 
-### Additional customer-facing UI acceptance (user screenshot feedback)
+### 额外面向客户的 UI 验收（用户截图反馈）
 
-- [x] General tab now contains appearance and three concise service statuses only; remove env templates, deployment tutorials, step/time limits and SDK footer from the customer UI. Actual rendered HTML has an offline regression test.
-- [x] Tools and skills use customer-facing language. Keep protocol/billing/key explanations in collapsed admin details and deployment instructions in docs.
-- [x] Default admin editor uses name/address/authentication; single Bearer uses password input, custom headers are preserved in full, auto-generated internal ID and JSON import live in advanced details.
-- [x] Independent final desktop/narrow-screen re-verification of this revised UI.
+- [x] 通用标签页现在只包含外观和三项简洁服务状态；从客户 UI 移除环境模板、部署教程、步骤/时间限制和 SDK 页脚。真实渲染 HTML 有离线回归测试。
+- [x] 工具和技能使用面向客户的语言。协议/计费/密钥说明放在折叠管理详情中，部署指引放在文档中。
+- [x] 默认管理编辑器使用名称/地址/认证；单个 Bearer 使用密码输入框，自定义请求头完整保留，自动生成的内部 ID 和 JSON 导入置于高级详情中。
+- [x] 对修订后的 UI 进行独立最终桌面端/窄屏复验。
 
-- Final review regression: new-mode imported IDs now check the latest file + managed IDs, block save and show an advanced-ID correction warning instead of silently upserting an existing connection. Edit mode remains compatible; a refreshed-ID unit case covers 409 retry safety.
+- 最终审查回归：新增模式导入的 ID 现在检查最新文件配置 + 托管 ID，阻止保存并显示高级 ID 修正警告，不再静默对现有连接执行更新或插入。编辑模式保持兼容；刷新 ID 的单元用例覆盖 409 重试安全性。
 
-- Production-only route validation found the pre-existing unsupported `getStreamContext` named export in the chat route. Keep the internal helper/calls unchanged, remove only the export, and add an explicit static regression; no type checking is disabled. Exact-origin configuration also now explicitly rejects literal `*` hosts (assertion RED → GREEN).
+- 仅生产环境的路由校验发现聊天路由既有不受支持的 `getStreamContext` 命名导出。保持内部辅助函数/调用不变，只移除导出，并添加显式静态回归；不禁用任何类型检查。精确源配置现在还明确拒绝字面 `*` 主机（断言从失败到通过）。
 
-- Final root verification: 67/67 focused + baseline tests, typecheck, 35-file targeted Biome and diff check all pass. Actual clean isolated-source-copy `next build --webpack` completed compilation (59s), TypeScript (16.8s), 21 static pages and trace generation. Actual `next start` verified admin management GET 200, secret-free capability summary 200, cross-origin POST 403, existing anonymous guest redirect behavior and `/ping` 200; route trace includes `config/agent.json`. The migration wrapper was deliberately not run against production.
-- Final deliverables are committed as the backend/runtime chunk and customer-facing UI/documentation chunk on `feat/mcp/visual-settings`; no push or merge. Ignored `.local-review` evidence and fixture secrets are not included. Remaining deployment prerequisites are real admin UUIDs, a securely backed-up random key, trusted HTTPS origins/egress policy and the provider's own activation/quotas.
+- 最终主会话验证：67/67 项定向 + 基线测试、类型检查、35 文件定向 Biome 和差异检查全部通过。真实干净隔离源码副本的 `next build --webpack` 完成编译（59s）、TypeScript（16.8s）、21 个静态页面及追踪生成。真实 `next start` 验证管理 GET 200、不含密钥的能力摘要 200、跨源 POST 403、既有匿名访客重定向行为和 `/ping` 200；路由追踪包含 `config/agent.json`。特意未对生产环境执行迁移包装命令。
+- 最终交付物已作为后端/运行时切片和面向客户的 UI/文档切片提交到 `feat/mcp/visual-settings`；未推送或合并。已忽略的 `.local-review` 证据和夹具密钥未包含在内。仍需完成的部署前提是真实管理员 UUID、安全备份的随机密钥、可信 HTTPS 源/出站策略，以及供应商自身的启用/配额。

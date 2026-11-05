@@ -1,17 +1,17 @@
-# Unified tool experience
+# 统一工具体验
 
-Extends the approved quiet, flat ChatNest direction across search, MCP, skills and file tools. Right side stays the existing generic artifact viewer. No runtime scheduling, provider parameters, model prompt, credentials, database, or artifact protocol changes.
+将已批准的低调、扁平 ChatNest 方向扩展到搜索、MCP、技能和文件工具。右侧仍为现有通用产物查看器。不改运行时调度、供应商参数、模型提示词、凭据、数据库或产物协议。
 
-## Verified gap
-Root opened the actual two-search conversation in the browser. Expanding a successful search produced an empty body. Shared chrome alone did not make all tools useful. Current native-name projections also match dynamic lookalikes; skill resource content has no presentation.
+## 已验证的差距
+主会话在浏览器中打开了实际包含两次搜索的对话。展开一次成功搜索后出现空白正文。仅统一外层界面并不能让所有工具都有用。当前基于原生名称的投影还会匹配外观相似的动态工具；技能资源内容没有对应呈现。
 
-## Design
-- One quiet action row: action, real subject, honest state, separate details affordance. A bounded meaningful result on expansion, never a blank disclosure or duplicated query. Stable canonical message/tool identity and inspector survival remain mandatory.
-- Exact native file/skill contracts only. Skills show human display names, short description, and an accurate loaded state (not claiming the method was followed); skill references show returned path and bounded plain content. Full skill instructions remain in the exact details, not spilled into the conversation.
-- MCP labels may use exact current configured alias mapping; historical unavailable mapping falls back to original alias without guessed identity. Search classification must not silently relabel arbitrary destructive operations based on substring. Approval retains exact canonical identity, arguments available before approval, original approval IDs and readonly guards.
-- Returned content gets a small, schema-conservative preview: valid HTTP(S) source title/domain rows; actual structured list records or primitive fields; bounded plain text for MCP text content. Preserve false/0/empty/null, distinguish explicit empty collection from absent output, and clearly mark bounded previews. Do not treat arbitrary object error fields as transport failure or declare legal conclusions. Never fetch preview images or execute result markup. Raw keys and data stay intact in independent details.
-- For unknown formats, give a truthful received-content description plus details entry. Failed/denied/incomplete/running/approval states are clear and non-empty. No fabricated counts/durations/background tasks, no auto-retry.
-- Preserve normal file artifact handoff, original sources, table save/version/export and unsaved guards. Do not move tool results into a forced right-hand dashboard.
+## 设计
+- 一个低调的动作行：动作、真实对象、如实状态，以及独立的详情入口。展开后显示有界且有意义的结果，绝不出现空白展开区或重复查询。规范消息/工具身份稳定及检查器存续仍是强制要求。
+- 仅适用精确的原生文件/技能契约。技能显示面向人的名称、简短描述，以及准确的已加载状态（不声称已经遵循该方法）；技能参考资料显示返回的路径和有界纯文本内容。完整技能指引留在精确详情中，不铺进对话。
+- MCP 标签可使用当前配置中精确的别名映射；历史映射不可用时回退到原始别名，不猜测身份。搜索分类不得根据子字符串静默地将任意破坏性操作重新标记。审批保留精确的规范身份、审批前可查看的参数、原始审批 ID 和只读保护。
+- 为返回内容提供小型、审慎依据 schema 的预览：合法 HTTP(S) 来源的标题/域名行；实际结构化列表记录或基本类型字段；MCP 文本内容的有界纯文本。保留 false/0/empty/null，区分明确的空集合与缺失输出，并清楚标记有界预览。不把任意对象的错误字段视为传输失败，也不宣称法律结论。绝不获取预览图片或执行结果标记语言。原始键和数据完整保留在独立详情中。
+- 对未知格式，如实说明收到的内容，并提供详情入口。失败/拒绝/未完成/运行中/审批状态清晰且不为空。不虚构数量/时长/后台任务，不自动重试。
+- 保留正常文件产物交接、原始来源、表格保存/版本/导出及未保存保护。不把工具结果移入强制的右侧仪表盘。
 
-## Acceptance
-Pure projection tests including malformed/falsey/large/mixed MCP envelopes, unsafe URL and dynamic/native collisions; actual component state tests for approval and Sheet lifecycle. Root live local mock model → native skills/resources → actual HTTP MCP approval → result → optional native table; alternate no-artifact, denied and failed routes; upload/read and generic text/code/sheet reopen regression. Desktop/mobile light/dark and keyboard check; original provider data remains exact. Isolated offline tests/type/lint/build and main checkout rerun, no paid providers.
+## 验收
+纯投影测试覆盖格式异常/假值/大型/混合 MCP 封装、不安全 URL 和动态/原生命名冲突；通过真实组件状态测试验证审批和 Sheet 生命周期。主会话进行本地实时验证：模拟模型 -> 原生技能/资源 -> 实际 HTTP MCP 审批 -> 结果 -> 可选原生表格；另行覆盖无产物、拒绝和失败路径；回归上传/读取及通用 text/code/sheet 重开。检查桌面/移动端浅色/深色及键盘；原始供应商数据保持精确。执行隔离的离线测试/类型检查/lint/构建，并在 main 检出目录重跑，不使用付费供应商。

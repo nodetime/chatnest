@@ -1,46 +1,46 @@
-# Reader-first results verification
+# 阅读优先结果验证
 
-## Scope
+## 范围
 
-- Successful tool previews show actual titles, returned prose and associated sources. Raw `item_id`, `price`, `seller` and other structured fields remain in exact call details, not reader cards.
-- No invented summaries. Approval retains exact tool identity and parameters. Agent scheduling, MCP contracts, evidence and artifact protocols are unchanged.
-- Process rows no longer repeat successful-state badges or timeline checks. Skill-loaded, approval, denied and error states remain explicit.
-- Artifact workspace defaults to 50%, remains resizable, and retains normal text/code/sheet renderers. Result table source labels use domains; URLs, raw data and exports are unchanged.
+- 成功工具预览展示真实标题、返回的文本和关联来源。原始 `item_id`、`price`、`seller` 及其他结构化字段保留在精确调用详情中，不进入阅读卡片。
+- 不虚构摘要。审批保留精确工具标识和参数。Agent 调度、MCP 契约、证据和产物协议均未改变。
+- 过程行不再重复成功状态徽标或时间线勾选标记。技能已加载、审批、拒绝和错误状态仍明确展示。
+- 产物工作区默认占50%，仍可调整尺寸，并保留正常文本/代码/表格渲染器。结果表来源标签使用域名；URL、原始数据和导出保持不变。
 
-## Independent review and corrections
+## 独立审查与修正
 
-- Spec review approved the scope and implementation.
-- Quality review reproduced blank prose and lost snippet-only results; `48072f1` fixed both with rendering regressions.
-- Root browser found duplicate generic-result hints; `09448f3` replaced them with one details fallback while retaining empty/mixed-content warnings.
-- Independent quality re-review approved; 82 focused tests passed.
+- 规格审查批准了范围与实现。
+- 质量审查复现了空白文本和仅有摘录的结果丢失问题；`48072f1` 通过渲染回归测试修复了两者。
+- 主代理在浏览器中发现重复的通用结果提示；`09448f3` 将其替换为一个详情兜底入口，同时保留空结果/混合内容警告。
+- 独立质量复审通过；82项定向测试通过。
 
-## Root verification
+## 主代理验证
 
-| Check | Actual result |
+| 检查 | 实际结果 |
 | --- | --- |
-| Explicit safe suites | 275/275 passed; no all-unit glob |
-| TypeScript | Passed, incremental disabled |
-| Changed-source lint | Passed, 9 included files; generated AI Elements component also reviewed and built |
-| Production build | Direct isolated `next build --webpack` passed; no migration-bearing package build |
-| Commodity search preview | Title/source only; original fields present in details |
-| Web search preview | Real snippets and linked titles; fifth source remains in full details when preview is partial |
-| Seven fresh HTTP MCP cases | Sources, empty, text, mixed, falsey, denied, failed; approval required, denied executes zero remote calls |
-| Browser approval and live details | Exact identity and `q` shown before approval; one actual mock call after approval; open details updated from missing output to complete result, Escape restored focus |
-| Artifact save/reopen | Saved new note; reloaded third version with filter retained; raw rows/source equal first version |
-| Generic artifact switching | Saved text, Python code and editable CSV reopened through normal picker |
-| Responsive / keyboard | Actual 390px light/dark and 1440px screenshots reviewed; resize 50→55→50, details via keyboard and focus return verified |
-| Production browser | Actual summaries/source display and complete fifth source in details passed; missing runtime alias mapping correctly used canonical name |
+| 明确列出的安全套件 | 275/275通过；未使用全量单元测试 glob |
+| TypeScript | 通过，已禁用增量模式 |
+| 变更源码 lint | 通过，包含9个文件；生成的 AI Elements 组件也经过审查和构建 |
+| 生产构建 | 直接隔离 `next build --webpack` 通过；未使用包含迁移的包构建命令 |
+| 商品搜索预览 | 仅显示标题/来源；原始字段保留在详情中 |
+| 网页搜索预览 | 真实摘录和带链接标题；预览不完整时第五个来源仍保留在完整详情中 |
+| 七个新的 HTTP MCP 场景 | 来源、空结果、文本、混合内容、假值、拒绝、失败；均需审批，拒绝执行零次远程调用 |
+| 浏览器审批和实时详情 | 批准前显示精确标识和 `q`；批准后实际发生一次 mock 调用；打开的详情从无输出更新为完整结果，Escape 恢复焦点 |
+| 产物保存/重新打开 | 保存新备注；重新加载第三个版本时筛选保留；原始行/来源与首个版本相同 |
+| 通用产物切换 | 通过正常选择器重新打开已保存文本、Python 代码和可编辑 CSV |
+| 响应式 / 键盘 | 已审阅实际390px浅色/深色和1440px截图；验证尺寸调整50 -> 55 -> 50、键盘操作详情及焦点返回 |
+| 生产浏览器 | 实际摘要/来源展示和详情中完整的第五个来源通过；缺少运行时别名映射时正确使用规范名称 |
 
-All calls used synthetic local fixtures, not real supplier or paid model services. PDF/Word/Excel ingestion was not changed; prior actual upload/read records were checked for preservation, not counted as new uploads in this turn.
+所有调用均使用合成本地测试夹具，不使用真实供应商或付费模型服务。PDF/Word/Excel 摄取未改变；检查了此前实际上传/读取记录是否保留，不计作本轮新增上传。
 
-## Local evidence
+## 本地证据
 
-Ignored `.local-review/` evidence: `unified-reader-final-units.log`, `unified-reader-final-types.log`, `reader-build-final.log`, `reader-tool-cases.json`, `reader-pending.json`, `reader-data-evidence.json`, `reader-mobile-light.png`, `reader-mobile-dark.png`, `chatnest-reader-results-final.png`.
+已忽略的 `.local-review/` 证据：`unified-reader-final-units.log`、`unified-reader-final-types.log`、`reader-build-final.log`、`reader-tool-cases.json`、`reader-pending.json`、`reader-data-evidence.json`、`reader-mobile-light.png`、`reader-mobile-dark.png`、`chatnest-reader-results-final.png`。
 
-No push or deployment was performed. Primary-checkout regression and source parity are recorded after the local fast-forward merge.
+未进行推送或部署。本地快进合并后记录主检出目录回归和源码一致性。
 
-## Primary checkout completion
+## 主检出目录收尾
 
-- Fast-forwarded local `main`, then independently reran the explicit safe suite: 275/275 passed; TypeScript passed.
-- All 279 runtime/config/skill/public files match between live checkout, primary checkout and isolated production build; zero mismatches (`reader-source-hashes.json`).
-- Production smoke service was stopped; existing local preview and isolated mock services remain. Both checkouts are clean, no push performed.
+- 快进本地 `main` 后，独立重跑明确列出的安全套件：275/275通过；TypeScript 通过。
+- 全部279个运行时/配置/技能/公共文件在运行中的检出目录、主检出目录和隔离生产构建中一致；零不匹配（`reader-source-hashes.json`）。
+- 生产冒烟服务已停止；现有本地预览和隔离 mock 服务保留。两个检出目录均干净，未推送。

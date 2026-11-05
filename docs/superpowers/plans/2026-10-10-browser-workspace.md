@@ -1,18 +1,18 @@
-# Browser workspace implementation
+# 浏览器工作区实现
 
-Goal: Complete the already approved conversation / chat / workspace design, with an actual shared browser session for the agent and human.
+目标：完成已批准的对话 / 聊天 / 工作区设计，让 Agent 与用户实际共享同一个浏览器会话。
 
-Architecture: Keep the official Vercel chat and AI SDK. Reuse Microsoft Playwright MCP through an in-memory MCP connection. Each authenticated owner/chat receives an isolated Chromium context, public-network-only proxy, bounded lifetime, and explicit control state. The right workspace embeds the existing document/source components alongside a live screenshot browser viewer; human input uses the same MCP connection as agent tools.
+架构：保留官方 Vercel 聊天界面和 AI SDK。通过内存内 MCP 连接复用 Microsoft Playwright MCP。为每个已认证的所有者/聊天分配隔离的 Chromium 上下文、仅允许访问公网的代理、有界生命周期和明确的控制状态。右侧工作区在嵌入现有文档/来源组件的同时，提供实时截图浏览器查看器；用户输入与 Agent 工具使用同一个 MCP 连接。
 
-Tech stack: Next.js, React, AI SDK, Playwright MCP, Chromium.
+技术栈：Next.js、React、AI SDK、Playwright MCP、Chromium。
 
-Constraints: Preserve existing edits. No native OS desktop control, no user's Chrome profile, no arbitrary MCP/evaluate/file tools, no model-key fabrication. A screenshot viewer is interactive browser control, not a video desktop stream. Local long-lived Node runtime only; multi-worker/cloud deployment needs a dedicated browser worker.
+约束：保留现有修改。不提供原生操作系统桌面控制，不使用用户的 Chrome 配置，不开放任意 MCP/evaluate/文件工具，不伪造模型密钥。截图查看器提供交互式浏览器控制，并非视频桌面流。仅适用于本地长驻 Node 运行时；多工作进程/云部署需要专用浏览器工作进程。
 
-- [x] Write and observe failing control/URL and workspace interaction tests.
-- [x] Implement public egress restrictions and per-chat browser ownership/locking/expiry; verify against real Chromium and MCP.
-- [x] Add authenticated state/frame/control routes and attach the allowed MCP tools to the current agent run. Mutating tools require approval; takeover revokes active/queued agent control.
-- [x] Build a collapsible, resizable right workspace with browser/document/sources tabs, fullscreen and mobile behavior. Preserve tab state.
-- [x] Verify real navigation, input, pause/takeover/resume, chat isolation, unsafe URL rejection, existing document and chat regressions, typecheck and build.
-- [x] Review changes and report verified capabilities and missing model credentials honestly.
+- [x] 编写控制/URL 和工作区交互测试，并观察其失败。
+- [x] 实现公网出站访问限制，以及每个聊天的浏览器所有权/锁定/过期机制；使用真实 Chromium 和 MCP 验证。
+- [x] 添加受认证保护的状态/画面/控制路由，并将允许的 MCP 工具接入当前 Agent 运行。会产生变更的工具需要审批；用户接管时撤销正在执行和排队中的 Agent 控制。
+- [x] 构建可折叠、可调整大小的右侧工作区，提供浏览器/文档/来源标签页、全屏和移动端行为。保留标签页状态。
+- [x] 验证真实导航、输入、暂停/接管/恢复、聊天隔离、不安全 URL 拒绝、现有文档和聊天回归、类型检查及构建。
+- [x] 审查变更，并如实报告已验证的能力及缺失的模型凭据。
 
-Result: 24 unit/integration checks, one PostgreSQL check, and eight UI suites passed this round. Final production build and browser/workspace/desktop/regeneration rechecks passed. Review fixes cover approval revalidation after takeover, eviction or browser restart, and streamed versus historical workspace events. The local production server is running on port 3000. Model-driven end-to-end investigation remains unverified because no model key is configured.
+结果：本轮通过了 24 项单元/集成检查、1 项 PostgreSQL 检查和 8 套 UI 测试。最终生产构建及浏览器/工作区/桌面端/重新生成复查均通过。审查修复覆盖接管、驱逐或浏览器重启后的审批重新校验，以及流式与历史工作区事件。本地生产服务器运行在 3000 端口。由于未配置模型密钥，模型驱动的端到端调查仍未验证。

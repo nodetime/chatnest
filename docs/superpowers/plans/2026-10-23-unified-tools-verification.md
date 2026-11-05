@@ -1,32 +1,32 @@
-# Unified tools acceptance
+# 统一工具验收
 
-## Scope and evidence
+## 范围与证据
 
-Extends the previously approved generic ChatNest direction across search, MCP, skills and file reading. No scheduling/prompt/provider-parameter/evidence/DB change; only credential-free alias display metadata is added to existing capability responses. Normal artifact viewer remains text/code/image/sheet; result-table creation is still an optional native Agent tool.
+将此前已获认可的通用 ChatNest 方向扩展到搜索、MCP、技能和文件读取。不修改调度/提示词/供应商参数/证据/DB；仅在现有能力响应中增加不含凭据的别名展示元数据。正常产物查看器仍支持文本/代码/图像/表格；结果表创建仍是可选原生 Agent 工具。
 
-Root rejected the first nonempty preview after actual visual inspection: transport fields and mirrored structured/text trees were still a debugger. Final preview uses bounded record title + corresponding source + small original-key fields, ordinary text, short skill description and reference content. Full canonical output remains in the separate inspector. No preview remote media requests or execution of returned markup.
+主代理实际视觉检查后拒绝了首个非空预览：传输字段和镜像的结构化/文本树仍像调试器。最终预览使用有边界限制的记录标题 + 对应来源 + 少量保留原始键的字段、普通文本、简短技能说明和参考内容。完整权威输出保留在独立检查器中。预览不会请求远程媒体，也不执行返回的标记内容。
 
-## Actual local browser / HTTP checks
+## 实际本地浏览器 / HTTP 检查
 
-All local synthetic model and MCP responses; no paid/provider inference quality claims.
+全部使用本地合成模型和 MCP 响应；不声称验证了付费/供应商推理质量。
 
-| Check | Result |
+| 检查 | 结果 |
 |---|---|
-| Real browser upload PDF, DOCX, XLSX; actual native readAttachment calls | Passed; exact page/paragraph/cell refs, late DOCX sentinel, date and formula-not-executed / no-OCR warnings preserved |
-| Actual loadSkill → readSkillResource → HTTP MCP approval → optional native result table | Passed; exact canonical tool identity/arguments remain inspectable |
-| Save table filter/notes, leave and reopen | Passed; two versions, original rows/source unchanged; saved filter and note recovered |
-| Existing text/code/ordinary CSV artifacts | Passed; normal file chooser/renderers, no forced table workspace |
-| MCP source list, empty list, plain text, mixed media notice, false/0/empty-string/null, rejected and failed | Passed through actual chat/approval routes and browser rendering; denied remote-call delta 0, allowed delta 1 |
-| Four-second MCP call with inspector open → tool result → final answer | Passed; same Sheet stayed open, raw output updated, Escape returned to original trigger |
-| Truncated preview vs exact details | Fifth source remains in original output; complete evidence not replaced by preview |
-| 390px/1440px, light/dark/reduced-motion | No outer overflow; root inspected screenshots; fixed short action truncation on mobile |
+| 真实浏览器上传 PDF、DOCX、XLSX；实际调用原生 readAttachment | 通过；保留精确页面/段落/单元格引用、DOCX 后部哨兵内容、日期及公式未执行 / 无 OCR 警告 |
+| 实际 loadSkill -> readSkillResource -> HTTP MCP 审批 -> 可选原生结果表 | 通过；精确规范工具标识/参数仍可检查 |
+| 保存表格筛选/备注，离开后重新打开 | 通过；两个版本，原始行/来源不变；已保存筛选和备注恢复 |
+| 现有文本/代码/普通 CSV 产物 | 通过；正常文件选择器/渲染器，不强制使用表格工作区 |
+| MCP 来源列表、空列表、纯文本、混合媒体提示、false/0/空字符串/null、拒绝和失败 | 通过实际聊天/审批路由和浏览器渲染；拒绝时远程调用增量0，允许时增量1 |
+| 检查器打开期间的四秒 MCP 调用 -> 工具结果 -> 最终回答 | 通过；同一个 Sheet 保持打开，原始输出更新，Escape 返回原触发控件 |
+| 截断预览与精确详情 | 第五个来源仍在原始输出中；完整证据未被预览替代 |
+| 390px/1440px、浅色/深色/减少动态效果 | 无外层溢出；主代理检查了截图；修复移动端短操作文案截断 |
 
-Ignored root evidence: `.local-review/unified-data-evidence.json`, `unified-browser-evidence.json`, `unified-tool-cases.json`, `unified-upload-flow.json`, `unified-tools-desktop.png`, `unified-search-mobile-light.png`, `unified-workspace-*.png`. Fixture IDs/account details remain ignored, not public documentation.
+主代理已忽略的证据：`.local-review/unified-data-evidence.json`、`unified-browser-evidence.json`、`unified-tool-cases.json`、`unified-upload-flow.json`、`unified-tools-desktop.png`、`unified-search-mobile-light.png`、`unified-workspace-*.png`。测试夹具 ID/账户详情保持忽略，不放入公开文档。
 
-## Review and checks
+## 审查与检查
 
-Independent specification review approved fec7fdc after fixing misleading omitted-field/empty-state notices. Independent quality review approved fec7fdc and final narrow-layout delta 3e6f301. Root safe explicit suites/types/scoped lint and isolated direct production build run separately; migration-running pnpm build and unsafe all-unit glob not used. Final exact counts, source parity and production/main results appended after completion.
+修复具有误导性的省略字段/空状态提示后，独立规格审查批准 fec7fdc。独立质量审查批准 fec7fdc 和最终窄布局改动 3e6f301。主代理的明确列出安全套件/类型检查/限定范围 lint 与隔离直接生产构建分别运行；未使用会执行迁移的 pnpm build，也未使用不安全的全量单元测试 glob。最终精确数量、源码一致性和生产/main 结果在完成后追加。
 
-Root final on 3e6f301: **271/271** explicit safe tests, TypeScript clean, 10 changed TS/TSX files lint clean, isolated `next build --webpack` succeeded. Final 390px real title widths confirm short search action and query remain readable. Production port33382 smoke passed for source preview, historical alias fallback (production intentionally had no loopback MCP credentials), raw fifth result retained, keyboard Sheet close/focus and no outer overflow. Temporary production tab/service closed; live33378 preview retained. Independent final narrow-layout review approved3e6f301.
+主代理在3e6f301上的最终结果：**271/271**项明确列出的安全测试通过，TypeScript 无问题，10个变更的 TS/TSX 文件 lint 无问题，隔离 `next build --webpack` 成功。最终390px实际标题宽度确认短搜索操作和查询仍可读。生产端口33382冒烟通过，覆盖来源预览、历史别名兜底（生产环境有意不配置回环 MCP 凭据）、保留原始第五条结果、键盘关闭 Sheet/焦点及无外层溢出。临时生产标签页/服务已关闭；运行中的33378预览保留。独立最终窄布局审查批准3e6f301。
 
-Primary checkout `main` fast-forwarded locally, then root independently reran **271/271** safe tests and TypeScript successfully. Compared **279** runtime/config/skill/public files across live worktree, primary checkout and isolated built copy: zero mismatches. Working trees clean after documentation commit; no remote push. Final screenshot: ignored `.local-review/chatnest-unified-tools-final.png`; retained QA tab returns to ordinary chat tools, not a forced artifact dashboard.
+主检出目录 `main` 已在本地快进，随后主代理独立重跑 **271/271**项安全测试及 TypeScript，均成功。对运行中的工作树、主检出目录和隔离构建副本中的 **279**个运行时/配置/技能/公共文件进行比较：零不匹配。文档提交后工作树干净；未远程推送。最终截图：已忽略的 `.local-review/chatnest-unified-tools-final.png`；保留的 QA 标签页回到普通聊天工具，不强制展示产物仪表盘。

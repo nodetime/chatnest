@@ -1,17 +1,17 @@
-# Porta host integration
+# Porta 宿主集成
 
-Approved continuation: install the canonical Porta skill and use existing host capabilities, not a new execution engine.
+已获认可的后续工作：安装规范 Porta 技能并使用现有宿主能力，不引入新的执行引擎。
 
-## Implementation and verification
+## 实现与验证
 
-- [x] Export the pinned Porta skill into ChatNest `skills/porta`; include source revision and file hashes for review and updates. Test real discovery/references and integrity in offline CI.
-- [x] Install the same skill into the local Codex project and install the packed Porta CLI. Configure a dedicated profile using environment-token references, not embedded credentials.
-- [x] Configure a real local Porta MCP service with clearly labelled synthetic supplier responses, an isolated ChatNest database/storage, existing per-call approval and a real model connection. Never enable mock-model flags for this acceptance.
-- [x] Run a Codex task through the installed CLI; let the Agent inspect native schemas and choose its calls. Save evidence and a useful report.
-- [ ] Run ChatNest through normal upload/chat/approval/artifact/reopen paths with a real model. Do not inject tool selections or substitute a scripted model. Report external model failures separately.
-- [x] Focused and full tests, types, lint in the primary checkout and independent review (294 tests).
-- [ ] CI, production build, PR and merge gate (recorded on PR). Only mark live acceptance complete with observed model-selected calls and saved/reopened output.
+- [x] 将固定版本的 Porta 技能导出到 ChatNest `skills/porta`；包含源码修订和文件哈希，以供审查和更新。在离线 CI 中测试真实发现/引用和完整性。
+- [x] 将同一技能安装到本地 Codex 项目，并安装已打包的 Porta CLI。使用环境令牌引用配置专用 profile，不嵌入凭据。
+- [x] 配置真实本地 Porta MCP 服务，使用明确标注的合成供应商响应、隔离的 ChatNest 数据库/存储、现有逐调用审批和真实模型连接。本次验收绝不启用 mock 模型标志。
+- [x] 通过已安装 CLI 运行 Codex 任务；让 Agent 检查原生 schema 并选择调用。保存证据和有用报告。
+- [ ] 使用真实模型，走 ChatNest 正常上传/聊天/审批/产物/重新打开路径。不注入工具选择，不以脚本化模型替代。单独报告外部模型失败。
+- [x] 在主检出目录运行定向和全量测试、类型检查、lint，并进行独立审查（294项测试）。
+- [ ] CI、生产构建、PR 和合并门禁（在 PR 中记录）。只有观察到模型选择调用以及输出保存/重新打开后，才将真实运行验收标为完成。
 
-No ChatNest shell runner, hidden automatic billing, new provider implementation, or fixed search-to-table workflow. A supplier fixture is allowed for wiring acceptance but must remain explicit and isolated from production. A model outage is not acceptance success.
+不添加 ChatNest shell 运行器、隐藏自动计费、新供应商实现或固定搜索到表格工作流。接线验收允许使用供应商测试夹具，但必须明确标注并与生产隔离。模型服务中断不算验收成功。
 
-Actual ChatNest task attempted with three extracted uploads; real model gateway returned 502 before tools. The live task checkbox remains open. Fixed the discovered missing persisted failure status and added SDK/UI regression tests; no scripted-model substitute.
+已用三个提取后的上传文件尝试实际 ChatNest 任务；真实模型网关在调用工具前返回502。真实任务复选框仍未勾选。修复了发现的失败状态未持久化问题，并添加 SDK/UI 回归测试；未以脚本化模型替代。

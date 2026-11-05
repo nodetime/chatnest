@@ -1,41 +1,41 @@
-# ChatNest workbench polish verification
+# ChatNest 工作台打磨验证
 
-Verified by the root session on2026-10-23. Source commit:40824f1 (implementation7b41cc3 + preview lifecycle f93286f + accessible splitter40824f1).
+主会话于 2026-10-23 验证。源码提交：40824f1（实现 7b41cc3 + 预览生命周期 f93286f + 无障碍分隔条 40824f1）。
 
-## Scope
+## 范围
 
-General Codex/Manus-like Agent shell; scenario customization remains prompt/MCP/skills. No runtime routing, original evidence, persistence, approval semantics, administrator layout, Porta, migrations or dependencies changed. This is presentation polish, not a claim of parity with commercial Agent products.
+类似 Codex/Manus 的通用 Agent 外壳；场景定制仍通过提示/MCP/技能实现。未改变运行时路由、原始证据、持久化、审批语义、管理后台布局、Porta、迁移或依赖。这是展示打磨，不宣称与商业 Agent 产品能力对等。
 
-## Independent checks
+## 独立检查
 
-| Check | Result |
+| 检查 | 结果 |
 |---|---|
-| Explicit safe offline unit suites |233/233 pass; excludes database-backed regeneration and browser-runtime suites |
-| TypeScript |tsc --noEmit --incremental false: pass |
-| Changed TypeScript/TSX formatting |16 files pass |
-| Production build |Clean copied source + private dependency clone; next build --webpack passes,27 static pages; no migration command |
-| Independent specification review |Approved at40824f1 |
-| Independent code-quality review |Approved at40824f1 |
-| Browser console |No error entries in development or compiled production acceptance |
+| 显式安全离线单元套件 |233/233 通过；排除依赖数据库的重新生成和浏览器运行时套件 |
+| TypeScript |tsc --noEmit --incremental false：通过 |
+| 变更 TypeScript/TSX 格式化 |16 个文件通过 |
+| 生产构建 |干净源码副本 + 私有依赖副本；next build --webpack 通过，27 个静态页面；无迁移命令 |
+| 独立规格审查 |在 40824f1 批准 |
+| 独立代码质量审查 |在 40824f1 批准 |
+| 浏览器控制台 |开发环境或编译后的生产验收中均无错误条目 |
 
-## Real browser + isolated services
+## 真实浏览器 + 隔离服务
 
-All files and rows were synthetic, model responses offline mocks, MCP a real local HTTP JSON-RPC service and persistence isolated PostgreSQL. No paid model/vendor requests or customer files used.
+所有文件和行均为合成，模型响应为离线 mock，MCP 是真实本地 HTTP JSON-RPC 服务，持久化使用隔离 PostgreSQL。未进行付费模型/供应商请求，也未使用客户文件。
 
-- Browser file chooser uploaded PDF/DOCX/XLSX; all became text-ready with actual size/format warnings. Agent invoked optional readAttachment on a late DOCX segment, then dynamically discovered MCP search with original q argument. No MCP call before approval; one after approval.
-- Native optional createResultTable produced three original source rows. Filter1688, numeric priceDESC, hidden seller and independent notes were saved, refreshed and reopened. Original rows/source remained identical across two versions. Historical version has no save control.
-- Actual downloads: CSV two current-view rows with formula escaping; JSON all three original rows, source, view and notes. Source drawer contains all six fields and returns focus on close.
-- PDF two pages and XLSX late sparse/date cells were separately read via actual optional Agent tool over HTTP. Embedded images were honestly marked not analyzed.
-- Native Agent tools produced text/code/plainCSV artifacts. Browser opened all three plus a separately seeded image-renderer-only fixture; no table filters leaked to other artifact kinds. Image rendering is not image-generation acceptance.
-- Continuous text typing preserved focus and saved after reload. Only one editable text instance when that artifact was open. Header assistant menu dispatched the original request; a mock response elected only to answer, without forced document mutation.
-- Same artifact closes/reopens, sources→artifact activation returns to documenttab, activecard reflects actual visible workspace. Actual-component/actual-hook regression was red before fix and green after.
-- Splitter has900px desktop height/8px hit area, keyboard60→65→60, actual pointer drag62.5; expand/return works. Mobile close returns to composer and samecard reopens full390px pane. Keyboard tabEnd selects sources.
--390/1280/1440px, light/dark: body width equals viewport in all six final screenshots; desktop splitter full height, intentionally hidden on mobile. Home empty state also checked at390/1440.
-- Persisted rejection, provider failure and native table validation failure remain visible and produce no artifact cards.
-- Compiled production browser independently reopens code card, uses header menu/keyboard splitter and loads saved table. Temporary production server stopped; development preview retained. Temporary viewport/media overrides reset.
+- 浏览器文件选择器上传了 PDF/DOCX/XLSX；全部达到文本就绪状态，并展示真实大小/格式警告。Agent 对 DOCX 后部片段调用了可选 readAttachment，随后以原始 q 参数动态发现 MCP 搜索。审批前无 MCP 调用；审批后一次调用。
+- 原生可选 createResultTable 生成了三条原始来源行。筛选 1688、按数值 price 降序（DESC）排列、隐藏 seller 和独立备注均已保存、刷新并重新打开。两个版本之间原始行/来源保持一致。历史版本无保存控件。
+- 真实下载：CSV 包含当前视图两行并进行公式转义；JSON 包含全部三条原始行、来源、视图和备注。来源抽屉包含全部六个字段，关闭后返回焦点。
+- 通过真实可选 Agent 工具经 HTTP 分别读取了两页 PDF 和 XLSX 后部稀疏/日期单元格。如实标记嵌入图片未分析。
+- 原生 Agent 工具生成了文本/代码/普通 CSV 产物。浏览器打开了这三种产物，以及单独预置、仅验证图片渲染器的夹具；表格筛选没有泄漏到其他产物类型。图片渲染不代表图片生成验收。
+- 连续文本输入保持焦点，并在重新加载后保留保存内容。该产物打开时仅有一个可编辑文本实例。表头助手菜单分派了原始请求；mock 响应选择仅回答，没有强制修改文档。
+- 同一产物可关闭/重新打开，来源->产物激活会返回文档标签页，激活卡片反映真实可见工作区。真实组件/真实 hook 回归在修复前失败、修复后通过。
+- 分隔条具有 900px 桌面高度/8px 命中区域，键盘调整 60->65->60，真实指针拖动为 62.5；展开/返回可用。移动端关闭会返回输入区，同一张卡片可重新打开完整 390px 面板。键盘标签页 End 操作选择来源。
+- 390/1280/1440px、浅色/深色：最终六张截图中 body 宽度均等于视口；桌面分隔条全高，在移动端有意隐藏。还检查了 390/1440 的首页空状态。
+- 持久化拒绝、供应商失败和原生表格校验失败保持可见，且不生成产物卡片。
+- 编译后的生产浏览器独立重新打开代码卡片、使用表头菜单/键盘分隔条，并加载已保存表格。临时生产服务器已停止；保留开发预览。临时视口/媒体覆盖已重置。
 
-Ignored `.local-review/` retains actual screenshots, source/build paths and synthetic fixture assertions. No credentials or private fixture internals are committed.
+已忽略的 `.local-review/` 保留真实截图、源码/构建路径和合成夹具断言。未提交凭据或私有夹具内部内容。
 
-## Remaining boundaries
+## 剩余边界
 
-Not live provider/model quality acceptance, cloud deployment, OCR, background durable tasks or generating-stream resume. Skills bundles were not changed as part of this generic presentation pass. Existing product methods remain dynamically discoverable rather than a mandatory industry pipeline.
+不代表真实供应商/模型质量验收、云部署、OCR、持久化后台任务或生成流恢复。本轮通用展示调整未改变技能包。既有产品方法仍动态发现，不构成强制行业流水线。

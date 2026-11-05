@@ -1,16 +1,16 @@
-# Lessie composition correction — implementation plan
+# Lessie 布局修正 - 实施计划
 
-> **For agentic workers:** Use subagent-driven-development, with one implementation owner for this coupled layout surface.
+> **供自主执行任务的代理使用：** 使用 subagent-driven-development；对于这一相互关联的布局界面，由一名实现负责人负责。
 
-**Goal:** Fulfil the already approved Lessie-inspired composition, not another colour/spacing pass.
-**Architecture:** An open generic artifact enters a two-pane focus layout: history is temporarily off-canvas without changing its persisted preference, chat stays about 400 px and the artifact fills the remainder. A single artifact header hosts context-specific controls. Keep existing Agent/tool orchestration and all generic viewers.
-**Tech Stack:** Existing Next.js, React, shadcn and react-data-grid.
+**目标：** 落实已经获准的 Lessie 风格布局，而非再做一轮颜色/间距调整。
+**架构：** 打开通用产物后进入双栏聚焦布局：历史记录临时移到画布外，不改变其持久化偏好；聊天保持约400 px，产物填满剩余空间。一个产物标题栏承载与上下文相关的控件。保留现有 Agent/工具编排和全部通用查看器。
+**技术栈：** 现有 Next.js、React、shadcn 和 react-data-grid。
 
-The prior functional acceptance remains valid; the user rejected its visual acceptance. Compare against the actual saved Lessie reference, not just the last ChatNest screenshot.
+此前的功能验收仍然有效；用户拒绝了其视觉验收。应与实际保存的 Lessie 参考图比较，而非仅与上一张 ChatNest 截图比较。
 
-- [x] Inspect shell/sidebar/workspace ownership; add focused regression checks for focus/restoration, header composition and responsive widths.
-- [x] Implement scoped focus mode on artifact open with explicit sidebar toggle override; preserve stored sidebar preference and restore on close. Chat-only and admin layouts unchanged. Default chat ~400 px, workspace remainder; manual resize still works.
-- [x] Consolidate title, artifact picker, table controls and workspace actions into one desktop rail (responsive overflow or menu, no vanished actions). Keep generic text/code/image viewers and unsaved/version guards. Avoid portal/remount state loss.
-- [x] Make filter a deliberate compact control, not a permanent second full-width rail. No fabricated matching groups, avatars, selection or unavailable actions. Show actual title/source semantics, retain raw details.
-- [x] Root browser comparison at 1440 × 900 and 390 px, filter/notes save/reopen, generic artifact switch; run explicit safe suite, typecheck, scoped lint and isolated production build. No customer files, paid APIs, migrations or broad unit glob.
-- [x] Record actual evidence and remaining differences; do not equate test success with visual acceptance.
+- [x] 检查外壳/侧栏/工作区的归属；为聚焦/恢复、标题栏组合和响应式宽度添加定向回归检查。
+- [x] 在产物打开时实现限定范围的聚焦模式，支持显式切换侧栏覆盖；保留已保存的侧栏偏好，并在关闭时恢复。纯聊天和管理布局保持不变。默认聊天约400 px，工作区占剩余空间；手动调整尺寸仍然有效。
+- [x] 将标题、产物选择器、表格控件和工作区操作合并到一条桌面栏中（响应式溢出或菜单，不丢失操作）。保留通用文本/代码/图像查看器及未保存/版本保护。避免 portal/重新挂载造成状态丢失。
+- [x] 将筛选设计为紧凑控件，不作为永久占满宽度的第二条栏。不虚构匹配分组、头像、选择项或不可用操作。展示真实标题/来源语义，保留原始详情。
+- [x] 由主代理在1440 × 900和390 px浏览器中进行对比，检查筛选/备注保存和重新打开、通用产物切换；运行明确列出的安全套件、类型检查、限定范围的 lint 和隔离生产构建。不使用客户文件、付费 API，不执行迁移，不使用全量单元测试 glob。
+- [x] 记录实际证据与剩余差异；不将测试成功等同于视觉验收。

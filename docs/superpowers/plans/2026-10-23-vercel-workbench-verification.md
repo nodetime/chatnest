@@ -1,47 +1,47 @@
-# Vercel-backed workbench verification
+# 基于 Vercel 的工作台验证
 
-## Scope and provenance
+## 范围与来源
 
-- Implementation commits: `6f8e877` and `81cd4bd`, based on `b4b09f9` planning / `918d108` preceding workbench.
-- Actual official reference: [Vercel Chatbot template](https://vercel.com/templates/next.js/chatbot) and its [demo](https://chatbot.ai-sdk.dev/demo), viewed in a real browser. Existing local project already descends from Chatbot; this pass changes composition rather than claiming a wholesale template migration.
-- Actual new primitives: [Artifact](https://raw.githubusercontent.com/vercel/ai-elements/ca8be600bfd01b3131f9bf6134b51602a71f4374/packages/elements/src/artifact.tsx) and [Task](https://raw.githubusercontent.com/vercel/ai-elements/ca8be600bfd01b3131f9bf6134b51602a71f4374/packages/elements/src/task.tsx), fixed upstream `ca8be600bfd01b3131f9bf6134b51602a71f4374`, Apache-2.0 with full license/source/modification notices. Existing Conversation/PromptInput are actually composed. No dependency/runtime upgrade.
+- 实现提交：`6f8e877` 和 `81cd4bd`，基于 `b4b09f9` 规划 / `918d108` 前序工作台。
+- 实际官方参考：[Vercel Chatbot 模板](https://vercel.com/templates/next.js/chatbot)及其[演示](https://chatbot.ai-sdk.dev/demo)，已在真实浏览器中查看。现有本地项目本就源自 Chatbot；本轮修改组件组合，不声称进行了整套模板迁移。
+- 实际新增基础组件：[Artifact](https://raw.githubusercontent.com/vercel/ai-elements/ca8be600bfd01b3131f9bf6134b51602a71f4374/packages/elements/src/artifact.tsx) 和 [Task](https://raw.githubusercontent.com/vercel/ai-elements/ca8be600bfd01b3131f9bf6134b51602a71f4374/packages/elements/src/task.tsx)，固定上游版本 `ca8be600bfd01b3131f9bf6134b51602a71f4374`，采用 Apache-2.0，附完整许可证/来源/修改声明。现有 Conversation/PromptInput 已实际组合使用。未升级依赖/运行时。
 
-## Independent checks
+## 独立检查
 
-| Gate | Actual result |
+| 门禁 | 实际结果 |
 | --- | --- |
-| Spec review | Initial blocker found: result-table notes/view dirty was separate from generic editor dirty. Fixed via original dirty/saving projection, re-reviewed APPROVED. |
-| Quality review | Independent read-only review APPROVED; lifecycle, per-chat identity, catalog, metadata, preserved modes/editor/approval boundaries and license checked. |
-| Root safe offline tests | 242/242 passed, explicit named suites; never the all-unit wildcard. Logs ignored under `.local-review/vercel-root-final-units.log`. |
-| Types / formatting | `tsc --noEmit --incremental false` passed; changed-file ultracite checked19 files, no fixes. |
-| Production build | Clean temporary source copy and private APFS dependency clone; direct `next build --webpack` exit0. No migration wrapper, real environment or supplier credentials. |
-| Production browser | Built app on own33382: persisted title, four native files in chooser, code→text selection, edited content and close/reopen; exactly one workspace header. |
+| 规格审查 | 初次发现阻塞项：结果表备注/视图的未保存状态与通用编辑器未保存状态分离。通过原有未保存/保存中投影修复，复审通过。 |
+| 质量审查 | 独立只读审查通过；检查了生命周期、逐聊天标识、目录、元数据、保留的模式/编辑器/审批边界和许可证。 |
+| 主代理安全离线测试 | 242/242通过，明确指定名称的套件；未使用全量单元测试通配符。日志已忽略，位于 `.local-review/vercel-root-final-units.log`。 |
+| 类型 / 格式 | `tsc --noEmit --incremental false` 通过；变更文件 ultracite 检查19个文件，未修复。 |
+| 生产构建 | 干净的临时源码副本和私有 APFS 依赖克隆；直接执行 `next build --webpack`，退出码0。未使用迁移封装、真实环境或供应商凭据。 |
+| 生产浏览器 | 构建应用运行在专用33382端口：持久化标题、选择器中的四个原生文件、代码 -> 文本选择、已编辑内容及关闭/重新打开；工作区标题栏恰好一个。 |
 
-## Actual CUA browser acceptance
+## 实际 CUA 浏览器验收
 
-| Surface | Evidence/result |
+| 界面 | 证据/结果 |
 | --- | --- |
-| General artifact navigation | Actual native Agent created text, Python code and CSV in one chat. Keyboard chooser switches kinds; refresh rebuilds four-file catalog after additional streamed text. No global old-chat membership. New chat artifact list empty. |
-| Text editing | Real ProseMirror typing immediately disables chooser and displays save reason; persisted text confirmed in DB, normal switch/reopen and production reader. |
-| Table editing | Real notes + filter disables chooser; save releases lock; text→table restores notes/filter. DB two versions preserve all3 original rows/source; CSV current view2 rows, JSON complete3 rows downloaded and compared. |
-| Mode/visibility | Source and document mode menu, close/reopen and mobile close verified; one64px header. Native row/source details remain available and explicitly unverified. |
-| Attachment + HTTP MCP | Three real browser uploads (synthetic PDF/DOCX/XLSX) show ready extraction; XLSX embedded-image/no-OCR warning retained. Model-selected readAttachment reads DOCX segment41 sentinel, then pauses for real HTTP MCP approval. Calls remained1 baseline before approval,2 after approval; native optional table created from actual tool evidence. |
-| Streaming/reading | Mock SSE long reply8312 chars; after user scroll, top2870 stayed while total height5044→6404. Jump-to-latest works; second reply stopped, input recovered. Edited user turn persisted. Separate streamed native document disables chooser during generation; completion restores selection and all31 headings survive reopen. |
-| Abnormal persisted states | Existing synthetic denied call renders已拒绝; failed supplier and native table error render失败 with no false artifact completion. This checks renderer regression, not new paid-provider failure tests. |
-| Responsive/theme |390×844,1280×720,1440×900, light/dark actual screenshots; no outer horizontal overflow, exactly one visible64px workspace header and in-viewport close target. Mobile table scroll is local, not page overflow. |
+| 通用产物导航 | 实际原生 Agent 在同一聊天中创建文本、Python 代码和 CSV。键盘选择器切换类型；额外文本流式生成后，刷新重建含四个文件的目录。不包含全局旧聊天成员。新聊天产物列表为空。 |
+| 文本编辑 | 实际在 ProseMirror 中输入后立即禁用选择器并展示保存原因；DB 确认文本已持久化，正常切换/重新打开和生产查看器均验证。 |
+| 表格编辑 | 实际备注 + 筛选禁用选择器；保存释放锁定；文本 -> 表格后恢复备注/筛选。DB 两个版本保留全部3条原始行/来源；已下载并比较当前视图2行的 CSV 和完整3行的 JSON。 |
+| 模式/可见性 | 已验证来源和文档模式菜单、关闭/重新打开及移动端关闭；一个64px标题栏。原生行/来源详情仍可用，并明确标注未经验证。 |
+| 附件 + HTTP MCP | 三次真实浏览器上传（合成 PDF/DOCX/XLSX）显示提取就绪；保留 XLSX 嵌入图像/无 OCR 警告。模型选择 readAttachment 读取 DOCX 片段41的哨兵内容，随后暂停等待真实 HTTP MCP 审批。批准前调用保持基线1，批准后为2；基于实际工具证据创建了可选原生表格。 |
+| 流式输出/阅读 | mock SSE 长回复8312字符；用户滚动后，顶部位置保持2870，而总高度5044 -> 6404。跳转到最新内容有效；停止第二条回复后输入恢复。编辑后的用户轮次已持久化。独立流式原生文档在生成期间禁用选择器；完成后恢复选择，全部31个标题在重新打开后保留。 |
+| 异常持久化状态 | 现有合成被拒调用渲染为已拒绝；供应商失败和原生表格错误渲染为失败，没有错误的产物完成状态。这是渲染器回归检查，不是新的付费供应商失败测试。 |
+| 响应式/主题 |390×844、1280×720、1440×900浅色/深色实际截图；无外层横向溢出，恰好一个可见64px工作区标题栏，关闭目标位于视口内。移动表格滚动限制在局部，不造成页面溢出。 |
 
-Root fixtures, screenshots and private logs remain ignored. Temporary viewport/media overrides restored. A simulated-viewport click mismatch was resolved by returning to the standard viewport; actual message editing and actual handler chain work, no speculative production fix.
+主代理测试夹具、截图和私有日志保持忽略。临时视口/媒体覆盖已恢复。一次模拟视口点击坐标不匹配通过恢复标准视口解决；实际消息编辑和实际处理函数链正常，未进行推测性的生产修复。
 
-## Limits
+## 限制
 
-- All model/MCP/data are local synthetic fixtures; no paid supplier/model requests or customer materials. Mock tool decisions live only in ignored fixture code, not production Agent flow.
-- This pass preserves general Agent selection; it does not add a fixed legal/research pipeline, AG-UI protocol, durable background jobs, resumable execution, OCR, cloud storage or commercial-agent parity.
-- New chooser guards unsaved edits; original message-card navigation follows its pre-existing behavior. Wider navigation/unload confirmation is separate scope.
-- Source branch/worktree and running isolated dev preview retained. No remote push/deployment claimed.
+- 所有模型/MCP/数据均为本地合成测试夹具；未进行付费供应商/模型请求，未使用客户材料。mock 工具决策仅位于已忽略的测试夹具代码中，不进入生产 Agent 流程。
+- 本轮保留通用 Agent 选择；不新增固定法律/研究流水线、AG-UI 协议、持久后台任务、可恢复执行、OCR、云存储或商业 Agent 对等能力。
+- 新选择器保护未保存编辑；原消息卡片导航遵循原有行为。更广泛的导航/卸载确认属于其他范围。
+- 保留源码分支/工作树和运行中的隔离开发预览。未声称远程推送/部署。
 
 
-## Local integration
+## 本地集成
 
-- Fast-forward integrated into local `main` after browser/build/review gates. Root reran the full explicit safe unit list in the primary checkout: **242/242 pass**, then `tsc --noEmit --incremental false`: exit0.
-- Compared all263 runtime/config source files across primary `main`, live preview worktree and the built production copy: zero hash mismatches. No dependency, runtime prompt or Agent selection changes.
-- Primary and feature worktrees clean after docs-only verification record. Main remains local; no remote push or deployment performed. Production smoke server33382 stopped; own isolated33378 preview remains with mock model/MCP. Final actual screenshot and interactive artifact page retained.
+- 浏览器/构建/审查门禁通过后，快进集成到本地 `main`。主代理在主检出目录重跑完整、明确列出的安全单元测试清单：**242/242通过**，随后 `tsc --noEmit --incremental false`：退出码0。
+- 比较主检出目录 `main`、运行预览的工作树和已构建生产副本中的全部263个运行时/配置源码文件：零哈希不匹配。未修改依赖、运行时提示词或 Agent 选择。
+- 仅添加验证文档记录后，主工作树和功能工作树均干净。Main 仍仅在本地；未执行远程推送或部署。生产冒烟服务33382已停止；自己的隔离33378预览继续运行 mock 模型/MCP。最终实际截图和交互产物页面保留。

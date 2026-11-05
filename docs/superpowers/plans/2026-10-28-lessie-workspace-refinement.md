@@ -2,8 +2,8 @@
 
 > 按已批准设计执行，独立只读复核；只改呈现，不增加 Agent 或商业能力。
 
-**Goal:** 数知探AI首页、对话、产物、个人管理形成一致的轻盈工作空间。
-**Architecture:** 复用现有 shadcn、AI Elements、Next Image 和数据钩子，更新语义token及组件布局；不追加一套工作流或样式框架。
+**目标：** 数知探AI首页、对话、产物、个人管理形成一致的轻盈工作空间。
+**架构：** 复用现有 shadcn、AI Elements、Next Image 和数据钩子，更新语义token及组件布局；不追加一套工作流或样式框架。
 
 - [x] 在既有 workbench-ui 与交互测试中先声明新布局/语义与不变量，确认红灯。
 - [x] 统一 globals 的主/次表面与深色变量、侧栏密度；调整 shell、greeting、workspace-home 与输入区，最近内容只来自已有API。

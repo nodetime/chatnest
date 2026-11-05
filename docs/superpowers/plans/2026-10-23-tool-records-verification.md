@@ -1,46 +1,46 @@
-# Tool-record acceptance
+# 工具记录验收
 
-## User-visible correction
+## 用户可见修正
 
-The exact reported PDF page was reproduced before editing. A one-step read was wrapped by `执行过程1次调用`, another tool disclosure, internal character/segment/trust-boundary bookkeeping and two native details. The replacement is a compact file action; expanding it directly shows the returned text and exact references. Raw name/input/output/error live in a separate keyboard Sheet. Unknown/falsey values remain exact, not silently absent.
+编辑前已复现用户报告的精确 PDF 页面。一次读取被包裹在 `执行过程1次调用`、另一层工具展开控件、内部字符/片段/信任边界统计，以及两处原生详情中。替换后是紧凑的文件操作；展开后直接展示返回文本和精确引用。原始名称/输入/输出/错误放在独立、可键盘操作的 Sheet 中。未知值/假值保持精确，不会被静默隐藏。
 
-Root actually opened an existing Manus Computer Use test task, expanded its work-history entry and viewed lightweight browser records. No new task/message/credits were used. Account/history screenshots stay ignored/private. Native Codex app access was denied by the available surface; no bypass or claim of a hands-on native Codex session.
+主代理实际打开了一个现有 Manus Computer Use 测试任务，展开其工作历史条目并查看轻量浏览器记录。未使用新任务/消息/额度。账户/历史截图保持忽略和私密。可用界面拒绝了原生 Codex 应用访问；未绕过限制，也未声称亲自操作过原生 Codex 会话。
 
-## Implementation and independent review
+## 实现与独立审查
 
-Source sequence: `e9e20d8`, `8ef4d42`, `b7b5023`, `53a3a70`, `12b518c`.
+源码序列：`e9e20d8`、`8ef4d42`、`b7b5023`、`53a3a70`、`12b518c`。
 
-- Initial compact UI preserves the original approval ids, readonly guards, source text, warning semantics and Agent selection.
-- Root reproduced a transient false incomplete state during submitted approval continuation; only the latest active UI projection now includes submitted as well as streaming, while historical idle unfinished calls remain incomplete.
-- Spec/quality reviews identified focus risk. A local Group inspection guard was insufficient: root twice reproduced the open Sheet disappearing when final answer text arrived. Independent source/VM review confirmed content-dependent outer component replacement.
-- Final architecture always renders canonical `PreviewMessage(message.id)`; adjacent tools can group inside that stable message, never by reparenting different messages. No-text intermediate action bars are suppressed; real answer/artifact/regeneration actions remain. No global inspector, DOM registry or manual focus routing added.
-- Exact native table active-generation fallback is a temporary normal-artifact handoff, so it offers no transient Sheet entry. Approval, error/denial, historical incomplete, terminal fallback and dynamic same-name tools retain details. Existing special renderers are unchanged.
-- Final independent spec and quality reviews APPROVED. Old-source transition regression independently RED, final source GREEN.
+- 初始紧凑 UI 保留原审批 ID、只读保护、来源文本、警告语义和 Agent 选择。
+- 主代理在已提交审批的继续执行阶段复现了短暂的错误未完成状态；现在仅最新活动 UI 投影同时包含已提交和流式状态，而历史空闲未结束调用仍显示未完成。
+- 规格/质量审查发现焦点风险。局部 Group 检查保护仍不够：主代理两次复现最终回答文本到达时已打开 Sheet 消失。独立源码/VM 审查确认外层组件会因内容不同而被替换。
+- 最终架构始终渲染规范的 `PreviewMessage(message.id)`；相邻工具可在该稳定消息内部归组，绝不通过将不同消息重新挂到其他父组件下实现分组。隐藏无文本的中间操作栏；保留真实回答/产物/重新生成操作。未添加全局检查器、DOM 注册表或手动焦点路由。
+- 精确原生表格的活动生成兜底是临时交接给正常产物，因此不提供短暂的 Sheet 入口。审批、错误/拒绝、历史未完成、终态兜底和动态同名工具保留详情。现有特殊渲染器不变。
+- 最终独立规格和质量审查通过。旧源码过渡回归独立验证为红，最终源码为绿。
 
-## Root gates on final source
+## 主代理对最终源码的门禁
 
-| Gate | Actual result |
+| 门禁 | 实际结果 |
 | --- | --- |
-| Explicit safe offline suite |257/257 passed; named suites only, no all-unit wildcard. |
-| Types / format |`tsc --noEmit --incremental false` exit0; scoped ultracite8 files clean. Existing ai-elements exclusion respected; its tiny scoped edit also exercised by UI tests/build. |
-| Isolated production build |Direct `next build --webpack` exit0 in private source/dependency clone, final source updated and rebuilt. No migration build, real env or supplier/model credentials. |
-| Production CUA |Exact PDF page: direct source refs/text, keyboard Sheet, original JSON and Esc focus return. Temporary production server33382 stopped after smoke. |
+| 明确列出的安全离线套件 |257/257通过；仅指定名称的套件，未使用全量单元测试通配符。 |
+| 类型 / 格式 |`tsc --noEmit --incremental false` 退出码0；限定范围的 ultracite 检查8个文件无问题。遵守现有 ai-elements 排除规则；其微小限定修改也由 UI 测试/构建覆盖。 |
+| 隔离生产构建 |在私有源码/依赖克隆中直接执行 `next build --webpack`，退出码0，已更新最终源码并重新构建。未执行迁移构建，未使用真实环境或供应商/模型凭据。 |
+| 生产 CUA |精确 PDF 页面：直接来源引用/文本、键盘 Sheet、原始 JSON，以及 Esc 焦点返回。临时生产服务33382在冒烟后停止。 |
 
-## Actual browser checks
+## 实际浏览器检查
 
-| Case | Observed result |
+| 场景 | 观察结果 |
 | --- | --- |
-| Exact PDF |Default one action with real filename; one expand reveals page:1 and page:2 plus exact original66 characters. No inline bookkeeping/native nested summaries. |
-| DOCX |Existing actual paginated read keeps paragraph42–44, later-page sentinel and honest remaining-content notice; bounded source reading area. |
-| XLSX |Exact cell references, cached date, formula-not-executed marker and embedded-image/no-OCR warning remain. |
-| Details keyboard |Enter opens; Escape closes and returns to exact visible trigger. Closing does not replace the right result artifact. |
-| Single live MCP |Before approval counter2, after explicit approval3; unchanged q argument; optional no-table answer demonstrates no fixed artifact pipeline. |
-| Live completion regression |Two failed pre-fix reproductions retained privately. Final frozen53a3a70 two-step HTTP MCP run used5000ms delay: Sheet initially shows no output, survives completion, updates to original returned result, Esc focuses visible36×36 original button; step group remains open. |
-| Historical exceptions |Denied call stays已拒绝, supplier failure stays visible with exact raw error available, native table failure keeps details. These are renderer regressions on synthetic history, not new real-provider failures. |
-| Responsive/theme |390×844 and1280×800 light/dark screenshots: no page overflow, visible details target, original source text unchanged. Temporary emulation restored. |
+| 精确 PDF |默认仅一个带真实文件名的操作；展开一次即可看到 page:1 和 page:2 及精确原始66个字符。没有内联统计信息/原生嵌套摘要。 |
+| DOCX |现有实际分页读取保留段落42–44、后续页面哨兵内容，以及如实说明剩余内容的提示；来源阅读区有边界限制。 |
+| XLSX |保留精确单元格引用、缓存日期、公式未执行标记和嵌入图像/无 OCR 警告。 |
+| 详情键盘操作 |Enter 打开；Escape 关闭并返回精确的可见触发控件。关闭不会替换右侧结果产物。 |
+| 单次实时 MCP |批准前计数2，显式批准后3；q 参数不变；可选的无表格回答证明不存在固定产物流水线。 |
+| 实时完成回归 |修复前两次失败复现私密保留。最终冻结的53a3a70两步 HTTP MCP 运行采用5000ms延迟：Sheet 最初显示无输出，完成后仍保持打开，更新为原始返回结果，Esc 聚焦可见36×36原按钮；步骤组保持展开。 |
+| 历史异常 |被拒调用仍显示已拒绝，供应商失败保持可见并可查看精确原始错误，原生表格失败保留详情。这些是合成历史的渲染器回归，不是新的真实供应商失败。 |
+| 响应式/主题 |390×844和1280×800浅色/深色截图：无页面溢出，详情目标可见，原始来源文本不变。已恢复临时模拟设置。 |
 
-All data/model/MCP requests are isolated local mocks; zero paid-provider calls. Test routing exists only in ignored fixture code, not production. Source runtime, prompts, MCP params, credentials, DB, upload behavior and right-side general artifact architecture are unchanged. Screenshot/interactive preview retained at the exact reported page. No remote push/deployment claimed.
+所有数据/模型/MCP 请求均为隔离的本地 mock；付费供应商调用为零。测试路由只存在于已忽略的测试夹具代码中，不进入生产。源码运行时、提示词、MCP 参数、凭据、DB、上传行为和右侧通用产物架构保持不变。截图/交互预览保留在用户报告的精确页面。未声称远程推送/部署。
 
-## Local main integration
+## 本地 main 集成
 
-Fast-forward integrated into local main after reviews/browser/build. Root independently reran the entire explicit safe list in the primary checkout: **257/257 passed**, then typecheck exit0. All265 runtime/config files match across primary checkout, live preview worktree and final production build. Both worktrees clean after verification docs. No remote push. Production smoke server stopped; own local dev/mock preview retained. Final screenshot was explicitly checked with source region visible after the last hot refresh, not merely a collapsed/loading state.
+审查/浏览器/构建通过后，快进集成到本地 main。主代理在主检出目录独立重跑完整、明确列出的安全清单：**257/257通过**，随后类型检查退出码0。全部265个运行时/配置文件在主检出目录、运行预览的工作树和最终生产构建中一致。验证文档完成后两个工作树均干净。未远程推送。生产冒烟服务已停止；自己的本地开发/mock 预览保留。最后一次热刷新后明确检查了最终截图，来源区域可见，而非仅处于折叠/加载状态。

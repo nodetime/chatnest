@@ -1,42 +1,42 @@
-# Live runtime interaction verification
+# 实时运行时交互验证
 
-## Scope and behavior
+## 范围与行为
 
-Continue the approved generic workbench design through actual runtime states. No provider workflow is hardcoded. Approval uses exact canonical IDs; same-mounted-event double/stale callbacks are guarded. Recovery appends a normal user message asking the Agent to assess prior side effects and choose retry, another approach or clarification; it does not directly replay tools, clear failed messages or reuse authorization.
+将已获认可的通用工作台设计延伸到实际运行时状态。未硬编码供应商工作流。审批使用精确规范 ID；对同一已挂载事件的重复/过期回调设置保护。恢复操作追加一条普通用户消息，要求 Agent 评估先前副作用并选择重试、其他方法或澄清；不直接重放工具、不清除失败消息，也不复用授权。
 
-## Actual local browser flow
+## 实际本地浏览器流程
 
-All model and MCP responses below are controlled synthetic HTTP fixtures. These checks prove integration/state transitions, not real-model reasoning or supplier reliability. No paid APIs/customer documents were used.
+以下全部模型和 MCP 响应均为受控的合成 HTTP 测试夹具。这些检查证明集成/状态转换，不验证真实模型推理或供应商可靠性。未使用付费 API/客户文档。
 
-1. Sent a fresh request through the chat input. Observed preparation and the existing stop control.
-2. Before allowing the generated MCP request, verified server call count unchanged. Approval card shows operation, actual origin/parameters and access to raw details without the long technical alias inline.
-3. Allowed it. Captured the genuine 8.5-second delayed execution: spinner, `执行中`, waiting text and stop action.
-4. Fixture returned an error. UI displayed the expanded failure plus `让 Agent 继续处理`; raw error remains in details.
-5. Selected recovery. Original failed call stayed in the conversation, a new normal user turn was appended, and a new approval appeared. MCP call count remained unchanged until the new approval.
-6. Approved recovery. A new distinct MCP call succeeded, and the Agent-selected result-table tool persisted three source-backed rows. DB inspection verified both old failure and new success remain with separate IDs.
-7. Requested readable table columns as a subsequent normal turn; the mock model selected the generic table tool using existing successful evidence. This is fixture input, not hardcoded product orchestration. Open/close/reopen and persisted source-backed rows were checked.
-8. Separate denial flow: UI becomes `已拒绝` and no new MCP call occurs.
-9. Separate stop flow: active call becomes `未完成`, not permanently running or falsely successful. Recovery remains available. Stopping client observation does not guarantee cancellation of remote side effects.
-10. Forced model transport failure during recovery: existing error notice restores exactly the recovery request. Browser testing exposed an empty reply toolbar and raw generic English error; the follow-up fix hides only the empty final presentation (retaining its canonical keyed wrapper) and puts the exact error behind a closed detail disclosure. Repeating the failure in the actual browser confirmed the friendly summary, hidden empty actions, exact expandable error and successful input restoration.
+1. 通过聊天输入框发送新请求。观察到准备状态和现有停止控件。
+2. 允许生成的 MCP 请求前，验证服务端调用数未改变。审批卡片展示操作、实际来源/参数，并可访问原始详情，行内不展示冗长技术别名。
+3. 允许请求。捕获真实8.5秒延迟执行：旋转指示器、`执行中`、等待文本和停止操作。
+4. 测试夹具返回错误。UI 展示展开的失败状态及 `让 Agent 继续处理`；原始错误保留在详情中。
+5. 选择恢复。原失败调用保留在会话中，追加新的普通用户轮次，并出现新审批。新审批前 MCP 调用数保持不变。
+6. 批准恢复。一次新的独立 MCP 调用成功，Agent 选择的结果表工具持久化了三条有来源支撑的行。DB 检查确认旧失败和新成功均保留，具有不同 ID。
+7. 在后续普通轮次中请求可读表格列；mock 模型基于现有成功证据选择通用表格工具。这是测试夹具输入，不是硬编码产品编排。检查了打开/关闭/重新打开及持久化的有来源支撑行。
+8. 独立拒绝流程：UI 变为 `已拒绝`，不发生新 MCP 调用。
+9. 独立停止流程：活动调用变为 `未完成`，不会永久运行或错误显示成功。恢复仍可用。停止客户端观察不保证取消远程副作用。
+10. 在恢复期间强制模型传输失败：现有错误提示精确恢复恢复请求。浏览器测试暴露了空回复工具栏和原始通用英文错误；后续修复仅隐藏空的最终展示（保留其带规范 key 的包装组件），并将精确错误放在默认关闭的详情展开控件中。在实际浏览器重复失败后，确认友好摘要、隐藏空操作、可展开的精确错误，以及输入成功恢复。
 
-Evidence under ignored `.local-review/`: `runtime-approval.png`, `runtime-running.png`, `runtime-failed.png`, `runtime-flow.json`, `runtime-data-evidence.json`, before/after MCP call-count snapshots. The dedicated localhost session uses synthetic fixture identity.
+证据位于已忽略的 `.local-review/`：`runtime-approval.png`、`runtime-running.png`、`runtime-failed.png`、`runtime-flow.json`、`runtime-data-evidence.json`，以及前后 MCP 调用计数快照。专用 localhost 会话使用合成测试夹具身份。
 
-## Checks
+## 检查
 
-Initial final runtime revision `4812941`: primary checkout serial offline suite 286/286, TypeScript and full-repository lint passed. Isolated `scripts/ci/offline-checks.sh build` passed, using closed-loopback sentinel configuration and no migrations. CI on PR #1 also passed lint, 286-test suite, typecheck and production build in Ubuntu loopback-only network namespaces. Follow-up edge-fix verification is appended below before merge.
+最初的最终运行时修订 `4812941`：主检出目录串行离线套件286/286、TypeScript 和全仓 lint 通过。隔离 `scripts/ci/offline-checks.sh build` 通过，采用关闭回环连接的哨兵配置，未执行迁移。PR #1 的 CI 也在 Ubuntu 仅允许回环网络的命名空间中通过 lint、286项测试套件、类型检查和生产构建。后续边界修复验证在合并前追加于下方。
 
-CI no longer uses deployment DB/model/storage secrets. Retired legacy browser workflow had obsolete selectors and production-secret wiring; replacement is honestly named offline checks. Browser integration above was run manually via the app's browser tooling, not falsely attributed to automated CI.
+CI 不再使用部署 DB/模型/存储密钥。已退役的旧浏览器工作流包含过时选择器和生产密钥接线；替代工作流如实命名为离线检查。上述浏览器集成通过应用浏览器工具手动执行，不虚假归属于自动化 CI。
 
-## Review and boundaries
+## 审查与边界
 
-Independent focused review found no new blockers in approval/recovery/CI paths. Prior pending local workbench commits are included in the PR and received focused security triage, not an exhaustive audit. No local fixture credentials or customer files are committed.
+独立定向审查未在审批/恢复/CI 路径中发现新阻塞项。此前待集成的本地工作台提交包含在 PR 中，并接受了定向安全分诊，非全面审计。未提交本地测试夹具凭据或客户文件。
 
-Inherited limitation: server-side approval continuation lacks an atomic execution claim across concurrent requests/tabs. This change prevents duplicate actions within the same UI event, not cross-tab exactly-once execution. Runtime timeout/abort also cannot prove a remote operation had no effect; recovery explicitly asks the Agent to assess existing evidence.
+继承限制：服务端审批继续执行缺少跨并发请求/标签页的原子执行占用机制。本次修改防止同一 UI 事件中的重复操作，不保证跨标签页恰好执行一次。运行时超时/中止也不能证明远程操作未产生效果；恢复明确要求 Agent 评估已有证据。
 
-## Final browser re-open
+## 最终浏览器重新打开
 
-After leaving and reopening the acceptance conversation, the saved `候选资料 · 已恢复` artifact opened in the normal right-hand viewer with all three rows and readable column names. The original failed and successful calls remained in the chat. Screenshot: ignored `.local-review/runtime-reopened.png`; transport-error screenshot: `.local-review/runtime-transport-error.png`. The test draft was cleared and model/MCP fault controls reset.
+离开并重新打开验收会话后，已保存的 `候选资料 · 已恢复` 产物在正常右侧查看器中打开，包含全部三行和可读列名。原失败和成功调用仍在聊天中。截图：已忽略的 `.local-review/runtime-reopened.png`；传输错误截图：`.local-review/runtime-transport-error.png`。测试草稿已清空，模型/MCP 故障控制已重置。
 
-## Final source verification
+## 最终源码验证
 
-Follow-up runtime revision `2207236` was fast-forwarded into the primary checkout and independently verified there: explicit serial offline manifest **288/288 passed, 0 skipped**, `tsc --noEmit --incremental false` passed, full `ultracite check` passed (279 files). Independent focused review of the transport-error/empty-reply fix reported no blocking findings. Latest-head hosted CI is required before merge; no check or protection is bypassed.
+后续运行时修订 `2207236` 已快进至主检出目录，并在那里独立验证：明确列出的串行离线清单 **288/288通过，0跳过**，`tsc --noEmit --incremental false` 通过，全量 `ultracite check` 通过（279个文件）。对传输错误/空回复修复的独立定向审查未报告阻塞问题。合并前必须通过最新提交的托管 CI；不绕过任何检查或保护。

@@ -1,18 +1,18 @@
-# Lessie-inspired complete workbench
+# 借鉴 Lessie 的完整工作台
 
-User approved the entire visual direction on 2026-10-23: compact navigation, narrow readable chat, broad flat artifacts, near-white/light-neutral surfaces, thin separators, dark-gray text and restrained mint accents. This is one coordinated presentation change, not a bottom-bar patch.
+用户于 2026-10-23 批准了整体视觉方向：紧凑导航、较窄且易读的聊天区、宽阔扁平的产物区、近白/浅中性表面、细分隔线、深灰文字，以及克制的薄荷色点缀。这是一次协调一致的整体呈现调整，而非底栏补丁。
 
-## Reference and boundaries
-Root actually entered Lessie's authenticated /find workspace, opened an existing task, inspected its top grouping menu and record details, and separately explored its official public showcase. No search, paid reasoning or outreach was submitted. Reference notes/screenshots are ignored under .local-review/lessie-reference-review.md. Reuse the visual hierarchy, not logos, unrelated outreach controls, fake matches or private task content.
+## 参考与边界
+主会话实际进入了 Lessie 需登录的 /find 工作空间，打开已有任务，检查顶部的分组菜单和记录详情，并另外浏览了其官方公开示例。没有提交搜索、付费推理或外联操作。参考笔记/截图位于已被忽略的 .local-review/lessie-reference-review.md 下。复用视觉层级，不复用标识、无关外联控件、虚假匹配或私有任务内容。
 
-## Intended result
-- Chat-only CSS tokens: neutral near-white, subtle gray canvas and separators, readable charcoal, a restrained soft-mint accent for meaningful selection/state; coherent dark and reduced-motion modes. Admin/Porta and global non-chat theme unchanged.
-- Compact sidebar and unified approximately 52px header rail; task title, normal new-task navigation, natural assistant prose, modest gray user bubble, compact composed input. Desktop artifact share around 58% leaves readable chat; retain user resize bounds and mobile full-screen pane.
-- Artifact remains a normal text/code/image/sheet viewer with file picker, close/expand and correct dirty/streaming guards. No special dashboard, fake tab, mandatory result-table flow or new Agent runtime.
-- Result table is the primary canvas within its own renderer: comfortable roughly 44–48px rows, thin neutral grid, readable headers and balanced column widths. Top contextual controls for filtering, columns, export, notes and source information. No permanent developer footer or duplicate helper prose.
-- Keep only restrained record count in the status area. Notes open a proper side panel and retain real draft/dirty/saving/error state. Save appears when changes exist (and while saving); readonly remains guarded. Source caveat stays in source detail and raw-row detail, not repeated as a large always-visible row. Export scope stays in export menu. Nothing falsely claims verification/autosave.
-- Source links use domain labels with exact original destinations; raw rows/fields remain accessible. No fake matching groups or business-specific people-search columns; actual Agent-created columns remain authoritative.
-- Tool activity stays quiet but readable, consistent with chat typography. Exact approval identities, errors, incomplete states, source previews and Sheet lifetimes remain intact.
+## 预期结果
+- 仅聊天范围的 CSS token：中性近白、细微灰色画布与分隔线、易读的炭黑文字，以及用于有意义的选择/状态的克制柔和薄荷色；深色和减少动态效果模式保持一致。Admin/Porta 及全局非聊天主题不变。
+- 紧凑侧栏和统一的约 52px 顶栏；任务标题、正常的新任务导航、自然的助手正文、低调的灰色用户气泡、紧凑的组合式输入框。桌面产物区占比约 58%，为聊天保留可读空间；保留用户调整宽度的边界及移动端全屏面板。
+- 产物仍是正常的 text/code/image/sheet 查看器，带文件选择器、关闭/展开，以及正确的未保存/流式生成保护。不引入特殊仪表盘、虚假标签页、强制结果表格流程或新的 Agent 运行时。
+- 结果表格在自己的 renderer 内作为主画布：舒适的约 44–48px 行高、细中性网格、可读表头和均衡列宽。顶部上下文控件提供筛选、列、导出、备注及来源信息。不保留永久性的开发者页脚或重复辅助说明。
+- 状态区仅保留克制的记录数量。备注打开正常的侧面板，并保留真实的草稿/未保存/保存中/错误状态。有改动时（以及保存期间）显示保存；只读保护继续生效。来源提示留在来源详情和原始行详情中，不重复呈现为始终可见的大行。导出范围留在导出菜单中。不虚称已核验或自动保存。
+- 来源链接使用域名标签，精确保留原始目标；原始行/字段仍可访问。不提供虚假匹配分组或特定业务的人员搜索列；Agent 实际创建的列仍是权威依据。
+- 工具活动保持低调且易读，与聊天排版一致。精确的审批身份、错误、未完成状态、来源预览及 Sheet 生命周期保持完整。
 
-## Acceptance
-Whole-page screenshot visibly changes hierarchy/palette/chat/result chrome; not merely spacing. Desktop/mobile/light/dark; actual browser upload/read→approved HTTP MCP→native artifact, save/reopen, generic text/code/sheet switching, source/raw details, error/denial, keyboard/disclosure and unsaved protection. Offline fixtures only. Root reruns explicit safe suites/types/lint and isolated direct Next build; primary checkout regression and source parity before completion. No push unless requested.
+## 验收
+整页截图应能明显体现层级/配色/聊天/结果界面框架的变化，而不只是间距。覆盖桌面/移动端/浅色/深色；真实浏览器上传/读取->经审批的 HTTP MCP->原生产物、保存/重开、通用 text/code/sheet 切换、来源/原始详情、错误/拒绝、键盘/展开收起，以及未保存保护。仅使用离线夹具。主会话重跑显式安全测试集/类型检查/lint 和隔离的直接 Next 构建；完成前在主检出目录进行回归与源码一致性检查。除非用户要求，否则不推送。

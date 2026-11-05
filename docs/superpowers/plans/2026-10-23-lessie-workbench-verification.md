@@ -1,48 +1,48 @@
-# Lessie-inspired workbench — acceptance
+# Lessie 风格工作台 - 验收
 
-Date: 2026-10-23. Runtime implementation: `d810758` (includes `1b1ee29`, `1882f51`).
+日期：2026-10-23。运行时实现：`d810758`（包含 `1b1ee29`、`1882f51`）。
 
-## Scope and review
+## 范围与审查
 
-Whole ChatNest presentation: coordinated neutral/mint palette, compact sidebar, aligned 52px headers, chat/input spacing, broad resizable generic artifact pane, table toolbar and independent notes Sheet. No Agent/provider/approval/schema changes; no new dependencies. Porta unchanged.
+ChatNest 整体展示层：协调一致的中性/薄荷色调、紧凑侧栏、对齐的52px标题栏、聊天/输入间距、宽大且可调整尺寸的通用产物面板、表格工具栏和独立备注 Sheet。未修改 Agent/供应商/审批/schema；未新增依赖。Porta 保持不变。
 
-Reference inspected in the authenticated Lessie workspace and an existing task, plus the public showcase. No searches, paid actions or outreach were submitted. This is a visual reference, not a claim of feature parity.
+在已登录的 Lessie 工作区和现有任务中查看参考，并查看公开展示页。未提交搜索、付费操作或对外联系。这只是视觉参考，不声称功能对等。
 
-Independent spec review passed. Independent quality review found an inline-preview geometry regression; fixed by keeping inline 38px headers/rows while the full workspace uses 42/46px. Follow-up review approved `d810758`. Root additionally tightened column defaults after seeing excessive horizontal overflow in the actual browser.
+独立规格审查通过。独立质量审查发现内联预览几何布局回归；已通过让内联标题栏/行保持38px、完整工作区采用42/46px修复。后续复审批准了 `d810758`。主代理在实际浏览器中发现横向溢出过多后，还收紧了列默认值。
 
-## Fresh verification
+## 最新验证
 
-| Check | Result |
+| 检查 | 结果 |
 | --- | --- |
-| Explicit offline safe suite, live checkout | 276/276; 0 failed |
-| TypeScript, live checkout | Passed |
-| Scoped lint | 12 changed TS/TSX files passed |
-| Direct isolated Next production build | Passed; no migration-running build script used |
-| Primary `main` after fast-forward | Same 276/276 and TypeScript passed |
-| Runtime file hash comparison | 279 files identical in live checkout, primary main and production snapshot |
-| Browser console at final preview | No captured error entries |
+| 明确列出的安全离线套件，运行中的检出目录 | 276/276；0失败 |
+| TypeScript，运行中的检出目录 | 通过 |
+| 限定范围的 lint | 12个变更的 TS/TSX 文件通过 |
+| 直接隔离 Next 生产构建 | 通过；未使用会执行迁移的构建脚本 |
+| 快进后的主检出目录 `main` | 同样276/276及 TypeScript 通过 |
+| 运行时文件哈希比较 | 279个文件在运行中的检出目录、主检出目录 main 和生产快照中一致 |
+| 最终预览的浏览器控制台 | 未捕获到错误条目 |
 
-## Actual browser acceptance
+## 实际浏览器验收
 
-Fresh conversation `bec8f8a5-25c6-415f-ab48-64bb0c81d655`:
+新会话 `bec8f8a5-25c6-415f-ab48-64bb0c81d655`：
 
-1. Uploaded synthetic `two-pages.pdf`, `长篇材料.docx`, `完整商品资料.xlsx` through the attachment menu; all reached readable state.
-2. Mock model selected the real native `readAttachment` tool three times, then `loadSkill`, `readSkillResource`, the discovered HTTP MCP search tool and `createResultTable`. The fixture model selects calls; production Agent code has no fixed task sequence.
-3. Browser approved the exact MCP request. Remote fixture calls increased from 15 to 16; approval preceded the call. Native table creation used the actual tool-result reference.
-4. Saved filter `1688` and a personal note. Closing/reopening the notes Sheet kept its draft and returned focus. After saving, the save control disappeared; refreshing and reopening restored the filter and note.
-5. Database verification found two table versions with identical original rows/source metadata. Read results contain PDF page refs, DOCX paragraph refs and XLSX cell refs/date/OCR caveat.
-6. Source and raw-row drawers retain exact fields, original URLs and the unverified-source caveat. Main search preview shows titles/source rather than raw field dumps.
-7. Downloaded actual CSV and JSON through the toolbar: CSV contains two filtered records and five displayed columns; JSON preserves all three records and saved notes.
-8. Existing generic text, code and ordinary CSV artifacts opened/switched normally. The right side remains the shared artifact viewer, not a table-only surface.
-9. Checked light/dark, reduced motion and 390px mobile chat/table/notes. Mobile body width stays 390px; table overflow stays inside the workspace. Closed the overlay to return to chat successfully.
-10. Production server on temporary port 33382 reopened the same saved artifact and note. Temporary production server/tab were then stopped/closed; development preview remains available.
+1. 通过附件菜单上传合成的 `two-pages.pdf`、`长篇材料.docx`、`完整商品资料.xlsx`；全部达到可读状态。
+2. mock 模型三次选择真实原生 `readAttachment` 工具，随后选择 `loadSkill`、`readSkillResource`、已发现的 HTTP MCP 搜索工具和 `createResultTable`。测试夹具模型选择调用；生产 Agent 代码中没有固定任务序列。
+3. 浏览器批准精确的 MCP 请求。远程测试夹具调用数从15增至16；批准先于调用。原生表格创建使用实际工具结果引用。
+4. 保存筛选 `1688` 和个人备注。关闭/重新打开备注 Sheet 时草稿保留，焦点返回。保存后保存控件消失；刷新并重新打开后筛选和备注恢复。
+5. 数据库验证发现两个表格版本，原始行/来源元数据相同。读取结果包含 PDF 页面引用、DOCX 段落引用和 XLSX 单元格引用/日期/OCR 限制说明。
+6. 来源和原始行抽屉保留精确字段、原始 URL 以及来源未经验证的说明。主搜索预览展示标题/来源，而非原始字段转储。
+7. 通过工具栏实际下载 CSV 和 JSON：CSV 包含两条筛选后的记录和五个展示列；JSON 保留全部三条记录及已保存备注。
+8. 现有通用文本、代码和普通 CSV 产物正常打开/切换。右侧仍是共享产物查看器，不是仅供表格使用的界面。
+9. 检查浅色/深色、减少动态效果，以及390px移动端聊天/表格/备注。移动端页面主体宽度保持390px；表格溢出限制在工作区内。成功关闭覆盖层返回聊天。
+10. 临时端口33382上的生产服务重新打开了同一已保存产物和备注。随后停止/关闭临时生产服务/标签页；开发预览继续可用。
 
-Seven additional fresh HTTP fixture scenarios passed: source records, empty result, plain text, mixed content, falsey values, denial and failure. Denial executed zero remote calls; other cases executed one. None generated a table automatically. Browser inspected failure and denial messages. The test fixture initially hit the normal hourly message quota; only synthetic message timestamps in the isolated fixture database were moved outside that window before rerunning. Product quota policy was not altered.
+另外七个新的 HTTP 测试夹具场景通过：来源记录、空结果、纯文本、混合内容、假值、拒绝和失败。拒绝执行零次远程调用；其他场景各执行一次。所有场景都未自动生成表格。浏览器检查了失败和拒绝消息。测试夹具起初触发现有每小时消息配额；重跑前仅将隔离测试夹具数据库中的合成消息时间戳移到该时间窗口之外。产品配额策略未改变。
 
-Notes/CAS failure, readonly, pending switch guards and inline geometry also have automated behavioral regressions. Not every automated edge case was repeated manually in the browser.
+备注/CAS 失败、只读、待处理切换保护和内联几何布局也有自动化行为回归覆盖。并非每个自动化边界场景都在浏览器中手动重复。
 
-## Evidence and limits
+## 证据与限制
 
-Ignored local evidence under `.local-review/`: `lessie-v2-data-evidence.json`, `lessie-v2-tool-cases.json`, `lessie-v2-source-parity.json`, `lessie-v2-production-build.log`, `unified-lessie-v2-final-units.log`, `unified-lessie-v2-main-units.log`, and `chatnest-lessie-workbench-final.png`; mobile/dark screenshots use the `lessie-v2-` prefix.
+`.local-review/` 下已忽略的本地证据：`lessie-v2-data-evidence.json`、`lessie-v2-tool-cases.json`、`lessie-v2-source-parity.json`、`lessie-v2-production-build.log`、`unified-lessie-v2-final-units.log`、`unified-lessie-v2-main-units.log` 和 `chatnest-lessie-workbench-final.png`；移动端/深色截图使用 `lessie-v2-` 前缀。
 
-All input documents, accounts, model responses and MCP records were isolated fixtures. The HTTP/tool/upload/persistence/UI paths are real; these tests do not validate a paid model's judgment or a commercial data provider's availability. No customer documents, real vendor calls, paid model calls or GitHub pushes were used.
+所有输入文档、账户、模型响应和 MCP 记录均为隔离测试夹具。HTTP/工具/上传/持久化/UI 路径是真实的；这些测试不验证付费模型的判断力或商业数据供应商的可用性。未使用客户文档，未进行真实供应商调用、付费模型调用或 GitHub 推送。

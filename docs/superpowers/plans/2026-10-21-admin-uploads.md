@@ -1,85 +1,85 @@
-# Platform administration and upload repair implementation plan
+# 平台管理与上传修复实现计划
 
-> **For agentic workers:** REQUIRED: use subagent-driven-development, TDD, and independent spec/quality reviews. One implementation writer at a time; root owns isolated actual HTTP/browser/DB verification.
+> **面向 Agent 执行者：** 必须使用 subagent-driven-development、TDD 及独立的规格/质量审查。同一时间只安排一名实现者；主会话负责隔离的真实 HTTP/浏览器/数据库验证。
 
-**Goal:** Separate platform operations from personal settings, replace misleading upload setup hints with a real administrator entry, and verify private attachment upload through model delivery.
+**目标：** 将平台运维与个人设置分离，用真实管理员入口替换误导性的上传配置提示，并验证私有附件从上传到交付模型的完整链路。
 
-**Architecture:** Same Next repository, independent `/admin` shell and guarded pages; reuse current encrypted MCP service rather than duplicating provider configuration. Personal settings contain only personal presentation/preferences and read-only capabilities. Uploads require an explicit storage service, ownership metadata and bounded byte reads; model delivery resolves registered assets server-side instead of trusting arbitrary client URLs.
+**架构：** 使用同一 Next 仓库，提供独立 `/admin` 外壳和受保护页面；复用当前加密 MCP 服务，避免重复实现供应商配置。个人设置只包含个人展示/偏好和只读能力。上传需要明确的存储服务、所有权元数据和有界字节读取；模型交付在服务端解析已登记资产，不信任任意客户端 URL。
 
-**Tech stack:** existing Next/React/shadcn, Drizzle/PostgreSQL, node:fs/crypto, AI SDK 7, node:test/tsx. Do not run real supplier/model calls or read actual secrets.
+**技术栈：** 现有 Next/React/shadcn、Drizzle/PostgreSQL、node:fs/crypto、AI SDK 7、node:test/tsx。不进行真实供应商/模型调用，不读取真实密钥。
 
-## Investigation evidence (before any implementation)
+## 调查证据（任何实现之前）
 
-- Real local fixture POST `/api/files/upload` returns 503 and points to storage setup in personal settings, but no setup interface exists. Evidence: ignored `.local-review/upload-before.json`.
-- Current uploader accepts only declared JPEG/PNG <=5 MiB, relies on `BLOB_READ_WRITE_TOKEN`, stores public blobs, and has no asset owner record or CSRF/body stream bound.
-- Chat file schema accepts arbitrary `z.url()` including oversized data URLs and file/ftp/external HTTP. Installed SDK usually forwards HTTP image URLs to OpenAI/gateway; do not misreport this as a proven application SSRF.
-- Model vision is only enforced by menu state, not paste/submit/backend. Messages/title generation start before file/model validation.
-- A→B→A upload and overlapping batches can reinsert stale files or exceed the 15-file count. Generation tokens plus synchronous admission are needed.
-- Private file route must not use Next Image optimizer (cookies/cache), and private URLs cannot be handed to a model that lacks browser cookies.
+- 真实本地测试夹具 POST `/api/files/upload` 返回 503，并指向个人设置中的存储配置，但实际不存在配置界面。证据：已忽略的 `.local-review/upload-before.json`。
+- 当前上传器只接受声明为 JPEG/PNG 且 <=5 MiB 的文件，依赖 `BLOB_READ_WRITE_TOKEN`，存储公开 Blob，且没有资产所有者记录或 CSRF/请求体流量上限。
+- 聊天文件 schema 接受任意 `z.url()`，包括过大的 data URL 和 file/ftp/外部 HTTP。已安装的 SDK 通常将 HTTP 图片 URL 转发给 OpenAI/网关；不要将其误报为已证实的应用 SSRF。
+- 模型视觉能力只由菜单状态约束，粘贴/提交/后端未强制检查。消息/标题生成先于文件/模型校验开始。
+- A->B->A 上传及重叠批次可能重新插入过期文件，或超过 15 个文件上限。需要代次令牌和同步准入控制。
+- 私有文件路由不得使用 Next Image 优化器（涉及 Cookie/缓存），也不能把私有 URL 交给没有浏览器 Cookie 的模型。
 
-## Chunk 1: independent platform administration
+## 阶段 1：独立平台管理
 
-### Task 1: migrate current MCP management out of personal settings
+### 任务 1：将当前 MCP 管理迁出个人设置
 
-Files: new `app/admin/layout.tsx`, `/admin/page.tsx`, `/admin/connections/page.tsx`, focused admin shell/components; modify `components/chat/agent-library.tsx`, `app-sidebar.tsx`, `sidebar-user-nav.tsx`, chat server layout; new admin/auth presentation tests. Preserve `lib/agent/mcp-settings` service and protected management API.
+文件：新增 `app/admin/layout.tsx`、`/admin/page.tsx`、`/admin/connections/page.tsx` 及职责集中的管理外壳/组件；修改 `components/chat/agent-library.tsx`、`app-sidebar.tsx`、`sidebar-user-nav.tsx`、聊天服务端布局；新增管理/认证展示测试。保留 `lib/agent/mcp-settings` 服务和受保护的管理 API。
 
-- [x] First write failing tests: personal settings never mount management/editor, even for admin; admin link only based on trusted server-derived permission; admin layout rejects non-admin before displaying private controls; admin page uses existing guarded MCP APIs.
-- [x] Add independent full-page `/admin` navigation, professional compact data-oriented UI consistent with existing tokens. Implement only real pages (connections first, storage follows); no empty model/billing/log placeholders.
-- [x] Reuse exact regular UUID admin allowlist. Centralize shared helper if useful without granting new users permission or client-controlled roles; keep legacy MCP environment compatibility. Every management API still independently guards reads/writes and Origin.
-- [x] Add a separate “平台管理” entry for admins. Admins opening personal settings still see only personal settings, never global editing.
-- [x] User tools/skills remain read-only; technical deployment state is not a personal preference. Rename links/prompts correctly and test no obsolete “settings can configure storage” promises remain.
-- [x] TDD green, targeted lint/typecheck; independent spec then quality review. Do not commit/push until root can validate actual routes/roles.
+- [x] 先编写失败测试：即使是管理员，个人设置也绝不挂载管理界面/编辑器；管理员链接只依据可信服务端计算的权限展示；管理布局在显示私有控件前拒绝非管理员；管理页面使用现有受保护 MCP API。
+- [x] 添加独立全页 `/admin` 导航，采用与现有设计令牌一致、专业紧凑且面向数据的 UI。只实现真实页面（先连接，后存储）；不放置空的模型/计费/日志占位页面。
+- [x] 原样复用普通用户精确 UUID 管理员白名单。如有需要，集中共享辅助函数，但不授予新用户权限，也不使用客户端控制的角色；保留旧 MCP 环境配置兼容性。每个管理 API 仍独立保护读写和检查 Origin。
+- [x] 为管理员添加独立“平台管理”入口。管理员打开个人设置时，仍只看到个人设置，绝不看到全局编辑功能。
+- [x] 用户工具/技能保持只读；技术部署状态不是个人偏好。正确重命名链接/提示，并测试不再存在过时的“设置可以配置存储”承诺。
+- [x] TDD 通过、定向 lint/类型检查；先独立规格审查，再质量审查。在主会话能够验证真实路由/角色之前，不提交/推送。
 
-### Task 1 completion evidence (2026-10-21)
+### 任务 1 完成证据（2026-10-21）
 
-- Implemented independent `app/admin` shell and server-side regular UUID gate behind Suspense; only the real connections page is navigable. Shared `lib/admin/access.ts` recommends `PLATFORM_ADMIN_USER_IDS`, with explicit-empty revocation and fallback to legacy `MCP_ADMIN_USER_IDS` only when unset. Existing MCP APIs retain per-request authorization and Origin checks.
-- Server-computed permission flows through chat layout → AppSidebar → SidebarUserNav. Personal appearance works independently of capability-summary availability; both administrator and ordinary tools/skills remain read-only. Admin MCP management reads its protected API directly, independently of model/skill summary success.
-- TDD: missing behaviors first failed, then 7 new access/real React HTML/structure regressions passed. Root independently reran original 67 + new 7 tests: 74/74; TypeScript and diff checks passed. Implementation writer also verified targeted Biome across 19 changed source/test files.
-- Root actual isolated HTTP evidence: anonymous/ordinary/admin role matrix for `/admin` and `/admin/connections`, independent shell (no chat shell), MCP GET admin 200/ordinary 403, and bad-Origin write 403. Root actual in-app browser confirmed independent management UI and existing CRUD controls. Spec and quality reviews approved Task 1.
-- Upload hints no longer promise a nonexistent personal storage setting; actual private storage/upload repair, production build/start and further attachment evidence remain Task 2/3 scope below. No paid model/vendor requests were made. Private fixture evidence remains ignored and excluded from commits.
+- 已实现独立 `app/admin` 外壳，以及位于 Suspense 后的服务端普通用户 UUID 权限门控；只有真实连接页面可导航。共享 `lib/admin/access.ts` 推荐使用 `PLATFORM_ADMIN_USER_IDS`，显式空值会撤销权限，只有未设置时才回退到旧 `MCP_ADMIN_USER_IDS`。现有 MCP API 保留逐请求授权和 Origin 检查。
+- 服务端计算的权限经聊天布局 -> AppSidebar -> SidebarUserNav 传递。个人外观设置独立于能力摘要可用性工作；管理员和普通用户的工具/技能都保持只读。管理员 MCP 管理直接读取其受保护 API，不依赖模型/技能摘要成功。
+- TDD：缺失行为先失败，随后新增的 7 项访问/真实 React HTML/结构回归通过。主会话独立重跑原有 67 + 新增 7 项测试：74/74；TypeScript 和差异检查通过。实现者还验证了 19 个变更源代码/测试文件的定向 Biome 检查。
+- 主会话真实隔离 HTTP 证据：`/admin` 和 `/admin/connections` 的匿名/普通用户/管理员角色矩阵、独立外壳（无聊天外壳）、MCP GET 管理员 200/普通用户 403，以及错误 Origin 写入 403。主会话在真实应用内浏览器中确认了独立管理 UI 和现有 CRUD 控件。规格与质量审查批准任务 1。
+- 上传提示不再承诺不存在的个人存储设置；真实私有存储/上传修复、生产构建/启动及后续附件证据仍属于下方任务 2/3 范围。未进行付费模型/供应商请求。私有测试夹具证据仍被忽略，并排除在提交之外。
 
-## Chunk 2: actual upload service and private attachment delivery
+## 阶段 2：真实上传服务与私有附件交付
 
-### Task 2: repair currently supported image path before expanding formats
+### 任务 2：先修复当前支持的图片链路，再扩展格式
 
-Task 2 repairs the existing JPEG/PNG path. The user has since confirmed readable PDF/Word/Excel materials and a model-directed MCP → result-table loop; those are separately planned follow-up tasks, not capabilities delivered by this image patch. Preserve original bytes and provenance; no silent image modifications.
+任务 2 修复现有 JPEG/PNG 链路。此后用户已确认需要可读取的 PDF/Word/Excel 材料，以及由模型引导的 MCP -> 结果表格闭环；这些是单独规划的后续任务，不是本次图片补丁交付的能力。保留原始字节和来源信息；不静默修改图片。
 
-- [x] Finalize storage/provider scope with root after capability investigation. A private local persistent-directory adapter can run without vendor credentials for development/long-lived self-hosted servers; cloud object storage can be a separate adapter, not a publicly exposed object by default. Production must not silently choose ephemeral disk. Document deployment constraints.
-- [x] Add a real storage administration page with capability/status and meaningful test/setup actions. Ordinary users are told to contact an administrator; admins get a working management link. Never store provider keys in browser persistence or expose saved keys.
-- [x] Authenticate uploads; enforce same-Origin, bounded multipart request body, nonempty file and trusted content sniffing, canonical MIME, random asset identifier, max size/count/quota, safe UTF-8 display name. Reject unsupported files clearly, no misleading arbitrary file support.
-- [x] Asset metadata records owner, MIME/size/hash, storage locator and association/lifecycle. Storage uses private reads; owner/authorized chat visibility are checked server-side on every GET. Never trust a client URL for model fetch; accept only registered asset refs and server-side resolve bounded bytes. Cache private reads no-store and avoid image optimization proxy.
-- [x] Validate model capabilities and every incoming/history attachment before saving message or issuing title/model requests. Unsupported vision gives an actionable error and preserves draft. Enforce the advertised count both server/client; bound context byte budget.
-- [x] Fix generation-aware cancellation, upload batching admission and submit guards. Removing a draft/abandoned upload cleans safe unreferenced assets; do not delete files still used by messages. Define public→private and deletion behavior explicitly.
-- [x] Tests first for malformed/oversize/unsupported, spoof MIME, paths, unauthorized/other user, stale generation, parallel admission, model rejection before paid calls, private preview and trusted bytes in actual mock model request. No actual vendor/model charges.
+- [x] 在能力调查后，与主会话确定存储/供应商范围。私有本地持久目录适配器可在开发/长驻自托管服务器上不依赖供应商凭据运行；云对象存储可作为独立适配器，不默认公开对象。生产环境不得静默选择临时磁盘。记录部署约束。
+- [x] 添加真实存储管理页面，展示能力/状态，并提供有实际意义的测试/配置操作。普通用户被提示联系管理员；管理员获得可用管理链接。绝不在浏览器持久化中存储供应商密钥，也不暴露已保存密钥。
+- [x] 上传需认证；强制同源、有界 multipart 请求体、非空文件和可信内容嗅探、规范 MIME、随机资产标识、大小/数量/配额上限，以及安全 UTF-8 展示名。明确拒绝不支持的文件，不误导为支持任意文件。
+- [x] 资产元数据记录所有者、MIME/大小/哈希、存储定位信息及关联/生命周期。存储使用私有读取；每次 GET 都在服务端检查所有者/已授权聊天可见性。绝不信任客户端 URL 来获取模型输入；只接受已登记资产引用，并在服务端解析有界字节。私有读取缓存设为 no-store，并避免图片优化代理。
+- [x] 在保存消息或发出标题/模型请求前，校验模型能力以及每个传入/历史附件。不支持视觉能力时给出可操作错误并保留草稿。服务端/客户端同时强制执行已声明数量限制；限制上下文字节预算。
+- [x] 修复感知代次的取消、上传批次准入和提交保护。移除草稿/放弃上传时清理安全且未引用的资产；不删除仍被消息使用的文件。明确定义公开->私有及删除行为。
+- [x] 先测试格式错误/超大/不支持、伪造 MIME、路径、未授权/其他用户、过期代次、并行准入、付费调用前的模型拒绝、私有预览，以及真实 mock 模型请求中的可信字节。不产生真实供应商/模型费用。
 
-### Task 2 completion evidence (2026-10-21)
+### 任务 2 完成证据（2026-10-21）
 
-- Implemented the private persistent local driver, enabled/revision singleton with CAS, asset metadata/reservations and committed-message associations in migration `0002_private_uploads`. Blank/whitespace storage environment values are treated as unset; production requires an explicit absolute persistent directory. No cloud adapter or public-object fallback is installed. Deployment and recovery details are in `docs/integrations/private-uploads.md` and `.env.example`.
-- Real `/admin/storage` actions test private write/read/delete, enable/disable new uploads and process bounded expired-draft cleanup. Every API independently checks role/authentication and write Origin. Used-file reads require an existing intended chat and actual committed-message association, including for their owner; other authenticated readers additionally require the chat to be currently public. Guest sessions can read authorized public-chat images but cannot upload/delete drafts.
-- Uploads preserve original bytes/SHA-256 and safe Unicode names. Bounded multipart parsing, magic/MIME agreement, full decoder validation, PNG chunk bounds and APNG `acTL` rejection, 5 MiB/file, 15 images/message, 20 MiB context and atomic quotas are implemented. Per-process admission rejects excess uploads/decodes as busy (429), not as corrupt-image errors. Pending finalization rechecks reservation/ownership under the lifecycle lock; chat-delete contention cannot return a successful untracked asset.
-- Chat JSON authentication precedes its 1 MiB stream bound and parsing. Current/history canonical asset refs are validated and resolved before message/chat persistence, title generation or model requests. Canonical URLs remain in DB/UI; models receive original inline bytes. An installed OpenAI 4.0.7 converter defect (bare base64 rather than complete data URLs) is covered by a narrow V4 middleware and actual provider-request JSON capture tests for PNG/JPEG. No node_modules patches or global fetch interception are used.
-- Client upload admission/cancellation is generation-aware (including A→B→A), with pending-send guards and draft preservation on validation errors. Safe edits reconstruct original stored image parts, validate without deleting history, and replace a snapshot-checked edited turn only after successful model completion. Original user row/asset associations survive. The user bubble uses static Markdown rendering so edited text updates immediately; conditional edit completion preserves a newly typed next draft. Editing only changes text; new file/paste additions are disabled with a clear original-image-retention hint.
-- TDD regressions were observed failing before fixes. Final focused offline verification: original 74 plus 24 new tests, **98/98 passed**; TypeScript, targeted Biome across **39 source/test/JSON files**, and `git diff --check` passed. The focused command excludes existing real browser-runtime and database regeneration integration suites; it includes the four pure browser-policy tests.
-- Root independently verified actual isolated PostgreSQL migration/idempotence/singleton behavior, **37 HTTP cases**, authenticated original-byte write/read/delete, ownership/public→private/guest rules, quota/Origin/malformed/spoof/oversize rejection, valid inline mock-model data URLs and canonical DB refs. Additional actual checks covered image edits preserving associations, forced model failure leaving the old DB history readable, oversized chat JSON 413 without model calls, APNG HTTP 400, and **8 × 3 upload/chat-delete contention attempts** with expected conflict/busy outcomes and no untracked disk UUIDs.
-- Root actual stable browser verified image chooser → private preview → send/mock reply → cleared draft and retained history image; edited user text updates without reload, and a five-second model delay does not erase a newly typed next draft. Independent spec and quality reviews approved the fixes after re-review. Evidence fixtures remain ignored and are excluded from the commit; no paid model/vendor calls were made.
-- Scope boundary: the pre-existing normal-stream completion versus another-tab edit race is not given a new global run/version fence here; edited-turn replacement itself is snapshot checked. Production build/start and narrow-screen final regression remain pending. PDF/Word/Excel extraction, autonomous result-table closure and the requested standard admin-template integration remain follow-up work; no production/cloud/paid-provider acceptance is claimed.
+- 已实现私有持久化本地驱动、带 CAS 的启用状态/修订号单例，以及迁移 `0002_private_uploads` 中的资产元数据/预留和已提交消息关联。空白/纯空格存储环境值按未设置处理；生产环境要求显式绝对持久目录。未安装云适配器或公开对象回退。部署和恢复细节见 `docs/integrations/private-uploads.md` 及 `.env.example`。
+- 真实 `/admin/storage` 操作可测试私有写入/读取/删除、启用/禁用新上传，以及执行有界过期草稿清理。每个 API 独立检查角色/认证和写入 Origin。已使用文件的读取需要预期聊天存在且有真实已提交消息关联，对所有者也一样；其他已认证读取者还要求聊天当前公开。访客会话可读取已授权公开聊天图片，但不能上传/删除草稿。
+- 上传保留原始字节/SHA-256 和安全 Unicode 名称。已实现有界 multipart 解析、文件魔数/MIME 一致性、完整解码器校验、PNG 数据块边界及 APNG `acTL` 拒绝、5 MiB/文件、15 张图片/消息、20 MiB 上下文和原子配额。进程内准入将过量上传/解码拒绝为繁忙（429），而不是图片损坏错误。等待最终确认时在生命周期锁内重新检查预留/所有权；聊天删除竞争不能返回成功但未追踪的资产。
+- 聊天 JSON 认证先于 1 MiB 流上限检查及解析。当前/历史规范资产引用在消息/聊天持久化、标题生成或模型请求前完成校验和解析。数据库/UI 保留规范 URL；模型接收原始内联字节。已安装 OpenAI 4.0.7 转换器缺陷（裸 base64，而非完整 data URL）由范围有限的 V4 中间件，以及 PNG/JPEG 的真实供应商请求 JSON 捕获测试覆盖。未修改 node_modules，也未全局拦截 fetch。
+- 客户端上传准入/取消感知代次（包括 A->B->A），具有待发送保护，并在校验错误时保留草稿。安全编辑重建原始已存储图片部分，校验而不删除历史，只有模型成功完成后才替换经过快照检查的已编辑轮次。原始用户行/资产关联保留。用户气泡使用静态 Markdown 渲染，使编辑文本立即更新；有条件的编辑完成处理保留新输入的下一份草稿。编辑只改变文本；禁用新增文件/粘贴附件，并明确提示保留原图。
+- TDD 回归在修复前已观察到失败。最终定向离线验证：原有 74 项加新增 24 项测试，**98/98 通过**；TypeScript、**39 个源代码/测试/JSON 文件**的定向 Biome 检查及 `git diff --check` 通过。定向命令排除现有真实浏览器运行时和数据库重新生成集成套件；包含四项纯浏览器策略测试。
+- 主会话独立验证了真实隔离 PostgreSQL 迁移/幂等性/单例行为、**37 个 HTTP 用例**、需认证的原始字节写入/读取/删除、所有权/公开->私有/访客规则、配额/Origin/格式错误/伪造/超大拒绝、有效内联 mock 模型 data URL 和规范数据库引用。额外真实检查覆盖图片编辑保留关联、强制模型失败后旧数据库历史仍可读、超大聊天 JSON 返回 413 且无模型调用、APNG HTTP 400，以及 **8 × 3 次上传/聊天删除竞争尝试**，得到预期冲突/繁忙结果，且无未追踪磁盘 UUID。
+- 主会话在真实稳定浏览器中验证了图片选择器 -> 私有预览 -> 发送/mock 回复 -> 草稿清空且历史图片保留；编辑后的用户文本无需重新加载即更新，五秒模型延迟不会清除新输入的下一份草稿。独立规格与质量审查在复审后批准修复。证据测试夹具仍被忽略，并排除在提交之外；未进行付费模型/供应商调用。
+- 范围边界：此处未对既有普通流完成与另一个标签页编辑之间的竞争新增全局运行/版本隔离机制；已编辑轮次替换本身具有快照检查。生产构建/启动和窄屏最终回归仍待完成。PDF/Word/Excel 提取、自主结果表格闭环，以及所要求的标准管理模板集成仍是后续工作；不宣称完成生产/云端/付费供应商验收。
 
-## Chunk 3: independent evidence and handoff
+## 阶段 3：独立证据与交接
 
-- [x] Root real isolated Postgres migrations and CRUD/auth tests, actual local byte write/read/delete, two-user read isolation, browser image upload/preview/send/edit, mock-model full turn with inline bytes and no arbitrary URL retrieval.
-- [x] Independent spec and security/quality review; fixes re-reviewed.
-- [x] Root fresh 98 focused tests, TypeScript, targeted lint and diff verification.
-- [ ] Production build/start in clean isolated source (skip real migration wrapper), desktop + narrow-screen final UI regression after the pending template integration.
-- [x] Documentation distinguishes implemented image support from pending document extraction/cloud storage, states deployment prerequisites and paid-provider acceptance limitations; no secrets/private fixture artifacts are included.
+- [x] 主会话真实隔离 Postgres 迁移和 CRUD/认证测试、真实本地字节写入/读取/删除、双用户读取隔离、浏览器图片上传/预览/发送/编辑，以及使用内联字节且不获取任意 URL 的 mock 模型完整轮次。
+- [x] 独立规格及安全/质量审查；修复经过复审。
+- [x] 主会话重新执行 98 项定向测试、TypeScript、定向 lint 和差异验证。
+- [ ] 在干净隔离源码中进行生产构建/启动（跳过真实迁移包装命令），在待完成的模板集成后进行桌面端 + 窄屏最终 UI 回归。
+- [x] 文档区分已实现图片支持与待完成文档提取/云存储，说明部署前提和付费供应商验收限制；不包含密钥/私有测试夹具产物。
 
-### Task 2 concrete scope (root decision)
+### 任务 2 具体范围（主会话决定）
 
-- Finish the existing JPEG/PNG path first. No document parsing is promised by this patch; unsupported formats receive a clear message. Preserve original bytes, SHA-256 and UTF-8 display names.
-- Implement a private local filesystem driver, suitable for this self-hosted Node deployment. `UPLOAD_STORAGE_DIR` is operator-controlled; development may default to an ignored `.data/private-uploads`. Production requires an explicit absolute persistent directory. No silent fallback to public Vercel Blob or ephemeral production disk. Cloud/S3 remains a separate future driver.
-- Add actual `/admin/storage` with enabled/disabled status, supported formats/5MiB file limit/15-image task limit, a real write-read-delete connection test and enable/disable control. Persist enabled state with revision/CAS in a singleton DB row; API independently admin + same-Origin guarded. Keep paths/technical errors out of ordinary capability summaries.
-- New asset metadata: random UUID, owner, intended chat UUID (draft chat may not exist), original filename, verified MIME, byte count, SHA-256, used/draft lifecycle and timestamps. Storage keys are generated UUIDs, never client paths. Private file permissions, no symlink traversal; quotas reserve atomically before disk writes (100MiB/user,1GiB deployment defaults, bounded configurable values). Roll back reservations if writes fail. Admin disabling new uploads does not revoke access to already-used attachments.
-- Bounded multipart reads before form parsing (5MiB+64KiB), one file and valid chat UUID, real PNG/JPEG validation, empty/spoofed/oversize rejection. Same-Origin + regular-user authorization. Return same-origin relative `/api/files/<uuid>` refs and consistent errors. Draft delete is owner-only, same-Origin and forbidden for used assets; expired unreferenced drafts may be purged with a bounded cleanup path.
-- File GET checks owner and intended chat ownership; used assets may be shown only when associated chat exists and requester owns it or chat is currently public. `private,no-store`, `nosniff`, safe inline Content-Disposition. Do not route through Next Image optimizer. Old public URLs are not silently downloaded/migrated/deleted.
-- Chat schema accepts only canonical asset refs (plus explicitly documented rejection of old external URLs). Resolve ALL history/current refs server-side for the current user+chat, verify MIME/size/hash and aggregate context byte limit, and inline bytes to the model. Validate vision and attachments BEFORE new chat/message persistence/title/model invocation. Bind lifecycle before persistence so deletion cannot race used bytes; failures may retain a safe orphan but must not delete a used message attachment. Chat deletion cleans own files best-effort with safe retryable orphan state.
-- Client: synchronous admission/count lock; generation token changes on every chat switch and unmount (A→B→A safe); AbortController; stale success/failure/finally cannot alter a later draft. No send while uploads pending, including keyboard/programmatic submit. Remove unreferenced uploads; never lose selected attachments on server/model validation errors. Distinguish unsupported model vs unavailable storage vs upload failure.
-- TDD service/API/client helper tests. Root separately verifies real PostgreSQL migration, actual bytes HTTP upload/read/delete, role/Origin/malformed/spoof/oversize/cross-chat isolation, mock-model inline bytes and no call/persistence on rejected attachments, plus browser flow. No real model or vendor requests.
+- 先完成现有 JPEG/PNG 链路。本补丁不承诺文档解析；不支持的格式会收到明确提示。保留原始字节、SHA-256 和 UTF-8 展示名。
+- 实现适合此自托管 Node 部署的私有本地文件系统驱动。`UPLOAD_STORAGE_DIR` 由运维人员控制；开发环境可默认使用已忽略的 `.data/private-uploads`。生产环境要求显式绝对持久目录。不静默回退到公开 Vercel Blob 或生产临时磁盘。云端/S3 仍是未来的独立驱动。
+- 添加真实 `/admin/storage`，展示启用/禁用状态、支持格式/5MiB 文件限制/15 张图片任务限制，提供真实写入-读取-删除连接测试和启用/禁用控制。使用数据库单例行中的修订号/CAS 持久化启用状态；API 独立进行管理员 + 同源保护。普通能力摘要不显示路径/技术错误。
+- 新资产元数据：随机 UUID、所有者、预期聊天 UUID（草稿聊天可能不存在）、原始文件名、已验证 MIME、字节数、SHA-256、已使用/草稿生命周期和时间戳。存储键为生成的 UUID，绝不使用客户端路径。使用私有文件权限，禁止符号链接遍历；磁盘写入前原子预留配额（默认 100MiB/用户、1GiB/部署，配置值有界）。写入失败则回滚预留。管理员禁用新上传不会撤销已使用附件的访问权限。
+- 表单解析前执行有界 multipart 读取（5MiB+64KiB），要求一个文件和有效聊天 UUID，进行真实 PNG/JPEG 校验，拒绝空文件/伪造/超大文件。同源 + 普通用户授权。返回同源相对 `/api/files/<uuid>` 引用及一致错误。草稿删除仅限所有者、要求同源，已使用资产禁止删除；可通过有界清理路径清除过期未引用草稿。
+- 文件 GET 检查所有者和预期聊天所有权；已使用资产仅在关联聊天存在，且请求者拥有聊天或聊天当前公开时才可显示。使用 `private,no-store`、`nosniff`、安全内联 Content-Disposition。不经过 Next Image 优化器。旧公开 URL 不会被静默下载/迁移/删除。
+- 聊天 schema 只接受规范资产引用（并明确记录拒绝旧外部 URL）。在服务端为当前用户+聊天解析所有历史/当前引用，验证 MIME/大小/哈希和总上下文字节限制，并将字节内联提供给模型。在新聊天/消息持久化/标题/模型调用之前，先校验视觉能力和附件。持久化前绑定生命周期，防止删除与已使用字节竞争；失败可保留安全孤立文件，但不得删除已使用的消息附件。聊天删除尽力清理自身文件，并保留安全可重试的孤立状态。
+- 客户端：同步准入/数量锁；每次聊天切换和卸载时改变代次令牌（保证 A->B->A 安全）；使用 AbortController；过期成功/失败/finally 不得改变后续草稿。上传待完成时不允许发送，包括键盘/程序化提交。移除未引用上传；服务端/模型校验错误时绝不丢失已选附件。区分模型不支持、存储不可用和上传失败。
+- 对服务/API/客户端辅助函数执行 TDD 测试。主会话另行验证真实 PostgreSQL 迁移、真实字节 HTTP 上传/读取/删除、角色/Origin/格式错误/伪造/超大/跨聊天隔离、mock 模型内联字节，以及拒绝附件时无调用/无持久化，并验证浏览器流程。不进行真实模型或供应商请求。

@@ -1,17 +1,17 @@
-# Task and search experience
+# 任务与搜索体验
 
-Goal: Verify the actual model/skill/search chain and make starting a goal-based investigation comfortable in the existing Vercel chat.
+目标：验证真实的模型/技能/搜索链路，让用户能够在现有 Vercel 聊天界面中方便地发起基于目标的调查。
 
-Scope: Add the existing keyless Exa search/fetch MCP alongside optional Tavily. Adapt its documented result headers to bounded source metadata. Preserve raw tool output, approval rules and failures. Give the existing skill display metadata without changing its investigative method. Add a small task dialog that starts a new normal conversation from a goal, optional materials and method; no separate scheduler or fake background execution.
+范围：在可选 Tavily 之外，加入现有免密钥 Exa 搜索/抓取 MCP。将其文档规定的结果头适配为有界的来源元数据。保留原始工具输出、审批规则和失败信息。为现有技能添加展示元数据，不改变其调查方法。添加一个小型任务对话框，根据目标、可选材料和方法启动新的普通对话；不引入独立调度器或虚假的后台执行。
 
-UI: Minimal desktop-chat style. Sidebar and composer task entry, human-readable method descriptions and tool action labels, technical output collapsed behind details. Existing conversation/history/browser workspace remain the execution surface.
+UI：采用简洁的桌面聊天风格。在侧栏和输入区提供任务入口，使用易读的方法说明和工具操作标签，将技术输出折叠在详情中。现有对话/历史记录/浏览器工作区继续作为执行界面。
 
-- [x] Write failing task, skill-metadata and provider-source tests.
-- [x] Integrate Exa MCP and source adaptation; verify real search and fetch.
-- [x] Add task entry and isolate new task submission from the previous chat.
-- [x] Make skill and tool progress readable from actual tool states.
-- [x] Verify UI regressions, real model + skill + search + source persistence, build and targeted review.
+- [x] 编写任务、技能元数据和供应商来源的失败测试。
+- [x] 集成 Exa MCP 和来源适配；验证真实搜索与抓取。
+- [x] 添加任务入口，并将新任务提交与上一段聊天隔离。
+- [x] 根据真实工具状态，以易读方式展示技能和工具进度。
+- [x] 验证 UI 回归、真实模型 + 技能 + 搜索 + 来源持久化、构建，并进行定向审查。
 
-Evidence: 25 relevant unit/SDK checks, TypeScript, 14-file Biome and production build passed. Actual gpt-5.6-luna task used loadSkill, Exa search and Exa fetch successfully, saved and reloaded all message parts, displayed returned sources and produced no page errors. Task UI fixtures cover separate chat URLs, reload without rerun, interrupting an old stream and mobile entry. Tool/approval/source, missing-key desktop, workspace and local custom-model integration regressions passed. Scoped review found and fixed task URL persistence and header-shaped page-body source contamination. Desktop/mobile dialog and actual task screenshot inspected. Private configuration and review artifacts remain ignored; production trace excludes them.
+证据：25 项相关单元/SDK 检查、TypeScript、14 个文件的 Biome 检查和生产构建均通过。真实 gpt-5.6-luna 任务成功使用了 loadSkill、Exa 搜索和 Exa 抓取，保存并重新加载了所有消息部分，显示了返回的来源，且没有页面错误。任务 UI 测试夹具覆盖独立聊天 URL、重新加载不重复执行、中断旧流和移动端入口。工具/审批/来源、缺少密钥的桌面端、工作区及本地自定义模型集成回归均通过。定向审查发现并修复了任务 URL 持久化问题，以及形似结果头的页面正文造成来源污染的问题。已检查桌面端/移动端对话框和真实任务截图。私有配置和审查产物仍处于忽略范围；生产追踪不包含它们。
 
-Limits: Exa keyless access is rate-limited. A task is a foreground conversation, not a durable background job. Investigation accuracy is not established by connection tests. No external complaints, publication or third-party messages.
+限制：Exa 免密钥访问存在速率限制。任务是前台对话，不是持久化后台作业。连接测试不能证明调查准确性。未进行对外投诉、发布或向第三方发送消息。

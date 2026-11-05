@@ -1,12 +1,12 @@
-# Chat detail polish — approved Lessie continuation
+# 聊天细节优化 - 已获认可的 Lessie 风格延续
 
-**Goal:** Unify sent attachments, tool activities and artifact entries into a light, coherent chat surface; preserve the approved two-pane composition and generic Agent/artifact capabilities.
+**目标：** 将已发送附件、工具活动和产物入口统一为轻量、一致的聊天界面；保留已获认可的双栏布局以及通用 Agent/产物能力。
 
-**Architecture:** Presentation-only changes to chat components. One shared small file-symbol component may distinguish document/table/code/image formats. No provider/runtime orchestration changes or fabricated summaries/status. Keep exact evidence and disclosure identities.
+**架构：** 仅修改聊天组件的展示层。可以用一个共享的小型文件符号组件区分文档/表格/代码/图像格式。不修改供应商/运行时编排，不虚构摘要或状态。保留精确证据和展开控件的标识。
 
-- [x] Sent documents: adaptive one-line filename/format file chips, not a rigid160px tile grid. Keep authenticated image previews and upload queue statuses/remove/retry unchanged.
-- [x] Assistant content: quiet ChatNest sender label for a readable transition from user request to answer/process, without repeated branding per tool.
-- [x] Tools: one compact summary control with a light timeline when expanded; aligned icon/title/context/details, consistent typography and spacing. Completed steps stay quiet; approval/error/incomplete stay visible. Raw details remain accessible. Preserve mount/focus/reconciliation and exact arguments.
-- [x] Artifacts: consistent lightweight file entry and open affordance for all four kinds; no large icon slabs or duplicate type/status badges. Prefer compact metadata/header over embedded editor/table in the chat; normal right-side renderers remain authoritative. Preserve genuine loading/generating/open state and exact chat/document identity.
-- [x] Update targeted behavior/presentation tests to the new approved expectations, without deleting behavioral coverage. Root browser desktop/mobile check attachment wrapping, process/detail open-close, approvals/errors and generic artifact switching/reopening.
-- [x] Run safe explicit regression suite, types/scoped lint and isolated production build, main verification. Screenshots from actual UI/mock fixtures, no commercial calls or customer data.
+- [x] 已发送文档：采用可自适应的单行文件名/格式标签，不使用固定160px卡片网格。保留需鉴权的图像预览，以及上传队列的状态/移除/重试行为。
+- [x] 助手内容：用低调的 ChatNest 发送者标签，让用户请求与回答/处理过程之间的过渡清晰可读，不在每个工具旁重复品牌标识。
+- [x] 工具：使用一个紧凑的汇总控件，展开后显示轻量时间线；图标/标题/上下文/详情对齐，统一字体层级与间距。已完成步骤保持低调；审批/错误/未完成状态保持可见。原始详情仍可访问。保留挂载/焦点/协调行为和精确参数。
+- [x] 产物：四种类型都使用一致的轻量文件入口和打开操作提示；不使用大块图标区域或重复的类型/状态徽标。聊天内优先显示紧凑的元数据/标题栏，不嵌入编辑器/表格；正常的右侧渲染器仍是权威展示入口。保留真实的加载/生成/打开状态，以及精确的聊天/文档标识。
+- [x] 按新的已获认可预期更新定向行为/展示测试，不删除行为覆盖。由主代理在桌面/移动端浏览器中检查附件换行、过程/详情开关、审批/错误和通用产物切换/重新打开。
+- [x] 运行明确列出的安全回归套件、类型检查/限定范围的 lint 和隔离生产构建，并在主检出目录验证。截图来自真实 UI/mock 测试夹具，不进行商业调用，不使用客户数据。

@@ -1,35 +1,35 @@
-# Chat detail polish verification
+# 聊天细节优化验证
 
-## Scope
+## 范围
 
-Presentation-only follow-up to the accepted Lessie-style two-pane layout. Sent file chips, assistant attribution, tool timeline and generic artifact entries share a quieter hierarchy. Agent orchestration, provider parameters, approvals and canonical tool payloads are unchanged. No real provider calls or customer material were used.
+这是对已获认可的 Lessie 风格双栏布局的后续展示层调整。已发送文件标签、助手署名、工具时间线和通用产物入口采用更低调的层级。Agent 编排、供应商参数、审批和工具权威载荷均未改变。未进行真实供应商调用，未使用客户材料。
 
-## Visual comparison
+## 视觉对比
 
-Compared the previously captured Lessie workbench reference with the current live page, rather than relying on test counts. Main changes: 32px adaptive file chips instead of fixed tiles; quiet sender attribution; aligned tool titles/context and detail controls; one compact artifact entry instead of a duplicate embedded editor/table. Right-side text/code/image/table renderers remain the authoritative generic viewers.
+将此前保存的 Lessie 工作台参考图与当前运行页面进行比较，而非仅依赖测试数量。主要变化：使用32px自适应文件标签替代固定卡片；弱化发送者署名；对齐工具标题/上下文和详情控件；用一个紧凑产物入口替代重复嵌入的编辑器/表格。右侧文本/代码/图像/表格渲染器仍是权威的通用查看器。
 
-Local evidence, under `.local-review/` (ignored):
-- `lessie-workbench-reference-2026-10-22.png`: reference capture from prior inspection.
-- `detail-expanded-desktop.png`: current 1440×900 responsive check showing attachments, six-step timeline, artifact entry and right table.
-- `detail-final-native.png`: current normal 1280×720 viewport.
-- `detail-mobile.png`: current 390×844 check, wrapping attachments and normal artifact entry.
+本地证据位于 `.local-review/` 下（已忽略）：
+- `lessie-workbench-reference-2026-10-22.png`：此前检查时截取的参考图。
+- `detail-expanded-desktop.png`：当前1440×900响应式检查，展示附件、六步时间线、产物入口和右侧表格。
+- `detail-final-native.png`：当前正常1280×720视口。
+- `detail-mobile.png`：当前390×844检查，展示换行附件和正常产物入口。
 
-## Browser checks performed this turn
+## 本轮执行的浏览器检查
 
-- Reopened the persisted synthetic PDF/Word/Excel → skill/reference → MCP search → result-table conversation. This turn tests presentation and persistence of the existing full-chain fixture, not a new real-model reasoning run.
-- Expanded all six steps; checked exact PDF page excerpts, skill description and titled MCP records with source domains.
-- Opened raw MCP details and closed the sheet; focus returned to its trigger, expanded state remained intact.
-- Closed/reopened the table from its chat file entry; 12 rows and saved version 3 remained intact.
-- At 390px, attachments wrap and the document has no horizontal overflow. Opened/closed the table in the mobile workspace.
-- Opened the separate generic-artifact fixture, switched from Python code to rich text using the normal chat entries. Code was displayed, not executed.
-- Checked the stored failed-tool case: failure remains immediately expanded with an understandable message and accessible details.
-- Opened the isolated production build, opened its table and tool group; no browser console errors were recorded.
-- Temporary viewport overrides were reset. Production test server was stopped. Existing dev fixture remains available; no production credentials, paid calls, migrations or remote pushes.
+- 重新打开已持久化的合成 PDF/Word/Excel -> 技能/参考资料 -> MCP 搜索 -> 结果表会话。本轮测试现有全链路测试夹具的展示与持久化，不是新一轮真实模型推理运行。
+- 展开全部六个步骤；检查精确的 PDF 页面摘录、技能说明，以及带来源域名和标题的 MCP 记录。
+- 打开原始 MCP 详情并关闭 Sheet；焦点返回触发控件，展开状态保持不变。
+- 通过聊天文件入口关闭/重新打开表格；12行数据和已保存的版本3保持不变。
+- 在390px下，附件正常换行，文档无横向溢出。在移动端工作区中打开/关闭表格。
+- 打开独立的通用产物测试夹具，通过正常聊天入口从 Python 代码切换到富文本。代码仅展示，未执行。
+- 检查已保存的工具失败案例：失败仍会立即展开，具有可理解的信息和可访问的详情。
+- 打开隔离生产构建中的表格和工具组；未记录到浏览器控制台错误。
+- 已重置临时视口覆盖。生产测试服务已停止。现有开发测试夹具仍可使用；未使用生产凭据，未进行付费调用、迁移或远程推送。
 
-## Automated verification
+## 自动化验证
 
-Implementation safe serial suite: 280/280 passed; TypeScript and scoped Biome passed. Main checkout independently reran the explicit offline suite: 280/280 passed (0 failures, 0 skips), TypeScript passed, and scoped Biome passed. The suite intentionally excludes broad unit globs that touch live infrastructure.
+实现阶段的安全串行套件：280/280通过；TypeScript 和限定范围的 Biome 通过。主检出目录独立重跑明确列出的离线套件：280/280通过（0失败、0跳过），TypeScript 通过，限定范围的 Biome 通过。该套件有意排除会访问在线基础设施的全量单元测试 glob。
 
-Direct isolated `next build --webpack` passed (not `pnpm build`, which runs migrations). Build copied the frozen runtime sources; subsequent cleanup removed only the unused preview geometry helper and its obsolete test. Log: `.local-review/detail-build.log`.
+直接执行的隔离 `next build --webpack` 通过（不是会执行迁移的 `pnpm build`）。构建使用冻结的运行时源码副本；随后的清理仅移除了未使用的预览几何辅助函数及其过时测试。日志：`.local-review/detail-build.log`。
 
-During development, an old source assertion expecting the removed inline editor failed. It was replaced with an assertion that chat does not mount a duplicate editor; right-workspace editor identity/lifecycle checks were retained. The obsolete pure geometry helper/test was then removed; final total is 280, not 281.
+开发过程中，一条期待已移除内联编辑器的旧源码断言失败。它被替换为断言聊天不会挂载重复编辑器；右侧工作区编辑器标识/生命周期检查仍然保留。随后移除了过时的纯几何辅助函数/测试；最终总数为280，而非281。

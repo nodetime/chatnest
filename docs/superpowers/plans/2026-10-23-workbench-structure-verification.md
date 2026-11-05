@@ -1,18 +1,18 @@
-# Structural correction acceptance
+# 结构修正验收
 
-2026-10-23 — implementation `a87fc45`, baseline `76a1bcf`.
+2026-10-23 - 实现 `a87fc45`，基线 `76a1bcf`。
 
-The user rejected the preceding visual delivery. This pass changes information hierarchy, not just color:68% results pane,160×40 sent-document attachments, single-line artifact header, frozen/emphasized first record column, visible grid canvas/borders, and content-first row details with technical provenance collapsed.
+用户拒绝了此前的视觉交付。本轮修改信息层级，不只是颜色：68%结果面板、160×40已发送文档附件、单行产物标题栏、冻结/强调首个记录列、可见网格画布/边框，以及内容优先且技术溯源默认折叠的行详情。
 
-## Verification
+## 验证
 
-- Root explicit safe suite:278/278; TypeScript and scoped lint passed. Primary main repeated278/278 and TypeScript after fast-forward.
-- Isolated direct Next production build passed without the migration-running build script.280 runtime files match preview checkout/main/build snapshot.
-- Independent quality review approved; checked exact field values/safe links, compact-mode boundaries, inline geometry and pending/error branches.
-- Same1440×900 viewport, same conversation and filtered records were captured before/after. Before screenshots: `.local-review/structure-before-1440.png` and `structure-before-detail-1440.png`; after screenshots use `structure-after-1440.png` and `structure-after-detail-1440.png`.
-- Real browser: record title/labelled values/source link appear before any raw metadata. Technical details start closed and expose original JSON/source IDs when expanded. Notes draft still blocks switching; an actual save created version3, and production preview reopened its exact note. Immutable rows/source remained identical to version1.
-- Real browser: mobile390px has no body overflow; three compact documents wrap into two rows; details close normally back to the table and chat. Generic text/code switching and dark code/table presentation checked. No captured console error entries at final preview.
-- The original upload/read3→skill/reference→approvedHTTPMCP→native table fixture conversation was reused unchanged for visual comparison; its stored read/source evidence was rechecked. No new paid/model-provider validation claim is made.
-- Found persistent stale Turbopack CSS: both browser CSSOM and direct local CSS response still contained old header/border rules after source edits and normal restart. Moved only owned `.next/dev` into `.local-review/structure-stale-dev-cache`, restarted fixture service, and verified computed gray canvas/white header/nontransparent cell borders. No user action required and no CSS!important workaround.
+- 主代理明确列出的安全套件：278/278；TypeScript 和限定范围的 lint 通过。快进后主检出目录 main 重跑278/278及 TypeScript。
+- 隔离直接 Next 生产构建通过，未使用会执行迁移的构建脚本。280个运行时文件在预览检出目录/main/构建快照中一致。
+- 独立质量审查通过；检查精确字段值/安全链接、紧凑模式边界、内联几何布局和待处理/错误分支。
+- 在相同1440×900视口、同一会话和筛选记录下截取前后对比图。修改前截图：`.local-review/structure-before-1440.png` 和 `structure-before-detail-1440.png`；修改后截图使用 `structure-after-1440.png` 和 `structure-after-detail-1440.png`。
+- 真实浏览器：记录标题/带标签的值/来源链接先于原始元数据展示。技术详情默认关闭，展开后展示原始 JSON/来源 ID。备注草稿仍阻止切换；一次实际保存创建版本3，生产预览重新打开了精确备注。不可变行/来源仍与版本1相同。
+- 真实浏览器：移动端390px下无主体溢出；三个紧凑文档换行为两行；详情正常关闭并返回表格和聊天。检查了通用文本/代码切换及深色代码/表格展示。最终预览未捕获到控制台错误条目。
+- 复用原始上传/读取3次 -> 技能/参考资料 -> 已批准HTTPMCP -> 原生表格测试夹具会话，保持不变以进行视觉比较；重新检查了其存储的读取/来源证据。不声称进行了新的付费/模型供应商验证。
+- 发现持续陈旧的 Turbopack CSS：源码修改并正常重启后，浏览器 CSSOM 和直接本地 CSS 响应仍包含旧标题栏/边框规则。仅将自己负责的 `.next/dev` 移至 `.local-review/structure-stale-dev-cache`，重启测试夹具服务，并验证计算样式中的灰色画布/白色标题栏/非透明单元格边框。无需用户操作，也未采用 CSS!important 绕过办法。
 
-Temporary production preview stopped after acceptance. Development preview remains. No push or commercial data/model calls.
+验收后临时生产预览已停止。开发预览保留。未推送，未进行商业数据/模型调用。

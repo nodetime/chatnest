@@ -1,58 +1,58 @@
 # P0 目录收敛实施计划
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **供自主执行任务的代理使用：** 必需子技能：使用 superpowers:subagent-driven-development（推荐）或 superpowers:executing-plans，逐个任务实施本计划。步骤采用复选框（`- [ ]`）语法跟踪。
 
-**Goal:** 把一级目录收敛为 `app server public docs deploy tests scripts`,纯搬运零行为变更。
+**目标：** 把一级目录收敛为 `app server public docs deploy tests scripts`,纯搬运零行为变更。
 
-**Architecture:** 五个批次依次搬运(components/hooks/_lib -> app 下;db/ai/agent/skills/config、uploads/admin/artifacts、shared -> server 下;tests 就近;deploy 收尾),每批"脚本搬运 + 全仓 import 重写 + tsc/单测绿 + 提交",批内原子、批间可回滚。
+**架构：** 五个批次依次搬运(components/hooks/_lib -> app 下;db/ai/agent/skills/config、uploads/admin/artifacts、shared -> server 下;tests 就近;deploy 收尾),每批"脚本搬运 + 全仓 import 重写 + tsc/单测绿 + 提交",批内原子、批间可回滚。
 
-**Tech Stack:** Node ESM 迁移脚本(零依赖)+ git mv + tsc --noEmit + node:test(经 tsx)。
+**技术栈：** Node ESM 迁移脚本(零依赖)+ git mv + tsc --noEmit + node:test(经 tsx)。
 
-**Spec:** docs/01_架构决策/2026-10-24-governance-and-convergence-design.md(第三节 P0 v2 映射)
+**规格：** docs/01_架构决策/2026-10-24-governance-and-convergence-design.md(第三节 P0 v2 映射)
 
-## Global Constraints(每个任务隐含遵守)
+## 全局约束(每个任务隐含遵守)
 
 - 禁止 `pnpm build`(会执行数据库迁移);验证一律 `pnpm exec tsc --noEmit` + 离线单测。
 - 离线单测命令固定:`pnpm exec tsx --test --test-concurrency=1 --conditions=react-server $(grep -v '^#' scripts/ci/offline-tests.txt | tr '\n' ' ')`。
 - 不做付费模型/供应商调用;不动任何业务逻辑;P0 只搬文件与改路径。
 - `app/`、`public/`、根级 `next.config.ts`/`proxy.ts`/`instrumentation*.ts`/`vercel.json`/`components.json`/`tsconfig.json`/`playwright.config.ts`/`scripts/` 位置不动(components.json 内容要改)。
 - Git:Conventional Commits 中文信息,作者 codeYang,无任何 AI 署名;每批一个 commit。
-- 改完结构必须同步 `docs/CODEBASE_MAP.md`(Task 7)。
+- 改完结构必须同步 `docs/CODEBASE_MAP.md`(任务 7)。
 
 ---
 
-### Task 1: 分支与基线
+### 任务 1: 分支与基线
 
-**Files:** 无新增;产出 `.local-review/p0-baseline.md`(gitignored)。
+**文件：** 无新增;产出 `.local-review/p0-baseline.md`(gitignored)。
 
-**Interfaces:** Produces: 分支 `feat/p0-directory-convergence`;基线记录(后续任务对比用)。
+**接口：** 产出： 分支 `feat/p0-directory-convergence`;基线记录(后续任务对比用)。
 
-- [ ] **Step 1: 确认工作区干净、停掉 dev 服务**
+- [ ] **步骤 1: 确认工作区干净、停掉 dev 服务**
 
 ```bash
 git status --porcelain   # 必须为空(除 .local-review 等忽略项)
 ```
 若有后台 dev server 在跑(127.0.0.1:3003),先停掉再继续。
 
-- [ ] **Step 2: 建分支**
+- [ ] **步骤 2: 建分支**
 
 ```bash
 git checkout -b feat/p0-directory-convergence
 ```
 
-- [ ] **Step 3: 类型基线**
+- [ ] **步骤 3: 类型基线**
 
 ```bash
 pnpm exec tsc --noEmit && echo TYPE_BASELINE_PASS
 ```
-Expected: 无输出错误,打印 PASS。
+预期： 无输出错误,打印 PASS。
 
-- [ ] **Step 4: 离线单测基线**
+- [ ] **步骤 4: 离线单测基线**
 
-Run: 全局约束里的离线单测命令。
-Expected: 31 个套件全过(约 288 项)。把通过数记入 `.local-review/p0-baseline.md`。
+运行：全局约束里的离线单测命令。
+预期： 31 个套件全过(约 288 项)。把通过数记入 `.local-review/p0-baseline.md`。
 
-- [ ] **Step 5: e2e 基线(允许已有失败,只记录)**
+- [ ] **步骤 5: e2e 基线(允许已有失败,只记录)**
 
 ```bash
 PLAYWRIGHT=True pnpm exec playwright test --reporter=line 2>&1 | tail -5
@@ -61,14 +61,14 @@ PLAYWRIGHT=True pnpm exec playwright test --reporter=line 2>&1 | tail -5
 
 ---
 
-### Task 2: 迁移脚本
+### 任务 2: 迁移脚本
 
-**Files:**
-- Create: `scripts/migrate-paths.mjs`
+**文件：**
+- 新建： `scripts/migrate-paths.mjs`
 
-**Interfaces:** Produces: `node scripts/migrate-paths.mjs --batch <ui|core|domains|shared|deploy>`(幂等,已搬过的自动跳过)与 `--plan`(只打印不动文件)。
+**接口：** 产出： `node scripts/migrate-paths.mjs --batch <ui|core|domains|shared|deploy>`(幂等,已搬过的自动跳过)与 `--plan`(只打印不动文件)。
 
-- [ ] **Step 1: 写入脚本(完整内容如下,逐字使用)**
+- [ ] **步骤 1: 写入脚本(完整内容如下,逐字使用)**
 
 ```js
 #!/usr/bin/env node
@@ -291,14 +291,14 @@ for (const dir of ["app", "server", "tests", "scripts"]) {
 console.log(leftover ? `[WARN] 残留旧别名引用:\n${leftover}` : "[OK] 无残留旧别名引用");
 ```
 
-- [ ] **Step 2: 校验脚本语法与计划输出**
+- [ ] **步骤 2: 校验脚本语法与计划输出**
 
 ```bash
 node --check scripts/migrate-paths.mjs && node scripts/migrate-paths.mjs --plan | head -20
 ```
-Expected: 语法通过;计划输出含 `components -> app/_components` 等映射。
+预期： 语法通过;计划输出含 `components -> app/_components` 等映射。
 
-- [ ] **Step 3: 提交**
+- [ ] **步骤 3: 提交**
 
 ```bash
 git add scripts/migrate-paths.mjs
@@ -307,22 +307,22 @@ git commit -m "chore: 添加P0目录收敛迁移脚本"
 
 ---
 
-### Task 3: Batch ui(components/hooks/lib 前端部分 -> app/)
+### 任务 3: 批次 ui(components/hooks/lib 前端部分 -> app/)
 
-**Files:**
-- Modify: `components.json`(aliases)、`biome.jsonc`(files.includes 排除路径)
-- Move: components/ hooks/ lib/{editor,utils.ts,types.ts,constants.ts}(脚本执行)
+**文件：**
+- 修改： `components.json`(aliases)、`biome.jsonc`(files.includes 排除路径)
+- 移动： components/ hooks/ lib/{editor,utils.ts,types.ts,constants.ts}(脚本执行)
 
-**Interfaces:** Produces: `@/app/_components`、`@/app/_hooks`、`@/app/_lib` 别名生效;后续任务可引用。
+**接口：** 产出： `@/app/_components`、`@/app/_hooks`、`@/app/_lib` 别名生效;后续任务可引用。
 
-- [ ] **Step 1: 执行搬运**
+- [ ] **步骤 1: 执行搬运**
 
 ```bash
 node scripts/migrate-paths.mjs --batch ui
 ```
-Expected: git mv 成功,末尾 `[OK] 无残留旧别名引用`,rewrote 数 > 0。
+预期： git mv 成功,末尾 `[OK] 无残留旧别名引用`,rewrote 数 > 0。
 
-- [ ] **Step 2: 改 components.json aliases**
+- [ ] **步骤 2: 改 components.json aliases**
 
 ```json
 "aliases": {
@@ -335,7 +335,7 @@ Expected: git mv 成功,末尾 `[OK] 无残留旧别名引用`,rewrote 数 > 0�
 ```
 (tailwind.css 的 `app/globals.css` 不动。)
 
-- [ ] **Step 3: 改 biome.jsonc files.includes**
+- [ ] **步骤 3: 改 biome.jsonc files.includes**
 
 ```jsonc
 "includes": [
@@ -348,15 +348,15 @@ Expected: git mv 成功,末尾 `[OK] 无残留旧别名引用`,rewrote 数 > 0�
 ]
 ```
 
-- [ ] **Step 4: 类型 + 离线单测验收**
+- [ ] **步骤 4: 类型 + 离线单测验收**
 
 ```bash
 pnpm exec tsc --noEmit && echo TSC_PASS
 pnpm exec tsx --test --test-concurrency=1 --conditions=react-server $(grep -v '^#' scripts/ci/offline-tests.txt | tr '\n' ' ') 2>&1 | tail -3
 ```
-Expected: TSC_PASS;31 套件全过(与基线一致)。
+预期： TSC_PASS;31 套件全过(与基线一致)。
 
-- [ ] **Step 5: 提交**
+- [ ] **步骤 5: 提交**
 
 ```bash
 git add -A && git commit -m "refactor: 收敛UI目录到app/_components与_app_hooks_lib"
@@ -364,45 +364,45 @@ git add -A && git commit -m "refactor: 收敛UI目录到app/_components与_app_h
 
 ---
 
-### Task 4: Batch core(lib/{db,ai,agent} + skills + config -> server/)
+### 任务 4: 批次 core(lib/{db,ai,agent} + skills + config -> server/)
 
-**Files:**
-- Modify: `drizzle.config.ts:13-14`、`package.json:7,13`、`next.config.ts:55-58`、`server/agent/config.ts`(原 lib/agent/config.ts:94)、`server/agent/skills.ts`(原 lib/agent/skills.ts:29)
+**文件：**
+- 修改： `drizzle.config.ts:13-14`、`package.json:7,13`、`next.config.ts:55-58`、`server/agent/config.ts`(原 lib/agent/config.ts:94)、`server/agent/skills.ts`(原 lib/agent/skills.ts:29)
 
-- [ ] **Step 1: 执行搬运**
+- [ ] **步骤 1: 执行搬运**
 
 ```bash
 node scripts/migrate-paths.mjs --batch core
 ```
 
-- [ ] **Step 2: drizzle.config.ts 两处路径**
+- [ ] **步骤 2: drizzle.config.ts 两处路径**
 
 `out: "./lib/db/migrations"` -> `out: "./server/db/migrations"`;`schema: "./lib/db/schema.ts"` -> `schema: "./server/db/schema.ts"`。
 
-- [ ] **Step 3: package.json 两个脚本**
+- [ ] **步骤 3: package.json 两个脚本**
 
 `"build": "tsx lib/db/migrate && next build"` -> `"build": "tsx server/db/migrate && next build"`;
 `"db:migrate": "npx tsx lib/db/migrate.ts"` -> `"db:migrate": "npx tsx server/db/migrate.ts"`。
 
-- [ ] **Step 4: next.config.ts tracing 三处**
+- [ ] **步骤 4: next.config.ts tracing 三处**
 
 `"/api/agent"` 与 `"/api/chat"` 条目里的 `"./config/agent.json"` -> `"./server/config/agent.json"`、`"./skills/**/*"` -> `"./server/skills/**/*"`;`"/api/agent/mcp"` 条目里 `"./config/agent.json"` 同改。
 
-- [ ] **Step 5: 两处 process.cwd() 字面量**
+- [ ] **步骤 5: 两处 process.cwd() 字面量**
 
 `server/agent/config.ts` 中 `path.join(process.cwd(), "config/agent.json")` -> `path.join(process.cwd(), "server/config/agent.json")`;
 `server/agent/skills.ts` 中 `path.join(process.cwd(), "skills")` -> `path.join(process.cwd(), "server/skills")`。
 
-- [ ] **Step 6: 验收(含迁移幂等确认)**
+- [ ] **步骤 6: 验收(含迁移幂等确认)**
 
 ```bash
 pnpm db:migrate   # 应输出 Migrations completed(证明 drizzle.config 新路径生效)
 pnpm exec tsc --noEmit && echo TSC_PASS
 pnpm exec tsx --test --test-concurrency=1 --conditions=react-server $(grep -v '^#' scripts/ci/offline-tests.txt | tr '\n' ' ') 2>&1 | tail -3
 ```
-Expected: 迁移完成;TSC_PASS;31 套件全过。
+预期： 迁移完成;TSC_PASS;31 套件全过。
 
-- [ ] **Step 7: 提交**
+- [ ] **步骤 7: 提交**
 
 ```bash
 git add -A && git commit -m "refactor: 收敛服务端核心到server并更新配置路径"
@@ -410,37 +410,37 @@ git add -A && git commit -m "refactor: 收敛服务端核心到server并更新�
 
 ---
 
-### Task 5: Batch domains(uploads/admin/artifacts -> server/;artifacts 客户端 -> app/_artifacts/)
+### 任务 5: 批次 domains(uploads/admin/artifacts -> server/;artifacts 客户端 -> app/_artifacts/)
 
-**Files:**
-- Modify: `next.config.ts`(worker 路径两处)、`server/uploads/document-parser.ts`(原 lib/uploads/document-parser.ts:43)
+**文件：**
+- 修改： `next.config.ts`(worker 路径两处)、`server/uploads/document-parser.ts`(原 lib/uploads/document-parser.ts:43)
 
-- [ ] **Step 1: 执行搬运**
+- [ ] **步骤 1: 执行搬运**
 
 ```bash
 node scripts/migrate-paths.mjs --batch domains
 ```
 注意:`lib/artifacts -> server/artifacts` 与 `artifacts/<kind>/server.ts -> server/artifacts/<kind>/server.ts` 同批合并,根级 `artifacts/` 搬空后应仅剩目录壳,确认 `ls artifacts` 为空后 `rmdir artifacts`。
 
-- [ ] **Step 2: next.config.ts worker 路径两处**
+- [ ] **步骤 2: next.config.ts worker 路径两处**
 
 outputFileTracingIncludes 里 `"/api/files/upload"` 的 `"./lib/uploads/document-worker.cjs"` -> `"./server/uploads/document-worker.cjs"`;
 底部 nodeFileTrace 入参 `["lib/uploads/document-worker.cjs", ...]` -> `["server/uploads/document-worker.cjs", ...]`。
 
-- [ ] **Step 3: document-parser.ts worker 路径字面量**
+- [ ] **步骤 3: document-parser.ts worker 路径字面量**
 
 `join(process.cwd(), "lib/uploads/document-worker.cjs")` -> `join(process.cwd(), "server/uploads/document-worker.cjs")`。
 
-- [ ] **Step 4: 验收 + dev 冒烟**
+- [ ] **步骤 4: 验收 + dev 冒烟**
 
 ```bash
 pnpm exec tsc --noEmit && echo TSC_PASS
 pnpm exec tsx --test --test-concurrency=1 --conditions=react-server $(grep -v '^#' scripts/ci/offline-tests.txt | tr '\n' ' ') 2>&1 | tail -3
 pnpm dev --hostname 127.0.0.1 --port 3003 &   # 后台起,Ready 后 curl -s http://127.0.0.1:3003/ping 应为 pong,然后杀掉
 ```
-Expected: TSC_PASS;31 套件全过;/ping 返回 pong。
+预期： TSC_PASS;31 套件全过;/ping 返回 pong。
 
-- [ ] **Step 5: 提交**
+- [ ] **步骤 5: 提交**
 
 ```bash
 git add -A && git commit -m "refactor: 收敛uploads_admin_artifacts到server并拆分产物客户端"
@@ -448,42 +448,42 @@ git add -A && git commit -m "refactor: 收敛uploads_admin_artifacts到server并
 
 ---
 
-### Task 6: Batch shared + tests 就近
+### 任务 6: 批次 shared + tests 就近
 
-**Files:**
-- Modify: `scripts/ci/offline-tests.txt`(31 条路径)、`scripts/ci/offline-checks.test.mjs:81`(硬编码断言)
+**文件：**
+- 修改： `scripts/ci/offline-tests.txt`(31 条路径)、`scripts/ci/offline-checks.test.mjs:81`(硬编码断言)
 
-- [ ] **Step 1: 执行搬运**
+- [ ] **步骤 1: 执行搬运**
 
 ```bash
 node scripts/migrate-paths.mjs --batch shared
 ```
 
-- [ ] **Step 2: 重写 offline-tests.txt**
+- [ ] **步骤 2: 重写 offline-tests.txt**
 
 保留首行注释,31 条 `tests/unit/xxx.test.ts` 按脚本 TEST_MOVES 同名映射为新路径(如 `server/agent/mcp-settings/mcp-settings-api.test.ts`、`app/_components/chat/runtime-interactions.test.ts`)。browser-runtime 与 regeneration-db 本就不在清单,不添加。
 
-- [ ] **Step 3: 改 offline-checks.test.mjs:81 断言**
+- [ ] **步骤 3: 改 offline-checks.test.mjs:81 断言**
 
 `assert.ok(args.includes("tests/unit/runtime-interactions.test.ts"));` -> `assert.ok(args.includes("app/_components/chat/runtime-interactions.test.ts"));`
 
-- [ ] **Step 4: 清空 lib/ 壳**
+- [ ] **步骤 4: 清空 lib/ 壳**
 
 ```bash
 ls lib 2>/dev/null && rmdir lib 2>/dev/null || echo "lib gone or not empty(check)"
 ```
 若 lib 仍有文件,列出并确认是否遗漏映射(预期:空,可删)。
 
-- [ ] **Step 5: 验收(单测从新位置跑,同时验证契约自测)**
+- [ ] **步骤 5: 验收(单测从新位置跑,同时验证契约自测)**
 
 ```bash
 node --test scripts/ci/offline-checks.test.mjs 2>&1 | tail -3
 pnpm exec tsc --noEmit && echo TSC_PASS
 pnpm exec tsx --test --test-concurrency=1 --conditions=react-server $(grep -v '^#' scripts/ci/offline-tests.txt | tr '\n' ' ') 2>&1 | tail -3
 ```
-Expected: 契约自测过;TSC_PASS;31 套件全过。
+预期： 契约自测过;TSC_PASS;31 套件全过。
 
-- [ ] **Step 6: 提交**
+- [ ] **步骤 6: 提交**
 
 ```bash
 git add -A && git commit -m "refactor: shared入server并就近搬迁单元测试"
@@ -491,19 +491,19 @@ git add -A && git commit -m "refactor: shared入server并就近搬迁单元测�
 
 ---
 
-### Task 7: Batch deploy + 文档同步
+### 任务 7: 批次 deploy + 文档同步
 
-**Files:**
-- Move: vercel-template.json、.env.example -> deploy/(脚本执行)
-- Modify: `AGENTS.md`、`docs/CODEBASE_MAP.md`、`README.md`、`DEVELOPMENT.md`
+**文件：**
+- 移动： vercel-template.json、.env.example -> deploy/(脚本执行)
+- 修改： `AGENTS.md`、`docs/CODEBASE_MAP.md`、`README.md`、`DEVELOPMENT.md`
 
-- [ ] **Step 1: 执行搬运**
+- [ ] **步骤 1: 执行搬运**
 
 ```bash
 node scripts/migrate-paths.mjs --batch deploy
 ```
 
-- [ ] **Step 2: 删除 .cursor/(用户 2026-10-24 指示)**
+- [ ] **步骤 2: 删除 .cursor/(用户 2026-10-24 指示)**
 
 `.cursor/` 下仅有 `rules/ultracite.mdc`(ultracite 自动生成的 Cursor 规则,与 Biome 实际执行的 lint 完全重复,真源是 `pnpm check`)。AGENTS.md 已统一双工具指令源,删除:
 
@@ -511,19 +511,19 @@ node scripts/migrate-paths.mjs --batch deploy
 git rm -r .cursor 2>/dev/null || rm -rf .cursor   # 若未被 git 跟踪则直接删
 ```
 
-- [ ] **Step 3: AGENTS.md 更新目录段**
+- [ ] **步骤 3: AGENTS.md 更新目录段**
 
 "目录(收敛过渡态)"一节改为已收敛状态:目标目录已落地,删除"按现状目录工作"的过渡提示;启动序列与约束不变。
 
-- [ ] **Step 4: CODEBASE_MAP.md 路径替换**
+- [ ] **步骤 4: CODEBASE_MAP.md 路径替换**
 
 全量把旧路径替换为新路径:`lib/` 前缀按 MOVES 映射、`components/` -> `app/_components/`、`hooks/` -> `app/_hooks/`、`artifacts/<kind>/client` -> `app/_artifacts/...`、顶层 `artifacts/<kind>/server` -> `server/artifacts/...`。逐条过,不许漏(此文件是权威地图)。
 
-- [ ] **Step 5: README.md / DEVELOPMENT.md**
+- [ ] **步骤 5: README.md / DEVELOPMENT.md**
 
 涉及 `lib/db/migrate`、`.env.example`、`skills/`、`config/agent.json`、`components/` 的命令与描述改为新路径;README 本地启动步骤里 `.env.example` 位置注明 `deploy/.env.example`。
 
-- [ ] **Step 6: 验收 + 提交**
+- [ ] **步骤 6: 验收 + 提交**
 
 ```bash
 pnpm exec tsc --noEmit && echo TSC_PASS
@@ -532,11 +532,11 @@ git add -A && git commit -m "chore: deploy目录收敛文档同步并清理curso
 
 ---
 
-### Task 8: 终验收与 PR
+### 任务 8: 终验收与 PR
 
-**Files:** 无代码改动;产出一个验证记录追加到本计划文件末尾。
+**文件：** 无代码改动;产出一个验证记录追加到本计划文件末尾。
 
-- [ ] **Step 1: 全量验收**
+- [ ] **步骤 1: 全量验收**
 
 ```bash
 pnpm exec tsc --noEmit && echo TSC_PASS
@@ -545,7 +545,7 @@ PLAYWRIGHT=True pnpm test -- --reporter=line 2>&1 | tail -5   # 与基线对比,
 ls -d */ | sort   # 可见一级目录应为: app/ deploy/ docs/ public/ scripts/ server/ tests/ (+node_modules)
 ```
 
-- [ ] **Step 2: 产物 tracing 抽查(spec 验收项)**
+- [ ] **步骤 2: 产物 tracing 抽查(spec 验收项)**
 
 不跑 `pnpm build`(会迁移),单独跑 next build:
 
@@ -554,22 +554,22 @@ pnpm exec next build 2>&1 | tail -5
 grep -l "server/skills" .next/server/app/api/chat/*.nft.json && echo TRACING_OK
 grep -l "server/uploads/document-worker.cjs" .next/server/app/api/files/upload/*.nft.json && echo WORKER_TRACING_OK
 ```
-Expected: 两个 TRACING_OK 都打印(证明 outputFileTracingIncludes 与 NFT 入参新路径生效)。若 build 因本机环境失败,记录原因,以 CI build job 绿 + Vercel preview 为准,但 grep 检查不得省略。
+预期： 两个 TRACING_OK 都打印(证明 outputFileTracingIncludes 与 NFT 入参新路径生效)。若 build 因本机环境失败,记录原因,以 CI build job 绿 + Vercel preview 为准,但 grep 检查不得省略。
 
-- [ ] **Step 3: dev 浏览器冒烟**
+- [ ] **步骤 3: dev 浏览器冒烟**
 
 起 dev(3003),`/ping` pong;`/` 200 且标题 ChatNest;`/api/agent` 返回 JSON(modelConfigured 字段存在即可)。
 
-- [ ] **Step 4: 验证记录与最终提交**
+- [ ] **步骤 4: 验证记录与最终提交**
 
-把每批 commit、tsc/单测/e2e 对比结果、一级目录 `ls` 输出追加到本计划文件"Verification"节,提交:
+把每批 commit、tsc/单测/e2e 对比结果、一级目录 `ls` 输出追加到本计划文件"验证"节,提交:
 
 ```bash
 git add docs/superpowers/plans/2026-10-24-p0-directory-convergence.md
 git commit -m "docs: 记录P0目录收敛验收结果"
 ```
 
-- [ ] **Step 5: push 并开 PR**
+- [ ] **步骤 5: push 并开 PR**
 
 ```bash
 git push -u origin feat/p0-directory-convergence
@@ -578,17 +578,17 @@ PR 标题:`refactor: P0 一级目录收敛(app/server 双顶层)`;描述链接 s
 
 ---
 
-## Verification(执行时回填)
+## 验证(执行时回填)
 
 ### 基线(对照 .local-review/p0-baseline.md)
 
-- tsc PASS;离线单测 288 项 / 285 过 / 3 败(3 败均为 Windows 环境性: agent EPERM symlink、
+- tsc PASS;离线单测 288 项 / 285 过 / 3 败(3 败均为 Windows 环境性: agent 符号链接权限错误（EPERM）、
   private-uploads 与 document-ingestion 的 NTFS 无 POSIX 权限位);e2e 23 项 / 14 过 / 9 败。
 - 对比口径: 失败集合不得增长。
 
-### Task 3-7 各批(每批后 tsc PASS,单测 31 套件与基线一致)
+### 任务 3-7 各批(每批后 tsc PASS,单测 31 套件与基线一致)
 
-| 批次 | commit | 主题 |
+| 批次 | 提交 | 主题 |
 |---|---|---|
 | 前置 | f611773 / e490146 / 49aab38 / f7ade1f / 0563c41 / 73b901a | 钉 playwright 版本、迁移脚本、test 脚本与计划对齐 |
 | UI 目录 | 460f627 | 收敛UI目录到app/_components与_app_hooks_lib |
@@ -602,7 +602,7 @@ PR 标题:`refactor: P0 一级目录收敛(app/server 双顶层)`;描述链接 s
 
 - tsc: `pnpm exec tsc --noEmit` => TSC_PASS(与基线一致)。
 - 单测: `# tests 288; # pass 285; # fail 3`,3 败与基线逐一对应(路径按预期就近搬迁:
-  server/agent/agent.test.ts:203 EPERM symlink、server/uploads/document-ingestion.test.ts
+  server/agent/agent.test.ts:203 的符号链接权限错误（EPERM）、server/uploads/document-ingestion.test.ts
   POSIX 权限位、server/uploads/private-uploads.test.ts:58 POSIX 权限位)=> 失败集合一致。
 - e2e: 23 项 / 14 过 / 9 败,9 败与基线逐项一致(api 2 + chat 2 + model-selector 5)
   => 失败集合一致、零新增。注: `pnpm test` 脚本含 POSIX `export` 在本机 cmd.exe 下不可执行,

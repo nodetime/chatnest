@@ -1,49 +1,49 @@
-# Standard administration template integration
+# 标准管理后台模板集成
 
-**Status: Task 2.5 accepted (2026-10-21).** Document ingestion/parsing and result tables remain separate pending work. Storage remains local-only.
+**状态：任务 2.5 已验收（2026-10-21）。** 文档接入/解析和结果表格仍是独立的待办工作。存储仍仅支持本地。
 
-**User correction:** the current centered configuration page is not a standard product administration console. Use an existing Vercel-listed Next/shadcn dashboard template instead of inventing another layout.
+**用户纠正：** 当前居中的配置页面不是标准产品管理控制台。使用 Vercel 列出的现有 Next/shadcn 仪表盘模板，不要再自行设计另一套布局。
 
-## Reference and source provenance
+## 参考与来源溯源
 
-- Vercel listing: https://vercel.com/templates/next.js/next-js-and-shadcn-ui-admin-dashboard
-- Upstream: https://github.com/arhamkhnz/next-shadcn-admin-dashboard
-- Inspected commit: `487a741538e787113f24a6c291f606136e2a970a`
-- License: MIT, Copyright (c) 2024 Mohammed Arham Khan. Preserve full license and upstream/source commit in THIRD_PARTY_NOTICES or a dedicated notice when adapting substantial template components.
-- Local read-only snapshot: ignored `.local-review/admin-template-reference` (do not vendor whole repository/dependencies/demo data).
-- Applicable upstream files: `src/app/(main)/dashboard/layout.tsx`, `_components/sidebar/app-sidebar.tsx`, `nav-main.tsx`, `nav-user.tsx`, UI card/table/breadcrumb as needed.
-- This is a Vercel template-market listing by its upstream author, not a claim of Vercel-authored RBAC/backend. Keep our actual server authorization; upstream RBAC roadmap/demo users must not become permissions.
+- Vercel 模板条目：https://vercel.com/templates/next.js/next-js-and-shadcn-ui-admin-dashboard
+- 上游：https://github.com/arhamkhnz/next-shadcn-admin-dashboard
+- 已检查的提交：`487a741538e787113f24a6c291f606136e2a970a`
+- 许可证：MIT，版权所有 (c) 2024 Mohammed Arham Khan。适配较多模板组件时，在 THIRD_PARTY_NOTICES 或专门的声明中保留完整许可证及上游/来源提交。
+- 本地只读快照：已忽略的 `.local-review/admin-template-reference`（不要将整个仓库/依赖/演示数据引入项目）。
+- 适用的上游文件：`src/app/(main)/dashboard/layout.tsx`、`_components/sidebar/app-sidebar.tsx`、`nav-main.tsx`、`nav-user.tsx`，以及按需使用的 UI 卡片/表格/面包屑。
+- 这是上游作者在 Vercel 模板市场发布的条目，不代表其 RBAC/后端由 Vercel 编写。保留我们实际的服务端授权；上游 RBAC 路线图/演示用户不得成为权限依据。
 
-## Implementation slice (after private upload writer handoff)
+## 实现切片（私有上传实现者交接之后）
 
-1. Template-derived full-height SidebarProvider/SidebarInset shell, collapsible desktop sidebar, accessible mobile Sheet, compact top header with actual breadcrumb/page location, current signed-in admin identity and return-to-workbench. Existing neutral shadcn tokens; no global theme/font rewrite. Scope admin only.
-2. Navigation only real pages: overview `/admin`, tool connections `/admin/connections`, file storage `/admin/storage`. Exact active styles/aria-current, no inert fake users/billing/log charts/menus. No dummy notification counters or environment selectors.
-3. Overview has actual lightweight service/readiness summaries and links, not fabricated revenue/activity charts. Use existing independently guarded data services; model name/status read-only (never API keys). Failures isolated per card. Overview page data independently authorized, not merely trusting layout.
-4. Tool connections use standard data-table/list pattern: clear name, connection type/source, enabled state, open tools count, available actions. Retain working official endpoint/native tool schema import/test, secret masking, explicit admin controls and every API auth/Origin. Reuse existing service/editor logic, adapt editor to standard side Sheet where appropriate; no duplicate connection service.
-5. Storage uses standard labeled status/configuration cards and primary actions, clear supported formats/limits, actual test result, enable/disable and cleanup. Deployment path/technical constraints behind collapsible details. Reuse real existing API; no fake selectable cloud provider/no invented metrics. Task3 extends file capability text later.
-6. All settings remain separate from personal settings. Server AdminGate stays under Suspense; every API remains independent. Template client layout receives only authorized presentation props, never secrets/client role overrides.
-7. Tests first for active navigation/layout/identity and no dummy demos, real MCP controls and storage. Root actual desktop+narrow browser and three-role route/API matrix; focused unit/type/lint/production build. Preserve attribution, no template package scripts run or whole framework replacement.
+1. 基于模板构建全高 SidebarProvider/SidebarInset 外壳、可折叠桌面侧栏、支持无障碍的移动端 Sheet、紧凑顶部栏，并显示真实面包屑/页面位置、当前登录管理员身份和返回工作台入口。沿用现有中性 shadcn 设计令牌；不重写全局主题/字体。仅限管理后台范围。
+2. 导航只包含真实页面：概览 `/admin`、工具连接 `/admin/connections`、文件存储 `/admin/storage`。精确匹配激活样式/aria-current，不放置无法操作的虚假用户/计费/日志图表/菜单。不添加虚假通知计数或环境选择器。
+3. 概览展示真实、轻量的服务/就绪状态摘要和链接，不伪造收入/活动图表。使用现有、各自具有独立权限保护的数据服务；模型名称/状态只读（绝不展示 API 密钥）。卡片之间隔离失败。概览页面数据独立授权，不能仅信任布局层。
+4. 工具连接采用标准数据表格/列表模式：明确展示名称、连接类型/来源、启用状态、开放工具数量和可用操作。保留可用的官方端点/原生工具 schema 导入/测试、密钥遮蔽、明确管理员控制及每个 API 的认证/Origin 检查。复用现有服务/编辑器逻辑，适当将编辑器适配为标准侧边 Sheet；不重复创建连接服务。
+5. 存储使用带标准标签的状态/配置卡片和主要操作，清楚展示支持的格式/限制、真实测试结果、启用/禁用与清理。部署路径/技术约束置于可折叠详情中。复用真实现有 API；不提供虚假可选云供应商，不编造指标。任务 3 后续再扩展文件能力文案。
+6. 所有设置仍与个人设置分离。服务端 AdminGate 继续置于 Suspense 下；每个 API 保持独立保护。模板客户端布局只接收已获授权的展示属性，绝不接收密钥/客户端角色覆盖值。
+7. 先编写激活导航/布局/身份及无虚假演示内容、真实 MCP 控制和存储的测试。主会话负责真实桌面端 + 窄屏浏览器及三角色路由/API 矩阵；执行定向单元/类型/lint/生产构建检查。保留署名，不执行模板包脚本，不替换整个框架。
 
-## Implementation handoff
+## 实现交接
 
-- Implemented all six scoped UI/API items without additional dependencies, global theme changes, fake demo data, model calls or new storage drivers.
-- Template adaptation is recorded with full upstream MIT license and exact source commit in `THIRD_PARTY_NOTICES.md`.
-- Test-first regressions cover shell/identity, exact active route (including `/demo`), real MCP table/action wiring, storage cards/actions, independent overview auth/error isolation, configuration counts, three-card-only overview and breadcrumb text semantics. Updated old render assertions only for the new identity/context/table contracts; authorization assertions remain intact.
-- Writer verification: 109/109 focused offline tests, `tsc --noEmit --incremental false`, targeted Biome on 17 source/test files plus the three new UI primitives (explicit temporary config to include the otherwise excluded UI directory), and `git diff --check`. No migration/build wrapper, writer-side real DB write or vendor/model request. A scoped local commit was authorized only after independent acceptance; no push.
-- Independent spec review and quality review approved after the busy-dismiss fix. The quality reviewer separately ran 45 safe tests and TypeScript. Root acceptance evidence is summarized below; paid supplier/model acceptance is not claimed.
+- 已实现全部六项范围内的 UI/API 内容，未新增依赖、改动全局主题、添加虚假演示数据、调用模型或新增存储驱动。
+- 模板适配已在 `THIRD_PARTY_NOTICES.md` 中记录完整上游 MIT 许可证和精确来源提交。
+- 先测试的回归覆盖外壳/身份、精确激活路由（包括 `/demo`）、真实 MCP 表格/操作接线、存储卡片/操作、独立概览认证/错误隔离、配置计数、仅三张卡片的概览及面包屑文本语义。旧渲染断言仅针对新的身份/上下文/表格契约更新；授权断言保持完整。
+- 实现者验证：109/109 项定向离线测试、`tsc --noEmit --incremental false`、17 个源代码/测试文件及三个新增 UI 基础组件的定向 Biome 检查（使用明确的临时配置纳入原本被排除的 UI 目录），以及 `git diff --check`。未运行迁移/构建包装命令，未由实现者写入真实数据库，也未请求供应商/模型。仅在独立验收后授权一次限定范围的本地提交；未推送。
+- 修复繁忙状态下的关闭问题后，独立规格审查和质量审查均批准。质量审查者另外运行了 45 项安全测试和 TypeScript。主会话验收证据汇总如下；不宣称完成付费供应商/模型验收。
 
-### Spec-review follow-up
+### 规格审查后续
 
-The MCP drawer now blocks close-button/Escape/outside/cancel dismissal while discovery, saving or conflict refresh is pending. A synchronous busy ref covers the event-to-render gap. The mounted editor owns a cancellable operation lifetime; unmount aborts transport and invalidates all late success/error/saved/conflict/finally callbacks, including Strict Mode reactivation. Cancellation does not imply that a server-side save transaction was rolled back. Two additional regressions were observed RED before implementation and are included in the 109-test writer verification above.
+MCP 抽屉现在会在发现、保存或冲突刷新等待期间，阻止通过关闭按钮/Escape/外部点击/取消来关闭。同步繁忙状态 ref 覆盖事件发生到渲染之间的间隙。已挂载编辑器拥有可取消的操作生命周期；卸载会中止传输，并使所有迟到的成功/错误/已保存/冲突/finally 回调失效，包括 Strict Mode 重新激活情形。取消并不意味着服务端保存事务已经回滚。实现前观察到另外两项回归测试失败，它们已包含在上述实现者的 109 项测试验证中。
 
-## Root acceptance verification
+## 主会话验收验证
 
-- Root independently reran all 109 focused offline tests, TypeScript, targeted Biome on 17 non-UI files and diff checks.
-- Actual desktop 1360×900 and mobile 390×844 browser checks passed without horizontal document overflow; mobile navigation opened and dismissed after route selection.
-- Actual MCP keep-secret editing discovered two native tools through the local fixture, saved successfully and returned to the real table without exposing saved secrets. With a 5000 ms delayed discovery response, Escape stayed blocked, cancel stayed disabled and X was hidden; controls recovered after completion.
-- Actual storage UI write/read/delete probe passed. The independent 18-check role/page/API matrix passed.
-- A clean source copy passed actual `next build --webpack` and `next start`; production admin storage page returned 200, actual private write/read/delete passed, overview denied ordinary/guest accounts with 403, cross-origin storage test returned 403 and responses exposed no secrets. The overview production file trace retained `config/agent.json`.
-- The production tools card correctly rejected the development-only HTTP fixture configuration, while storage and model cards remained available. This demonstrates per-card isolation, not paid vendor connectivity, model execution or cloud-storage compatibility.
-- Root evidence stays ignored: `.local-review/admin-template-{http,browser,production}-evidence.json` and build logs. No paid supplier/model calls were made.
+- 主会话独立重新运行了全部 109 项定向离线测试、TypeScript、17 个非 UI 文件的定向 Biome 检查及差异检查。
+- 真实桌面端 1360×900 和移动端 390×844 浏览器检查通过，文档无横向溢出；移动端导航可打开，并在选择路由后关闭。
+- 真实 MCP 保留密钥编辑通过本地测试夹具发现了两个原生工具，保存成功并返回真实表格，未暴露已保存的密钥。在发现响应延迟 5000 ms 的情况下，Escape 持续被阻止，取消按钮持续禁用，X 被隐藏；完成后控件恢复。
+- 真实存储 UI 写入/读取/删除探测通过。独立的 18 项角色/页面/API 矩阵检查通过。
+- 干净源码副本通过了真实 `next build --webpack` 和 `next start`；生产管理存储页面返回 200，真实私有写入/读取/删除通过，概览对普通/访客账户返回 403，跨源存储测试返回 403，响应未暴露密钥。概览的生产文件追踪保留了 `config/agent.json`。
+- 生产工具卡片正确拒绝了仅限开发的 HTTP 测试夹具配置，同时存储和模型卡片仍然可用。这证明了卡片间隔离，并不证明付费供应商连通性、模型执行或云存储兼容性。
+- 主会话证据仍处于忽略范围：`.local-review/admin-template-{http,browser,production}-evidence.json` 和构建日志。未进行付费供应商/模型调用。
 
-Accepted scope is the standard administration UI, read-only readiness and retained local/MCP management paths. Document parsing, result tables and any future cloud adapter/migration remain pending separately.
+已验收范围为标准管理后台 UI、只读就绪状态及保留的本地/MCP 管理路径。文档解析、结果表格及未来任何云适配器/迁移仍分别待办。

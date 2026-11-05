@@ -1,24 +1,24 @@
-# Tool-record interaction correction
+# 工具记录交互修正
 
-- [x] Reproduce the user's exact PDF read page, trace nested UI and identify the untouched ToolActivity result body.
-- [x] Read-only design review APPROVED after clarifying special-renderer boundaries, both grouping paths, falsey raw results and focus lifecycle.
-- [x] One source writer: add failing behavior tests, flatten singleton activity, readable file-row context, direct evidence excerpts and a separate generic tool-detail Sheet. Preserve original Agent/approval/error evidence.
-- [x] Independent spec and quality review; repair/recheck any blocker.
-- [x] Root real browser on exact PDF + long DOCX/XLSX reads, keyboard/source/details/approval/error and multi-step regression. Retain normal artifact viewer.
-- [x] Root named safe unit suites/types/changed-file lint/direct isolated production build; verify main locally after integration, no push claimed.
-
-
-## Source cut and red-green sequence
-
-One source writer owns `components/chat/{tool-activity,activity-group}.tsx`, optional scoped `components/ai-elements/tool.tsx`, new small attachment-evidence and generic tool-details components, `tests/unit/tool-records.test.ts` and intentionally replaced UI assertions in existing focused suites. Root owns docs/ignored fixtures/browser/build. No artifact layout or Agent runtime redesign.
-
-1. Write and run failing actual-component tests for singleton composition/children, direct excerpts, malformed inputs and exact falsey/raw error evidence.
-2. Keep the keyed tool subtree stable across singleton/multi transitions; omit singleton group chrome and use one accessible details Sheet outside result collapse.
-3. Wire readable attachment output filename, bounded direct references, real partial/warnings; preserve canonical raw data and all approval/disclosure callbacks.
-4. Update only intentionally replaced UI wording/structure assertions, run focused named suites and type/changed-file checks; source-only commit.
-5. Spec review then quality review; writer fixes/rechecks blockers. Root browser at standard viewport first (avoid prior emulated-coordinate false negatives), then responsive media checks, full named offline suites and private direct production build. Primary checkout regression before completion.
+- [x] 复现用户精确的 PDF 读取页面，追踪嵌套 UI，识别尚未修改的 ToolActivity 结果主体。
+- [x] 澄清特殊渲染器边界、两条分组路径、假值原始结果和焦点生命周期后，只读设计审查通过。
+- [x] 一名源码修改者：添加失败的行为测试，扁平化单次活动，提供可读的文件行上下文、直接证据摘录和独立通用工具详情 Sheet。保留原 Agent/审批/错误证据。
+- [x] 独立规格和质量审查；修复/复查所有阻塞项。
+- [x] 主代理在真实浏览器中检查精确 PDF + 长 DOCX/XLSX 读取、键盘/来源/详情/审批/错误和多步回归。保留正常产物查看器。
+- [x] 主代理运行指定名称的安全单元套件/类型检查/变更文件 lint/直接隔离生产构建；集成后在本地验证 main，不声称推送。
 
 
-## Browser-discovered lifecycle correction
+## 源码范围与红绿顺序
 
-Root reproduced the two-step live HTTP MCP completion twice on frozen source: the open details Sheet vanished without user dismissal. Group-local inspection was insufficient because the outer renderer changed component type when the assistant appended answer text. Choose the smaller structural correction: always render each canonical keyed PreviewMessage, retain grouping only inside that stable message. No cross-message Task reparenting and no global inspector/ref registry. Suppress meaningless no-text intermediate assistant action rows; retain real answer/artifact/regeneration actions. Add a transition harness and repeat the actual delayed browser case before approval.
+一名源码修改者负责 `components/chat/{tool-activity,activity-group}.tsx`、可选的限定范围 `components/ai-elements/tool.tsx`、新增的小型附件证据和通用工具详情组件、`tests/unit/tool-records.test.ts`，以及现有定向套件中有意替换的 UI 断言。主代理负责文档/已忽略测试夹具/浏览器/构建。不重新设计产物布局或 Agent 运行时。
+
+1. 编写并运行失败的真实组件测试，覆盖单次活动组合/子节点、直接摘录、格式错误输入和精确假值/原始错误证据。
+2. 在单次/多次过渡时保持带 key 的工具子树稳定；去掉单次活动分组外框，并在结果折叠区域之外使用一个可访问的详情 Sheet。
+3. 接入可读的附件输出文件名、有边界限制的直接引用和真实的不完整内容/警告；保留权威原始数据及全部审批/展开回调。
+4. 仅更新有意替换的 UI 文案/结构断言，运行指定名称的定向套件及类型/变更文件检查；仅提交源码。
+5. 先规格审查，再质量审查；修改者修复/复查阻塞项。主代理先在标准视口检查浏览器（避免此前模拟坐标导致的假阴性），再检查响应式媒体、完整的指定名称离线套件和私有直接生产构建。完成前在主检出目录回归。
+
+
+## 浏览器发现的生命周期修正
+
+主代理在冻结源码上两次复现两步实时 HTTP MCP 完成过程：用户未关闭详情 Sheet，它却自行消失。组内局部检查不足以发现问题，因为助手追加回答文本时，外层渲染器改变了组件类型。选择更小的结构修正：始终渲染每个带规范 key 的 PreviewMessage，仅在该稳定消息内部保留分组。不跨消息重新设置 Task 父级，也不使用全局检查器/引用注册表。隐藏无文本的无意义中间助手操作行；保留真实回答/产物/重新生成操作。批准前添加过渡测试装置，并重复实际延迟浏览器场景。

@@ -1,48 +1,48 @@
-# Artifact interactions implementation verification
+# 产物交互实现验证
 
-## Scope
+## 范围
 
-Presentation-only execution grouping and the conventional multi-type artifact viewer. Original SDK messages, call/approval IDs, actions, tool execution, evidence envelopes, CAS persistence and renderer kinds remain unchanged. The successful table tool still renders the existing artifact preview, with the actual title and a `表格` type label; its in-flight/error activity uses `生成表格产物`.
+仅涉及展示的执行分组和常规多类型产物查看器。原始 SDK 消息、调用/审批 ID、操作、工具执行、证据信封、CAS 持久化和渲染器类型保持不变。成功的表格工具仍渲染现有产物预览，使用真实标题和 `表格` 类型标签；执行中/错误活动使用 `生成表格产物`。
 
-## Observed TDD
+## 已观察到的 TDD
 
-- Initial feature RED: 7 failures (missing grouping/type-label components, saved-notes disclosure, renamed workspace tab, and relocated version navigation). Existing behavioral tests otherwise passed.
-- Header-action RED: the new accessibility/single-navigation regression failed before moving existing actions into the header and naming the buttons.
-- Honest idle-status RED: idle unfinished calls and approved-without-output calls failed before the summary/child shared display-state refinement. Idle calls now show `未完成`, not a continuing execution spinner; denied approval keeps its own status; streaming approved calls remain active.
-- Real SDK sequence RED: empty SDK text and known transport metadata split attachment-read/search into separate groups. The regression now asserts one two-call group, followed by the table artifact and final answer, with canonical references unchanged. Only empty/whitespace text and explicitly recognized nonvisual step/MCP/title/table transport parts are skipped for presentation.
-- Final GREEN: **70 tests passed, 0 failed** in the explicit five-file suite below.
+- 初始功能失败阶段：7 项失败（缺少分组/类型标签组件、已保存备注的折叠展开、重命名工作区标签页，以及版本导航迁移）。其余既有行为测试通过。
+- 表头操作失败阶段：在将现有操作移到表头并为按钮命名之前，新增无障碍/单一导航回归失败。
+- 如实展示空闲状态的失败阶段：在摘要/子项共享展示状态的细化之前，空闲未完成调用及已批准但无输出调用的测试失败。空闲调用现在显示 `未完成`，不再持续显示执行中旋转图标；被拒绝审批保留自身状态；流式已批准调用仍保持活动。
+- 真实 SDK 序列失败阶段：空 SDK 文本和已知传输元数据把附件读取/搜索拆成独立分组。回归现在断言只有一个包含两次调用的分组，后接表格产物和最终回答，且规范引用不变。展示投影只跳过空/纯空格文本，以及明确识别的非可视步骤/MCP/标题/表格传输部分。
+- 最终通过阶段：下方显式五文件套件中，**70 项测试通过，0 项失败**。
 
-## Commands run in the implementation worktree
+## 实现工作树中执行过的命令
 
 ```sh
 env -i HOME="$HOME" PATH="$PATH" NODE_ENV=test pnpm exec tsx --conditions=react-server --test tests/unit/activity-groups.test.ts tests/unit/workbench-ui.test.ts tests/unit/message-turn.test.ts tests/unit/result-table.test.ts tests/unit/chat-layout.test.ts
 env -i HOME="$HOME" PATH="$PATH" pnpm exec tsc --noEmit --incremental false
 ```
 
-Type checking completed successfully with no diagnostics. Targeted Biome checks/formatting were run on changed TypeScript files; the excluded AI Elements file was formatted through an allowed temporary stdin path. `git diff --check` was also run.
+类型检查成功完成，无诊断信息。已对变更的 TypeScript 文件执行定向 Biome 检查/格式化；被排除的 AI Elements 文件通过允许的临时 stdin 路径格式化。也执行了 `git diff --check`。
 
-No real environment files, provider calls, migrations, broad unit-test glob, dev-server restart or `pnpm build` were used by the implementation worker. The parent session owns browser/mock HTTP MCP checks and independent main-worktree verification.
+实现者未使用真实环境文件，未进行供应商调用、迁移、宽泛单元测试通配、开发服务器重启或 `pnpm build`。父会话负责浏览器/mock HTTP MCP 检查，以及独立主工作树验证。
 
-## Self-review
+## 自查
 
-- Grouping preserves visible boundaries, special renderers, original references and per-message actions; new attention is keyed by call/state/approval ID, not just aggregate status.
-- Parent/child chevrons use their own disclosure state; tool query context stays adjacent to the natural-width child header.
-- Text/code/image/sheet labels and renderer selection remain generic. Version navigation appears only in the footer; generic actions keep their existing handlers with accessible names.
-- Table controls remain local to the table artifact: current-view CSV, original JSON, source/raw row details, read-only originals, notes/view save and optimistic CAS behavior are retained.
+- 分组保留可见边界、特殊渲染器、原始引用和逐消息操作；新的需关注事件按调用/状态/审批 ID 标识，不仅依赖聚合状态。
+- 父/子展开箭头各自使用自己的折叠展开状态；工具查询上下文紧邻自然宽度的子项表头。
+- 文本/代码/图片/工作表标签和渲染器选择保持通用。版本导航仅出现在页脚；通用操作沿用现有处理函数，并具备无障碍名称。
+- 表格控件仍局限于表格产物：保留当前视图 CSV、原始 JSON、来源/原始行详情、只读原始数据、备注/视图保存及乐观 CAS 行为。
 
-## Acceptance/review follow-up
+## 验收/审查后续
 
-The parent browser pass exposed text-editor lifecycle loss on every content change. A focused isolated hook/ProseMirror-boundary harness observed **3 RED failures** before the repair: local edits recreated/destroyed the view, readonly updates lost their guard, and equal-content status changes were skipped by memoization. The repair mounts once from the initial content, reconciles later content (including empty strings) through internal `no-save` transactions, retains guards for user edits, and compares status in memoization. Suggestions/schema behavior is unchanged.
+父会话的浏览器验收暴露了每次内容改变时文本编辑器生命周期丢失的问题。定向隔离的 hook/ProseMirror 边界测试装置在修复前观察到 **3 项失败阶段的失败**：本地编辑会重建/销毁视图，只读更新失去保护，相同内容的状态变化被记忆化跳过。修复后，编辑器只从初始内容挂载一次，后续内容（包括空字符串）通过内部 `no-save` 事务同步，保留用户编辑保护，并在记忆化中比较状态。建议/schema 行为不变。
 
-Spec review also produced **2 RED failures** before fixes: replacement approval IDs on the same call did not reopen child details, and noncontiguous reasoning was globally merged ahead of intervening tools. Child disclosure now uses call/state/approval identity and individual reasoning SDK parts render at their original positions.
+规格审查还在修复前产生 **2 项失败阶段的失败**：同一调用上的替换审批 ID 不会重新展开子项详情，不连续的推理被全局合并到中间工具之前。子项折叠展开现在使用调用/状态/审批身份，独立推理 SDK 部分在原始位置渲染。
 
-The final explicit suite includes `tests/unit/text-editor-lifecycle.test.ts` in addition to the five files above: **75 passed, 0 failed**. Type checking and targeted Biome checks completed successfully with no diagnostics. The VM harness tests actual component scheduling/transaction logic but replaces its hook scheduler and ProseMirror DOM boundary; actual focus/continuous typing remains a separate parent browser acceptance check.
+最终显式套件在上述五个文件之外包含 `tests/unit/text-editor-lifecycle.test.ts`：**75 项通过，0 项失败**。类型检查和定向 Biome 检查成功完成，无诊断信息。VM 测试装置测试真实组件调度/事务逻辑，但替换了 hook 调度器和 ProseMirror DOM 边界；真实焦点/连续输入仍是父会话单独的浏览器验收项。
 
-Final honest-error review: the known native `tool-createResultTable` contract returns `{ error: string }` inside SDK `output-available` on source/validation failures. A precise SSR test observed RED before projecting that specific contract to failed/open activity with its returned error. A negative test confirms dynamic/MCP `output.error` fields (including a dynamic tool with the same name) remain evidence, not normalized failures. Canonical parts/output are unchanged. Final six-file suite: **77 passed, 0 failed**; type checking, targeted Biome and diff checks clean. Parent separately confirmed the actual SDK error envelope in the browser shows failure/error text without an artifact.
+最终错误如实展示审查：已知原生 `tool-createResultTable` 契约在来源/校验失败时会返回 `{ error: string }`，该结果位于 SDK `output-available` 内。精确 SSR 测试在把该特定契约投影为失败/展开活动并展示返回错误之前观察到失败。反向测试确认动态/MCP `output.error` 字段（包括同名动态工具）仍是证据，不被归一化为失败。规范消息部分/输出不变。最终六文件套件：**77 项通过，0 项失败**；类型检查、定向 Biome 和差异检查均无问题。父会话另行确认，真实 SDK 错误信封在浏览器中显示失败/错误文本，不生成产物。
 
-Undo-history isolation review: the stable editor revealed that external/streamed replacement transactions previously entered ProseMirror history. The parent reproduced A→B artifact switching followed by Cmd-Z mutating B. Two new RED assertions reproduced missing `addToHistory: false` and missing document/version editor identity. Text editor mounts are now keyed by document/version (inline previews by document/timestamp), not content or typing; external, readonly, empty and streamed replacements are `no-save` and nonhistorical, while ordinary local edits keep their in-document undo behavior. The focused harness now covers six lifecycle/history cases. Final six-file suite: **80 passed, 0 failed**; type checking, targeted Biome and diff checks clean.
+撤销历史隔离审查：稳定编辑器暴露出外部/流式替换事务此前会进入 ProseMirror 历史。父会话复现了 A->B 产物切换后按 Cmd-Z 会修改 B 的问题。新增两项失败阶段断言复现了缺少 `addToHistory: false` 和文档/版本编辑器身份的问题。文本编辑器挂载现在按文档/版本标识（内联预览按文档/时间戳标识），不按内容或输入标识；外部、只读、空内容和流式替换都为 `no-save` 且不进入历史，普通本地编辑保留文档内撤销行为。定向测试装置现覆盖六个生命周期/历史用例。最终六文件套件：**80 项通过，0 项失败**；类型检查、定向 Biome 和差异检查均无问题。
 
-Empty-editor acceptance follow-up: the actual empty ProseMirror host collapsed to zero width inside its flex renderer. A focused width-contract regression failed RED before adding only `min-w-0 w-full` to the existing editor host. Final explicit suite: **81 passed, 0 failed**; type checking, targeted Biome and diff checks clean.
+空编辑器验收后续：真实空 ProseMirror 宿主在 flex 渲染器内收缩为零宽。在仅给现有编辑器宿主添加 `min-w-0 w-full` 之前，定向宽度契约回归在失败阶段失败。最终显式套件：**81 项通过，0 项失败**；类型检查、定向 Biome 和差异检查均无问题。
 
 ## 主会话最终验证（实现提交 42c64b4）
 
