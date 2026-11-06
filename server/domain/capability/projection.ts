@@ -31,12 +31,40 @@ export function redactPersonalSkillOutputs<T extends { parts: unknown }>(
   }));
 }
 
-/** 只投影给本轮模型；存储/UI 保留原始证据，当前运行新加载的正文不受影响。 */
+/** 只恢复历史实际使用过的技能，不预加载当前可选目录中的其他正文。 */
+export function historicalSkillNames(messages: { parts: unknown }[]) {
+  const names = new Set<string>();
+  for (const message of messages) {
+    if (!Array.isArray(message.parts)) {
+      continue;
+    }
+    for (const part of message.parts) {
+      if (!part || typeof part !== "object" || !("output" in part)) {
+        continue;
+      }
+      const toolName =
+        part.type === "dynamic-tool"
+          ? part.toolName
+          : typeof part.type === "string"
+            ? part.type.slice(5)
+            : "";
+      const name = part.input?.name ?? part.output?.name;
+      if (
+        ["loadSkill", "readSkillResource"].includes(toolName) &&
+        typeof name === "string"
+      ) {
+        names.add(name);
+      }
+    }
+  }
+  return names;
+}
+
+/** 本轮模型使用当前已授权技能正文；存储/UI 保留原始调用证据。 */
 export function projectSkillHistoryForModel<T extends { parts: unknown }>(
   messages: T[],
-  availableSkillNames: readonly string[]
+  currentSkillInstructions: ReadonlyMap<string, string>
 ): T[] {
-  const available = new Set(availableSkillNames);
   return messages.map((message) => ({
     ...message,
     parts: Array.isArray(message.parts)
@@ -57,13 +85,27 @@ export function projectSkillHistoryForModel<T extends { parts: unknown }>(
             return part;
           }
           const name = part.input?.name ?? part.output?.name;
-          const enabled = typeof name === "string" && available.has(name);
+          const instructions =
+            typeof name === "string"
+              ? currentSkillInstructions.get(name)
+              : undefined;
+          const enabled = instructions !== undefined;
+          if (enabled && toolName === "loadSkill") {
+            return {
+              ...part,
+              output: {
+                instructions,
+                name,
+                sourceType: "CURRENT_SKILL_INSTRUCTIONS",
+              },
+            };
+          }
           return {
             ...part,
             output: {
               available: enabled,
               message: enabled
-                ? "Historical skill metadata only; prior instructions and resource text are not replayed. This skill is available this round; optionally load its current instructions when relevant."
+                ? "Historical skill metadata only; prior instructions and resource text are not replayed. This skill is available this round. Load its current instructions before continuing work within its scope."
                 : "Historical skill metadata only; this skill is not available this round. Do not use its prior instructions or resources.",
               sourceType: "HISTORICAL_SKILL_METADATA",
             },

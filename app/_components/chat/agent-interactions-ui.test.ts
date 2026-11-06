@@ -365,6 +365,18 @@ test("Provider导航和卸载中止捕获的旧SDK请求，旧交互句柄既不
       render('/chat/H');
       assert.deepEqual(instances.at(-1).messages,saved);
       assert.equal(requests.length,beforeSuccess+1,'completed send and sidebar reopen must result in exactly one chat POST');
+      holdSuccessfulStream=true;draft='interrupted tool loop';
+      const interrupted=render('/chat/H');
+      const interruptedSend=completeDraftSubmission(
+        onAccepted=>interrupted.sendMessage({role:'user',parts:[{type:'text',text:draft}]},{metadata:{onAccepted}}),
+        interrupted.getSendError,()=>true,()=>{draft='';},()=>{draft ||= 'interrupted tool loop';}
+      );
+      await tick();assert.equal(draft,'');
+      requests.at(-1).controller.enqueue({type:'data-run-status',id:'run-status',data:{state:'failed'}});
+      requests.at(-1).controller.enqueue({type:'finish',finishReason:'tool-calls'});
+      requests.at(-1).controller.close();await assert.rejects(interruptedSend,/本轮未完成/);holdSuccessfulStream=false;
+      assert.ok(interrupted.getSendError(),'a persisted failure is failure even when SDK transport finishes normally');
+      assert.equal(draft,'interrupted tool loop','tool-loop cutoff restores the accepted draft');
       const planHistory={...cached,messages:[{id:'old-plan',role:'assistant',parts:[{type:'tool-updateTodo',toolCallId:'old-todo',state:'output-available',input:{items:[{id:'one',title:'未完成的旧任务',status:'in_progress'}]},output:{items:[{id:'one',title:'未完成的旧任务',status:'in_progress'}]}}]}]};
       chats.set('/api/messages?chatId=P',planHistory);
       const planned=render('/chat/P');

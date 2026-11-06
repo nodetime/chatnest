@@ -345,7 +345,8 @@ export function ActiveChatProvider({
         isError ||
         isDisconnect ||
         !finishReason ||
-        finishReason === "error";
+        finishReason === "error" ||
+        (finishedMessage && hasRunFailure(finishedMessage));
       const stoppedByUser =
         isAbort && !isError && !isDisconnect && interactionGate.current.paused;
       // Only a new prompt is already stored when a partial reply arrives.

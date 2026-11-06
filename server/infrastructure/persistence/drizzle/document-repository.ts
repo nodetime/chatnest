@@ -13,6 +13,7 @@ import {
   validView,
   withResultTableView,
 } from "@/server/domain/document/result-table";
+import { isValidSheetCsv } from "@/server/domain/document/sheet-csv";
 import type { Document } from "@/server/domain/document/types";
 import { ChatbotError } from "@/server/shared/errors";
 import { db } from "./client";
@@ -119,6 +120,12 @@ export const documentRepository: DocumentRepository & {
         }
         if (docs.some((doc) => doc.userId !== userId)) {
           throw new ChatbotError("forbidden:document");
+        }
+        if (kind === "sheet" && !isValidSheetCsv(content)) {
+          throw new ChatbotError(
+            "bad_request:document",
+            "CSV rows must match the header column count and use valid quoting."
+          );
         }
         return tx
           .insert(document)
@@ -267,6 +274,12 @@ export const documentRepository: DocumentRepository & {
           docs.some((doc) => isProtectedResultTable(doc.content))
         ) {
           throw new ChatbotError("forbidden:document");
+        }
+        if (latest.kind === "sheet" && !isValidSheetCsv(content)) {
+          throw new ChatbotError(
+            "bad_request:document",
+            "CSV rows must match the header column count and use valid quoting."
+          );
         }
         return tx
           .update(document)

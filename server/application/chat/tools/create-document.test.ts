@@ -2,9 +2,143 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { runInNewContext } from "node:vm";
-import { tool } from "ai";
+import { streamText, tool } from "ai";
+import { MockLanguageModelV4 } from "ai/test";
 import ts from "typescript";
 import { z } from "zod";
+import { isValidSheetCsv } from "@/server/domain/document/sheet-csv";
+import { ChatbotError } from "@/server/shared/errors";
+
+test("统一保存入口拒绝错列和破损 CSV，合法引号及换行原样保存", async () => {
+  const saved: any[] = [];
+  let current: any[] = [];
+  const manualWrites: any[] = [];
+  const { documentRepository } = load(
+    "server/infrastructure/persistence/drizzle/document-repository.ts",
+    {
+      "./client": {
+        db: {
+          transaction: (run: any) =>
+            run({
+              execute: () => Promise.resolve(),
+              insert: () => ({
+                values: (row: any) => ({
+                  returning: () => {
+                    saved.push(row);
+                    return Promise.resolve([row]);
+                  },
+                }),
+              }),
+              select: () => ({
+                from: () => ({
+                  where: () => ({ orderBy: () => Promise.resolve(current) }),
+                }),
+              }),
+              update: () => ({
+                set: (row: any) => ({
+                  where: () => ({
+                    returning: () => {
+                      manualWrites.push(row);
+                      return Promise.resolve([row]);
+                    },
+                  }),
+                }),
+              }),
+            }),
+        },
+      },
+      "./schema": { document: {} },
+      "@/server/domain/document/library": {},
+      "@/server/domain/document/result-table": {
+        isProtectedResultTable: () => false,
+      },
+      "@/server/domain/document/sheet-csv": { isValidSheetCsv },
+      "@/server/shared/errors": {
+        ChatbotError: class extends Error {},
+      },
+      "drizzle-orm": {
+        and: () => null,
+        desc: () => null,
+        eq: () => null,
+        sql: () => null,
+      },
+    }
+  );
+  const save = (content: string) =>
+    documentRepository.save({
+      content,
+      id: "sheet",
+      kind: "sheet",
+      title: "对比表",
+      userId: "owner",
+    });
+  await Promise.all(
+    [
+      "商品,链接,平台,备注\n台灯,,未返回链接,1688,未知",
+      "商品,备注\n台灯",
+      '商品,备注\n台灯,"未闭合',
+      " \n",
+    ].map((invalid) => assert.rejects(save(invalid), /bad_request:document/))
+  );
+  assert.equal(saved.length, 0, "校验失败不写入新版本");
+  const valid = '商品,备注\r\n"台灯,暖白","用户备注\n第二行"\r\n';
+  await save(valid);
+  assert.equal(saved.length, 1);
+  assert.equal(saved[0].content, valid, "不自动改写、补列或缩写内容");
+  current = saved;
+  await assert.rejects(
+    documentRepository.updateContent({
+      content: "商品,备注\n台灯",
+      id: "sheet",
+    }),
+    /bad_request:document/
+  );
+  assert.equal(manualWrites.length, 0);
+  await documentRepository.updateContent({ content: valid, id: "sheet" });
+  assert.equal(manualWrites[0].content, valid);
+});
+
+test("文档 API 将两种保存入口的校验失败返回 JSON 400，其他错误继续上抛", async () => {
+  let failure: Error = new ChatbotError("bad_request:document");
+  const { POST } = load("app/(chat)/api/document/route.ts", {
+    "@/app/(auth)/auth": {
+      auth: () => Promise.resolve({ user: { id: "owner" } }),
+    },
+    "@/server/composition": {
+      getUseCases: () => ({
+        documents: {
+          listById: () => Promise.resolve([{ userId: "owner" }]),
+          save: () => Promise.reject(failure),
+          updateContent: () => Promise.reject(failure),
+        },
+      }),
+    },
+    "@/server/domain/document/result-table": {
+      isProtectedResultTable: () => false,
+    },
+    "@/server/shared/errors": { ChatbotError },
+    zod: { z },
+  });
+  const request = (isManualEdit: boolean) => ({
+    json: () =>
+      Promise.resolve({
+        content: "商品,备注\n台灯",
+        isManualEdit,
+        kind: "text", // Manual writes must validate the persisted sheet kind.
+        title: "对比表",
+      }),
+    url: "http://localhost/api/document?id=sheet",
+  });
+  await Promise.all(
+    [false, true].map(async (manual) => {
+      const response = await POST(request(manual));
+      assert.equal(response.status, 400);
+      assert.equal((await response.json()).code, "bad_request:document");
+    })
+  );
+  failure = new Error("storage offline");
+  await assert.rejects(POST(request(false)), /storage offline/);
+});
 
 function load(file: string, modules: Record<string, unknown>) {
   const output = { exports: {} as Record<string, any> };
@@ -17,12 +151,15 @@ function load(file: string, modules: Record<string, unknown>) {
   runInNewContext(code, {
     exports: output.exports,
     module: output,
+    process: { env: {} },
+    Response,
     require: (name: string) => {
       if (!Object.hasOwn(modules, name)) {
         throw new Error(`Unexpected dependency: ${name}`);
       }
       return modules[name];
     },
+    URL,
   });
   return output.exports;
 }
@@ -39,6 +176,253 @@ function factory(save: (input: any) => Promise<unknown>) {
     ai: { tool },
     zod: { z },
   }).createDocument;
+}
+
+for (const fails of [false, true]) {
+  test(`整体修改${fails ? "失败保留旧工作区" : "成功打开正确表格"}，只在保存后发布`, async () => {
+    const writes: any[] = [];
+    const current = {
+      content: "旧内容",
+      id: "current-sheet",
+      kind: "sheet",
+      title: "对比表",
+      userId: "owner",
+    };
+    const { updateDocument } = load(
+      "server/application/chat/tools/update-document.ts",
+      {
+        "@/server/application/document/artifact-service": {
+          documentHandlersByArtifactKind: [
+            {
+              kind: "sheet",
+              onUpdateDocument: ({ dataStream }: any) => {
+                dataStream.write({
+                  data: "部分生成",
+                  transient: true,
+                  type: "data-sheetDelta",
+                });
+                dataStream.write({
+                  data: "商品,备注\n台灯,用户备注",
+                  transient: true,
+                  type: "data-sheetDelta",
+                });
+                assert.equal(
+                  writes.length,
+                  0,
+                  "未保存的生成结果不应改变用户工作区"
+                );
+                return fails
+                  ? Promise.reject(new Error("save failed"))
+                  : Promise.resolve();
+              },
+            },
+          ],
+        },
+        "@/server/domain/document/result-table": {
+          isProtectedResultTable: () => false,
+        },
+        "@/server/infrastructure/persistence/drizzle/document-repository": {
+          documentRepository: {
+            findLatestById: () => Promise.resolve(current),
+          },
+        },
+        ai: { tool },
+        zod: { z },
+      }
+    );
+    const definition = updateDocument({
+      dataStream: { write: (part: any) => writes.push(part) },
+      modelId: "fixture",
+      session: { user: { id: "owner" } },
+    });
+    const operation = definition.execute({
+      description: "精简",
+      id: current.id,
+    });
+    if (fails) {
+      await assert.rejects(operation, /save failed/);
+      assert.equal(writes.length, 0);
+    } else {
+      const result = await operation;
+      assert.equal(result.id, current.id);
+      assert.equal(result.savedContent, "商品,备注\n台灯,用户备注");
+      assert.deepEqual(
+        writes.map((part) => part.type),
+        [
+          "data-id",
+          "data-kind",
+          "data-title",
+          "data-clear",
+          "data-sheetDelta",
+          "data-finish",
+        ]
+      );
+      assert.equal(writes[0].data, current.id);
+      assert.equal(writes[1].data, "sheet");
+      assert.equal(writes.at(-2).data, "商品,备注\n台灯,用户备注");
+    }
+  });
+}
+
+test("局部修改保存成功后携带目标身份，关闭工作区也能打开正确产物", async () => {
+  const writes: any[] = [];
+  let saves = 0;
+  const current = {
+    content: "商品,备注\n台灯,待实物复核",
+    id: "sheet",
+    kind: "sheet",
+    title: "对比表",
+    userId: "owner",
+  };
+  const { editDocument } = load(
+    "server/application/chat/tools/edit-document.ts",
+    {
+      "@/server/domain/document/result-table": {
+        isProtectedResultTable: () => false,
+      },
+      "@/server/infrastructure/persistence/drizzle/document-repository": {
+        documentRepository: {
+          findLatestById: () => Promise.resolve(current),
+          save: (input: any) => {
+            saves += 1;
+            assert.equal(input.content, "商品,备注\n流云石菇台灯,待实物复核");
+            assert.equal(writes.length, 0);
+            return Promise.resolve();
+          },
+        },
+      },
+      ai: { tool },
+      zod: { z },
+    }
+  );
+  const edited = await editDocument({
+    dataStream: { write: (part: any) => writes.push(part) },
+    session: { user: { id: "owner" } },
+  }).execute({ id: "sheet", new_string: "流云石菇台灯", old_string: "台灯" });
+  assert.equal(edited.savedContent, "商品,备注\n流云石菇台灯,待实物复核");
+  assert.equal(writes[0].type, "data-id");
+  assert.equal(writes[0].data, "sheet");
+  assert.equal(writes[1].data, "sheet");
+  assert.equal(writes.at(-1).type, "data-finish");
+  assert.equal(saves, 1);
+  writes.length = 0;
+  const unchanged = await editDocument({
+    dataStream: { write: (part: any) => writes.push(part) },
+    session: { user: { id: "owner" } },
+  }).execute({
+    id: "sheet",
+    new_string: "待实物复核",
+    old_string: "待实物复核",
+  });
+  assert.equal(unchanged.savedContent, current.content);
+  assert.equal(saves, 1, "原样替换不应重复生成版本");
+  assert.equal(writes.length, 0);
+  const mismatch = await editDocument({
+    dataStream: { write: (part: any) => writes.push(part) },
+    session: { user: { id: "owner" } },
+  }).execute({ id: "sheet", new_string: "新值", old_string: "不存在的旧值" });
+  assert.equal(mismatch.error, "old_string not found in document");
+  assert.equal(mismatch.savedContent, current.content);
+  const forbidden = await editDocument({
+    dataStream: { write: (part: any) => writes.push(part) },
+    session: { user: { id: "other" } },
+  }).execute({ id: "sheet", new_string: "新值", old_string: "台灯" });
+  assert.equal(forbidden.error, "Forbidden");
+  assert.equal(forbidden.savedContent, undefined);
+  assert.equal(saves, 1);
+  assert.equal(writes.length, 0);
+});
+
+for (const mode of ["complete", "empty", "truncated", "error"] as const) {
+  test(`真实 SDK 表格整体修改 ${mode}：失败不覆盖保存内容`, async () => {
+    const saved: any[] = [];
+    const writes: any[] = [];
+    const model = new MockLanguageModelV4({
+      doStream: () =>
+        Promise.resolve({
+          stream: new ReadableStream({
+            start(controller) {
+              controller.enqueue({ type: "stream-start", warnings: [] });
+              if (mode === "error") {
+                controller.enqueue({
+                  error: new Error("provider failed"),
+                  type: "error",
+                });
+              } else {
+                controller.enqueue({ id: "text", type: "text-start" });
+                controller.enqueue({
+                  delta: mode === "empty" ? "" : "商品,备注\n台灯,用户备注",
+                  id: "text",
+                  type: "text-delta",
+                });
+                controller.enqueue({ id: "text", type: "text-end" });
+                controller.enqueue({
+                  finishReason: {
+                    raw: mode === "truncated" ? "length" : "stop",
+                    unified: mode === "truncated" ? "length" : "stop",
+                  },
+                  type: "finish",
+                  usage: {
+                    inputTokens: {
+                      cacheRead: 0,
+                      cacheWrite: 0,
+                      noCache: 1,
+                      total: 1,
+                    },
+                    outputTokens: { reasoning: 0, text: 1, total: 1 },
+                  },
+                });
+              }
+              controller.close();
+            },
+          }),
+        }),
+    });
+    const service = load("server/application/document/artifact-service.ts", {
+      "./kinds/code": {},
+      "./kinds/sheet": {},
+      "./kinds/text": {},
+      "@/server/infrastructure/persistence/drizzle/document-repository": {
+        documentRepository: {
+          save: (input: any) => {
+            saved.push(input);
+            return Promise.resolve();
+          },
+        },
+      },
+    });
+    const handler = load("server/application/document/kinds/sheet.ts", {
+      "../artifact-service": service,
+      "@/server/application/ai/prompts": {
+        updateDocumentPrompt: (content: string) => content,
+      },
+      "@/server/application/ai/providers": { getLanguageModel: () => model },
+      "@/server/shared/telemetry": { metadataOnlyTelemetry: {} },
+      ai: { streamText },
+    }).sheetDocumentHandler;
+    const update = handler.onUpdateDocument({
+      dataStream: { write: (part: any) => writes.push(part) },
+      description: "精简，保留备注",
+      document: {
+        content: "商品,备注\n原版,用户备注",
+        id: "sheet",
+        kind: "sheet",
+        title: "表格",
+      },
+      modelId: "fixture",
+      session: { user: { id: "owner" } },
+    });
+    if (mode === "complete") {
+      await update;
+      assert.equal(saved.length, 1);
+      assert.equal(saved[0].content, "商品,备注\n台灯,用户备注");
+      assert.equal(writes.at(-1).data, saved[0].content);
+    } else {
+      await assert.rejects(update, /表格修改未/);
+      assert.equal(saved.length, 0);
+      assert.equal(writes.length, 0);
+    }
+  });
 }
 
 test("creation saves the agent's exact content once, then publishes a ready artifact without a second model", async () => {
@@ -113,6 +497,11 @@ test("missing identity and persistence failures never claim creation or publish 
 });
 
 test("a short newly saved artifact opens the workspace without relying on a text length window", () => {
+  let opened = 0;
+  let historyUpdates = 0;
+  const refreshedDocuments: string[] = [];
+  let metadata: any = null;
+  const blockedArtifact = { current: false };
   let state: any = {
     content: "older body",
     documentId: "old",
@@ -146,6 +535,10 @@ test("a short newly saved artifact opens the workspace without relying on a text
           },
         ],
       },
+      "./artifact-catalog": load(
+        "app/_components/chat/artifact-catalog.ts",
+        {}
+      ),
       "./data-stream-provider": {
         useDataStream: () => ({
           dataStream: parts,
@@ -153,17 +546,42 @@ test("a short newly saved artifact opens the workspace without relying on a text
         }),
       },
       "./sidebar-history": { getChatHistoryPaginationKey: () => null },
+      "@/app/_hooks/use-active-chat": {
+        useActiveChat: () => ({ chatId: "chat" }),
+      },
       "@/app/_hooks/use-artifact": {
         initialArtifactData: state,
         useArtifact: () => ({
           artifact: state,
+          metadata,
           setArtifact,
           setMetadata: () => undefined,
         }),
       },
+      "@/app/_hooks/use-workspace": {
+        useWorkspace: () => ({
+          show: (tab: string) => {
+            assert.equal(tab, "document");
+            opened += 1;
+          },
+        }),
+      },
       "@/server/domain/document/stream-state": {},
-      react: { useEffect: (fn: () => void) => fn() },
-      swr: { useSWRConfig: () => ({ mutate: () => undefined }) },
+      react: {
+        useEffect: (fn: () => void) => fn(),
+        useRef: () => blockedArtifact,
+      },
+      swr: {
+        useSWRConfig: () => ({
+          mutate: (key: string) => {
+            if (key === "history") {
+              historyUpdates += 1;
+            } else {
+              refreshedDocuments.push(key);
+            }
+          },
+        }),
+      },
       "swr/infinite": { unstable_serialize: () => "history" },
     }
   );
@@ -183,6 +601,56 @@ test("a short newly saved artifact opens the workspace without relying on a text
   assert.equal(state.content, "短报告");
   assert.equal(state.isVisible, true);
   assert.equal(state.status, "idle");
+  assert.equal(opened, 1);
+  // Reopening an update to the same artifact must not depend on a visible/id
+  // transition; the workspace may have been closed independently.
+  state.isVisible = true;
+  parts = [
+    { data: "new", type: "data-id" },
+    { data: null, type: "data-finish" },
+  ];
+  DataStreamHandler();
+  assert.equal(opened, 2);
+  assert.deepEqual(refreshedDocuments, [
+    "/api/document?id=new&chatId=chat",
+    "/api/document?id=new&chatId=chat",
+  ]);
+
+  for (const dirtyFlag of [
+    "documentPendingChanges",
+    "resultTablePendingChanges",
+  ]) {
+    metadata = { [dirtyFlag]: true };
+    state.content = "尚未保存的用户修改";
+    parts = [{ data: "other", type: "data-id" }];
+    DataStreamHandler();
+    // Streaming events can arrive in separate renders. Keep the whole blocked
+    // artifact out of the editor, while unrelated chat metadata still works.
+    parts = [
+      { data: "text", type: "data-kind" },
+      { data: null, type: "data-clear" },
+      { data: "另一份已保存文件", type: "data-textDelta" },
+      { data: "对话新标题", type: "data-chat-title" },
+      { data: null, type: "data-finish" },
+    ];
+    DataStreamHandler();
+    assert.equal(state.documentId, "new");
+    assert.equal(state.content, "尚未保存的用户修改");
+    assert.equal(state.status, "idle");
+    assert.equal(opened, 2);
+  }
+  assert.equal(historyUpdates, 2);
+  metadata = null;
+  parts = [
+    { data: "other", type: "data-id" },
+    { data: null, type: "data-clear" },
+    { data: "另一份已保存文件", type: "data-textDelta" },
+    { data: null, type: "data-finish" },
+  ];
+  DataStreamHandler();
+  assert.equal(state.documentId, "other");
+  assert.equal(state.content, "另一份已保存文件");
+  assert.equal(opened, 3);
 });
 
 test("text artifact opens while suggestion metadata is still initializing", () => {

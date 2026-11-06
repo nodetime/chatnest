@@ -50,7 +50,7 @@ test("审批只接受存储assistant上与当前会话同代的范围标记", as
   assert.equal(feature.hasCurrentCapabilityScope([{ parts: [] }], 2), false);
 });
 
-test("本轮模型历史仅重放技能元数据，同标识编辑及停用不复用旧正文，持久证据不变", async () => {
+test("本轮续聊使用已授权技能的最新正文，停用技能和旧资源不重放，持久证据不变", async () => {
   const feature = await import("./projection");
   assert.equal(typeof feature.projectSkillHistoryForModel, "function");
   const messages = [
@@ -91,18 +91,29 @@ test("本轮模型历史仅重放技能元数据，同标识编辑及停用不�
     },
   ];
   const original = JSON.stringify(messages);
-  const projected = feature.projectSkillHistoryForModel(messages, [
-    "selected-method",
-  ]);
+  assert.deepEqual(
+    [...feature.historicalSkillNames(messages)],
+    ["personal:unselected", "disabled-builtin", "selected-method"]
+  );
+  assert.equal(
+    feature.historicalSkillNames([
+      { parts: [{ text: "selected-method", type: "text" }] },
+    ]).size,
+    0
+  );
+  const projected = feature.projectSkillHistoryForModel(
+    messages,
+    new Map([["selected-method", "CURRENT_SELECTED_BODY"]])
+  );
   assert.ok(!JSON.stringify(projected).includes("PRIVATE_BODY_SENTINEL"));
   assert.ok(!JSON.stringify(projected).includes("DISABLED_RESOURCE"));
   assert.ok(!JSON.stringify(projected).includes("OLD_SELECTED_BODY"));
   const projectedParts = projected[0].parts as unknown as {
-    output?: { available: boolean };
+    output?: { available?: boolean; instructions?: string };
   }[];
   assert.equal(projectedParts[1].output?.available, false);
   assert.equal(projectedParts[2].output?.available, false);
-  assert.equal(projectedParts[3].output?.available, true);
+  assert.equal(projectedParts[3].output?.instructions, "CURRENT_SELECTED_BODY");
   assert.ok(JSON.stringify(projected).includes("已生成的正常成果"));
   assert.equal(JSON.stringify(messages), original);
   const { convertToModelMessages } = await import("ai");
@@ -115,7 +126,8 @@ test("本轮模型历史仅重放技能元数据，同标识编辑及停用不�
   assert.ok(!JSON.stringify(model).includes("PRIVATE_BODY_SENTINEL"));
   assert.ok(!JSON.stringify(model).includes("DISABLED_RESOURCE"));
   assert.ok(!JSON.stringify(model).includes("OLD_SELECTED_BODY"));
-  const empty = feature.projectSkillHistoryForModel(messages, []);
+  assert.ok(JSON.stringify(model).includes("CURRENT_SELECTED_BODY"));
+  const empty = feature.projectSkillHistoryForModel(messages, new Map());
   assert.ok(!JSON.stringify(empty).includes("OLD_SELECTED_BODY"));
   const emptyParts = empty[0].parts as unknown as {
     output?: { available: boolean };

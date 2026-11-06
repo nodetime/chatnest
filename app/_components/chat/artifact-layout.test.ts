@@ -184,11 +184,18 @@ test("legacy result card uses native open semantics and reopens the document wor
   assert.equal(artifact.content, "same body");
 });
 
-test("late editor and version callbacks cannot change or save the newly opened document", () => {
+test("artifact version updates follow latest, preserve history selection, and isolate late callbacks", () => {
   const refs: any[] = [];
   let cursor = 0;
   let calls = 0;
   let writes = 0;
+  let savedVersions: any[] | undefined;
+  let runEffects = false;
+  let stateCursor = 0;
+  let effectCursor = 0;
+  const states: any[] = [];
+  const effectDeps: any[] = [];
+  const effects: (() => void)[] = [];
   let artifact = {
     boundingBox: {},
     content: "A",
@@ -204,6 +211,9 @@ test("late editor and version callbacks cannot change or save the newly opened d
       { content: `${kind}-content`, kind },
     ])
   );
+  const setArtifact = (fn: any) => {
+    artifact = fn(artifact);
+  };
   const modules: Record<string, unknown> = {
     "./artifact-actions": { ArtifactActions: "actions" },
     "./artifact-catalog": { artifactCatalog: () => [] },
@@ -218,9 +228,7 @@ test("late editor and version callbacks cannot change or save the newly opened d
     "@/app/_hooks/use-artifact": {
       useArtifact: () => ({
         artifact,
-        setArtifact: (fn: any) => {
-          artifact = fn(artifact);
-        },
+        setArtifact,
         setMetadata() {
           writes += 1;
         },
@@ -243,8 +251,19 @@ test("late editor and version callbacks cannot change or save the newly opened d
     react: {
       memo: (fn: unknown) => fn,
       useCallback: (fn: unknown) => fn,
-      useEffect() {
-        /* No-op: this fixture observes other callbacks. */
+      useEffect(fn: () => void, deps: unknown[]) {
+        if (!runEffects) {
+          return;
+        }
+        const index = effectCursor;
+        effectCursor += 1;
+        if (
+          !effectDeps[index] ||
+          deps.some((dep, i) => dep !== effectDeps[index][i])
+        ) {
+          effectDeps[index] = deps;
+          effects.push(fn);
+        }
       },
       useRef: (value: unknown) => {
         const index = cursor;
@@ -252,18 +271,36 @@ test("late editor and version callbacks cannot change or save the newly opened d
         refs[index] ??= { current: value };
         return refs[index];
       },
-      useState: (value: unknown) => [
-        value === -1 ? 0 : value,
-        () => {
-          writes += 1;
-        },
-      ],
+      useState: (value: unknown) => {
+        if (!runEffects) {
+          return [
+            value === -1 ? 0 : value,
+            () => {
+              writes += 1;
+            },
+          ];
+        }
+        const index = stateCursor;
+        stateCursor += 1;
+        if (!(index in states)) {
+          states[index] = value;
+        }
+        return [
+          states[index],
+          (next: any) => {
+            states[index] =
+              typeof next === "function" ? next(states[index]) : next;
+          },
+        ];
+      },
     },
     "react/jsx-runtime": { Fragment: "fragment", jsx, jsxs: jsx },
     swr: {
       __esModule: true,
       default: () => ({
-        data: [{ content: artifact.content, id: artifact.documentId }],
+        data: savedVersions ?? [
+          { content: artifact.content, id: artifact.documentId },
+        ],
       }),
       useSWRConfig: () => ({ mutate: () => Promise.resolve() }),
     },
@@ -284,6 +321,8 @@ test("late editor and version callbacks cannot change or save the newly opened d
   });
   const render = () => {
     cursor = 0;
+    stateCursor = 0;
+    effectCursor = 0;
     return Artifact({
       chatId: "chat",
       embedded: true,
@@ -326,6 +365,42 @@ test("late editor and version callbacks cannot change or save the newly opened d
   );
   assert.equal(calls, 0);
   assert.equal(writes, 0);
+
+  // Now exercise the actual loading effect. A new server version must not
+  // silently turn a latest-version view into a historical, readonly view.
+  refs.length = 0;
+  runEffects = true;
+  artifact = { ...artifact, content: "version 1", documentId: "a" };
+  savedVersions = [{ content: "version 1", id: "a" }];
+  const settle = () => {
+    let tree = render();
+    for (let i = 0; i < 4 && effects.length; i += 1) {
+      for (const effect of effects.splice(0)) {
+        effect();
+      }
+      tree = render();
+    }
+    return tree;
+  };
+  assert.equal(find(settle(), "text-content")?.props.currentVersionIndex, 0);
+  savedVersions = [...savedVersions, { content: "version 2", id: "a" }];
+  let tree = settle();
+  assert.equal(find(tree, "text-content")?.props.currentVersionIndex, 1);
+  assert.equal(find(tree, "text-content")?.props.isCurrentVersion, true);
+  assert.equal(artifact.content, "version 2");
+  const previousVersion = find(tree, "actions")?.props.handleVersionChange;
+  assert.equal(typeof previousVersion, "function");
+  previousVersion("prev");
+  tree = settle();
+  assert.equal(find(tree, "text-content")?.props.currentVersionIndex, 0);
+  savedVersions = [...savedVersions, { content: "version 3", id: "a" }];
+  tree = settle();
+  assert.equal(find(tree, "text-content")?.props.currentVersionIndex, 0);
+  assert.equal(find(tree, "text-content")?.props.isCurrentVersion, false);
+  find(tree, "actions")?.props.handleVersionChange("latest");
+  tree = settle();
+  assert.equal(find(tree, "text-content")?.props.currentVersionIndex, 2);
+  assert.equal(artifact.content, "version 3");
 });
 
 test("workspace header separates a 52px title rail from contextual controls and keeps the keyboard mode menu", () => {

@@ -4,19 +4,160 @@ import { test } from "node:test";
 import {
   convertToModelMessages,
   createUIMessageStream,
+  generateText,
+  isStepCount,
   readUIMessageStream,
   tool,
 } from "ai";
+import { MockLanguageModelV4 } from "ai/test";
+import { z } from "zod";
 import type { ChatMessage } from "@/server/domain/message/types";
-import { systemPrompt } from "../ai/prompts";
+import { completionStepSettings, systemPrompt } from "../ai/prompts";
 import { agentInteractionTools } from "./tools/agent-interactions";
+
+const modelUsage = {
+  inputTokens: { cacheRead: 0, cacheWrite: 0, noCache: 1, total: 1 },
+  outputTokens: { reasoning: 0, text: 1, total: 1 },
+};
+
+test("真实 SDK 在既有步数内提示保存产物与交接，保留供应商原生工具协议", async () => {
+  let calls = 0;
+  const executed: string[] = [];
+  const maxSteps = 4;
+  const model = new MockLanguageModelV4({
+    doGenerate: (options) => {
+      calls += 1;
+      if (calls === maxSteps) {
+        assert.notDeepEqual(options.toolChoice, { type: "none" });
+        assert.equal(options.tools?.length, 2);
+        assert.match(JSON.stringify(options.prompt), /Complete this turn/);
+        assert.match(JSON.stringify(options.prompt), /RUNTIME_TOOL_CATALOG/);
+        return Promise.resolve({
+          content: [
+            { text: "对比表已保存，另有一项待补充。", type: "text" as const },
+          ],
+          finishReason: { raw: "stop", unified: "stop" as const },
+          usage: modelUsage,
+          warnings: [],
+        });
+      }
+      const toolName = calls === maxSteps - 1 ? "createDocument" : "search";
+      if (toolName === "createDocument") {
+        assert.match(JSON.stringify(options.prompt), /Complete this turn/);
+      } else {
+        assert.doesNotMatch(
+          JSON.stringify(options.prompt),
+          /Complete this turn/
+        );
+      }
+      return Promise.resolve({
+        content: [
+          {
+            input: "{}",
+            toolCallId: `call-${calls}`,
+            toolName,
+            type: "tool-call" as const,
+          },
+        ],
+        finishReason: { raw: "tool_calls", unified: "tool-calls" as const },
+        usage: modelUsage,
+        warnings: [],
+      });
+    },
+  });
+  const result = await generateText({
+    instructions: "Complete the requested task. RUNTIME_TOOL_CATALOG",
+    model,
+    prepareStep: ({ stepNumber }) =>
+      completionStepSettings(
+        stepNumber,
+        maxSteps,
+        "Complete the requested task. RUNTIME_TOOL_CATALOG"
+      ),
+    prompt: "比较已有候选并保存表格",
+    stopWhen: isStepCount(maxSteps),
+    tools: Object.fromEntries(
+      ["search", "createDocument"].map((name) => [
+        name,
+        tool({
+          execute: () => {
+            executed.push(name);
+            return { saved: name === "createDocument" };
+          },
+          inputSchema: z.object({}),
+        }),
+      ])
+    ),
+  });
+  assert.equal(calls, maxSteps);
+  assert.deepEqual(executed, ["search", "search", "createDocument"]);
+  assert.equal(result.text, "对比表已保存，另有一项待补充。");
+});
+
+for (const mode of ["answer", "ask", "loop"] as const) {
+  test(`真实 SDK 步数边界：${mode}`, async () => {
+    let failure = 0;
+    const reachedLimit = isStepCount(2);
+    const definitions = agentInteractionTools();
+    const result = await generateText({
+      model: new MockLanguageModelV4({
+        doGenerate: {
+          content:
+            mode === "answer"
+              ? [{ text: "已完成", type: "text" }]
+              : [
+                  {
+                    input:
+                      mode === "ask"
+                        ? JSON.stringify({
+                            questions: [
+                              {
+                                id: "reference",
+                                label: "参照",
+                                required: true,
+                                type: "text",
+                              },
+                            ],
+                            title: "补充参照",
+                          })
+                        : "{}",
+                    toolCallId: "call",
+                    toolName: mode === "ask" ? "askUser" : "search",
+                    type: "tool-call",
+                  },
+                ],
+          finishReason: {
+            raw: mode === "answer" ? "stop" : "tool_calls",
+            unified: mode === "answer" ? "stop" : "tool-calls",
+          },
+          usage: modelUsage,
+          warnings: [],
+        },
+      }),
+      prompt: "完成任务",
+      stopWhen: async (context) => {
+        const reached = await reachedLimit(context);
+        if (reached) {
+          failure += 1;
+        }
+        return reached;
+      },
+      tools: {
+        askUser: tool(definitions.askUser),
+        search: tool({ execute: () => "found", inputSchema: z.object({}) }),
+      },
+    });
+    assert.equal(failure, mode === "loop" ? 1 : 0, mode);
+    assert.equal(result.steps.length, mode === "loop" ? 2 : 1, mode);
+  });
+}
 
 test("通用提示词按能力注入交互规则，不向无工具模型许诺工具，也不硬编码业务 SOP", () => {
   const markdown = readFileSync(
     new URL("../ai/core.md", import.meta.url),
     "utf8"
   );
-  const [core, tools] = markdown.split("<!-- tools -->");
+  const [core, tools] = markdown.split(/<!-- (?:tools|completion) -->/);
   assert.equal(systemPrompt({ supportsTools: false }), core.trim());
   assert.equal(
     systemPrompt({ supportsTools: true }),

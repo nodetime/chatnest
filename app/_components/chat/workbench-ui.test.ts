@@ -566,7 +566,7 @@ test("version footer exposes Chinese version labels and keeps restore protection
   assert.doesNotMatch(source, /Show changes|\bRestore\b|\bLatest\b|\} of \{/);
 });
 
-test("all artifact action and toolbar descriptions and copy toasts are Chinese without translating agent messages", () => {
+test("artifact controls are Chinese and action messages request supported capabilities", () => {
   const expected: Record<string, string[]> = {
     code: [
       "运行代码",
@@ -616,7 +616,7 @@ test("all artifact action and toolbar descriptions and copy toasts are Chinese w
     ["sheet", "Can you please format and clean the data?"],
     [
       "sheet",
-      "Can you please analyze and visualize the data by creating a new code artifact in python?",
+      "请分析当前表格中的数据，说明主要发现；需要计算时使用当前可用的计算工具。",
     ],
     [
       "text",
@@ -630,6 +630,12 @@ test("all artifact action and toolbar descriptions and copy toasts are Chinese w
       )
     );
   }
+});
+
+test("sheet analysis uses the available compute tool instead of requesting an unsupported Python artifact", () => {
+  const source = readFileSync("app/_artifacts/sheet/client.tsx", "utf8");
+  assert.doesNotMatch(source, /new code artifact in python/);
+  assert.match(source, /需要计算时使用当前可用的计算工具/);
 });
 
 test("source and raw-result Sheets localize close controls without changing the shared Sheet", () => {
@@ -795,6 +801,7 @@ test("mixed reasoning and tools render in their original SDK order rather than m
       'react/jsx-runtime': {jsx, jsxs:jsx, Fragment:'fragment'},
       '@/app/_lib/utils': {cn:()=>'', sanitizeText: text=>text},
       '@/server/domain/message/run-failure': require('./server/domain/message/run-failure.ts'),
+      '@/server/domain/message/agent-interactions': require('./server/domain/message/agent-interactions.ts'),
       '../ai-elements/message': {MessageContent:'text', MessageResponse:'response'},
       '../ai-elements/shimmer': {Shimmer:'shimmer'},
       '../ai-elements/tool': {},

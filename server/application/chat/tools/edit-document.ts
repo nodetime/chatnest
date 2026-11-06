@@ -13,7 +13,7 @@ type EditDocumentProps = {
 export const editDocument = ({ session, dataStream }: EditDocumentProps) =>
   tool({
     description:
-      "Make a targeted edit to an existing artifact by finding and replacing an exact string. Preferred over updateDocument for small changes. The old_string must match exactly.",
+      "Make a targeted edit to an existing artifact by finding and replacing an exact string. The old_string must match exactly. Results include savedContent, the actual saved artifact body, for verification or correcting a failed match. Use updateDocument for changes spanning many rows or sections.",
     execute: async ({ id, old_string, new_string, replace_all }) => {
       const document = await documentRepository.findLatestById(id);
 
@@ -37,12 +37,25 @@ export const editDocument = ({ session, dataStream }: EditDocumentProps) =>
       }
 
       if (!document.content.includes(old_string)) {
-        return { error: "old_string not found in document" };
+        return {
+          error: "old_string not found in document",
+          savedContent: document.content,
+        };
       }
 
       const updated = replace_all
         ? document.content.replaceAll(old_string, new_string)
         : document.content.replace(old_string, new_string);
+
+      if (updated === document.content) {
+        return {
+          content: "No changes needed; the saved content already matches.",
+          id,
+          kind: document.kind,
+          savedContent: document.content,
+          title: document.title,
+        };
+      }
 
       await documentRepository.save({
         content: updated,
@@ -52,6 +65,17 @@ export const editDocument = ({ session, dataStream }: EditDocumentProps) =>
         userId: document.userId,
       });
 
+      dataStream.write({ data: document.id, transient: true, type: "data-id" });
+      dataStream.write({
+        data: document.kind,
+        transient: true,
+        type: "data-kind",
+      });
+      dataStream.write({
+        data: document.title,
+        transient: true,
+        type: "data-title",
+      });
       dataStream.write({
         data: null,
         transient: true,
@@ -87,6 +111,7 @@ export const editDocument = ({ session, dataStream }: EditDocumentProps) =>
             : "The document has been edited successfully.",
         id,
         kind: document.kind,
+        savedContent: updated,
         title: document.title,
       };
     },

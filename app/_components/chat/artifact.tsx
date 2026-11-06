@@ -130,6 +130,7 @@ function PureArtifact({
     [scope, setMetadata]
   );
   const loadedIdRef = useRef("");
+  const loadedVersionCountRef = useRef(0);
   const editRevisionRef = useRef(0);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // biome-ignore lint/correctness/useExhaustiveDependencies: Reset transient editor state for each document/chat visit.
@@ -167,17 +168,17 @@ function PureArtifact({
       return;
     }
     const changed = loadedIdRef.current !== artifact.documentId;
+    const followLatest =
+      changed ||
+      currentVersionIndex === -1 ||
+      currentVersionIndex === loadedVersionCountRef.current - 1;
     loadedIdRef.current = artifact.documentId;
+    loadedVersionCountRef.current = documents.length;
     setDocument(latest);
-    if (changed || currentVersionIndex === -1) {
+    if (followLatest) {
       setCurrentVersionIndex(documents.length - 1);
     }
-    if (
-      !isContentDirty &&
-      (changed ||
-        currentVersionIndex === -1 ||
-        currentVersionIndex === documents.length - 1)
-    ) {
+    if (!isContentDirty && followLatest) {
       setArtifact((current) =>
         current.documentId === latest.id
           ? { ...current, content: latest.content ?? "" }

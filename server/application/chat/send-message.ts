@@ -6,6 +6,7 @@ import {
   type ToolSet,
   toUIMessageStream,
 } from "ai";
+import matter from "gray-matter";
 import {
   getModelConnection,
   getRuntimeModels,
@@ -15,7 +16,10 @@ import {
   getCapabilities,
   getModelAvailability,
 } from "@/server/application/ai/model-service";
-import { systemPrompt } from "@/server/application/ai/prompts";
+import {
+  completionStepSettings,
+  systemPrompt,
+} from "@/server/application/ai/prompts";
 import { getLanguageModel } from "@/server/application/ai/providers";
 import {
   createTaskCapabilityService,
@@ -40,6 +44,7 @@ import {
 import { AttachmentRoundBudget } from "@/server/domain/attachment/document-budget";
 import {
   hasCurrentCapabilityScope,
+  historicalSkillNames,
   projectSkillHistoryForModel,
 } from "@/server/domain/capability/projection";
 import type { CapabilitySelection } from "@/server/domain/capability/schema";
@@ -80,6 +85,7 @@ import { entitlementsByUserType } from "@/server/domain/user/entitlements";
 import type { ChatSession } from "@/server/domain/user/types";
 import { createBrowserTools } from "@/server/infrastructure/browser/browser-tools";
 import { createAgentRuntime } from "@/server/infrastructure/mcp/runtime";
+import { readSkillFile } from "@/server/infrastructure/mcp/skills";
 import { ChatbotError } from "@/server/shared/errors";
 import { checkIpRateLimit } from "@/server/shared/ratelimit";
 import {
@@ -320,10 +326,26 @@ export async function sendMessage(
   restoreResultEvidence(evidenceLedger, evidenceHistory);
   const historyTools = historyProjectionTools(evidenceLedger, evidenceHistory);
   const imageViewer = createImageViewer(evidenceLedger, input.signal);
+  const usedSkillNames = historicalSkillNames(resolvedAttachmentContext);
+  const currentSkillInstructions = new Map(
+    await Promise.all(
+      taskCapabilities.skills
+        .filter((skill) => usedSkillNames.has(skill.name))
+        .map(async (skill) => {
+          await taskCapabilities.assertCurrent(
+            `skill:${skill.id ?? `builtin:${skill.name}`}`
+          );
+          return [
+            skill.name,
+            matter(await readSkillFile(skill, "SKILL.md")).content,
+          ] as const;
+        })
+    )
+  );
   const attachmentContext = boundedMcpHistory(
     projectSkillHistoryForModel(
       resolvedAttachmentContext,
-      taskCapabilities.skills.map((skill) => skill.name)
+      currentSkillInstructions
     ),
     historyTools,
     evidenceLedger
@@ -526,20 +548,23 @@ export async function sendMessage(
             session,
           }),
         };
+        const instructions = [
+          systemPrompt({ supportsTools }),
+          supportsTools
+            ? runtime.instructions
+            : "No tools are available to this model for this turn.",
+          searchMode === "web"
+            ? "The user selected web search for this turn. Use the available tools; explain any unavailable capability."
+            : "",
+        ]
+          .filter(Boolean)
+          .join("\n\n");
+        const { maxSteps } = runtime.config;
+        const reachedStepLimit = isStepCount(maxSteps);
         const result = streamText({
           abortSignal: runtime.signal,
           activeTools: supportsTools ? Object.keys(tools) : [],
-          instructions: [
-            systemPrompt({ supportsTools }),
-            supportsTools
-              ? runtime.instructions
-              : "No tools are available to this model for this turn.",
-            searchMode === "web"
-              ? "The user selected web search for this turn. Use the available tools; explain any unavailable capability."
-              : "",
-          ]
-            .filter(Boolean)
-            .join("\n\n"),
+          instructions,
           maxOutputTokens: runtime.config.maxOutputTokens,
           // A retry re-enters billing middleware and opens another reservation.
           // Let the existing reconciliation own a charged attempt with unknown outcome.
@@ -572,7 +597,10 @@ export async function sendMessage(
             }
             stopWaitingStatus();
           },
-          prepareStep: ({ messages: stepMessages }) => ({
+          prepareStep: ({ messages: stepMessages, stepNumber }) => ({
+            ...(supportsTools
+              ? completionStepSettings(stepNumber, maxSteps, instructions)
+              : {}),
             messages: imageViewer.projectMessages(
               projectMcpModelMessages(stepMessages, evidenceLedger)
             ),
@@ -585,7 +613,13 @@ export async function sendMessage(
               openai: { reasoningEffort: modelConfig.reasoningEffort },
             }),
           },
-          stopWhen: isStepCount(runtime.config.maxSteps),
+          stopWhen: async (context) => {
+            const reached = await reachedStepLimit(context);
+            if (reached && !input.signal.aborted) {
+              runFailure.report((part) => dataStream.write(part));
+            }
+            return reached;
+          },
           telemetry: {
             ...metadataOnlyTelemetry,
             functionId: "stream-text",

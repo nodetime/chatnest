@@ -6,15 +6,31 @@ import type { ArtifactKind } from "@/server/domain/message/types";
 const sections = readFileSync(
   join(process.cwd(), "server/application/ai/core.md"),
   "utf8"
-).split("<!-- tools -->");
-if (sections.length !== 2 || sections.some((section) => !section.trim())) {
-  throw new Error("Core prompt must contain core and tool sections");
+).split(/<!-- (?:tools|completion) -->/);
+if (sections.length !== 3 || sections.some((section) => !section.trim())) {
+  throw new Error(
+    "Core prompt must contain core, tool and completion sections"
+  );
 }
 export const regularPrompt = sections[0].trim();
 const interactionPrompt = sections[1].trim();
 
 export const systemPrompt = ({ supportsTools }: { supportsTools: boolean }) =>
   supportsTools ? `${regularPrompt}\n\n${interactionPrompt}` : regularPrompt;
+
+// Preserve the existing turn boundary while leaving room to save and hand off.
+export function completionStepSettings(
+  stepNumber: number,
+  maxSteps: number,
+  instructions: string
+) {
+  if (stepNumber < maxSteps - 2) {
+    return {};
+  }
+  return {
+    instructions: `${instructions}\n\n${sections[2].trim()}`,
+  };
+}
 
 export const updateDocumentPrompt = (
   currentContent: string | null,

@@ -44,6 +44,7 @@ export function projectToolIdentity(
     "tool-askUser": "补充信息",
     "tool-createDocument": "整理产物",
     "tool-createResultTable": "生成表格产物",
+    "tool-editDocument": "修改产物",
     "tool-executeCode": "计算与处理数据",
     "tool-loadSkill": "加载技能",
     "tool-readAttachment": "读取文件",
