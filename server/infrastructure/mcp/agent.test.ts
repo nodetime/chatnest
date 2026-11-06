@@ -178,7 +178,7 @@ test("skill discovery is metadata-only; loading and reference access work on dem
   const body = await readSkillFile(skills[0], "SKILL.md");
   assert.ok(catalog.includes(skills[0].name));
   assert.ok(!catalog.includes("## 工作方法"));
-  assert.ok(body.includes("## 工作方法"));
+  assert.ok(matter(body).content.trim().length > 0);
   const tools = createSkillTools(skills);
   const load = tools.loadSkill.execute;
   assert.ok(load);

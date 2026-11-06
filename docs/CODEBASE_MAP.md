@@ -18,7 +18,7 @@ flowchart LR
   A --> F[私有附件目录]
   N --> L[AI SDK Agent 循环]
   P[通用核心 Prompt] --> L
-  S[唯一按需 Skill：找相似商品] --> L
+  S[唯一按需 Skill：相似检索与比较] --> L
   L --> Q[内置 Ask / Todo / 附件 / 产物工具]
   L --> J[隔离 JavaScript 计算]
   L --> I[候选图片读取]
@@ -33,16 +33,16 @@ flowchart LR
 
 图中展示当前源码的连接结构；各环境运行状态、发布版本及真实验收证据只记录在[唯一研发 TODO](superpowers/plans/2026-11-04-core-launch-goal-and-todo.md)。当前演示为 `PLATFORM_MODE=standalone`，Payload 业务后端、账务、支付和 CLI 不参与演示调用链，不绘制成已连接服务。
 
-- **产物交付**：`createDocument` 接收当轮 Agent 写好的正文，持久化成功后打开右侧工作区，不再仅凭标题二次调用模型。相似商品默认走已有 `sheet` 原始CSV产物，表头/数据行、来源链接、主图预览和比较判断共用 `sheet-editor.tsx`，保存/导出仍为CSV。整体修改复用`updateDocument`，完整生成并保存后只发布最终正文（代码/表格仅留最终快照，文本拼接增量）；修改工具携带目标id/kind/title，流入口显式打开工作区，关闭后同文件更新也可打开。不同目标的流切换复用未保存/生成中保护，被拦截的产物事件不覆盖当前编辑器；对话标题等独立事件仍处理。成功finish使同文件文档缓存重新校验；查看最新版时跟随新增版本，主动查看历史时保持所选版本。sheet子生成错误、截断或空内容不覆盖保存版本；普通CSV在仓储版本保存与手工保存入口共用`domain/document/sheet-csv.ts`校验，拒绝错列及破损引号，不自动补列或改写。文档POST将校验失败转为既有JSON400；编辑工具在属主/保护校验及保存后返回实际正文，匹配失败仅返回当前已存正文供纠正；原始 `createResultTable` 继续只存原始查询数据。`app/_lib/editor/markdown.ts` 统一正文与版本比较的 Markdown/schema，保留链接、图片、强调及表格；`config.ts` 约束单元格内回车与粘贴，保存重开不拆列。商品图省略来源页信息，避免来源站拒绝加载；编辑器链接经协议校验后独立页打开。
+- **产物交付**：`createDocument` 接收当轮 Agent 写好的正文，持久化成功后打开右侧工作区，不再仅凭标题二次调用模型。相似商品默认走已有 `sheet` 原始CSV产物，表头/数据行、来源链接、主图预览和比较判断共用 `sheet-editor.tsx`，保存/导出仍为CSV。整体修改复用`updateDocument`，完整生成并保存后只发布最终正文（代码/表格仅留最终快照，文本拼接增量）；修改工具携带目标id/kind/title，流入口显式打开工作区，关闭后同文件更新也可打开。不同目标的流切换复用未保存/生成中保护，被拦截的产物事件不覆盖当前编辑器；对话标题等独立事件仍处理。成功finish使同文件文档缓存重新校验；查看最新版时跟随新增版本，主动查看历史时保持所选版本。sheet子生成错误、截断或空内容不覆盖保存版本；普通CSV在仓储版本保存与手工保存入口共用`domain/document/sheet-csv.ts`校验，拒绝错列及破损引号，不自动补列或改写。普通sheet编辑以同模块解析的完整单元格快照核对旧表，仅CSV引号/行尾格式差异可匹配；保留空单元格数据行与空格，真实值或行列差异拒绝覆盖，新CSV按提交原字节保存。文档POST将校验失败转为既有JSON400；新建工具在登录校验及保存后返回 `savedContent`；编辑工具在属主/保护校验及保存后返回实际正文；整表更新另返回修改前正文供前后核对，匹配失败仅返回当前已存正文供纠正；原始 `createResultTable` 继续只存原始查询数据。`app/_lib/editor/markdown.ts` 统一正文与版本比较的 Markdown/schema，保留链接、图片、强调及表格；`config.ts` 约束单元格内回车与粘贴，保存重开不拆列。商品图省略来源页信息，避免来源站拒绝加载；编辑器链接经协议校验后独立页打开。
 - **核心规则**：`server/application/ai/core.md` 是通用核心Prompt唯一正文，`prompts.ts` 读取核心、工具交互及条件收尾三段；NFT与Docker显式携带同一路径。业务SOP只在技能中。`send-message.ts` 保留既有`maxSteps`，末两步提醒交付与简短交接，保留供应商原生工具协议；真正耗尽工具循环时复用`data-run-status`保存失败，客户端也据此恢复草稿或回滚重新生成。正常文本结束与等待Ask不误报失败。网页模式只传递当轮用户意图，工具schema和实际执行门控仍是权限边界。
-- **技能方法**：应用仅内置 `server/infrastructure/skills/similar-products/SKILL.md`（找相似商品），按需加载；候选不足也交付有效结果，补查无新增即收敛，默认保存sheet/CSV对比表。续聊只恢复历史实际使用且当前仍选中、通过`assertCurrent`校验的技能最新正文；旧正文、禁用技能和旧资源不重放，未使用技能不预加载；持久原始证据不变。Ask/Todo属于核心，搜索/读取及1688属于MCP工具。独立Porta CLI skill源码仍在`nodetime/porta-cli/skills/porta`。
+- **技能方法**：应用仅内置 `server/infrastructure/skills/similar-products/SKILL.md`（相似检索与比较），按需加载；先识别用户材料中的参照，按商品、商标、设计或文档采用同口径比较，区分普通共性与有区分度的重合；抄袭排查交付线索及时间/权属等缺口，图片一致不外推供货关系。事实依据只列本次比较已读信息，“图片/原文与来源已核对”状态覆盖本行依据；影响判断的关键缺口在状态中保持待核对，避免通用已核实与无关待确认并存。交付约定在技能前部，逐项比较在表内，聊天简短交接。候选不足也交付有效结果，补查无新增即收敛，默认先整理完结果、一次保存完整sheet/CSV对比表；续改合并本轮修改后整表保存，核对用户保留字段，聊天简短交接。续聊只恢复历史实际使用且当前仍选中、通过`assertCurrent`校验的技能最新正文；`projectSkillContextForModel`把正文放到当轮独立技能指令段，历史工具结果仅留元数据，避免正文埋在早期调用中或重复注入。旧正文、禁用技能和旧资源不重放，未使用技能不预加载；核心MD和持久原始证据不变，末步收尾保留完整技能上下文。Ask/Todo属于核心，搜索/读取及1688属于MCP工具。独立Porta CLI skill源码仍在`nodetime/porta-cli/skills/porta`。
 - **Ask / Todo**：沿用 AI SDK 原生工具与 AI Elements Question / Task。Ask 询问需求，不重复授权；Todo 是完整任务快照，仅为实质性多步骤工作更新。服务端合并、消息持久化、属主校验、幂等和侧栏重开走既有实现，没有新增流程引擎。
 - **计算执行**：`application/chat/tools/execute-code.ts` 接入自动执行工具；`infrastructure/execution/` 每次以独立子进程运行 QuickJS/WASM，只提供同步 JavaScript、JSON结果与有限日志，无文件、网络、宿主env或shell。固定并发准入、guest内存/栈、执行中断、宿主输出检查及父进程取消/时限约束；V8参数不是整个进程RSS硬限。worker及依赖纳入现有NFT追踪与Docker交付。
-- **候选图片**：`application/chat/tools/view-image.ts` 仅允许读取当前会话成功MCP JSON的原始图片字段；`infrastructure/uploads/remote-image.ts` 解析并固定公网HTTPS地址、拒绝重定向，限制下载和解码，统一JPEG。图片仅在当轮模型请求中经现有视觉通路注入，数据库只存来源/尺寸等元数据；历史明确不含像素。
+- **候选图片**：`application/chat/tools/view-image.ts` 仅允许读取当前会话成功MCP JSON的原始图片字段；`infrastructure/uploads/remote-image.ts` 解析并固定公网HTTPS地址、拒绝重定向，限制下载和解码，统一JPEG。成功看图同时返回该图片直接父记录的 `sourceRecord` 原始标量字段，让采样预览以外的候选也能关联实际链接和SKU；最多32字段、单字符串512字符、整段8000 UTF8字节，省略标 `partial`，不另抓来源、不拼其他行。失败不返回该字段。图片像素仅在当轮模型请求中经现有视觉通路注入，数据库只存来源/尺寸及有界来源字段等元数据；历史明确不含像素。
 - **MCP 文本上下文**：文本结果向模型传递正文（单次最多12,000字符并显式标记截断），不套用结构化表格的120字字段采样。历史恢复和每步模型请求使用同一投影，淘汰旧正文以保留现有总体上下文边界，数据库原文不改；非 JSON 正文不作为表格行证据。
 - **MCP**：`agent.json` 启用 Exa search/fetch 与 Porta 的单个百炼商品查询，Tavily 关闭。已允许的只读查询使用现有 `autoApproveTools` 自动执行，不新增权限模式；未知或未允许操作仍遵守宿主策略。模型验收按用户授权集中执行，真实验收记录见唯一研发 TODO。
-- **发送与运行状态**：沿用SDK请求metadata中的客户端回调，在HTTP成功返回可读流时清空该轮文字/附件；完整流Promise语义保持不变，迟到失败恢复草稿且不覆盖新草稿，会话visit隔离。工具完成而Agent仍运行时展示中性处理状态，待答/审批、正文流和历史不重复转圈，不制造模型思考。
-- **界面**：已知审批只显示用户需要的摘要；原始参数在详情。身份或能力目录加载时显示中性状态，避免原名称/参数闪现。历史已保存的问题或技能名称不伪装成重新执行后的新结果。
+- **发送与运行状态**：沿用SDK请求metadata中的客户端回调，在HTTP成功返回可读流时清空该轮文字/附件；完整流Promise语义保持不变，迟到失败恢复草稿且不覆盖新草稿，会话visit隔离。工具完成而Agent仍运行时展示中性处理状态，待答/审批、正文流和历史不重复转圈，不制造模型思考。`application/ai/model-connection.ts` 识别官方HTTPS DeepSeek Chat连接，`providers.ts` 在同一模型工厂使用Vercel官方openai-compatible适配器，保留真实思考流、工具多轮及历史回传；复用原网络安全与配置，其他OpenAI/Responses/Gateway路径保持各自适配器，无失败降级。
+- **界面**：已知审批只显示用户需要的摘要；原始参数在详情。身份或能力目录加载时显示中性状态，避免原名称/参数闪现。历史已保存的问题或技能名称不伪装成重新执行后的新结果。同条assistant消息内，原生编辑已知无写入冲突在同文件后续确认保存后中性折叠，no-op、未知结果及其他文件均不视作恢复；原始失败详情不变。Conversation外层用overflow-clip防止焦点滚走整个消息区，内层StickToBottom.Content继续独占滚动，保留贴底与历史浏览。
 
 参考公开实现的通用交互原则，未复制其终端/编码环境规则：[Codex 当前模板](https://github.com/openai/codex/blob/ddd1812a51f4aded35c3ec5446672474d5cb546b/codex-rs/models-manager/models.json)、[OpenCode 提示词组装](https://github.com/anomalyco/opencode/blob/05620f8ff9938ed3af3308cc40bb6cbac92b0f09/packages/core/src/session/system-prompt.ts)、[Claude Code 技能说明](https://code.claude.com/docs/en/skills)。这不是模型能力等同声明；通用交互已有本机真实 DeepSeek Flash 验收，范围见唯一研发 TODO。
 
@@ -113,6 +113,7 @@ server/
 ## app 层要点
 
 - `app/(auth)/auth.ts`:NextAuth credentials/guest 会话;用户仅 id/type,无工作区角色。`app/_components/ui/` 为 shadcn/radix 既有件,复用不重造。
+- 工具失败说明：`activity-groups.ts` 的单一展示投影按原生确定的错误契约说明“未保存”，未知异常保留完成/保存结果未确认；附件、图片、网页、搜索分别说明未读到或未核实，不保证调用详情一定有真实原因。原始调用与状态不改，不增加重试、成功兜底或历史兼容路径；`readAttachment` 说明仅使用上传上下文中的assetId，产物仍用文档工具。
 - 失败展示：`message.tsx` 显示持久化的单行中断状态；`conversation-notice.tsx` 承接当前传输/加载错误，同时暂隐最新持久化中断标记，关闭提示或重开后恢复历史状态，避免吞掉重新生成的新错误。已移除 `runtime-recovery.tsx`，不注入固定续跑用户消息、不重复 toast，用户通过底部输入框继续表达需求。
 - 聊天主链路:`app/(chat)/api/chat/route.ts`(96 行平台层)+ 同目录 request.ts/schema.ts;业务在 application/chat/send-message.ts。
 - `app/_components/ai-elements/` 钉定的 Apache-2.0 上游原语,许可全文见 THIRD_PARTY_NOTICES.md。
@@ -149,7 +150,7 @@ server/
 - `server/infrastructure/persistence/drizzle/capability-repository.ts` 保存个人配置与 `chat_capability_scopes`；范围仓储核对 chats 属主并锁行。迁移 `0007_personal_capabilities.sql` 为两表、字段、主外键、修订约束及主键索引补齐中文注释。
 - `/api/personal/{mcp,skills,scope}` 仅正式账号管理本人能力；写操作检查同源并有界读体。skills 只接受有界单文件 SKILL.md，预览/导入/编辑/启停/删除/内置副本不执行脚本、安装依赖或授予连接权限。个人引用资源包与 Git 仓库导入尚未实现。
 - `readUserCatalog` 按当前用户装配平台与个人目录；`createTaskCapabilityService` 在 MCP 建连前验证并持久化 `capabilitySelection`。首次默认可用目录，省略沿用当前选择，显式空集不退回全部；审批只用服务端范围、assistant 的 data-capability-scope 修订标记，不能借客户端选择扩权。
-- 个人工具别名绑定授权修订；MCP 和技能执行前复核当前配置及范围代次。纯 MCP 审批也复用 chat 行锁 merge/CAS，重复提交不再次进入执行。历史用过且当前仍授权选中的技能在本轮模型投影中恢复最新正文；禁用技能和旧资源仅保留元数据，避免旧指令注入；存储证据不改。公开对话不透出个人技能原始正文。
+- 个人工具别名绑定授权修订；MCP 和技能执行前复核当前配置及范围代次。纯 MCP 审批也复用 chat 行锁 merge/CAS，重复提交不再次进入执行。历史用过且当前仍授权选中的技能在本轮模型投影中恢复最新正文；本轮首次成功加载后立即更新同一请求内的指令Map，每个模型步骤复用，并仅投影去除已激活原生加载结果中的重复正文；禁用技能和旧资源仅保留元数据，避免旧指令注入；存储证据不改。公开对话不透出个人技能原始正文。
 - `app/_components/chat/{personal-connections,personal-skills,task-capabilities}.tsx` 复用 McpEditor、Dialog、Button 和现有组件；侧栏与设置共用个人管理视图。`use-personal-capabilities` 与 Agent 摘要缓存均绑定登录用户，选择由 `use-active-chat` 仅在新用户轮次提交，审批续跑不重传选择。
 - Ask 复用 Apache-2.0 AI Elements Question（本地仅添加 asField，避免多问题嵌套 form）；题目仍来自 askUser 工具输入，长问题区域滚动，输入框不移动。未知 MCP 原生操作名保留在审批内容/详情，不把原始参数堆在时间线。
 - 普通预览与模型/MCP验收隔离；`NEXT_DIST_DIR` 可指定独立开发输出目录。`tests/visual/personal_capabilities.py` 仅接受 33379 本地夹具验收，正常预览不启动脚本模型。现有本地 browser 工具仍保留其独立审批，不属于 MCP/skills 选择集合。
@@ -214,6 +215,9 @@ server/
 - `tests/visual/lessie_workspace.py` 为显式 opt-in 的本地样式/键盘检查，只接受隔离端口33379；`formal_workspace.py` 补充长标题纯DOM边界探针和输入底部稳定断言。脚本不进入生产装配，测试模型/数据不冒充真实服务验收。
 
 ## 独立C端首页（2026-10-28）
+
+- 聊天新会话页由 `greeting.tsx`、`shell.tsx`、`workspace-home.tsx` 统一内容宽度和左边界，最近对话与成果纵向排列。失败草稿提示由 `conversation-notice.tsx` 比较末次用户文本与 Shell 传入附件，已恢复时明确提示且不重复展示恢复按钮。
+- 普通 sheet 的 `editDocument` 只接受完整当前CSV与完整目标CSV，拒绝局部表头/单元格写入造成中间错位版本；替换按字面值处理。该工具与create/update共用消息类型、产物索引、打开入口及原生业务错误分类，错误结果不显示为成功产物。相似商品Skill提供“事实依据 / 是否核实”两列的业务口径；表格编辑器保持普通CSV渲染，不新增核实状态存储系统，核心Prompt不承载商品规则。
 
 - `app/_components/landing/`：HomeEntry按路径/个人section分流，LandingPage为独立全宽首页；LandingPreview的示例只在此页面展示，不进入聊天/证据/库；局部landing.css不改变后台或工作台主题。
 - `/chat`空页复用既有聊天layout与ActiveChatProvider；`/chat/:id`不变。proxy只精确公开非个人root，旧个人root仍走认证；导航消费section后归一/chat，新对话也留在/chat。空对话跨旧root/chat不重新生成chatId，保留草稿与附件身份。

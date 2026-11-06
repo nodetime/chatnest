@@ -45,7 +45,8 @@ import { AttachmentRoundBudget } from "@/server/domain/attachment/document-budge
 import {
   hasCurrentCapabilityScope,
   historicalSkillNames,
-  projectSkillHistoryForModel,
+  projectLoadedSkillResultsForModel,
+  projectSkillContextForModel,
 } from "@/server/domain/capability/projection";
 import type { CapabilitySelection } from "@/server/domain/capability/schema";
 import type { ChatRepository } from "@/server/domain/chat/repository";
@@ -326,7 +327,9 @@ export async function sendMessage(
   restoreResultEvidence(evidenceLedger, evidenceHistory);
   const historyTools = historyProjectionTools(evidenceLedger, evidenceHistory);
   const imageViewer = createImageViewer(evidenceLedger, input.signal);
-  const usedSkillNames = historicalSkillNames(resolvedAttachmentContext);
+  const usedSkillNames = supportsTools
+    ? historicalSkillNames(resolvedAttachmentContext)
+    : new Set<string>();
   const currentSkillInstructions = new Map(
     await Promise.all(
       taskCapabilities.skills
@@ -342,11 +345,12 @@ export async function sendMessage(
         })
     )
   );
+  const skillContext = projectSkillContextForModel(
+    resolvedAttachmentContext,
+    currentSkillInstructions
+  );
   const attachmentContext = boundedMcpHistory(
-    projectSkillHistoryForModel(
-      resolvedAttachmentContext,
-      currentSkillInstructions
-    ),
+    skillContext.messages,
     historyTools,
     evidenceLedger
   );
@@ -500,6 +504,9 @@ export async function sendMessage(
                     }) ?? next()
                 : undefined),
             ledger: evidenceLedger,
+            onSkillLoaded: (name, body) => {
+              currentSkillInstructions.set(name, body);
+            },
             onSource: (source) =>
               dataStream.write({ data: source, type: "data-mcp-source" }),
             skills: taskCapabilities.skills,
@@ -597,14 +604,36 @@ export async function sendMessage(
             }
             stopWaitingStatus();
           },
-          prepareStep: ({ messages: stepMessages, stepNumber }) => ({
-            ...(supportsTools
-              ? completionStepSettings(stepNumber, maxSteps, instructions)
-              : {}),
-            messages: imageViewer.projectMessages(
-              projectMcpModelMessages(stepMessages, evidenceLedger)
-            ),
-          }),
+          prepareStep: ({ messages: stepMessages, stepNumber }) => {
+            const currentInstructions = [
+              instructions,
+              supportsTools
+                ? projectSkillContextForModel([], currentSkillInstructions)
+                    .instructions
+                : "",
+            ]
+              .filter(Boolean)
+              .join("\n\n");
+            return {
+              instructions: currentInstructions,
+              ...(supportsTools
+                ? completionStepSettings(
+                    stepNumber,
+                    maxSteps,
+                    currentInstructions
+                  )
+                : {}),
+              messages: imageViewer.projectMessages(
+                projectMcpModelMessages(
+                  projectLoadedSkillResultsForModel(
+                    stepMessages,
+                    currentSkillInstructions
+                  ),
+                  evidenceLedger
+                )
+              ),
+            };
+          },
           providerOptions: {
             ...(modelConfig?.gatewayOrder && {
               gateway: { order: modelConfig.gatewayOrder },

@@ -1,3 +1,5 @@
+import type { ModelMessage } from "ai";
+
 /** 共享聊天允许展示结果，不隐式公开账号私有技能的原始正文。 */
 export function redactPersonalSkillOutputs<T extends { parts: unknown }>(
   messages: T[]
@@ -60,12 +62,12 @@ export function historicalSkillNames(messages: { parts: unknown }[]) {
   return names;
 }
 
-/** 本轮模型使用当前已授权技能正文；存储/UI 保留原始调用证据。 */
-export function projectSkillHistoryForModel<T extends { parts: unknown }>(
+/** 当前已授权技能单独进入本轮指令；历史仅留元数据，存储/UI 原样保留。 */
+export function projectSkillContextForModel<T extends { parts: unknown }>(
   messages: T[],
   currentSkillInstructions: ReadonlyMap<string, string>
-): T[] {
-  return messages.map((message) => ({
+): { messages: T[]; instructions: string } {
+  const projectedMessages = messages.map((message) => ({
     ...message,
     parts: Array.isArray(message.parts)
       ? message.parts.map((part) => {
@@ -90,22 +92,12 @@ export function projectSkillHistoryForModel<T extends { parts: unknown }>(
               ? currentSkillInstructions.get(name)
               : undefined;
           const enabled = instructions !== undefined;
-          if (enabled && toolName === "loadSkill") {
-            return {
-              ...part,
-              output: {
-                instructions,
-                name,
-                sourceType: "CURRENT_SKILL_INSTRUCTIONS",
-              },
-            };
-          }
           return {
             ...part,
             output: {
               available: enabled,
               message: enabled
-                ? "Historical skill metadata only; prior instructions and resource text are not replayed. This skill is available this round. Load its current instructions before continuing work within its scope."
+                ? "Historical skill metadata only; current instructions for this skill are provided separately for this turn. Prior instructions and resource text are not replayed."
                 : "Historical skill metadata only; this skill is not available this round. Do not use its prior instructions or resources.",
               sourceType: "HISTORICAL_SKILL_METADATA",
             },
@@ -113,6 +105,18 @@ export function projectSkillHistoryForModel<T extends { parts: unknown }>(
         })
       : message.parts,
   }));
+  return {
+    instructions: currentSkillInstructions.size
+      ? [
+          "# Current task skills\nSpecialized methods only; the user's scope, core rules and authorization still apply.",
+          ...Array.from(
+            currentSkillInstructions,
+            ([name, body]) => `## Skill: ${name}\n\n${body}`
+          ),
+        ].join("\n\n")
+      : "",
+    messages: projectedMessages,
+  };
 }
 
 /** 来自已存储 assistant 的范围标记，不能由审批响应覆盖。 */
@@ -130,5 +134,51 @@ export function hasCurrentCapabilityScope(
   return (
     markers.length > 0 &&
     markers.every((part) => part.data?.revision === revision)
+  );
+}
+
+/** 已加载正文进入当前指令后，原生工具结果仅向模型保留加载元数据。 */
+export function projectLoadedSkillResultsForModel(
+  messages: ModelMessage[],
+  currentSkillInstructions: ReadonlyMap<string, string>
+): ModelMessage[] {
+  return messages.map((message) =>
+    message.role === "tool"
+      ? {
+          ...message,
+          content: message.content.map((part) => {
+            if (
+              part.type !== "tool-result" ||
+              part.toolName !== "loadSkill" ||
+              part.output.type !== "json"
+            ) {
+              return part;
+            }
+            const { value } = part.output;
+            if (
+              !value ||
+              typeof value !== "object" ||
+              Array.isArray(value) ||
+              typeof value.name !== "string" ||
+              typeof value.instructions !== "string" ||
+              currentSkillInstructions.get(value.name) !== value.instructions
+            ) {
+              return part;
+            }
+            const { instructions: _body, ...metadata } = value;
+            return {
+              ...part,
+              output: {
+                type: "json" as const,
+                value: {
+                  ...metadata,
+                  message:
+                    "Skill loaded; its current instructions are provided separately for this turn.",
+                },
+              },
+            };
+          }),
+        }
+      : message
   );
 }

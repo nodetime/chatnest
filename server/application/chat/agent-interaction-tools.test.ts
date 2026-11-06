@@ -11,7 +11,12 @@ import {
 } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
 import { z } from "zod";
+import {
+  projectLoadedSkillResultsForModel,
+  projectSkillContextForModel,
+} from "@/server/domain/capability/projection";
 import type { ChatMessage } from "@/server/domain/message/types";
+import { createAgentRuntime } from "@/server/infrastructure/mcp/runtime";
 import { completionStepSettings, systemPrompt } from "../ai/prompts";
 import { agentInteractionTools } from "./tools/agent-interactions";
 
@@ -20,13 +25,119 @@ const modelUsage = {
   outputTokens: { reasoning: 0, text: 1, total: 1 },
 };
 
+test("首次按需加载的授权技能在下一模型步骤进入当前指令，发现阶段不预载", async () => {
+  const active = new Map<string, string>();
+  const body = "FIRST_LOADED_METHOD";
+  const runtime = await createAgentRuntime(
+    new AbortController().signal,
+    undefined,
+    () =>
+      Promise.resolve({
+        maxOutputTokens: 1000,
+        maxSteps: 3,
+        servers: [],
+        timeoutMs: 10_000,
+        toolTimeoutMs: 1000,
+      }),
+    {
+      onSkillLoaded: (name, instructions) => {
+        active.set(name, instructions);
+      },
+      skills: [
+        {
+          description: "Test method",
+          directory: "",
+          markdown: `---\nname: method\ndescription: Test method\n---\n${body}`,
+          name: "method",
+        },
+      ],
+    }
+  );
+  let calls = 0;
+  try {
+    const model = new MockLanguageModelV4({
+      doGenerate: (options) => {
+        calls += 1;
+        const system = options.prompt
+          .filter((message) => message.role === "system")
+          .map((message) => message.content)
+          .join("\n");
+        assert.equal(system.includes(body), calls === 2);
+        assert.equal(
+          JSON.stringify(options.prompt).split(body).length - 1,
+          calls === 2 ? 1 : 0,
+          "current skill body appears once across system and tool messages"
+        );
+        return Promise.resolve({
+          content:
+            calls === 1
+              ? [
+                  {
+                    input: '{"name":"method"}',
+                    toolCallId: "load",
+                    toolName: "loadSkill",
+                    type: "tool-call" as const,
+                  },
+                ]
+              : [{ text: "完成", type: "text" as const }],
+          finishReason: {
+            raw: calls === 1 ? "tool_calls" : "stop",
+            unified: calls === 1 ? ("tool-calls" as const) : ("stop" as const),
+          },
+          usage: modelUsage,
+          warnings: [],
+        });
+      },
+    });
+    const result = await generateText({
+      model,
+      prepareStep: ({ messages }) => ({
+        instructions: [
+          runtime.instructions,
+          projectSkillContextForModel([], active).instructions,
+        ]
+          .filter(Boolean)
+          .join("\n\n"),
+        messages: projectLoadedSkillResultsForModel(messages, active),
+      }),
+      prompt: "Use the task method.",
+      stopWhen: isStepCount(3),
+      tools: runtime.tools,
+    });
+    assert.equal(result.text, "完成");
+    assert.equal(calls, 2);
+    assert.equal(active.get("method")?.trim(), body);
+    assert.equal(
+      (
+        result.steps[0].toolResults[0].output as { instructions: string }
+      ).instructions.trim(),
+      body
+    );
+  } finally {
+    await runtime.close();
+  }
+});
+
 test("真实 SDK 在既有步数内提示保存产物与交接，保留供应商原生工具协议", async () => {
   let calls = 0;
   const executed: string[] = [];
   const maxSteps = 4;
+  const instructions = [
+    "Complete the requested task. RUNTIME_TOOL_CATALOG",
+    projectSkillContextForModel(
+      [],
+      new Map([["method", "CURRENT_AUTHORIZED_METHOD"]])
+    ).instructions,
+  ].join("\n\n");
   const model = new MockLanguageModelV4({
     doGenerate: (options) => {
       calls += 1;
+      assert.equal(
+        JSON.stringify(options.prompt).split("CURRENT_AUTHORIZED_METHOD")
+          .length,
+        2,
+        "including completion steps, the current skill is present exactly once"
+      );
       if (calls === maxSteps) {
         assert.notDeepEqual(options.toolChoice, { type: "none" });
         assert.equal(options.tools?.length, 2);
@@ -66,14 +177,10 @@ test("真实 SDK 在既有步数内提示保存产物与交接，保留供应商
     },
   });
   const result = await generateText({
-    instructions: "Complete the requested task. RUNTIME_TOOL_CATALOG",
+    instructions,
     model,
     prepareStep: ({ stepNumber }) =>
-      completionStepSettings(
-        stepNumber,
-        maxSteps,
-        "Complete the requested task. RUNTIME_TOOL_CATALOG"
-      ),
+      completionStepSettings(stepNumber, maxSteps, instructions),
     prompt: "比较已有候选并保存表格",
     stopWhen: isStepCount(maxSteps),
     tools: Object.fromEntries(

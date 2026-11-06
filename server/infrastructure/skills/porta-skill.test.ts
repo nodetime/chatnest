@@ -14,10 +14,14 @@ test("应用只提供按需相似商品技能；旧技能不保留别名或工�
     skills.map((skill) => skill.name),
     ["similar-products"]
   );
-  assert.equal(skills[0].displayName, "找相似商品");
+  assert.equal(skills[0].displayName, "相似检索与比较");
   const body = await readSkillFile(skills[0], "SKILL.md");
-  assert.ok(!buildSkillsPrompt(skills).includes("## 工作方法"));
-  const tools = createSkillTools(skills);
+  assert.ok(!buildSkillsPrompt(skills).includes(matter(body).content.trim()));
+  const active = new Map<string, string>();
+  const tools = createSkillTools(skills, undefined, (name, instructions) => {
+    active.set(name, instructions);
+  });
+  assert.equal(active.size, 0, "discovery must not activate a skill");
   const options = { context: {}, messages: [], toolCallId: "similar-products" };
   const loaded = await tools.loadSkill.execute?.(
     { name: "similar-products" },
@@ -25,7 +29,26 @@ test("应用只提供按需相似商品技能；旧技能不保留别名或工�
   );
   assert.ok(loaded && "instructions" in loaded);
   assert.equal(loaded.instructions, matter(body).content);
-  assert.doesNotMatch(body, /askUser|updateTodo|审批|onebound_|porta__/);
+  assert.equal(active.get("similar-products"), loaded.instructions);
+  const denied = new Map<string, string>();
+  const deniedTools = createSkillTools(
+    skills,
+    () => Promise.reject(new Error("not selected")),
+    (name, instructions) => denied.set(name, instructions)
+  );
+  await assert.rejects(
+    () =>
+      deniedTools.loadSkill.execute?.(
+        { name: "similar-products" },
+        options
+      ) as Promise<unknown>,
+    /not selected/
+  );
+  assert.equal(
+    denied.size,
+    0,
+    "a rejected load must never activate instructions"
+  );
   await Promise.all(
     ["porta", "investigate-content", "source-1688"].map((name) =>
       assert.rejects(

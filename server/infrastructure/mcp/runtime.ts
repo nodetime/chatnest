@@ -45,6 +45,7 @@ export async function createAgentRuntime(
     skills?: Skill[];
     authorizeTool?: (server: RuntimeServer) => Promise<void>;
     authorizeSkill?: (skill: Skill) => Promise<void>;
+    onSkillLoaded?: (name: string, instructions: string) => void;
     billToolCall?: (input: {
       args: unknown;
       canonicalToolKey: string;
@@ -64,7 +65,11 @@ export async function createAgentRuntime(
     AbortSignal.timeout(config.timeoutMs),
   ]);
   const tools: ToolSet = {
-    ...createSkillTools(skills, evidence.authorizeSkill),
+    ...createSkillTools(
+      skills,
+      evidence.authorizeSkill,
+      evidence.onSkillLoaded
+    ),
   };
   const unavailable: string[] = [];
   const close = async () => {

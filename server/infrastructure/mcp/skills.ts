@@ -94,7 +94,8 @@ export function buildSkillsPrompt(skills: Skill[]) {
 
 export function createSkillTools(
   skills: Skill[],
-  authorize?: (skill: Skill) => Promise<void>
+  authorize?: (skill: Skill) => Promise<void>,
+  onLoaded?: (name: string, instructions: string) => void
 ) {
   const getSkill = (name: string) => {
     const skill = skills.find((item) => item.name === name);
@@ -112,13 +113,17 @@ export function createSkillTools(
     loadSkill: tool({
       description:
         "Load the full instructions for a skill from the available catalog.",
-      execute: async ({ name }) => ({
-        description:
-          getSkill(name).shortDescription ?? getSkill(name).description,
-        displayName: getSkill(name).displayName ?? name,
-        instructions: matter(await read(name, "SKILL.md")).content,
-        name,
-      }),
+      execute: async ({ name }) => {
+        const instructions = matter(await read(name, "SKILL.md")).content;
+        onLoaded?.(name, instructions);
+        return {
+          description:
+            getSkill(name).shortDescription ?? getSkill(name).description,
+          displayName: getSkill(name).displayName ?? name,
+          instructions,
+          name,
+        };
+      },
       inputSchema: z.object({ name: z.string() }),
     }),
     readSkillResource: tool({
