@@ -54,7 +54,7 @@ test("failed tool summary separates raw error evidence and active approval suppr
     const h=hooks();const {ToolActivity}=load('app/_components/chat/tool-activity.tsx',{...base,react:h.react});
     const failed={...part,state:'output-error',errorText:'HTTP 500 opaque trace /private/provider'};
     const tree=h.render(ToolActivity,{part:failed,approve:()=>{},isReadonly:false,isRunning:false});
-    assert.match(JSON.stringify(tree),/这一步未能完成/);
+    assert.match(JSON.stringify(tree),/本次操作未返回有效结果，完成情况尚未确认/);
     assert.ok(!nodes(tree).some(n=>n.type==='p'&&JSON.stringify(n.props.children).includes('opaque trace')));
     assert.equal(nodes(tree).find(n=>n.type==='details').props.part,failed);
     const {activitySummary}=require('./app/_components/chat/activity-groups.ts');
@@ -129,13 +129,21 @@ test("transport failures use one compact notice, retain diagnostics and deduplic
   clientScript(`${harness}
     const raw='An error occurred. '+ 'opaque diagnostic '.repeat(30);let restored=0,reloaded=0;let state={messages:[],error:new Error(raw),clearError:()=>{},retryLoad:()=>reloaded++};
     const {ConversationNotice}=load('app/_components/chat/conversation-notice.tsx',{...base,react:{useCallback:fn=>fn},'@/app/_hooks/use-active-chat':{useActiveChat:()=>state},'./agent-library':{AgentLibrary:'library'}});
-    let tree=ConversationNotice({onRestore:()=>restored++});const paragraphs=nodes(tree).filter(n=>n.type==='p');assert.equal(paragraphs.length,1);assert.equal(paragraphs[0].props.children,'消息未能完成');assert.ok(paragraphs.every(n=>!String(n.props.children).includes('An error occurred.')));
+    let tree=ConversationNotice({attachments:[],onRestore:()=>restored++});const paragraphs=nodes(tree).filter(n=>n.type==='p');assert.equal(paragraphs.length,1);assert.equal(paragraphs[0].props.children,'消息未能完成');assert.ok(paragraphs.every(n=>!String(n.props.children).includes('An error occurred.')));
     const details=nodes(tree).find(n=>n.type==='details');assert.ok(details);assert.ok(!details.props.open);assert.equal(nodes(details).find(n=>n.type==='pre').props.children,raw);
     assert.ok(!nodes(tree).some(n=>n.type==='library'),'Model failures do not point to MCP configuration');
     button(tree,'恢复输入').props.onClick();assert.equal(restored,1);
-    state={...state,messages:[{role:'assistant',parts:[{type:'data-run-status',data:{state:'failed'}}]}]};assert.ok(ConversationNotice({onRestore:()=>{}}),'a regenerated turn failure must retain its new diagnostics despite an old failed snapshot');
-    state={...state,messages:[...state.messages,{role:'user',parts:[{type:'text',text:'My own next request'}]}]};assert.ok(ConversationNotice({onRestore:()=>{}}),'older failure cannot hide a newer send error');
-    state={...state,error:undefined,loadError:new Error(raw)};tree=ConversationNotice({onRestore:()=>restored++});assert.equal(nodes(tree).find(n=>n.type==='pre').props.children,raw);const reload=nodes(tree).find(n=>n.type==='button'&&JSON.stringify(n.props.children).includes('重新加载'));reload.props.onClick();assert.equal(reloaded,1);
+    state={...state,messages:[{role:'user',parts:[{type:'text',text:'Keep this draft'}]}],input:'Keep this draft',attachments:[]};
+    tree=ConversationNotice({attachments:[],onRestore:()=>restored++});
+    assert.equal(nodes(tree).find(n=>n.type==='p').props.children,'消息未完成，已恢复到输入框');
+    assert.ok(!nodes(tree).some(n=>n.type==='button'&&n.props.children==='恢复输入'),'already restored drafts have no redundant restore action');
+    state={...state,input:'A new draft'};
+    tree=ConversationNotice({attachments:[],onRestore:()=>restored++});
+    assert.ok(button(tree,'恢复输入'),'a different draft must not be mistaken for restored content');
+
+    state={...state,messages:[{role:'assistant',parts:[{type:'data-run-status',data:{state:'failed'}}]}]};assert.ok(ConversationNotice({attachments:[],onRestore:()=>{}}),'a regenerated turn failure must retain its new diagnostics despite an old failed snapshot');
+    state={...state,messages:[...state.messages,{role:'user',parts:[{type:'text',text:'My own next request'}]}]};assert.ok(ConversationNotice({attachments:[],onRestore:()=>{}}),'older failure cannot hide a newer send error');
+    state={...state,error:undefined,loadError:new Error(raw)};tree=ConversationNotice({attachments:[],onRestore:()=>restored++});assert.equal(nodes(tree).find(n=>n.type==='pre').props.children,raw);const reload=nodes(tree).find(n=>n.type==='button'&&JSON.stringify(n.props.children).includes('重新加载'));reload.props.onClick();assert.equal(reloaded,1);
   `);
 });
 

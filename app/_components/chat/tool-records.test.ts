@@ -527,7 +527,7 @@ test("actual expanded tool body uses readable results once and preserves honest 
     const props={part,approve:()=>{},isReadonly:false,isRunning:true};
     let tree=scheduler.render(ToolActivity,props);assert.ok(JSON.stringify(tree).includes('正在等待工具返回结果'));
     tree=scheduler.render(ToolActivity,{...props,isRunning:false,part:{...part,state:'output-denied'}});assert.ok(JSON.stringify(tree).includes('这次操作已被拒绝'));
-    tree=scheduler.render(ToolActivity,{...props,isRunning:false,part:{...part,state:'output-error'}});assert.ok(JSON.stringify(tree).includes('未返回错误说明'));
+    tree=scheduler.render(ToolActivity,{...props,isRunning:false,part:{...part,state:'output-error'}});assert.ok(JSON.stringify(tree).includes('完成情况尚未确认'));
     const completed={...props,isRunning:false,part:{...part,state:'output-available',output:{content:[{type:'text',text:'Plain exact result'}]}}};
     tree=scheduler.render(ToolActivity,completed);nodes(tree).find(n=>n.type==='tool').props.onOpenChange(true);
     tree=scheduler.render(ToolActivity,completed);
@@ -536,6 +536,59 @@ test("actual expanded tool body uses readable results once and preserves honest 
     const React=require('react');const {renderToStaticMarkup}=require('react-dom/server');
     const html=renderToStaticMarkup(React.createElement(ToolResultPreview,result.props));assert.ok(html.includes('Plain exact result'));assert.ok(!html.includes('one query'));
     assert.equal(nodes(tree).find(n=>n.type==='tool').props.open,true);
+  `);
+});
+
+test("同一轮编辑冲突后已保存时收起旧失败，未解决或其他文件的失败仍需关注", () => {
+  clientScript(`${hookHarness}
+    const scheduler=hooks();const {ToolActivity}=load('app/_components/chat/tool-activity.tsx',{...base,react:scheduler.react});
+    const {PreviewMessage}=load('app/_components/chat/message.tsx',{
+      ...base,react:{useCallback:fn=>fn},
+      '@/app/_lib/utils':{cn:()=>'',sanitizeText:text=>text},
+      '../ai-elements/message':{MessageContent:'text',MessageResponse:'response'},
+      '../ai-elements/shimmer':{Shimmer:'shimmer'},
+      './activity-group':{ActivityGroup:'activity'},
+      './data-stream-provider':{useDataStream:()=>({})},
+      './document-preview':{DocumentPreview:'artifact'},
+      './message-actions':{MessageActions:'actions'},
+      './message-reasoning':{MessageReasoning:'reasoning'},
+      './preview-attachment':{},'./tool-activity':{ToolActivity},'./ask-user':{AskUser:'ask'},'./weather':{},
+    });
+    const conflict={type:'tool-editDocument',toolCallId:'conflict',state:'output-available',input:{id:'sheet'},output:{error:'old_string not found in document',savedContent:'Previous table'}};
+    const saved={type:'tool-editDocument',toolCallId:'saved',state:'output-available',input:{id:'sheet'},output:{id:'sheet',kind:'sheet',title:'Table',savedContent:'Updated table'}};
+    const text={type:'text',text:'已更新对比表。'};
+    const props={message:{id:'retry-turn',role:'assistant',parts:[conflict,saved,text]},addToolApprovalResponse:()=>{},isLoading:false,isReadonly:false};
+    const before=JSON.stringify(props.message);
+    let messageTree=PreviewMessage(props);
+    let attempt=nodes(messageTree).find(n=>n.type===ToolActivity);assert.ok(attempt);
+    assert.equal(attempt.props.followUpSaved,true);
+    let tree=scheduler.render(ToolActivity,attempt.props);
+    assert.equal(nodes(tree).find(n=>n.type==='tool').props.open,false,'handled attempt is collapsed');
+    assert.equal(nodes(tree).find(n=>n.type==='header').props.statusLabel,'后续已保存');
+    assert.equal(nodes(tree).filter(n=>n.props?.role==='alert').length,0);
+    assert.equal(nodes(tree).find(n=>n.type==='call-details').props.part,conflict,'raw failed call stays inspectable');
+    assert.equal(JSON.stringify(props.message),before,'canonical tool evidence stays unchanged');
+    assert.ok(JSON.stringify(messageTree).includes(text.text),'final model reply is not pruned');
+    for(const followup of [undefined,
+      {...saved,output:{...saved.output,id:'another-sheet'}},
+      {...saved,output:{...saved.output,error:'save failed'}},
+      {...saved,output:{id:'sheet',title:'Table'}},
+      {...saved,output:{...saved.output,content:'No changes needed; the saved content already matches.'}},
+      {...saved,state:'output-error',errorText:'unknown outcome'},
+      {...saved,type:'dynamic-tool',toolName:'editDocument'},
+    ]) {
+      const message={...props.message,parts:[conflict,...(followup?[followup]:[]),text]};
+      attempt=nodes(PreviewMessage({...props,message})).find(n=>n.type===ToolActivity);
+      assert.equal(attempt.props.followUpSaved,false);
+      tree=scheduler.render(ToolActivity,attempt.props);
+      assert.equal(nodes(tree).find(n=>n.type==='header').props.state,'output-error');
+      assert.equal(nodes(tree).filter(n=>n.props?.role==='alert').length,1,'unresolved failure remains visible');
+    }
+    const unknown={...conflict,state:'output-error',output:undefined,errorText:'old_string not found in document'};
+    attempt=nodes(PreviewMessage({...props,message:{...props.message,parts:[unknown,saved,text]}})).find(n=>n.type===ToolActivity);
+    assert.equal(attempt.props.followUpSaved,false,'unknown execution outcome cannot be marked as a handled no-write conflict');
+    attempt=nodes(PreviewMessage({...props,message:{...props.message,parts:[saved,conflict,text]}})).find(n=>n.type===ToolActivity);
+    assert.equal(attempt.props.followUpSaved,false,'an earlier save cannot resolve a later conflict');
   `);
 });
 

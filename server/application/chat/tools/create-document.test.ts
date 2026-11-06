@@ -6,7 +6,10 @@ import { streamText, tool } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
 import ts from "typescript";
 import { z } from "zod";
-import { isValidSheetCsv } from "@/server/domain/document/sheet-csv";
+import {
+  isValidSheetCsv,
+  sheetCsvMatches,
+} from "@/server/domain/document/sheet-csv";
 import { ChatbotError } from "@/server/shared/errors";
 
 test("统一保存入口拒绝错列和破损 CSV，合法引号及换行原样保存", async () => {
@@ -245,6 +248,7 @@ for (const fails of [false, true]) {
     } else {
       const result = await operation;
       assert.equal(result.id, current.id);
+      assert.equal(result.previousContent, current.content);
       assert.equal(result.savedContent, "商品,备注\n台灯,用户备注");
       assert.deepEqual(
         writes.map((part) => part.type),
@@ -264,9 +268,77 @@ for (const fails of [false, true]) {
   });
 }
 
-test("局部修改保存成功后携带目标身份，关闭工作区也能打开正确产物", async () => {
+test("表格匹配比较完整单元格内容：引号写法等价可保存，真实变化及破损结构拒绝覆盖", async () => {
+  const current = {
+    content: '名称,备注\r\n"台灯","用户备注"\r\n',
+    id: "sheet",
+    kind: "sheet",
+    title: "对比表",
+    userId: "owner",
+  };
+  const saved: any[] = [];
+  const writes: any[] = [];
+  const { editDocument } = load(
+    "server/application/chat/tools/edit-document.ts",
+    {
+      "@/server/domain/document/result-table": {
+        isProtectedResultTable: () => false,
+      },
+      "@/server/domain/document/sheet-csv": { sheetCsvMatches },
+      "@/server/infrastructure/persistence/drizzle/document-repository": {
+        documentRepository: {
+          findLatestById: () => Promise.resolve(current),
+          save: (input: any) => {
+            saved.push(input);
+            return Promise.resolve();
+          },
+        },
+      },
+      ai: { tool },
+      zod: { z },
+    }
+  );
+  const edit = editDocument({
+    dataStream: { write: (part: any) => writes.push(part) },
+    session: { user: { id: "owner" } },
+  });
+  const next = '名称,备注\n流云石台灯,"用户备注\n$& $$"';
+  const result = await edit.execute({
+    id: current.id,
+    new_string: next,
+    old_string: "名称,备注\n台灯,用户备注",
+  });
+  assert.equal(result.error, undefined);
+  assert.equal(result.savedContent, next);
+  assert.equal(saved.length, 1);
+  assert.equal(saved[0].content, next, "只匹配旧表，提交的新正文逐字保存");
+  writes.length = 0;
+  for (const old_string of [
+    "名称,备注\n台灯,旧备注",
+    "名称,备注\n台灯, 用户备注",
+    "名称,备注\n台灯,用户备注\n,",
+    "名称,备注\n台灯,用户备注\n , ",
+    "名称,备注\n台灯",
+    '名称,备注\n台灯,"用户备注',
+    "名称,备注",
+  ]) {
+    // biome-ignore lint/performance/noAwaitInLoops: Each rejected edit must independently prove no save or stream was emitted.
+    const rejected = await edit.execute({
+      id: current.id,
+      new_string: next,
+      old_string,
+    });
+    assert.ok(rejected.error, "旧表必须完整且逐格一致");
+    assert.equal(rejected.savedContent, current.content);
+    assert.equal(saved.length, 1);
+    assert.equal(writes.length, 0);
+  }
+});
+
+test("表格整份提交且保留字面值，文本和代码仍支持局部编辑", async () => {
   const writes: any[] = [];
   let saves = 0;
+  let expected = "商品,备注\n流云石菇台灯,$& $$ 待实物复核";
   const current = {
     content: "商品,备注\n台灯,待实物复核",
     id: "sheet",
@@ -280,12 +352,13 @@ test("局部修改保存成功后携带目标身份，关闭工作区也能打�
       "@/server/domain/document/result-table": {
         isProtectedResultTable: () => false,
       },
+      "@/server/domain/document/sheet-csv": { sheetCsvMatches },
       "@/server/infrastructure/persistence/drizzle/document-repository": {
         documentRepository: {
           findLatestById: () => Promise.resolve(current),
           save: (input: any) => {
             saves += 1;
-            assert.equal(input.content, "商品,备注\n流云石菇台灯,待实物复核");
+            assert.equal(input.content, expected);
             assert.equal(writes.length, 0);
             return Promise.resolve();
           },
@@ -295,11 +368,23 @@ test("局部修改保存成功后携带目标身份，关闭工作区也能打�
       zod: { z },
     }
   );
+  const partial = await editDocument({
+    dataStream: { write: (part: any) => writes.push(part) },
+    session: { user: { id: "owner" } },
+  }).execute({ id: "sheet", new_string: "备注,商品", old_string: "商品,备注" });
+  assert.equal(partial.error, "old_string not found in document");
+  assert.equal(partial.savedContent, current.content);
+  assert.equal(saves, 0, "只换表头不能写出字段错位的中间版本");
+  assert.equal(writes.length, 0);
   const edited = await editDocument({
     dataStream: { write: (part: any) => writes.push(part) },
     session: { user: { id: "owner" } },
-  }).execute({ id: "sheet", new_string: "流云石菇台灯", old_string: "台灯" });
-  assert.equal(edited.savedContent, "商品,备注\n流云石菇台灯,待实物复核");
+  }).execute({
+    id: "sheet",
+    new_string: expected,
+    old_string: current.content,
+  });
+  assert.equal(edited.savedContent, expected);
   assert.equal(writes[0].type, "data-id");
   assert.equal(writes[0].data, "sheet");
   assert.equal(writes[1].data, "sheet");
@@ -311,8 +396,8 @@ test("局部修改保存成功后携带目标身份，关闭工作区也能打�
     session: { user: { id: "owner" } },
   }).execute({
     id: "sheet",
-    new_string: "待实物复核",
-    old_string: "待实物复核",
+    new_string: current.content,
+    old_string: current.content,
   });
   assert.equal(unchanged.savedContent, current.content);
   assert.equal(saves, 1, "原样替换不应重复生成版本");
@@ -331,6 +416,23 @@ test("局部修改保存成功后携带目标身份，关闭工作区也能打�
   assert.equal(forbidden.savedContent, undefined);
   assert.equal(saves, 1);
   assert.equal(writes.length, 0);
+  for (const kind of ["text", "code"]) {
+    current.kind = kind;
+    expected = "商品,备注\n流云石菇台灯,$& $$ 待实物复核";
+    // biome-ignore lint/performance/noAwaitInLoops: Cases mutate the same fixture and check each save before advancing.
+    const local = await editDocument({
+      dataStream: { write: (part: any) => writes.push(part) },
+      session: { user: { id: "owner" } },
+    }).execute({
+      id: current.id,
+      new_string: "流云石菇台灯,$& $$ 待实物复核",
+      old_string: "台灯,待实物复核",
+      replace_all: kind === "code",
+    });
+    assert.equal(local.savedContent, expected);
+    writes.length = 0;
+  }
+  assert.equal(saves, 3);
 });
 
 for (const mode of ["complete", "empty", "truncated", "error"] as const) {
@@ -451,6 +553,7 @@ test("creation saves the agent's exact content once, then publishes a ready arti
     // biome-ignore lint/performance/noAwaitInLoops: Keep each artifact kind isolated with deterministic events.
     const result = await definition.execute(input);
     assert.equal(result.kind, kind);
+    assert.equal(result.savedContent, events[0].saved.content);
     assert.equal(events[0].saved.content, input.content);
     assert.equal(events[0].saved.userId, "owner");
     assert.equal(events.filter((event) => event.saved).length, 1);
@@ -491,7 +594,9 @@ test("missing identity and persistence failures never claim creation or publish 
     dataStream: { write: (part: unknown) => writes.push(part) },
     session: {},
   });
-  assert.equal((await anonymous.execute(input)).error, "Sign in required");
+  const rejected = await anonymous.execute(input);
+  assert.equal(rejected.error, "Sign in required");
+  assert.equal(rejected.savedContent, undefined);
   assert.equal(saved, false);
   assert.equal(writes.length, 0);
 });

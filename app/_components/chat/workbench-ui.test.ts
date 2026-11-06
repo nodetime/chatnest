@@ -142,20 +142,20 @@ test("readonly approval shows its state but not mutation controls; approval IDs 
   assert.match(source, /approved \? \{\} : \{ reason: "用户拒绝执行" \}/);
 });
 
-test("generic SDK error has a Chinese visible explanation without inlining its raw evidence", () => {
+test("generic SDK error explains an unconfirmed outcome without promising unavailable details", () => {
   const html = renderActivity({
     ...success,
     errorText: "An error occurred.",
     state: "output-error",
   });
-  assert.match(html, /role="alert">这一步未能完成。错误原文保留在调用详情中。/);
+  assert.match(html, /role="alert">本次搜索未返回有效结果，相关信息尚未核实。/);
   assert.doesNotMatch(html, /An error occurred\./);
   const custom = renderActivity({
     ...success,
     errorText: "Provider fixture error",
     state: "output-error",
   });
-  assert.match(custom, /role="alert">这一步未能完成/);
+  assert.match(custom, /role="alert">本次搜索未返回有效结果/);
   assert.doesNotMatch(custom, /Provider fixture error/);
   assert.match(
     renderCallDetails({
@@ -173,6 +173,26 @@ test("generic SDK error has a Chinese visible explanation without inlining its r
     }),
     /An error occurred\./
   );
+});
+
+test("stale document edits explain why no change was saved and retain exact evidence", () => {
+  const part = {
+    input: { id: "document", new_string: "new", old_string: "stale" },
+    output: {
+      error: "old_string not found in document",
+      savedContent: "current content",
+    },
+    state: "output-available",
+    toolCallId: "stale-edit",
+    type: "tool-editDocument",
+  };
+  const before = JSON.stringify(part);
+  const html = renderActivity(part);
+  assert.match(html, /修改未保存：待替换内容与当前文件不匹配，原文件未改动。/);
+  assert.match(html, /失败/);
+  assert.doesNotMatch(html, /这一步未能完成|错误原文保留|current content/);
+  assert.match(renderCallDetails(part), /old_string not found in document/);
+  assert.equal(JSON.stringify(part), before);
 });
 
 test("disclosure transitions collapse success, open new attention states, and preserve manual choices on same-state rerenders", () => {
@@ -834,25 +854,33 @@ test("mixed reasoning and tools render in their original SDK order rather than m
   `);
 });
 
-test("native createResultTable validation errors are failed open activities with exact error in call details", () => {
-  const part = {
-    input: {},
-    output: { error: "Source fixture is unavailable" },
-    state: "output-available",
-    toolCallId: "native-table-error",
-    type: "tool-createResultTable",
-  };
-  const before = JSON.stringify(part);
-  const html = renderActivity(part);
-  assert.match(html, /生成表格产物/);
-  assert.match(html, /失败/);
-  assert.match(html, /aria-expanded="true"/);
-  assert.match(html, /role="alert">这一步未能完成/);
-  assert.doesNotMatch(html, /Source fixture is unavailable/);
-  assert.match(renderCallDetails(part), /Source fixture is unavailable/);
-  assert.doesNotMatch(html, /未完成|本轮没有收到执行结果/);
-  assert.equal(JSON.stringify(part), before);
-});
+for (const [type, title] of [
+  ["tool-createResultTable", "生成表格产物"],
+  ["tool-editDocument", "修改产物"],
+] as const) {
+  test(`native ${type} validation errors are failed open activities with exact error in call details`, () => {
+    const part = {
+      input: {},
+      output: { error: "Source fixture is unavailable" },
+      state: "output-available",
+      toolCallId: "native-table-error",
+      type,
+    };
+    const before = JSON.stringify(part);
+    const html = renderActivity(part);
+    assert.ok(html.includes(title));
+    assert.match(html, /失败/);
+    assert.match(html, /aria-expanded="true"/);
+    assert.match(
+      html,
+      /role="alert">文件(?:修改|生成)未完成，保存结果尚未确认。/
+    );
+    assert.doesNotMatch(html, /Source fixture is unavailable/);
+    assert.match(renderCallDetails(part), /Source fixture is unavailable/);
+    assert.doesNotMatch(html, /本轮没有收到执行结果/);
+    assert.equal(JSON.stringify(part), before);
+  });
+}
 
 test("dynamic MCP output error fields are evidence data, not the native table failure contract", () => {
   for (const toolName of ["fixture__search", "createResultTable"]) {
@@ -1277,7 +1305,7 @@ test("chat refinement uses a soft task canvas, bounded home and aligned title ra
   assert.match(css, /--workbench-canvas: #fafafb/);
   assert.match(css, /--sidebar-width: 13rem/);
   assert.doesNotMatch(css, /--workbench-canvas: #f0f1f2/);
-  assert.match(shell, /max-w-\[840px\]/);
+  assert.match(shell, /max-w-\[800px\]/);
   const home = readFileSync("app/_components/chat/workspace-home.tsx", "utf8");
   assert.match(home, /data-testid="home-recent-grid"/);
   assert.match(home, /useSavedArtifacts/);

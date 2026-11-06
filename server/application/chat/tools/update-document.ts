@@ -19,7 +19,7 @@ export const updateDocument = ({
 }: UpdateDocumentProps) =>
   tool({
     description:
-      "Revise an existing artifact as a whole using its latest saved content. Use for changes spanning many sections, rows or columns, such as shortening a whole table. Describe exactly what to change and what to preserve. Returns savedContent, the actual saved artifact body, for verification. For a small exact replacement, use editDocument.",
+      "Revise an existing artifact as a whole using its latest saved content. Use for changes spanning many sections, rows or columns, such as shortening a whole table. Describe exactly what to change and what to preserve. Returns previousContent and savedContent for checking the actual changes. For a small exact replacement, use editDocument.",
     execute: async ({ id, description }) => {
       const document = await documentRepository.findLatestById(id);
 
@@ -103,6 +103,7 @@ export const updateDocument = ({
             : "The document has been updated successfully.",
         id,
         kind: document.kind,
+        previousContent: document.content,
         savedContent: content,
         title: document.title,
       };

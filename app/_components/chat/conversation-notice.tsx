@@ -3,10 +3,32 @@
 import { AlertCircle, RotateCcw, X } from "lucide-react";
 import { useCallback } from "react";
 import { useActiveChat } from "@/app/_hooks/use-active-chat";
+import type { Attachment } from "@/app/_lib/types";
 
-export function ConversationNotice({ onRestore }: { onRestore: () => void }) {
-  const { error, clearError, loadError, retryLoad, status } = useActiveChat();
+export function ConversationNotice({
+  onRestore,
+  attachments,
+}: {
+  onRestore: () => void;
+  attachments: Attachment[];
+}) {
+  const { error, clearError, loadError, retryLoad, status, messages, input } =
+    useActiveChat();
   const dismiss = useCallback(() => clearError(), [clearError]);
+  const lastUser = messages.findLast((message) => message.role === "user");
+  const previousText = lastUser?.parts
+    .filter((part) => part.type === "text")
+    .map((part) => part.text)
+    .join("\n");
+  const previousFiles =
+    lastUser?.parts.filter((part) => part.type === "file") ?? [];
+  const draftRestored =
+    Boolean(previousText || previousFiles.length) &&
+    input === previousText &&
+    previousFiles.length === attachments.length &&
+    previousFiles.every((file) =>
+      attachments.some((attachment) => attachment.url === file.url)
+    );
   // Live errors own this notice; Shell suppresses only the latest persisted
   // marker until dismissal. An old snapshot cannot swallow a new send error.
   if (
@@ -24,7 +46,13 @@ export function ConversationNotice({ onRestore }: { onRestore: () => void }) {
       <AlertCircle className="mt-0.5 size-3.5 shrink-0" />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <p>{loadError ? "对话加载失败" : "消息未能完成"}</p>
+          <p>
+            {loadError
+              ? "对话加载失败"
+              : draftRestored
+                ? "消息未完成，已恢复到输入框"
+                : "消息未能完成"}
+          </p>
           {loadError ? (
             <button
               className="inline-flex items-center gap-1 rounded-sm text-foreground hover:underline focus-visible:outline-2 focus-visible:outline-ring"
@@ -34,7 +62,7 @@ export function ConversationNotice({ onRestore }: { onRestore: () => void }) {
               <RotateCcw className="size-3" />
               重新加载
             </button>
-          ) : (
+          ) : draftRestored ? null : (
             <button
               className="rounded-sm text-foreground hover:underline focus-visible:outline-2 focus-visible:outline-ring"
               onClick={onRestore}

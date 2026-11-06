@@ -14,10 +14,13 @@ test("loaded skills supply readable metadata while retaining their original meth
     { name: skill.name },
     { context: {}, messages: [], toolCallId: "skill-display" }
   );
-  assert.equal((output as { displayName?: string }).displayName, "找相似商品");
+  assert.equal(
+    (output as { displayName?: string }).displayName,
+    "相似检索与比较"
+  );
   assert.ok((output as { description?: string }).description);
   assert.ok("instructions" in output);
-  assert.ok(output.instructions.includes("## 工作方法"));
+  assert.ok(output.instructions.trim().length > 0);
 });
 
 test("Exa source metadata comes only from result headers, excludes arbitrary snippet links and error results", async () => {

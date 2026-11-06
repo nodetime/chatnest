@@ -2,6 +2,7 @@ import { tool, type UIMessageStreamWriter } from "ai";
 import type { Session } from "next-auth";
 import { z } from "zod";
 import { isProtectedResultTable } from "@/server/domain/document/result-table";
+import { sheetCsvMatches } from "@/server/domain/document/sheet-csv";
 import type { ChatMessage } from "@/server/domain/message/types";
 import { documentRepository } from "@/server/infrastructure/persistence/drizzle/document-repository";
 
@@ -13,7 +14,7 @@ type EditDocumentProps = {
 export const editDocument = ({ session, dataStream }: EditDocumentProps) =>
   tool({
     description:
-      "Make a targeted edit to an existing artifact by finding and replacing an exact string. The old_string must match exactly. Results include savedContent, the actual saved artifact body, for verification or correcting a failed match. Use updateDocument for changes spanning many rows or sections.",
+      "Edit an existing artifact. For a sheet, old_string must contain the complete saved table with identical cell values (CSV quoting may differ), and new_string the complete updated CSV; submit all changes together as one snapshot. Text and code use exact substring replacement. Results include savedContent for verification or correcting a stale match. Use updateDocument when you need a rewrite based on the latest saved body.",
     execute: async ({ id, old_string, new_string, replace_all }) => {
       const document = await documentRepository.findLatestById(id);
 
@@ -36,16 +37,23 @@ export const editDocument = ({ session, dataStream }: EditDocumentProps) =>
         return { error: "Document has no content" };
       }
 
-      if (!document.content.includes(old_string)) {
+      const matches =
+        document.kind === "sheet"
+          ? sheetCsvMatches(old_string, document.content)
+          : document.content.includes(old_string);
+      if (!matches) {
         return {
           error: "old_string not found in document",
           savedContent: document.content,
         };
       }
 
-      const updated = replace_all
-        ? document.content.replaceAll(old_string, new_string)
-        : document.content.replace(old_string, new_string);
+      const updated =
+        document.kind === "sheet"
+          ? new_string
+          : replace_all
+            ? document.content.replaceAll(old_string, () => new_string)
+            : document.content.replace(old_string, () => new_string);
 
       if (updated === document.content) {
         return {
@@ -121,7 +129,7 @@ export const editDocument = ({ session, dataStream }: EditDocumentProps) =>
       old_string: z
         .string()
         .describe(
-          "Exact string to find. Include 3-5 surrounding lines for uniqueness."
+          "For sheets, the complete saved CSV. For text/code, an exact substring with enough surrounding context for uniqueness."
         ),
       replace_all: z
         .boolean()

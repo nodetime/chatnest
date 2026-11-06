@@ -54,7 +54,13 @@ export const createDocument = ({ session, dataStream }: CreateDocumentProps) =>
         });
       }
       dataStream.write({ data: null, transient: true, type: "data-finish" });
-      return { content: "Saved and opened in the workspace.", id, kind, title };
+      return {
+        content: "Saved and opened in the workspace.",
+        id,
+        kind,
+        savedContent: content,
+        title,
+      };
     },
     inputSchema: z.object({
       content: z

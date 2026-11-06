@@ -20,6 +20,64 @@ const source = {
   toolName: "fixture__search",
 };
 
+test("viewing a candidate outside the sampled rows returns its own original source fields", async () => {
+  const ledger = new ResultEvidenceLedger();
+  const candidate = {
+    description: "unrelated long source text ".repeat(60),
+    detailUrl: "https://example.com/offer/4?variant=button",
+    imageUrl: "https://example.com/fourth.jpg",
+    itemId: 4,
+    skuTitle: "Plug-in button variant",
+    title: "Fourth candidate",
+  };
+  ledger.record(source, {
+    structuredContent: {
+      items: [
+        { itemId: 1, title: "First candidate" },
+        { itemId: 2, title: "Second candidate" },
+        { itemId: 3, title: "Third candidate" },
+        candidate,
+      ],
+    },
+  });
+  assert.ok(
+    !ledger.projection(source.toolCallId)?.includes(candidate.detailUrl)
+  );
+  const fetched: string[] = [];
+  const viewer = createImageViewer(
+    ledger,
+    new AbortController().signal,
+    (url) => {
+      fetched.push(url);
+      return Promise.resolve({
+        data: "fixture-pixels",
+        height: 2,
+        mediaType: "image/jpeg",
+        width: 2,
+      });
+    }
+  );
+  assert.ok(viewer.tool.execute);
+  const output = await viewer.tool.execute(
+    { imagePath: "/items/3/imageUrl", sourceToolCallId: source.toolCallId },
+    { context: {}, messages: [], toolCallId: "view-fourth" }
+  );
+  assert.ok("sourceRecord" in output && output.sourceRecord);
+  assert.deepEqual(output.sourceRecord, {
+    fields: {
+      detailUrl: candidate.detailUrl,
+      imageUrl: candidate.imageUrl,
+      itemId: candidate.itemId,
+      skuTitle: candidate.skuTitle,
+      title: candidate.title,
+    },
+    partial: true,
+    path: "/items/3",
+  });
+  assert.ok(Buffer.byteLength(JSON.stringify(output.sourceRecord)) <= 8000);
+  assert.deepEqual(fetched, [candidate.imageUrl]);
+});
+
 test("candidate pixels reach actual provider wire while history keeps metadata only", async () => {
   const pixels = await sharp({
     create: { background: "#ffc800", channels: 3, height: 2, width: 2 },
@@ -149,7 +207,31 @@ test("candidate pixels reach actual provider wire while history keeps metadata o
   );
   assert.ok("status" in absent);
   assert.equal(absent.status, "failed");
+  assert.ok(!("sourceRecord" in absent));
   assert.deepEqual(fetched, ["https://example.com/product.jpg"]);
+});
+
+test("failed image reads return neither source context nor a visual success", async () => {
+  const ledger = new ResultEvidenceLedger();
+  ledger.record(source, {
+    structuredContent: [
+      {
+        detailUrl: "https://example.com/offer/1",
+        image: "https://example.com/broken.jpg",
+      },
+    ],
+  });
+  const viewer = createImageViewer(ledger, new AbortController().signal, () => {
+    throw new Error("Image unavailable");
+  });
+  assert.ok(viewer.tool.execute);
+  const output = await viewer.tool.execute(
+    { imagePath: "/0/image", sourceToolCallId: source.toolCallId },
+    { context: {}, messages: [], toolCallId: "failed-view" }
+  );
+  assert.ok("status" in output);
+  assert.equal(output.status, "failed");
+  assert.ok(!("sourceRecord" in output));
 });
 
 test("image destinations reject private/mixed DNS, redirects protocol and credentials", () => {

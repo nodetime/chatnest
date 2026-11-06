@@ -4,6 +4,8 @@ import { z } from "zod";
 import type { createDocument } from "@/server/application/chat/tools/create-document";
 // biome-ignore lint/style/noRestrictedImports: 已登记豁免:ChatTools 依赖工具定义的 InferUITool 推导,翻转需重写工具类型声明(裁决见 P5 待办)
 import type { createResultTable } from "@/server/application/chat/tools/create-result-table";
+// biome-ignore lint/style/noRestrictedImports: ChatTools follows the registered native tool's inferred schema.
+import type { editDocument } from "@/server/application/chat/tools/edit-document";
 // biome-ignore lint/style/noRestrictedImports: 已登记豁免:ChatTools 依赖工具定义的 InferUITool 推导,翻转需重写工具类型声明(裁决见 P5 待办)
 import type { getWeather } from "@/server/application/chat/tools/get-weather";
 // biome-ignore lint/style/noRestrictedImports: 已登记豁免:ChatTools 依赖工具定义的 InferUITool 推导,翻转需重写工具类型声明(裁决见 P5 待办)
@@ -57,6 +59,7 @@ export type ChatTools = {
   createResultTable: InferUITool<ReturnType<typeof createResultTable>>;
   getWeather: weatherTool;
   createDocument: createDocumentTool;
+  editDocument: InferUITool<ReturnType<typeof editDocument>>;
   updateDocument: updateDocumentTool;
   requestSuggestions: requestSuggestionsTool;
 };

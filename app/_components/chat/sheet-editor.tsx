@@ -110,13 +110,15 @@ const PureSpreadsheetEditor = ({
             isCurrentVersion && status !== "streaming" ? textEditor : undefined,
           width: imageColumn
             ? 132
-            : /判断|等级|来源平台/.test(header)
+            : /判断|等级|来源平台|是否核实|核实状态/.test(header)
               ? 120
               : /链接|url|link/i.test(header)
                 ? 140
                 : /名称|标题/.test(header)
                   ? 190
-                  : 240,
+                  : /事实依据/.test(header)
+                    ? 300
+                    : 240,
         };
       }),
     ],

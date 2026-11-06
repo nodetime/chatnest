@@ -18,7 +18,10 @@ import {
   ToolHeader,
   type ToolPart,
 } from "../ai-elements/tool";
-import { activityDisplayState, activityErrorText } from "./activity-groups";
+import {
+  activityDisplayState,
+  activityFailureMessage,
+} from "./activity-groups";
 import {
   AttachmentReadResult,
   parseAttachmentReadResult,
@@ -43,6 +46,7 @@ export function ToolActivity({
   isReadonly,
   isRunning,
   canApprove = true,
+  followUpSaved = false,
   timeline = false,
   onDetailsOpenChange,
   onDisclosureOpenChange,
@@ -52,6 +56,7 @@ export function ToolActivity({
   isReadonly: boolean;
   isRunning: boolean;
   canApprove?: boolean;
+  followUpSaved?: boolean;
   timeline?: boolean;
   onDetailsOpenChange?: (toolCallId: string, open: boolean) => void;
   onDisclosureOpenChange?: (toolCallId: string, open: boolean) => void;
@@ -77,8 +82,9 @@ export function ToolActivity({
       : null;
   const context = attachment?.name ?? inputContext;
   const approval = "approval" in part ? part.approval : undefined;
-  const displayState = activityDisplayState(part, isRunning);
-  const errorText = activityErrorText(part);
+  const displayState = followUpSaved
+    ? "output-available"
+    : activityDisplayState(part, isRunning);
   // The exact native table step hands off to DocumentPreview on success. Do not
   // open a temporary dialog that this authoritative artifact renderer replaces.
   // Terminal/fallback evidence and dynamic MCP lookalikes keep call details.
@@ -229,17 +235,19 @@ export function ToolActivity({
             }
             state={displayState}
             statusLabel={
-              displayState === "approval-responded" && isRunning
-                ? "执行中"
-                : incomplete
-                  ? "未完成"
-                  : part.type === "tool-readAttachment" &&
-                      part.state === "output-available" &&
-                      !attachment
-                    ? "已返回"
-                    : skillLoaded
-                      ? "技能已加载"
-                      : undefined
+              followUpSaved
+                ? "后续已保存"
+                : displayState === "approval-responded" && isRunning
+                  ? "执行中"
+                  : incomplete
+                    ? "未完成"
+                    : part.type === "tool-readAttachment" &&
+                        part.state === "output-available" &&
+                        !attachment
+                      ? "已返回"
+                      : skillLoaded
+                        ? "技能已加载"
+                        : undefined
             }
             title={loadingIdentity ? "正在读取工具信息…" : title}
             {...(part.type === "dynamic-tool"
@@ -254,6 +262,11 @@ export function ToolActivity({
           )}
         </div>
         <ToolContent className="space-y-2 py-1 pl-9 pr-3 pb-3 text-[13px]">
+          {!!followUpSaved && (
+            <p className="text-sm text-muted-foreground">
+              这次尝试未保存，后续修改已保存。
+            </p>
+          )}
           {displayState === "input-streaming" && (
             <p className="text-sm text-muted-foreground">正在准备调用参数…</p>
           )}
@@ -267,11 +280,11 @@ export function ToolActivity({
               这次操作已被拒绝，未执行。
             </p>
           )}
-          {!!(incomplete || errorText) && (
+          {displayState === "output-error" && (
             <p className="text-sm text-destructive" role="alert">
               {incomplete
                 ? "本轮没有收到执行结果，该步骤尚未完成。"
-                : "这一步未能完成。错误原文保留在调用详情中。"}
+                : activityFailureMessage(part, kind)}
             </p>
           )}
           {part.type === "tool-readAttachment" &&
@@ -279,6 +292,7 @@ export function ToolActivity({
               <AttachmentReadResult output={part.output} />
             )}
           {displayState === "output-available" &&
+            !followUpSaved &&
             part.type !== "tool-readAttachment" && (
               <div className="space-y-2">
                 {!!origin && (
@@ -287,11 +301,6 @@ export function ToolActivity({
                 <ToolResultPreview preview={projectToolResult(part)} />
               </div>
             )}
-          {displayState === "output-error" && !incomplete && !errorText && (
-            <p className="text-sm text-destructive" role="alert">
-              工具执行失败，未返回错误说明。
-            </p>
-          )}
           {part.state === "approval-requested" && (
             <div
               className="space-y-1.5 py-1 text-sm leading-6"

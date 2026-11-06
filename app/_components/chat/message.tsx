@@ -10,7 +10,10 @@ import { MessageContent, MessageResponse } from "../ai-elements/message";
 import { Shimmer } from "../ai-elements/shimmer";
 import type { ToolPart } from "../ai-elements/tool";
 import { ActivityGroup } from "./activity-group";
-import { groupActivityParts } from "./activity-groups";
+import {
+  artifactEditHasLaterSave,
+  groupActivityParts,
+} from "./activity-groups";
 import { type AnswerAskUser, AskUser } from "./ask-user";
 import { useDataStream } from "./data-stream-provider";
 import { DocumentPreview } from "./document-preview";
@@ -257,6 +260,7 @@ const PurePreviewMessage = ({
     if (
       type === "tool-createDocument" ||
       type === "tool-updateDocument" ||
+      type === "tool-editDocument" ||
       type === "tool-requestSuggestions"
     ) {
       if (
@@ -278,6 +282,10 @@ const PurePreviewMessage = ({
         <ToolActivity
           approve={addToolApprovalResponse}
           canApprove={canApprove}
+          followUpSaved={artifactEditHasLaterSave(
+            part as ToolPart,
+            message.parts.slice(index + 1)
+          )}
           isReadonly={isReadonly}
           isRunning={isLoading}
           key={part.toolCallId}

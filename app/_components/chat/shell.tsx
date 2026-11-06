@@ -285,7 +285,7 @@ export function ChatShell() {
               className={cn(
                 "mx-auto flex w-full min-w-0 shrink-0 flex-col",
                 isEmpty
-                  ? "max-w-[840px] px-5 pb-10 pt-12 sm:px-8 sm:pt-16"
+                  ? "max-w-[800px] px-4 pb-10 pt-10 sm:px-6 sm:pt-[clamp(3rem,9vh,6rem)]"
                   : "max-w-[800px] px-4 pt-2 pb-4 sm:px-6"
               )}
               data-testid="composer-dock"
@@ -298,7 +298,10 @@ export function ChatShell() {
                   plan={taskProgress}
                 />
               )}
-              <ConversationNotice onRestore={handleRestore} />
+              <ConversationNotice
+                attachments={attachments}
+                onRestore={handleRestore}
+              />
               {!isReadonly && (
                 <MultimodalInput
                   attachments={attachments}
@@ -323,7 +326,7 @@ export function ChatShell() {
                 />
               )}
               {!!isEmpty && (
-                <div className="mt-10">
+                <div className="mt-8 border-t border-border/60 pt-6">
                   <WorkspaceHome />
                 </div>
               )}
