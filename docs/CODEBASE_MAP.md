@@ -2,6 +2,49 @@
 
 > 模块现状的权威地图:改结构必看、必更(AGENTS.md 纪律 6)。分层演变史与逐轮裁决见 [01_架构决策/20261025101500_DDD分层待办P1-P4.md](01_架构决策/20261025101500_DDD分层待办P1-P4.md);逐轮功能验证记录见 `docs/superpowers/plans/`。
 
+## 项目仓库边界（2026-11-06 核对）
+
+项目仅包含 `nodetime/payload`（业务后端承载仓库）、`nodetime/chatnest`（Chat/Agent 应用）、`nodetime/porta`（MCP 服务）、`nodetime/porta-cli`（CLI 客户端）。ChatNest 自身是 Next.js 全栈应用；`PLATFORM_BASE_URL` 是其对接业务后端的 HTTP 入口。
+
+当前 `nodetime/payload` 检出内容为 Payload 框架，已查分支尚未找到本项目业务应用。此前部分联验脚本硬编码的 `NexaZ/heymoro-starter` 属于其他项目，不是本项目 Payload；这些脚本及历史账务证据不能作为四仓交付依据。待处理事项仅记在[唯一研发 TODO](superpowers/plans/2026-11-04-core-launch-goal-and-todo.md)。
+
+## 当前演示架构与 Agent 分层（2026-11-06）
+
+```mermaid
+flowchart LR
+  U[用户浏览器] --> N[ChatNest Next.js 全栈应用]
+  N --> A[认证 / 会话 / 上传 API]
+  A --> D[(PostgreSQL)]
+  A --> F[私有附件目录]
+  N --> L[AI SDK Agent 循环]
+  P[通用核心 Prompt] --> L
+  S[唯一按需 Skill：找相似商品] --> L
+  L --> Q[内置 Ask / Todo / 附件 / 产物工具]
+  L --> J[隔离 JavaScript 计算]
+  L --> I[候选图片读取]
+  Q --> D
+  Q --> W[右侧产物工作区]
+  L --> M["DeepSeek Flash<br/>文本和图片"]
+  L --> X["Exa HTTP MCP<br/>免 Key 搜索与网页读取"]
+  L --> R["Porta HTTP MCP"]
+  R --> B["百炼1688<br/>仅 find_product"]
+  L --> N
+```
+
+图中展示当前源码和已配置链路，不代表所有外部服务此刻均在运行：ChatNest 与开发数据库运行中；DeepSeek Flash 已真实调用，Porta 本机服务已启动；Exa 已免 Key 真实查询。当前演示为 `PLATFORM_MODE=standalone`，Payload 业务后端、账务、支付和 CLI 不参与演示调用链，不绘制成已连接服务。
+
+- **产物交付**：`createDocument` 接收当轮 Agent 写好的正文，持久化成功后打开右侧工作区，不再仅凭标题二次调用模型。文本报告按候选分节保留图片与链接；原始 `createResultTable` 继续只存原始查询数据。`app/_lib/editor/markdown.ts` 统一正文与版本比较的 Markdown/schema，保留链接、图片、强调及表格；`config.ts` 约束单元格内回车与粘贴，保存重开不拆列。商品图省略来源页信息，避免来源站拒绝加载；编辑器链接经协议校验后独立页打开。
+- **核心规则**：`server/application/ai/prompts.ts` 仅提供通用目标推进、澄清、规划、执行、交互和完成判断。已删除模板地理信息、强制所有写作建文档、无条件浏览器长段指令；`send-message.ts` 按工具能力注入 runtime 说明，网页模式只传递当轮用户意图。工具 schema 和实际执行门控仍是权限边界。
+- **技能方法**：应用仅内置 `server/infrastructure/skills/similar-products/SKILL.md`（找相似商品），按需加载。Ask/Todo、任务持续和工具策略属于核心；搜索/读取及1688属于 MCP 工具，不复制为技能手册。独立 Porta CLI skill 源码仍在 `nodetime/porta-cli/skills/porta`。
+- **Ask / Todo**：沿用 AI SDK 原生工具与 AI Elements Question / Task。Ask 询问需求，不重复授权；Todo 是完整任务快照，仅为实质性多步骤工作更新。服务端合并、消息持久化、属主校验、幂等和侧栏重开走既有实现，没有新增流程引擎。
+- **计算执行**：`application/chat/tools/execute-code.ts` 接入自动执行工具；`infrastructure/execution/` 每次以独立子进程运行 QuickJS/WASM，只提供同步 JavaScript、JSON结果与有限日志，无文件、网络、宿主env或shell。固定并发准入、guest内存/栈、执行中断、宿主输出检查及父进程取消/时限约束；V8参数不是整个进程RSS硬限。worker及依赖纳入现有NFT追踪与Docker交付。
+- **候选图片**：`application/chat/tools/view-image.ts` 仅允许读取当前会话成功MCP JSON的原始图片字段；`infrastructure/uploads/remote-image.ts` 解析并固定公网HTTPS地址、拒绝重定向，限制下载和解码，统一JPEG。图片仅在当轮模型请求中经现有视觉通路注入，数据库只存来源/尺寸等元数据；历史明确不含像素。
+- **MCP 文本上下文**：文本结果向模型传递正文（单次最多12,000字符并显式标记截断），不套用结构化表格的120字字段采样。历史恢复和每步模型请求使用同一投影，淘汰旧正文以保留现有总体上下文边界，数据库原文不改；非 JSON 正文不作为表格行证据。
+- **MCP**：`agent.json` 启用 Exa search/fetch 与 Porta 的单个百炼商品查询，Tavily 关闭。已允许的只读查询使用现有 `autoApproveTools` 自动执行，不新增权限模式；未知或未允许操作仍遵守宿主策略。模型验收按用户授权集中执行，真实验收记录见唯一研发 TODO。
+- **界面**：已知审批只显示用户需要的摘要；原始参数在详情。身份或能力目录加载时显示中性状态，避免原名称/参数闪现。历史已保存的问题或技能名称不伪装成重新执行后的新结果。
+
+参考公开实现的通用交互原则，未复制其终端/编码环境规则：[Codex 当前模板](https://github.com/openai/codex/blob/ddd1812a51f4aded35c3ec5446672474d5cb546b/codex-rs/models-manager/models.json)、[OpenCode 提示词组装](https://github.com/anomalyco/opencode/blob/05620f8ff9938ed3af3308cc40bb6cbac92b0f09/packages/core/src/session/system-prompt.ts)、[Claude Code 技能说明](https://code.claude.com/docs/en/skills)。这不是模型能力等同声明；通用交互已有本机真实 DeepSeek Flash 验收，范围见唯一研发 TODO。
+
 ## ChatNest 迁移与运行入口
 
 - 本地使用 PostgreSQL 和 `pnpm dev`；根目录 `Dockerfile` 的 `app` 与 `migrator` 只用于[容器交付](../deploy/docker-handoff.md)。
@@ -50,7 +93,7 @@ server/
 
 **模型网关**:`server/application/ai/` —— model-connection/model-service/model-context/providers/prompts + model-settings/{runtime,handler,service,network,probe}(加密 ModelSettings 行/AAD/CAS,DNS 钉扎 HTTPS 探测,可选部署侧 MODEL_DNS_OVERRIDES 精确域名公网 pin(仍保留 TLS/地址校验,dns-pins.test.ts 回归);目录 schema 在 domain/model/settings-schema.ts,仓储在 drizzle)。模型目录(chatModels/isDemo/titleModel)在 `domain/model/models.ts`。
 
-**Agent 运行时**:`server/infrastructure/mcp/` —— runtime.ts(每任务配置快照/HTTP MCP 客户端/工具发现/审批门)、config.ts(默认 agent.json + AGENT_CONFIG_PATH)、skills.ts(技能发现)。配置数据 agent.json 与技能快照(含 Porta)同层;`next.config.ts` NFT 种子指向这些路径。
+**Agent 运行时**:`server/infrastructure/mcp/` —— runtime.ts(每任务配置快照/HTTP MCP 客户端/工具发现/审批门)、config.ts(默认 agent.json + AGENT_CONFIG_PATH)、skills.ts(技能发现)。配置数据 agent.json 与唯一按需相似商品技能均纳入运行时文件追踪;`next.config.ts` NFT 种子指向这些路径。
 
 **积分 AOP**:`server/application/chat/tool-billing.ts` 包住 Porta 工具调用，`model-billing.ts` 通过 AI SDK `wrapLanguageModel` 包住每个模型 provider request；两者在 `server/application/platform/attempt-settlement.ts` 共享本地 CAS、预留、放行和失败入队；确认未派发时用原内部 report 释放，流断开无完成证据时进入原对账。`app/(chat)/api/billing` 读取 Payload 的 sessionGroup totals/steps。
 
@@ -76,11 +119,11 @@ server/
 
 ## 正式工作空间（2026-10-27）
 
-- `app/_components/chat/{shell,app-sidebar,greeting,workspace-home,workbench-section}.tsx` 复用原有 Sidebar/PromptInput/ModelSelector/AI Elements；72/184px 图标/展开导航，底部输入与消息/产物分别滚动。管理视图由 `app/_hooks/use-workbench-navigation.ts` 管理展示状态，不替换当前运行中的 Chat 实例。
+- `app/_components/chat/{shell,app-sidebar,greeting,workspace-home,workbench-section}.tsx` 复用原有 Sidebar/PromptInput/ModelSelector/AI Elements；64/208px 图标/展开导航，折叠图标居中，历史空标题展示“新对话”；底部输入与消息/产物分别滚动，窄栏表格局部横向滚动。管理视图由 `app/_hooks/use-workbench-navigation.ts` 管理展示状态，不替换当前运行中的 Chat 实例。
 - `app/(chat)/api/library/route.ts` 经 documents 门面读取属主最近50份文档元数据；`domain/document/library.ts` 投影不包含正文/属主，保护结果表额外校验源对话权限；首页/文件入口打开实际文档，不注入样例记录。
 - `server/application/chat/tools/agent-interactions.ts` 提供 `updateTodo` / `askUser` 通用工具；`domain/message/agent-interactions.ts` 校验问题/答案、投影最新计划、编码精简续跑体。模型自行决定是否调用，未新增业务工作流引擎。
 - `message-repository.mergeInteractionResponses` 用属主聊天行锁合并最新待答调用并即时落库；`updateContinuationParts` 以存储快照 CAS 防止迟到模型覆盖新轮次。复用 messages.parts，无新表/列。
-- `app/_components/chat/{ask-user,task-progress,agent-pause-notice}.tsx` 复用 AI Elements Task、shadcn Popover/Button/Textarea；等待、稍后回答、修改为新补充、停止与显式继续由真实消息状态驱动。`use-active-chat` 捕获 Chat 实例及暂停修订，不把 addToolOutput 的本地 resolve 当保存成功，不继承 MCP 授权。
+- `app/_components/chat/{ask-user,task-progress,agent-pause-notice}.tsx` 复用 AI Elements Question/Task、shadcn Button/Textarea；Ask 仅跳过/提交，必填未完成时禁用提交，已答修改作为新补充。Todo 唯一展示位于输入区上方，显示当前步骤和完成数，可展开清单，完成默认收起；暂停/失败不转圈，不改写原始计划。`use-active-chat` 捕获 Chat 实例及暂停修订，不把 addToolOutput 的本地 resolve 当保存成功，不继承 MCP 授权。
 - 右侧仍使用 `Artifact` / 既有四类编辑器；`app/_artifacts/export.ts` 统一真实文件导出。保存/版本/metadata 回调按文档与会话 visit scope 隔离，切换不受旧请求影响。
 - 上传 raw SQL client 仅对列名做 camelCase 映射，原始 JSON 不变；显式本地真库回归 `server/application/uploads/upload-lifecycle-db.test.ts` 默认跳过。
 - `tests/visual/formal_workspace.py` + `.fixture.mjs` 仅在本地测试中提供模型和 MCP；生产运行时无脚本模型或合成供应商数据。
@@ -95,7 +138,8 @@ server/
 
 ## 开发基座
 
-- 一键闭环 `pnpm dev:up`(脚本 `.claude/skills/dev-env/scripts/dev-env-loop.mjs`:体检/装指引 -> .env.local -> compose PG(127.0.0.1:55432,命名卷) -> 迁移 -> 启动);收尾 `pnpm dev:down`。
+- 一键闭环 `pnpm dev:up`(脚本 `.claude/skills/dev-env/scripts/dev-env-loop.mjs`:体检/装指引 -> .env.local -> compose PG(127.0.0.1:55432,命名卷) -> 迁移 -> `scripts/dev-seed.ts` 开发账号初始化 -> 启动);收尾 `pnpm dev:down`。
+- 本地开发默认登录 `admin / 123456`，账号保存在 `admin@chatnest.local`，用户名和密码由 `DEV_ADMIN_USERNAME` / `DEV_ADMIN_PASSWORD` 配置；`server/shared/login-identity.ts` 仅在 development 将 `admin` 解析为该邮箱；仍由既有 Credentials + bcrypt 校验。注册/生产保持邮箱登录；不授予 connected 平台管理员权限。初始化仅操作固定本地开发库与此专用账号，不触碰其他用户。
 - 进程工具 `scripts/governance/dev-env.mjs` 仅三能:nics / 绑 0.0.0.0:3003 启动 / 优雅杀;入口 `pnpm dev:nics|start|stop`。
 
 ## 个人能力与本次使用（2026-10-27）
@@ -112,7 +156,7 @@ server/
 ## Agent 交互统一（2026-10-27）
 
 - Ask 与 Todo 仍由 `agentInteractionTools()` 注册为 AI SDK 原生工具，模型决定是否调用。`ask-user` 复用 Question，按输入 schema 动态生成表单；已答摘要默认收起，未确认保存时显示待确认而非已回答。停止/异常后 `use-active-chat` 只读核实精确 messageId/toolCallId/答案，确认不重启生成、不重放工具；中断的 input-streaming 不冒充可回答的问题，也不解除 MCP 审批。
-- `activity-groups` 仅在视图中省略成功且有效的 updateTodo 快照，原始消息保留；Todo 由 `deriveTaskProgress` 唯一投影到有界滚动的任务进度列表。普通执行组默认收起，用户展开选择与正在查看的详情保留，新的审批/错误仍主动显露。
+- `activity-groups` 仅在视图中省略成功且有效的 updateTodo 快照，原始消息保留；Todo 由 `deriveTaskProgress` 唯一投影为所属消息 ID 与计划，输入区列表有界滚动，仅所属 assistant 正在生成时显示运行。普通新轮次不重启旧计划动效；计划已完成但最终答复仍生成时显示整理中。普通执行组默认收起，用户展开选择与正在查看的详情保留，新的审批/错误仍主动显露。
 - 原生文档/建议工具复用 ToolActivity 状态与 DocumentPreview 产物入口；只对已知原生文档工具的 `{error:string}` 契约判失败，MCP 同名字段保持源数据。消息产物卡片共用 `artifactSwitchReason`，未保存正文/表格备注或生成中阻止切到其他文件，同文件重开保留内容。
 - `agent-unification.test.ts` 含实际 SDK 中止语义回归；formal_workspace 的显式扩展模式追加双产物备注保存/切换及不完整 Ask 中止分支。正常预览不使用这些夹具。
 
@@ -156,7 +200,7 @@ server/
 ## 产品命名（2026-10-28）
 
 - 产品显示名为「数知探AI」：首页链接、页面 title、账户页、后台、输入提示、内置技能归属与 Markdown 导出统一；后台标题为「数知探AI · 管理后台」。
-- 仓库／技术宿主名 ChatNest、Porta、CSS 标识、日志服务名、加密 AAD 以及锁定的外部 Porta skill 快照保持不变；不重写历史用户消息、来源标题和已保存产物。
+- 仓库／技术宿主名 ChatNest、Porta、CSS 标识、日志服务名、加密 AAD 以及Codex 宿主通用 Porta skill 保持独立；不重写历史用户消息、来源标题和已保存产物。
 - 品牌回归覆盖新显示名、导出原文保留与内部稳定标识，既有认证／视觉选择器同步更新，不改变登录、导航或 Agent 行为。
 
 

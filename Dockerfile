@@ -32,6 +32,7 @@ COPY --from=build --chown=node:node /app/.next ./.next
 COPY --from=build /app/server/infrastructure/skills ./server/infrastructure/skills
 COPY --from=build /app/server/infrastructure/mcp/agent.json ./server/infrastructure/mcp/agent.json
 COPY --from=build /app/server/infrastructure/uploads/document-worker.cjs ./server/infrastructure/uploads/document-worker.cjs
+COPY --from=build /app/server/infrastructure/execution/javascript-worker.cjs ./server/infrastructure/execution/javascript-worker.cjs
 COPY --from=build /app/scripts/platform-settlement-worker.mjs /app/scripts/payment-recovery-result.mjs ./scripts/
 COPY --from=build /app/scripts/generated/payment-recovery-schema.mjs ./scripts/generated/payment-recovery-schema.mjs
 COPY --from=build /app/scripts/ci/production-gate.mjs ./scripts/ci/production-gate.mjs

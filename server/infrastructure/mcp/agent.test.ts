@@ -5,6 +5,7 @@ import path from "node:path";
 import { test } from "node:test";
 import type { MCPClient } from "@ai-sdk/mcp";
 import { jsonSchema } from "ai";
+import matter from "gray-matter";
 import { applyToolApprovals } from "@/server/domain/message/approvals";
 import {
   collectConversationSources,
@@ -170,26 +171,23 @@ test("conversation source workspace bounds very large histories to 200 distinct 
 test("skill discovery is metadata-only; loading and reference access work on demand", async () => {
   const discovered = await discoverSkills();
   const skills = discovered.filter(
-    (skill) => skill.name === "investigate-content"
+    (skill) => skill.name === "similar-products"
   );
   assert.equal(skills.length, 1);
   const catalog = buildSkillsPrompt(skills);
   const body = await readSkillFile(skills[0], "SKILL.md");
   assert.ok(catalog.includes(skills[0].name));
-  assert.ok(!catalog.includes("## 调查方法"));
-  assert.ok(body.includes("## 调查方法"));
+  assert.ok(!catalog.includes("## 工作方法"));
+  assert.ok(body.includes("## 工作方法"));
   const tools = createSkillTools(skills);
   const load = tools.loadSkill.execute;
   assert.ok(load);
   const options = { context: {}, messages: [], toolCallId: "skill-test" };
   const loaded = await load({ name: skills[0].name }, options);
   assert.ok("instructions" in loaded);
-  assert.ok(loaded.instructions.includes("references/review.md"));
+  assert.equal(loaded.instructions, matter(body).content);
   await assert.rejects(
     () => load({ name: "unknown" }, options) as Promise<unknown>
-  );
-  assert.ok(
-    (await readSkillFile(skills[0], "references/review.md")).length > 0
   );
 });
 
@@ -202,12 +200,21 @@ test("skill resource access rejects traversal, absolute paths and escaping symli
       path.join(directory, "SKILL.md"),
       "---\nname: safe\ndescription: Test resource boundary\n---\nSafe instructions"
     );
+    await mkdir(path.join(directory, "references"));
+    await writeFile(
+      path.join(directory, "references", "note.md"),
+      "Reference note"
+    );
     await writeFile(path.join(root, "outside.txt"), "outside");
     await symlink(
       path.join(root, "outside.txt"),
       path.join(directory, "escape.txt")
     );
     const [skill] = await discoverSkills(root);
+    assert.equal(
+      await readSkillFile(skill, "references/note.md"),
+      "Reference note"
+    );
     await Promise.all(
       ["../outside.txt", "/etc/passwd", "escape.txt", "..\\outside.txt"].map(
         (resource) => assert.rejects(() => readSkillFile(skill, resource))

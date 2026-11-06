@@ -56,6 +56,15 @@ const envSchema = z.object({
     .min(1000)
     .max(300_000)
     .optional(),
+  DEV_ADMIN_PASSWORD: z
+    .string()
+    .min(6)
+    .refine((value) => Buffer.byteLength(value, "utf8") <= 72, "最多 72 字节")
+    .default("123456"),
+  DEV_ADMIN_USERNAME: z
+    .string()
+    .regex(/^[a-zA-Z0-9_-]{1,32}$/)
+    .default("admin"),
   IS_DEMO: z.string().optional(),
   LOG_FILE_DIR: z.string().optional(),
   LOG_LEVEL: z.string().optional(),

@@ -164,7 +164,7 @@ test("actual ToolActivity disclosure, canonical approval identity, callbacks and
     let props={part,approve:value=>decisions.push(value),isReadonly:false,isRunning:true};
     let tree=scheduler.render(ToolActivity,props);
     assert.equal(nodes(tree).find(n=>n.type==='tool').props.open,true);
-    const text=JSON.stringify(tree);assert.ok(text.includes('billing__perform_operation'));assert.ok(text.includes('查看调用详情'));assert.ok(!text.includes('只读操作'));
+    const text=JSON.stringify(tree);assert.ok(text.includes('billing__perform_operation'));assert.ok(nodes(tree).some(n=>n.type==='call-details'&&n.props.part===part));assert.ok(!text.includes('只读操作'));
     const buttons=nodes(tree).filter(n=>n.type==='button');buttons.find(n=>n.props.children==='允许执行').props.onClick();buttons.find(n=>n.props.children==='拒绝').props.onClick();
     assert.equal(JSON.stringify(decisions),JSON.stringify([{approved:true,id:'exact-id'}]),'same approval accepts only one decision');
     nodes(tree).find(n=>n.type==='tool').props.onOpenChange(false);
@@ -175,6 +175,31 @@ test("actual ToolActivity disclosure, canonical approval identity, callbacks and
     tree=scheduler.render(ToolActivity,{...props,part:{...part,state:'output-error',errorText:'raw failure'}});assert.ok(JSON.stringify(tree).includes('raw failure'));
   `
   );
+});
+
+test("dynamic approval waits for catalog labels without flashing protocol parameters; failures remain inspectable", () => {
+  clientScript(`${hookHarness}
+    const scheduler=hooks();let catalog={isLoading:true};
+    const {ToolActivity}=load('app/_components/chat/tool-activity.tsx',{
+      ...base,react:scheduler.react,'@/app/_hooks/use-agent-info':{useAgentInfo:()=>catalog},
+    });
+    const part={type:'dynamic-tool',toolName:'opaque__alias',toolCallId:'call',state:'approval-requested',input:{query:'旅行包',pageSize:5},approval:{id:'exact-id'}};
+    const props={part,approve:()=>{},isReadonly:false,isRunning:false};
+    let tree=scheduler.render(ToolActivity,props);
+    const summary=()=>nodes(tree).find(n=>n.props?.['data-testid']==='tool-approval-summary');
+    assert.ok(!JSON.stringify(summary()).includes('pageSize'));
+    assert.notEqual(nodes(tree).find(n=>n.type==='header').props.title,'opaque__alias');
+    assert.ok(nodes(tree).filter(n=>n.type==='button').every(n=>n.props.disabled));
+    assert.ok(nodes(tree).some(n=>n.type==='call-details'&&n.props.part===part));
+    catalog={isLoading:false,data:{servers:[{toolAliases:[{alias:'opaque__alias',name:'native_alibaba1688_product_find_product',serverName:'1688 商品查询'}]}]}};
+    tree=scheduler.render(ToolActivity,props);
+    assert.ok(JSON.stringify(summary()).includes('关键词'));
+    assert.ok(!JSON.stringify(summary()).includes('pageSize'));
+    assert.ok(nodes(tree).filter(n=>n.type==='button').every(n=>!n.props.disabled));
+    catalog={isLoading:false,error:new Error('catalog failed')};tree=scheduler.render(ToolActivity,props);
+    assert.ok(JSON.stringify(tree).includes('opaque__alias'));
+    assert.ok(nodes(tree).some(n=>n.type==='call-details'&&n.props.part===part));
+  `);
 });
 
 test("singleton to multi keeps the same keyed step path, user disclosure state and children reachable", () => {

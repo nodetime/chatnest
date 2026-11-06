@@ -56,7 +56,8 @@ export function ToolActivity({
   onDetailsOpenChange?: (toolCallId: string, open: boolean) => void;
   onDisclosureOpenChange?: (toolCallId: string, open: boolean) => void;
 }) {
-  const { data: info } = useAgentInfo();
+  const { data: info, isLoading } = useAgentInfo();
+  const loadingIdentity = part.type === "dynamic-tool" && isLoading === true;
   const {
     approvalInput,
     name,
@@ -205,7 +206,7 @@ export function ToolActivity({
           <ToolHeader
             appearance={timeline ? "timeline" : "compact"}
             className="min-w-0 flex-1"
-            context={context}
+            context={loadingIdentity ? undefined : context}
             icon={
               [
                 "input-streaming",
@@ -240,7 +241,7 @@ export function ToolActivity({
                       ? "技能已加载"
                       : undefined
             }
-            title={title}
+            title={loadingIdentity ? "正在读取工具信息…" : title}
             {...(part.type === "dynamic-tool"
               ? { toolName: name, type: "dynamic-tool" }
               : { type: part.type })}
@@ -296,22 +297,24 @@ export function ToolActivity({
               className="space-y-1.5 py-1 text-sm leading-6"
               data-testid="tool-approval-summary"
             >
-              <p className="font-medium">请确认这次操作：{title}</p>
-              {!!nativeName && (
-                <p className="break-all text-xs text-muted-foreground">
-                  操作：{nativeName}
+              <p className="font-medium">请确认这次操作</p>
+              {loadingIdentity ? (
+                <p className="text-muted-foreground" role="status">
+                  正在读取操作说明…
                 </p>
+              ) : (
+                <>
+                  {!!nativeName && (
+                    <p className="break-all text-xs text-muted-foreground">
+                      操作：{nativeName}
+                    </p>
+                  )}
+                  <ToolResultPreview
+                    parameters
+                    preview={projectResult(approvalInput, "parameters")}
+                  />
+                </>
               )}
-              {!!origin && (
-                <p className="text-xs text-muted-foreground">{origin}</p>
-              )}
-              <ToolResultPreview
-                parameters
-                preview={projectResult(approvalInput, "parameters")}
-              />
-              <p className="text-xs text-muted-foreground">
-                完整参数保留在查看调用详情中。
-              </p>
             </div>
           )}
           {part.state === "approval-requested" &&
@@ -332,7 +335,7 @@ export function ToolActivity({
                 )}
                 <button
                   className="min-h-9 rounded-md border px-3 text-sm transition-colors hover:bg-accent disabled:cursor-wait disabled:opacity-50"
-                  disabled={pendingDecision}
+                  disabled={pendingDecision || loadingIdentity}
                   onClick={handleDeny}
                   type="button"
                 >
@@ -340,7 +343,7 @@ export function ToolActivity({
                 </button>
                 <button
                   className="min-h-9 rounded-md bg-foreground px-3 text-sm text-background transition-opacity hover:opacity-85 disabled:cursor-wait disabled:opacity-50"
-                  disabled={pendingDecision}
+                  disabled={pendingDecision || loadingIdentity}
                   onClick={handleAllow}
                   type="button"
                 >

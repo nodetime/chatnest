@@ -401,6 +401,19 @@ textarea:focus-visible {
   outline: none;
 }
 
+.ProseMirror table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.ProseMirror td,
+.ProseMirror th {
+  min-width: 7rem;
+  padding: 0.6rem 0.75rem;
+  vertical-align: top;
+}
+
 .cm-editor {
   font-family:
     "SF Mono", "Cascadia Code", "Fira Code", "JetBrains Mono", ui-monospace,
@@ -521,24 +534,24 @@ textarea:focus-visible {
 
 /* The workbench palette is local to chat; admin and global fonts stay unchanged. */
 .chat-workbench {
-  --background: #ffffff;
-  --foreground: #262a33;
+  --background: #fafafb;
+  --foreground: #25242a;
   --card: oklch(1 0 0);
   --card-foreground: var(--foreground);
   --popover: var(--card);
   --popover-foreground: var(--foreground);
   --primary: var(--foreground);
   --primary-foreground: var(--card);
-  --secondary: #f5f6f7;
+  --secondary: #f1f0f4;
   --secondary-foreground: var(--foreground);
-  --muted: oklch(0.965 0.002 250);
-  --muted-foreground: #6b7078;
-  --accent: oklch(0.95 0.003 250);
+  --muted: #f1f0f4;
+  --muted-foreground: #6d6975;
+  --accent: #eeedf3;
   --accent-foreground: var(--foreground);
-  --border: #e8eaed;
+  --border: #eaeaee;
   --input: var(--border);
-  --ring: #555b65;
-  --sidebar: #f7f7f7;
+  --ring: #7774b6;
+  --sidebar: #f4f3f6;
   --sidebar-foreground: var(--foreground);
   --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: var(--primary-foreground);
@@ -546,8 +559,8 @@ textarea:focus-visible {
   --sidebar-accent-foreground: var(--foreground);
   --sidebar-border: var(--border);
   --sidebar-ring: var(--ring);
-  --workbench-selection: #e9f2ef;
-  --workbench-canvas: #ffffff;
+  --workbench-selection: #eae8f2;
+  --workbench-canvas: #fafafb;
   --workbench-shell: var(--sidebar);
   --workbench-surface: var(--background);
   --shadow-composer: 0 2px 8px -3px oklch(0.3 0.005 250 / 0.06);
@@ -557,7 +570,12 @@ textarea:focus-visible {
 
 .chat-workbench[data-slot="sidebar-wrapper"] {
   --sidebar-width: 13rem !important;
-  --sidebar-width-icon: 4.5rem !important;
+  --sidebar-width-icon: 4rem !important;
+}
+
+/* Center every collapsed menu on the same axis as the sidebar toggle. */
+.chat-workbench [data-collapsible="icon"] [data-sidebar="menu"] {
+  align-items: center;
 }
 
 .dark .chat-workbench {
@@ -578,6 +596,21 @@ textarea:focus-visible {
 
 .chat-workbench [data-slot="sidebar-inner"] {
   background: var(--sidebar);
+}
+
+.chat-workbench[data-slot="popover-content"] {
+  background: var(--card);
+}
+
+/* The search field belongs to its rounded group, including keyboard focus. */
+.chat-workbench [data-slot="command-input"]:focus-visible {
+  outline: none;
+}
+
+.chat-workbench
+  [data-slot="input-group"]:has([data-slot="command-input"]:focus-visible) {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ring) 18%, transparent);
 }
 
 .chat-workbench [data-slot="sidebar-inset"],

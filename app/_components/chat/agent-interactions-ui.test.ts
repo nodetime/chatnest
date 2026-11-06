@@ -21,6 +21,8 @@ test("Ask 渲染通用表单、明确必填、支持文本和单/多选；只读
   assert.match(html, /role="checkbox"/);
   assert.match(html, /提交回答/);
   assert.match(html, /跳过/);
+  assert.doesNotMatch(html, /稍后回答|继续回答/);
+  assert.match(html, /type="submit"[^>]*disabled|disabled[^>]*type="submit"/);
   assert.match(html, /required/);
   const readonly = client(
     `${code}process.stdout.write(renderToStaticMarkup(React.createElement(AskUser,{messageId:'a',part,onAnswer:async()=>{},isReadonly:true})));`
@@ -30,7 +32,7 @@ test("Ask 渲染通用表单、明确必填、支持文本和单/多选；只读
 
 test("TaskProgress 使用 AI Elements Task 与真实快照计数；空计划不渲染", () => {
   const html = client(
-    `const React=require('react');const {renderToStaticMarkup}=require('react-dom/server');const {TaskProgress}=require('./app/_components/chat/task-progress.tsx');process.stdout.write(renderToStaticMarkup(React.createElement(TaskProgress,{plan:{items:[{id:'one',title:'核对资料',status:'completed'},{id:'two',title:'整理结论',status:'in_progress'}]}})));`
+    `const React=require('react');const {renderToStaticMarkup}=require('react-dom/server');const {TaskProgress}=require('./app/_components/chat/task-progress.tsx');process.stdout.write(renderToStaticMarkup(React.createElement(TaskProgress,{isRunning:true,plan:{items:[{id:'one',title:'核对资料',status:'completed'},{id:'two',title:'整理结论',status:'in_progress'}]}})));`
   );
   assert.match(html, /1\s*\/\s*2/);
   assert.match(html, /核对资料/);
@@ -63,14 +65,14 @@ test("hook 暴露真实回答和停止门控；Ask 发送显式等待网络，tr
   assert.match(source, /gate\.revision/);
 });
 
-test("Ask 复用shadcn表单控件，稍后回答不提交取消，已答修改用普通用户补充", () => {
+test("Ask 复用Question与shadcn控件，只保留跳过和提交，已答修改用普通用户补充", () => {
   const source = readFileSync(
     new URL("./ask-user.tsx", import.meta.url),
     "utf8"
   );
   assert.match(source, /@\/app\/_components\/ui\/button/);
   assert.match(source, /@\/app\/_components\/ai-elements\/question/);
-  assert.match(source, /稍后回答/);
+  assert.doesNotMatch(source, /稍后回答|草稿已保留|handleDefer/);
   assert.match(source, /onRevise/);
   const hook = readFileSync(
     new URL("../../_hooks/use-active-chat.tsx", import.meta.url),
@@ -80,7 +82,7 @@ test("Ask 复用shadcn表单控件，稍后回答不提交取消，已答修改�
   assert.match(hook, /补充\/修改/);
 });
 
-test("真实Ask组件稍后回答保留输入、同一时刻只提交一次，并隔离迟到失败；修改只调用onRevise", () => {
+test("真实Ask组件空答案禁用提交、单次提交且隔离迟到失败；修改与跳过分开处理", () => {
   const result = client(`
     const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript');
     const jsx=(type,props,key)=>({type,props,key});
@@ -96,17 +98,47 @@ test("真实Ask组件稍后回答保留输入、同一时刻只提交一次，�
     let props={messageId:'a',part:{type:'tool-askUser',toolCallId:'ask',state:'input-available',input},onAnswer:value=>{calls.push(value);return new Promise((_,r)=>reject=r);},onRevise:async value=>{revisions.push(value);}};
     (async()=>{
       let tree=h.render(AskUser,props);
+      assert.equal(nodes(tree).find(node=>node.type==='button'&&node.props.type==='submit').props.disabled,true);
       nodes(tree).find(node=>node.props?.asField).props.onValueChange({text:'保留的草稿',selectedValues:[]});
-      tree=h.render(AskUser,props);button(tree,'稍后回答').props.onClick();tree=h.render(AskUser,props);assert.equal(calls.length,0);assert.ok(!nodes(tree).some(node=>node.type==='form'));
-      button(tree,'继续回答').props.onClick();tree=h.render(AskUser,props);assert.equal(nodes(tree).find(node=>node.props?.asField).props.value.text,'保留的草稿');
+      tree=h.render(AskUser,props);assert.equal(calls.length,0);assert.equal(nodes(tree).find(node=>node.type==='button'&&node.props.type==='submit').props.disabled,false);
       const submit=nodes(tree).find(node=>node.type==='form').props.onSubmit;
       const pending=submit({preventDefault(){}});submit({preventDefault(){}});assert.equal(calls.length,1);assert.equal(calls[0].output.answers.goal,'保留的草稿');
       props={...props,part:{...props.part,toolCallId:'replacement'}};tree=h.render(AskUser,props);reject(new Error('late failure'));await pending;tree=h.render(AskUser,props);assert.ok(!JSON.stringify(tree).includes('尚未确认提交'));
       props={...props,part:{...props.part,state:'output-available',output:{status:'answered',answers:{goal:'原回答'}}}};tree=h.render(AskUser,props);button(tree,'修改回答').props.onClick();tree=h.render(AskUser,props);nodes(tree).find(node=>node.props?.asField).props.onValueChange({text:'用户补充',selectedValues:[]});tree=h.render(AskUser,props);await nodes(tree).find(node=>node.type==='form').props.onSubmit({preventDefault(){}});assert.equal(revisions.length,1);assert.equal(revisions[0].output.answers.goal,'用户补充');assert.equal(calls.length,1);
+      let failRevision=true;props={...props,onRevise:async value=>{revisions.push(value);if(failRevision)throw new Error('save failed');}};
+      tree=h.render(AskUser,props);button(tree,'修改回答').props.onClick();tree=h.render(AskUser,props);nodes(tree).find(node=>node.props?.asField).props.onValueChange({text:'新的修改',selectedValues:[]});tree=h.render(AskUser,props);await nodes(tree).find(node=>node.type==='form').props.onSubmit({preventDefault(){}});
+      tree=h.render(AskUser,props);assert.ok(JSON.stringify(tree).includes('修改未提交'));failRevision=false;await button(tree,'重试提交').props.onClick();assert.equal(revisions.at(-1).output.answers.goal,'新的修改');
+      tree=h.render(AskUser,props);button(tree,'修改回答').props.onClick();tree=h.render(AskUser,props);failRevision=true;await nodes(tree).find(node=>node.type==='form').props.onSubmit({preventDefault(){}});tree=h.render(AskUser,props);button(tree,'取消修改').props.onClick();tree=h.render(AskUser,props);assert.ok(!button(tree,'重试提交'));assert.ok(!JSON.stringify(tree).includes('修改未提交'));
+      props={...props,onAnswer:async value=>{calls.push(value);},part:{type:'tool-askUser',toolCallId:'skip',state:'input-available',input}};tree=h.render(AskUser,props);await button(tree,'跳过').props.onClick();assert.equal(calls.length,2);assert.deepEqual(calls[1].output,{answers:{},status:'cancelled'});
       process.stdout.write('ASYNC_DONE');
     })().catch(error=>{console.error(error);process.exitCode=1;});
   `);
   assert.match(result, /ASYNC_DONE/);
+});
+
+test("Todo 未运行时保留未完成状态且不转圈，已完成默认收起；输入区是唯一展示入口", () => {
+  const paused = client(
+    `const React=require('react');const {renderToStaticMarkup}=require('react-dom/server');const {TaskProgress}=require('./app/_components/chat/task-progress.tsx');process.stdout.write(renderToStaticMarkup(React.createElement(TaskProgress,{plan:{items:[{id:'one',title:'核对结果',status:'in_progress'}]}})));`
+  );
+  assert.match(paused, /待继续/);
+  assert.doesNotMatch(paused, /animate-spin|任务已完成/);
+  const done = client(
+    `const React=require('react');const {renderToStaticMarkup}=require('react-dom/server');const {TaskProgress}=require('./app/_components/chat/task-progress.tsx');process.stdout.write(renderToStaticMarkup(React.createElement(TaskProgress,{plan:{items:[{id:'one',title:'已交付',status:'completed'}]}})));`
+  );
+  assert.match(done, /任务已完成/);
+  assert.match(done, /aria-expanded="false"/);
+  const finalizing = client(
+    `const React=require('react');const {renderToStaticMarkup}=require('react-dom/server');const {TaskProgress}=require('./app/_components/chat/task-progress.tsx');process.stdout.write(renderToStaticMarkup(React.createElement(TaskProgress,{isRunning:true,plan:{items:[{id:'one',title:'已交付',status:'completed'}]}})));`
+  );
+  assert.match(finalizing, /正在整理结果/);
+  assert.doesNotMatch(finalizing, /任务已完成/);
+  const shell = readFileSync(new URL("./shell.tsx", import.meta.url), "utf8");
+  const header = readFileSync(
+    new URL("./chat-header.tsx", import.meta.url),
+    "utf8"
+  );
+  assert.match(shell, /<TaskProgress/);
+  assert.doesNotMatch(header, /TaskProgress/);
 });
 
 test("暂停后新的明确工具审批恢复交互门控，不让混合 Ask/审批永久锁住", () => {
@@ -324,6 +356,17 @@ test("Provider导航和卸载中止捕获的旧SDK请求，旧交互句柄既不
       render('/chat/H');
       assert.deepEqual(instances.at(-1).messages,saved);
       assert.equal(requests.length,beforeSuccess+1,'completed send and sidebar reopen must result in exactly one chat POST');
+      const planHistory={...cached,messages:[{id:'old-plan',role:'assistant',parts:[{type:'tool-updateTodo',toolCallId:'old-todo',state:'output-available',input:{items:[{id:'one',title:'未完成的旧任务',status:'in_progress'}]},output:{items:[{id:'one',title:'未完成的旧任务',status:'in_progress'}]}}]}]};
+      chats.set('/api/messages?chatId=P',planHistory);
+      const planned=render('/chat/P');
+      assert.equal(planned.taskProgress.items[0].title,'未完成的旧任务');
+      assert.equal(planned.isTaskProgressRunning,false);
+      const unrelated=planned.sendMessage({role:'user',parts:[{type:'text',text:'另一条简单问题'}]});await tick();
+      assert.equal(render('/chat/P').isTaskProgressRunning,false,'a later ordinary request cannot restart the old plan indicator');
+      const live=instances.at(-1);live.messages=[...live.messages.slice(0,-1),{...live.messages.at(-1),parts:[...live.messages.at(-1).parts,{...planHistory.messages[0].parts[0],toolCallId:'current-todo'}]}];
+      assert.equal(render('/chat/P').isTaskProgressRunning,true,'a current assistant plan update owns its running indicator');
+      await planned.stop();await unrelated;
+      assert.equal(render('/chat/P').isTaskProgressRunning,false,'stopping keeps unfinished steps without a running indicator');
       process.stdout.write('ASYNC_DONE');
     })().catch(error=>{console.error(error);process.exitCode=1;});
   `);

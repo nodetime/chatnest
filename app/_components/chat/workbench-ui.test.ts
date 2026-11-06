@@ -24,7 +24,7 @@ function renderActivity(
     const {SessionContext}=require('next-auth/react');
     const { ToolActivity } = require('./app/_components/chat/tool-activity.tsx');
     global.fetch = () => { throw new Error('Unexpected network access'); };
-    const info = { skills: [{ name: 'fixture-skill', displayName: '调查方法', shortDescription: '技能说明只在详情中' }], servers: [{toolAliases:[{alias:'fixture__search',name:'search',serverName:'Fixture'},{alias:'fixture__product',name:'onebound_1688_item_get',serverName:'Fixture'}]}] };
+    const info = { skills: [{ name: 'fixture-skill', displayName: '调查方法', shortDescription: '技能说明只在详情中' }], servers: [{toolAliases:[{alias:'fixture__search',name:'search',serverName:'Fixture'},{alias:'fixture__product',name:'onebound_1688_item_get',serverName:'Fixture'},{alias:'fixture__1688',name:'native_alibaba1688_product_find_product',serverName:'1688 商品查询'}]}] };
     const value = { provider: () => new Map(), fallback: { [unstable_serialize(['/api/agent','fixture-owner'])]: info }, revalidateOnMount: false, revalidateOnFocus: false };
     process.stdout.write(renderToStaticMarkup(React.createElement(SessionContext.Provider,{value:{data:{user:{id:'fixture-owner'}},status:'authenticated'}},React.createElement(SWRConfig, { value }, React.createElement(ToolActivity, {
       part: ${JSON.stringify(part)}, approve: () => { throw new Error('SSR must not approve'); }, isReadonly: ${isReadonly}, isRunning: ${isRunning}
@@ -1183,10 +1183,10 @@ test("workspace resize grip stretches across the pane with an 8px hit area and a
   assert.match(source, /tabIndex=\{0\}/);
 });
 
-test("Lessie composition uses neutral panes, purposeful mint and narrower chat beside broad artifacts", () => {
+test("chat composition continues the landing palette and keeps broad artifacts", () => {
   const css = readFileSync("app/globals.css", "utf8");
   const scoped = css.slice(css.indexOf(".chat-workbench {"));
-  assert.match(scoped, /--background: #ffffff/);
+  assert.match(scoped, /--background: #fafafb/);
   assert.match(scoped, /--workbench-selection:/);
   assert.doesNotMatch(scoped, /0\.00[1-8] (?:65|85)\)/);
   assert.match(
@@ -1264,10 +1264,10 @@ test("formal chat avoids repeated assistant branding without changing canonical 
   assert.match(messages, /key=\{message.id\}/);
 });
 
-test("Lessie refinement uses a white task canvas, bounded home and aligned title rails", () => {
+test("chat refinement uses a soft task canvas, bounded home and aligned title rails", () => {
   const css = readFileSync("app/globals.css", "utf8");
   const shell = readFileSync("app/_components/chat/shell.tsx", "utf8");
-  assert.match(css, /--workbench-canvas: #ffffff/);
+  assert.match(css, /--workbench-canvas: #fafafb/);
   assert.match(css, /--sidebar-width: 13rem/);
   assert.doesNotMatch(css, /--workbench-canvas: #f0f1f2/);
   assert.match(shell, /max-w-\[840px\]/);
@@ -1310,4 +1310,42 @@ test("settings has responsive navigation and independently scrollable content wi
   assert.match(source, /min-h-0[^"\n]*overflow-y-auto/);
   assert.match(source, /<PersonalConnections/);
   assert.match(source, /<PersonalSkills/);
+});
+
+test("1688 approval presents the query and result count while protocol fields stay in details", () => {
+  const part = {
+    ...success,
+    approval: { id: "fixture-1688-approval" },
+    input: { pageSize: 5, query: "旅行包" },
+    state: "approval-requested",
+    toolName: "fixture__1688",
+  };
+  const html = renderActivity(part);
+  assert.match(html, /查询1688商品/);
+  assert.match(html, /关键词/);
+  assert.match(html, /旅行包/);
+  assert.match(html, /最多返回条数/);
+  assert.match(html, /允许执行/);
+  assert.doesNotMatch(
+    html,
+    /native_alibaba1688_product_find_product|pageSize|>query<|完整参数|提交回答|稍后回答/
+  );
+  const details = renderCallDetails(part);
+  assert.match(details, /pageSize/);
+  assert.match(details, /旅行包/);
+});
+
+test("approval stays neutral while the real session hook waits before starting its catalog request", () => {
+  const html = clientScript(`
+    const React=require('react');const {renderToStaticMarkup}=require('react-dom/server');
+    const {SessionContext}=require('next-auth/react');const {SWRConfig}=require('swr');
+    const {ToolActivity}=require('./app/_components/chat/tool-activity.tsx');
+    global.fetch=()=>{throw new Error('No network expected');};
+    const part={type:'dynamic-tool',toolName:'opaque__alias',toolCallId:'pending',state:'approval-requested',input:{query:'旅行包',pageSize:5},approval:{id:'exact'}};
+    process.stdout.write(renderToStaticMarkup(React.createElement(SessionContext.Provider,{value:{data:undefined,status:'loading',update:async()=>{}}},React.createElement(SWRConfig,{value:{provider:()=>new Map(),revalidateOnMount:false}},React.createElement(ToolActivity,{part,approve:()=>{throw new Error('Must not approve');},isReadonly:false,isRunning:false})))));
+  `);
+  assert.match(html, /正在读取操作说明/);
+  assert.doesNotMatch(html, /opaque__alias|pageSize|>query</);
+  assert.match(html, /disabled=""[^>]*>允许执行/);
+  assert.match(html, /查看调用详情/);
 });

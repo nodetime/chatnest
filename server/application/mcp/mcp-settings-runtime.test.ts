@@ -12,6 +12,49 @@ import {
 import { agentConfigSchema } from "@/server/infrastructure/mcp/config";
 import { createAgentRuntime } from "@/server/infrastructure/mcp/runtime";
 
+test("disabled file MCP servers are never connected or discovered", async () => {
+  const file = agentConfigSchema.parse({
+    servers: [
+      {
+        enabled: false,
+        id: "exa",
+        name: "Exa",
+        url: "https://exa.example/mcp",
+      },
+      {
+        enabled: true,
+        id: "porta",
+        name: "1688",
+        url: "https://porta.example/mcp",
+      },
+    ],
+  });
+  const config = mergeManagedConfig(file, []);
+  const connections: string[] = [];
+  const runtime = await createAgentRuntime(
+    new AbortController().signal,
+    async (options) => {
+      if ("url" in options.transport) {
+        connections.push(options.transport.url);
+      }
+      return {
+        close: async () => undefined,
+        tools: async () => ({}),
+      } as unknown as MCPClient;
+    },
+    async () => config
+  );
+  try {
+    assert.deepEqual(
+      config.servers.map((s) => s.id),
+      ["porta"]
+    );
+    assert.deepEqual(connections, ["https://porta.example/mcp"]);
+  } finally {
+    await runtime.close();
+  }
+});
+
 test("native dot/128 names have stable bounded aliases, legacy aliases preserved", () => {
   assert.equal(toolAlias("exa", "search"), "exa__search");
   assert.match(toolAlias("fixture", "search.web"), /^[a-zA-Z0-9_-]{1,64}$/);

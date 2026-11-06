@@ -41,7 +41,7 @@ export function mergeManagedConfig(
   return structuredClone({
     ...file,
     servers: [
-      ...file.servers,
+      ...file.servers.filter((server) => server.enabled !== false),
       ...managed
         .filter((s) => s.enabled)
         .map(({ enabled: _, ...s }) => ({

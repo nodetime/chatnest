@@ -57,8 +57,9 @@ const PureChatItem = ({
   onDelete: (chatId: string) => void;
   setOpenMobile: (open: boolean) => void;
 }) => {
+  const displayTitle = chat.title.trim() || "新对话";
   const [renameOpen, setRenameOpen] = useState(false);
-  const [title, setTitle] = useState(chat.title);
+  const [title, setTitle] = useState(displayTitle);
   const [saving, setSaving] = useState(false);
   const { mutate } = useSWRConfig();
   const changeTitle = useCallback(
@@ -66,9 +67,9 @@ const PureChatItem = ({
     []
   );
   const openRename = useCallback(() => {
-    setTitle(chat.title);
+    setTitle(displayTitle);
     setRenameOpen(true);
-  }, [chat.title]);
+  }, [displayTitle]);
   const saveTitle = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
@@ -126,7 +127,9 @@ const PureChatItem = ({
         isActive={isActive}
       >
         <Link href={`/chat/${chat.id}`} onClick={closeMobile}>
-          <span className="truncate">{chat.title}</span>
+          <span className="truncate" title={displayTitle}>
+            {displayTitle}
+          </span>
         </Link>
       </SidebarMenuButton>
 
@@ -137,7 +140,7 @@ const PureChatItem = ({
             showOnHover={!isActive}
           >
             <MoreHorizontalIcon />
-            <span className="sr-only">对话操作：{chat.title}</span>
+            <span className="sr-only">对话操作：{displayTitle}</span>
           </SidebarMenuAction>
         </DropdownMenuTrigger>
 
@@ -191,7 +194,7 @@ const PureChatItem = ({
         <DialogContent className="rounded-2xl sm:max-w-[420px]">
           <DialogHeader>
             <DialogTitle>重命名对话</DialogTitle>
-            <DialogDescription>让这段调查或讨论更容易找回。</DialogDescription>
+            <DialogDescription>让这段对话更容易找回。</DialogDescription>
           </DialogHeader>
           <form className="space-y-4" onSubmit={saveTitle}>
             <input

@@ -217,6 +217,7 @@ function ensureEnvLocal() {
   const secret = randomBytes(32).toString("base64");
   text = text
     .replace(/^AUTH_SECRET=.*$/m, `AUTH_SECRET=${secret}`)
+    .replace(/^PLATFORM_MODE=.*$/m, "PLATFORM_MODE=standalone")
     .replace(
       /^POSTGRES_URL=.*$/m,
       "POSTGRES_URL=postgres://chatnest:chatnest@127.0.0.1:55432/chatnest"
@@ -379,6 +380,14 @@ if (mode === "up") {
   }
   upDatabase();
   migrate();
+  const seed = run("corepack", ["pnpm", "exec", "tsx", "scripts/dev-seed.ts"], {
+    env: { ...process.env, NODE_ENV: "development" },
+    stdio: "inherit",
+  });
+  if (seed.status !== 0) {
+    log("开发账号", "[失败] 开发账号初始化未完成，停止启动。");
+    process.exit(1);
+  }
   start();
 } else if (mode === "down") {
   down(flag === "--purge");

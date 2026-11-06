@@ -134,18 +134,27 @@ export function createTaskCapabilityService({
           "此待审批任务缺少服务端原范围，请发送新消息重新确认能力。"
         );
       }
+      const servers = catalog.config.servers.map(
+        (server) => server.capabilityId ?? server.id
+      );
+      const skills = catalog.skills.map(
+        (skill) => skill.id ?? `builtin:${skill.name}`
+      );
+      // 新轮次仅沿用仍可用的选择；续跑和显式选择保持严格校验。
+      const inherited = previous && {
+        serverIds: previous.selection.serverIds.filter((id) =>
+          servers.includes(id)
+        ),
+        skillIds: previous.selection.skillIds.filter((id) =>
+          skills.includes(id)
+        ),
+      };
       const requested = continuation
         ? previous?.selection
-        : (input ?? previous?.selection);
+        : (input ?? inherited ?? undefined);
       let selection: CapabilitySelection;
       try {
-        selection = resolveSelection(
-          requested,
-          catalog.config.servers.map(
-            (server) => server.capabilityId ?? server.id
-          ),
-          catalog.skills.map((skill) => skill.id ?? `builtin:${skill.name}`)
-        );
+        selection = resolveSelection(requested, servers, skills);
       } catch {
         // biome-ignore lint/style/useErrorCause: 校验原因可能含客户端数据，错误仅返回固定提示。
         throw new SettingsError(

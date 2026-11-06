@@ -9,8 +9,8 @@
 - 对话、浏览器/文档/来源工作区，以及可暂停和接管的浏览器会话。
 - 目标式任务入口、按需加载的 Skills、真实工具状态与执行确认。
 - 支持 OpenAI 兼容接口的自定义地址、模型与密钥，也支持 Vercel AI Gateway。
-- 默认接入免密钥、限流的 Exa 搜索与网页读取 MCP；可选 Tavily。
-- 已内置 Porta 通用 skill，复用现有 HTTP MCP；[Codex / 数知探AI 接入指南](docs/integrations/porta-hosts.md)与[实际验收边界](docs/integrations/porta-host-verification.md)。
+- 当前演示启用免 Key 的 Exa 网页搜索/读取，以及百炼 1688 单个商品查询；Tavily 关闭。已配置的只读查询自动执行，Ask 仅用于缺少的需求信息。
+- 唯一业务 Skill 提供找相似商品、看图比较和报告交付的方法，执行复用 Porta HTTP MCP；[Codex / 数知探AI 接入指南](docs/integrations/porta-hosts.md)与[实际验收边界](docs/integrations/porta-host-verification.md)。
 - 管理员可在设置页管理 HTTP MCP 连接，详见 [可视化 MCP 配置](docs/integrations/mcp-settings.md)。
 
 ## 本地运行
@@ -26,10 +26,11 @@ export AUTH_SECRET="$(openssl rand -hex 32)"
 export AUTH_URL=http://127.0.0.1:3003
 export PLATFORM_MODE=standalone
 MIGRATION_POSTGRES_URL="$POSTGRES_URL" corepack pnpm db:migrate
+NODE_ENV=development corepack pnpm exec tsx scripts/dev-seed.ts
 corepack pnpm dev --hostname 127.0.0.1 --port 3003
 ```
 
-打开 http://127.0.0.1:3003/register 注册；`GET /api/health/ready` 返回 200 即表示数据库就绪。启动和注册不需要模型、支付或供应商凭据。要发送聊天消息，再按 [模型配置](docs/integrations/model-settings.md) 设置模型；要用内置浏览器，再设置 `BROWSER_RUNTIME=local` 并安装 Chromium（`corepack pnpm exec playwright install chromium`）。日常开发可把自己的本地变量放在 `.env.local`，重启时保留同一个 `AUTH_SECRET`，以免现有会话失效。
+打开 http://127.0.0.1:3003/login，用开发账号 `admin / 123456` 登录，也可自行注册。`pnpm dev:up` 会自动初始化此账号；可在私密 `.env.local` 设置 `DEV_ADMIN_USERNAME`、`DEV_ADMIN_PASSWORD`；初始化仅接受上述固定本地开发库，生产不自动创建，standalone 管理权限沿用既有管理员名单，connected 管理权限仍由后端角色决定。`GET /api/health/ready` 返回 200 表示 ChatNest 数据库就绪，不能据此认定外部后端及账务已就绪。启动和注册不需要模型、支付或供应商凭据。要发送聊天消息，再按 [模型配置](docs/integrations/model-settings.md) 设置模型；要用内置浏览器，再设置 `BROWSER_RUNTIME=local` 并安装 Chromium（`corepack pnpm exec playwright install chromium`）。日常开发可把自己的本地变量放在 `.env.local`，重启时保留同一个 `AUTH_SECRET`，以免现有会话失效。
 
 `.env.local`、实际密钥、日志与本地截图不提交。完整配置、验证记录、上游更新方式及功能边界见 [DEVELOPMENT.md](docs/DEVELOPMENT.md)。当前任务在会话内运行，没有后台持久任务保证；知识产权调查交付的是待核验线索。
 

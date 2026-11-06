@@ -92,7 +92,7 @@ export function AppSidebar({
           ) : null}
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarContent className="gap-5 overflow-x-hidden px-3">
+      <SidebarContent className="gap-3 overflow-x-hidden px-3">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton

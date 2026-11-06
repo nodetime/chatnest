@@ -49,6 +49,7 @@ export const agentConfigSchema = z
             )
             .default([]),
           autoApproveTools: z.array(z.string()).default([]),
+          enabled: z.boolean().optional(),
           headers: z.record(z.string(), z.string()).default({}),
           id: z.string().regex(/^[a-z][a-z0-9_]{0,30}$/),
           name: z.string().min(1).max(80),

@@ -73,6 +73,7 @@ type ActiveChatContextValue = {
     output: AskUserOutput;
   }) => Promise<void>;
   taskProgress: TodoPlan | null;
+  isTaskProgressRunning: boolean;
   input: string;
   setInput: Dispatch<SetStateAction<string>>;
   visibilityType: VisibilityType;
@@ -994,7 +995,11 @@ export function ActiveChatProvider({
     [activeInstance, chatId, isReadonly, sendMessage]
   );
 
-  const taskProgress = useMemo(() => deriveTaskProgress(messages), [messages]);
+  const taskSnapshot = useMemo(() => deriveTaskProgress(messages), [messages]);
+  const taskProgress = taskSnapshot?.plan ?? null;
+  const isTaskProgressRunning =
+    (status === "submitted" || status === "streaming") &&
+    messages.at(-1)?.id === taskSnapshot?.messageId;
 
   const { data: votes } = useSWR<Vote[]>(
     !isReadonly && messages.length >= 2
@@ -1023,6 +1028,7 @@ export function ActiveChatProvider({
       input,
       isLoading: isHistoryLoading,
       isReadonly,
+      isTaskProgressRunning,
       loadError,
       messages,
       regenerate,
@@ -1052,6 +1058,7 @@ export function ActiveChatProvider({
       setCapabilitySelection,
       reviseAskUser,
       taskProgress,
+      isTaskProgressRunning,
       chatId,
       chatTitle,
       error,

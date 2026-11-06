@@ -5,6 +5,7 @@ import Credentials from "next-auth/providers/credentials";
 import { DUMMY_PASSWORD } from "@/app/_lib/constants";
 import { resolveSessionRevision } from "@/server/application/account/session-revision";
 import { getUseCases } from "@/server/composition";
+import { resolveLoginEmail } from "@/server/shared/login-identity";
 import { authConfig } from "./auth.config";
 
 export type UserType = "guest" | "regular";
@@ -77,7 +78,7 @@ export const {
   providers: [
     Credentials({
       async authorize(credentials) {
-        const email = String(credentials.email ?? "");
+        const email = resolveLoginEmail(String(credentials.email ?? ""));
         const password = String(credentials.password ?? "");
         const users = await getUseCases().users.findByEmail(email);
 

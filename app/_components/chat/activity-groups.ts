@@ -103,15 +103,17 @@ export function groupActivityMessages(messages: ChatMessage[]): MessageGroup[] {
   return groups;
 }
 
-// Only these native document tools define { error: string } business failures.
+// Only these exact native tools define { error: string } business failures.
 // A similarly named field in dynamic/MCP output remains raw evidence.
-function nativeDocumentError(part: ToolPart) {
+function nativeToolError(part: ToolPart) {
   if (
     [
       "tool-createResultTable",
       "tool-createDocument",
       "tool-updateDocument",
       "tool-requestSuggestions",
+      "tool-executeCode",
+      "tool-viewImage",
     ].includes(part.type) &&
     part.state === "output-available" &&
     part.output !== null &&
@@ -124,14 +126,14 @@ function nativeDocumentError(part: ToolPart) {
 }
 
 export function activityErrorText(part: ToolPart) {
-  return nativeDocumentError(part) ?? part.errorText;
+  return nativeToolError(part) ?? part.errorText;
 }
 
 export function activityDisplayState(
   part: ToolPart,
   isRunning = false
 ): ToolPart["state"] {
-  if (nativeDocumentError(part) !== undefined) {
+  if (nativeToolError(part) !== undefined) {
     return "output-error";
   }
   if (
@@ -201,8 +203,7 @@ export function activitySummary(parts: ToolPart[], isRunning = false) {
       state === "output-error" &&
       !parts.some(
         (part) =>
-          part.state === "output-error" ||
-          nativeDocumentError(part) !== undefined
+          part.state === "output-error" || nativeToolError(part) !== undefined
       )
         ? "未完成"
         : state === "approval-responded" && isRunning

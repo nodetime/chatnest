@@ -99,14 +99,14 @@ export const textArtifact = new Artifact<"text", TextArtifactMetadata>({
           : selectedContent;
 
       return (
-        <div className="mx-auto flex w-full max-w-[840px] flex-row px-6 py-9 md:px-10 md:py-11 [&_.ProseMirror]:min-h-[50vh] [&_.prose]:text-[14px] [&_.prose]:leading-[1.9] [&_h1]:text-[24px] [&_h1]:font-semibold [&_h2]:mt-8 [&_h2]:text-[18px] [&_h2]:font-semibold [&_h3]:text-[16px] [&_p]:leading-[1.9] [&_table]:text-[13px] [&_th]:bg-muted/60 [&_th]:font-medium [&_td]:border-border/60 [&_th]:border-border/60">
+        <div className="mx-auto flex w-full max-w-[840px] flex-row px-6 py-9 md:px-10 md:py-11 [&_.ProseMirror]:min-h-[50vh] [&_.prose]:text-[14px] [&_.prose]:leading-[1.9] [&_h1]:text-[24px] [&_h1]:font-semibold [&_h2]:mt-8 [&_h2]:text-[18px] [&_h2]:font-semibold [&_h3]:text-[16px] [&_p]:leading-[1.9] [&_table]:text-[13px] [&_th]:bg-muted/60 [&_th]:font-medium [&_td]:border-border/60 [&_th]:border-border/60 [&_img]:max-h-72 [&_img]:w-auto [&_img]:rounded-lg [&_img]:object-contain">
           <DiffView newContent={selectedContent} oldContent={prevContent} />
         </div>
       );
     }
 
     return (
-      <div className="mx-auto flex w-full max-w-[840px] flex-row px-6 py-9 md:px-10 md:py-11 [&_.ProseMirror]:min-h-[50vh] [&_.prose]:text-[14px] [&_.prose]:leading-[1.9] [&_h1]:text-[24px] [&_h1]:font-semibold [&_h2]:mt-8 [&_h2]:text-[18px] [&_h2]:font-semibold [&_h3]:text-[16px] [&_p]:leading-[1.9] [&_table]:text-[13px] [&_th]:bg-muted/60 [&_th]:font-medium [&_td]:border-border/60 [&_th]:border-border/60">
+      <div className="mx-auto flex w-full max-w-[840px] flex-row px-6 py-9 md:px-10 md:py-11 [&_.ProseMirror]:min-h-[50vh] [&_.prose]:text-[14px] [&_.prose]:leading-[1.9] [&_h1]:text-[24px] [&_h1]:font-semibold [&_h2]:mt-8 [&_h2]:text-[18px] [&_h2]:font-semibold [&_h3]:text-[16px] [&_p]:leading-[1.9] [&_table]:text-[13px] [&_th]:bg-muted/60 [&_th]:font-medium [&_td]:border-border/60 [&_th]:border-border/60 [&_img]:max-h-72 [&_img]:w-auto [&_img]:rounded-lg [&_img]:object-contain">
         <Editor
           content={content}
           currentVersionIndex={currentVersionIndex}
@@ -114,7 +114,7 @@ export const textArtifact = new Artifact<"text", TextArtifactMetadata>({
           key={`${documentId ?? "init"}:${currentVersionIndex}`}
           onSaveContent={onSaveContent}
           status={status}
-          suggestions={isCurrentVersion && metadata ? metadata.suggestions : []}
+          suggestions={isCurrentVersion ? (metadata?.suggestions ?? []) : []}
         />
 
         {metadata?.suggestions && metadata.suggestions.length > 0 ? (
@@ -145,12 +145,6 @@ export const textArtifact = new Artifact<"text", TextArtifactMetadata>({
       setArtifact((draftArtifact) => ({
         ...draftArtifact,
         content: draftArtifact.content + streamPart.data,
-        isVisible:
-          draftArtifact.status === "streaming" &&
-          draftArtifact.content.length > 400 &&
-          draftArtifact.content.length < 450
-            ? true
-            : draftArtifact.isVisible,
         status: "streaming",
       }));
     }

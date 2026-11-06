@@ -1,4 +1,4 @@
-import { geolocation, ipAddress } from "@vercel/functions";
+import { ipAddress } from "@vercel/functions";
 import { checkBotId } from "botid/server";
 import { cookies, headers } from "next/headers";
 import { auth } from "@/app/(auth)/auth";
@@ -83,7 +83,6 @@ async function postWithModelSettings(request: Request, session: ChatSession) {
       return new ChatbotError("forbidden:api").toResponse();
     }
 
-    const { longitude, latitude, city, country } = geolocation(request);
     const organizationId = organizationsEnabled(getEnv())
       ? (await cookies()).get("chatnest-organization-id")?.value
       : undefined;
@@ -91,7 +90,6 @@ async function postWithModelSettings(request: Request, session: ChatSession) {
       body: parsed.body,
       ip: ipAddress(request),
       organizationId,
-      requestHints: { city, country, latitude, longitude },
       session,
       signal: request.signal,
     });

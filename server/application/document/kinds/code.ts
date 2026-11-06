@@ -1,8 +1,5 @@
 import { streamText } from "ai";
-import {
-  codePrompt,
-  updateDocumentPrompt,
-} from "@/server/application/ai/prompts";
+import { updateDocumentPrompt } from "@/server/application/ai/prompts";
 import { getLanguageModel } from "@/server/application/ai/providers";
 import { metadataOnlyTelemetry } from "@/server/shared/telemetry";
 import { createDocumentHandler } from "../artifact-service";
@@ -16,29 +13,6 @@ function stripFences(code: string): string {
 
 export const codeDocumentHandler = createDocumentHandler<"code">({
   kind: "code",
-  onCreateDocument: async ({ title, dataStream, modelId }) => {
-    let draftContent = "";
-
-    const { stream } = streamText({
-      instructions: `${codePrompt}\n\nOutput ONLY the code. No explanations, no markdown fences, no wrapping.`,
-      model: getLanguageModel(modelId),
-      prompt: title,
-      telemetry: metadataOnlyTelemetry,
-    });
-
-    for await (const delta of stream) {
-      if (delta.type === "text-delta") {
-        draftContent += delta.text;
-        dataStream.write({
-          data: stripFences(draftContent),
-          transient: true,
-          type: "data-codeDelta",
-        });
-      }
-    }
-
-    return stripFences(draftContent);
-  },
   onUpdateDocument: async ({ document, description, dataStream, modelId }) => {
     let draftContent = "";
 

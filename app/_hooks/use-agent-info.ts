@@ -42,11 +42,15 @@ async function readInfo(url: string): Promise<AgentInfo> {
 export function useAgentInfo(enabled = true) {
   const session = useContext(SessionContext);
   const ownerId = session?.data?.user?.id;
-  return useSWR<AgentInfo>(
+  const catalog = useSWR<AgentInfo>(
     enabled && ownerId
       ? [`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/agent`, ownerId]
       : null,
     ([url]: [string, string]) => readInfo(url),
     { dedupingInterval: 15_000, shouldRetryOnError: false }
   );
+  return {
+    ...catalog,
+    isLoading: (enabled && session?.status === "loading") || catalog.isLoading,
+  };
 }

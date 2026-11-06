@@ -1,27 +1,12 @@
 "use client";
 
-import { defaultMarkdownSerializer } from "prosemirror-markdown";
-import { DOMParser, type Node } from "prosemirror-model";
 import { Decoration, DecorationSet, type EditorView } from "prosemirror-view";
-import { renderToString } from "react-dom/server";
-
-import { MessageResponse } from "@/app/_components/ai-elements/message";
-
-import { documentSchema } from "./config";
 import type { UISuggestion } from "./suggestions";
 
-export const buildDocumentFromContent = (content: string) => {
-  const parser = DOMParser.fromSchema(documentSchema);
-  const stringFromMarkdown = renderToString(
-    <MessageResponse>{content}</MessageResponse>
-  );
-  const tempContainer = document.createElement("div");
-  tempContainer.innerHTML = stringFromMarkdown;
-  return parser.parse(tempContainer);
-};
-
-export const buildContentFromDocument = (document: Node) =>
-  defaultMarkdownSerializer.serialize(document);
+export {
+  buildContentFromDocument,
+  buildDocumentFromContent,
+} from "./markdown";
 
 export const createDecorations = (
   suggestions: UISuggestion[],

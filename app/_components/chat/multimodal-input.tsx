@@ -5,11 +5,11 @@ import type { UIMessage } from "ai";
 import {
   ArrowUpIcon,
   BrainIcon,
+  CheckIcon,
   ChevronDown,
   EyeIcon,
   Globe,
   LockIcon,
-  WrenchIcon,
   X,
 } from "lucide-react";
 import {
@@ -33,7 +33,6 @@ import {
   ModelSelectorInput,
   ModelSelectorItem,
   ModelSelectorList,
-  ModelSelectorLogo,
   ModelSelectorName,
   ModelSelectorTrigger,
 } from "@/app/_components/ai-elements/model-selector";
@@ -713,6 +712,10 @@ function PureAttachmentPreviewItem({
 
 const AttachmentPreviewItem = memo(PureAttachmentPreviewItem);
 
+function modelDisplayName(model: ChatModel) {
+  return model.name === "deepseek-flash" ? "DeepSeek Flash" : model.name;
+}
+
 function ModelSelectorOption({
   capabilities,
   curated,
@@ -728,7 +731,6 @@ function ModelSelectorOption({
   selectedModelId: string;
   setOpen: Dispatch<SetStateAction<boolean>>;
 }) {
-  const logoProvider = model.provider;
   const maybeWithTooltip = (icon: ReactNode, label: string) => {
     if (!curated) {
       return icon;
@@ -764,8 +766,6 @@ function ModelSelectorOption({
       aria-disabled={!curated}
       className={cn(
         "flex w-full transition-colors",
-        model.id === selectedModelId &&
-          "border-b border-dashed border-foreground/50",
         curated
           ? "data-[selected=true]:bg-muted data-[selected=true]:text-foreground"
           : "cursor-not-allowed opacity-40 data-[selected=true]:bg-transparent data-[selected=true]:opacity-60 data-[selected=true]:ring-1 data-[selected=true]:ring-muted-foreground/30 data-[selected=true]:ring-inset"
@@ -773,15 +773,8 @@ function ModelSelectorOption({
       onSelect={handleSelect}
       value={model.id}
     >
-      <ModelSelectorLogo provider={logoProvider} />
-      <ModelSelectorName>{model.name}</ModelSelectorName>
+      <ModelSelectorName>{modelDisplayName(model)}</ModelSelectorName>
       <div className="ml-auto flex items-center gap-2 text-foreground/70">
-        {capabilities?.[model.id]?.tools
-          ? maybeWithTooltip(
-              <WrenchIcon className="size-3.5" />,
-              "Supports tool use"
-            )
-          : null}
         {capabilities?.[model.id]?.vision
           ? maybeWithTooltip(<EyeIcon className="size-3.5" />, "支持图片")
           : null}
@@ -789,6 +782,9 @@ function ModelSelectorOption({
           ? maybeWithTooltip(<BrainIcon className="size-3.5" />, "支持推理")
           : null}
         {!curated && <LockIcon className="size-3 text-muted-foreground/50" />}
+        {model.id === selectedModelId && (
+          <CheckIcon aria-label="当前模型" className="size-3.5" />
+        )}
       </div>
     </ModelSelectorItem>
   );
@@ -833,20 +829,35 @@ function PureModelSelectorCompact({
     activeModels.find((m: ChatModel) => m.id === DEFAULT_CHAT_MODEL) ??
     activeModels[0];
 
+  if (
+    activeModels.length === 1 &&
+    modelsData?.selectableModelIds?.length === 1
+  ) {
+    return (
+      <span
+        className="inline-flex h-8 shrink-0 items-center px-2 text-xs text-muted-foreground"
+        data-testid="current-model"
+      >
+        <span className="sr-only">当前模型：</span>
+        {modelDisplayName(selectedModel)}
+      </span>
+    );
+  }
+
   return (
     <ModelSelector onOpenChange={setOpen} open={open}>
       <ModelSelectorTrigger asChild>
         <Button
-          aria-label="选择模型"
-          className="h-8 w-[112px] max-w-[40vw] min-w-0 justify-between gap-1.5 rounded-lg bg-secondary px-2 text-xs font-normal text-foreground hover:bg-accent"
+          aria-label={`选择模型，当前 ${modelDisplayName(selectedModel)}`}
+          className="h-8 w-auto max-w-[45vw] min-w-0 justify-between gap-1.5 rounded-lg bg-secondary px-2 text-xs font-normal text-foreground hover:bg-accent"
           data-testid="model-selector"
           variant="ghost"
         >
           <span
             className="min-w-0 flex-1 truncate text-left"
-            title={selectedModel.name}
+            title={modelDisplayName(selectedModel)}
           >
-            {selectedModel.name}
+            {modelDisplayName(selectedModel)}
           </span>
           <ChevronDown className="size-3 shrink-0" />
         </Button>

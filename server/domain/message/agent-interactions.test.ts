@@ -202,7 +202,7 @@ test("Todo 仅投影成功工具结果，返回最后规范快照，不从普通
       role: "assistant",
     },
   ] as unknown as ChatMessage[];
-  assert.deepEqual(deriveTaskProgress(messages), plan);
+  assert.deepEqual(deriveTaskProgress(messages), { messageId: "a", plan });
   messages.push({
     id: "b",
     parts: [
@@ -217,7 +217,7 @@ test("Todo 仅投影成功工具结果，返回最后规范快照，不从普通
     ],
     role: "assistant",
   } as ChatMessage);
-  assert.deepEqual(deriveTaskProgress(messages), plan);
+  assert.deepEqual(deriveTaskProgress(messages), { messageId: "a", plan });
   assert.equal(
     todoPlanSchema.safeParse({
       items: [...plan.items, ...plan.items],

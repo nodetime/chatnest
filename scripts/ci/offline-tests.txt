@@ -31,6 +31,7 @@ server/shared/telemetry.test.ts
 app/_components/chat/workbench-ui.test.ts
 app/_components/chat/activity-groups.test.ts
 app/_components/chat/text-editor-lifecycle.test.ts
+app/_lib/editor/markdown.test.ts
 app/_components/chat/vercel-workbench.test.ts
 app/_components/chat/tool-records.test.ts
 app/_components/chat/unified-tools.test.ts
@@ -126,3 +127,9 @@ server/infrastructure/persistence/drizzle/runtime-role.test.ts
 
 scripts/ci/model-gateway-acceptance.test.mjs
 scripts/ci/contract-formatter.test.mjs
+
+server/infrastructure/execution/javascript.test.ts
+
+server/application/chat/tools/view-image.test.ts
+
+server/application/chat/tools/create-document.test.ts

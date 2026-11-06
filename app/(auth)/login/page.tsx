@@ -46,9 +46,9 @@ function AuthPage() {
 
   const error =
     state.status === "failed"
-      ? "邮箱或密码不正确，请重试。"
+      ? "账号或密码不正确，请重试。"
       : state.status === "invalid_data"
-        ? "请填写有效的邮箱，密码至少 6 位。"
+        ? "请填写有效的账号，密码至少 6 位。"
         : undefined;
 
   const handleSubmit = useCallback(

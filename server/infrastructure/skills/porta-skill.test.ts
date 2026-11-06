@@ -1,53 +1,36 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
-import path from "node:path";
 import { test } from "node:test";
+import matter from "gray-matter";
 import {
+  buildSkillsPrompt,
   createSkillTools,
   discoverSkills,
   readSkillFile,
 } from "@/server/infrastructure/mcp/skills";
 
-test("bundled Porta skill has pinned provenance and works with the existing host loader", async () => {
+test("应用只提供按需相似商品技能；旧技能不保留别名或工具手册副本", async () => {
   const skills = await discoverSkills();
-  const porta = skills.find((skill) => skill.name === "porta");
-  assert.ok(porta, "shared Porta skill must be installed, not just described");
-  const lock = JSON.parse(
-    await readFile(
-      path.join(
-        process.cwd(),
-        "server/infrastructure/skills/porta-skill.lock.json"
-      ),
-      "utf8"
-    )
+  assert.deepEqual(
+    skills.map((skill) => skill.name),
+    ["similar-products"]
   );
-  assert.equal(lock.repository, "https://github.com/nodetime/porta");
-  assert.match(lock.revision, /^[0-9a-f]{40}$/);
-  assert.deepEqual(Object.keys(lock.files).sort(), [
-    "SKILL.md",
-    "references/cli.md",
-    "references/mcp.md",
-  ]);
-  await Promise.all(
-    Object.entries(lock.files).map(async ([resource, hash]) => {
-      const body = await readSkillFile(porta, resource);
-      assert.equal(createHash("sha256").update(body).digest("hex"), hash);
-    })
-  );
+  assert.equal(skills[0].displayName, "找相似商品");
+  const body = await readSkillFile(skills[0], "SKILL.md");
+  assert.ok(!buildSkillsPrompt(skills).includes("## 工作方法"));
   const tools = createSkillTools(skills);
-  const options = {
-    context: {},
-    messages: [],
-    toolCallId: "test-porta-skill",
-  };
-  const loaded = await tools.loadSkill.execute?.({ name: "porta" }, options);
-  assert.ok(loaded && "instructions" in loaded);
-  assert.match(loaded.instructions, /not a fixed/);
-  const reference = await tools.readSkillResource.execute?.(
-    { name: "porta", resource: "references/mcp.md" },
+  const options = { context: {}, messages: [], toolCallId: "similar-products" };
+  const loaded = await tools.loadSkill.execute?.(
+    { name: "similar-products" },
     options
   );
-  assert.ok(reference && "content" in reference);
-  assert.match(reference.content, /MCP/);
+  assert.ok(loaded && "instructions" in loaded);
+  assert.equal(loaded.instructions, matter(body).content);
+  assert.doesNotMatch(body, /askUser|updateTodo|审批|onebound_|porta__/);
+  await Promise.all(
+    ["porta", "investigate-content", "source-1688"].map((name) =>
+      assert.rejects(
+        () => tools.loadSkill.execute?.({ name }, options) as Promise<unknown>
+      )
+    )
+  );
 });

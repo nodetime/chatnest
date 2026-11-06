@@ -2,6 +2,21 @@
 
 export type ChatVisibility = "public" | "private";
 
+export function normalizeChatTitle(
+  generated: string,
+  userText: string
+): string {
+  const title = generated
+    .replace(/^[#*"\s]+/, "")
+    .replace(/["\s]+$/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return (title || userText.replace(/\s+/g, " ").trim() || "新对话").slice(
+    0,
+    60
+  );
+}
+
 export type Chat = {
   createdAt: Date;
   id: string;

@@ -14,13 +14,10 @@ test("loaded skills supply readable metadata while retaining their original meth
     { name: skill.name },
     { context: {}, messages: [], toolCallId: "skill-display" }
   );
-  assert.equal(
-    (output as { displayName?: string }).displayName,
-    "内容调查与核验"
-  );
+  assert.equal((output as { displayName?: string }).displayName, "找相似商品");
   assert.ok((output as { description?: string }).description);
   assert.ok("instructions" in output);
-  assert.ok(output.instructions.includes("references/review.md"));
+  assert.ok(output.instructions.includes("## 工作方法"));
 });
 
 test("Exa source metadata comes only from result headers, excludes arbitrary snippet links and error results", async () => {
@@ -113,11 +110,11 @@ test("task messages preserve the user's goal/materials and reject empty or overs
   const message = implementation.buildTaskMessage({
     goal: "查找某讲义的传播线索",
     materials: "https://example.com/original\n独特原文",
-    method: "内容调查与核验",
+    method: "找相似商品",
   });
   assert.ok(message.includes("任务目标：查找某讲义的传播线索"));
   assert.ok(message.includes("https://example.com/original\n独特原文"));
-  assert.ok(message.includes("内容调查与核验"));
+  assert.ok(message.includes("找相似商品"));
   assert.throws(() => implementation.buildTaskMessage({ goal: "  " }));
   assert.throws(() =>
     implementation.buildTaskMessage({ goal: "字".repeat(8001) })

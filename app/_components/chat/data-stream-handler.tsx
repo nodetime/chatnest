@@ -65,7 +65,11 @@ export function DataStreamHandler() {
           case "data-id":
             return {
               ...draftArtifact,
+              ...(draftArtifact.documentId === delta.data
+                ? {}
+                : { content: "", title: "" }),
               documentId: delta.data,
+              isVisible: true,
               status: "streaming",
             };
 

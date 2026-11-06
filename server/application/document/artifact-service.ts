@@ -15,14 +15,6 @@ export type SaveDocumentProps = {
   userId: string;
 };
 
-export type CreateDocumentCallbackProps = {
-  id: string;
-  title: string;
-  dataStream: UIMessageStreamWriter<ChatMessage>;
-  session: Session;
-  modelId: string;
-};
-
 export type UpdateDocumentCallbackProps = {
   document: Document;
   description: string;
@@ -33,36 +25,15 @@ export type UpdateDocumentCallbackProps = {
 
 export type DocumentHandler<T = ArtifactKind> = {
   kind: T;
-  onCreateDocument: (args: CreateDocumentCallbackProps) => Promise<void>;
   onUpdateDocument: (args: UpdateDocumentCallbackProps) => Promise<void>;
 };
 
 export function createDocumentHandler<T extends ArtifactKind>(config: {
   kind: T;
-  onCreateDocument: (params: CreateDocumentCallbackProps) => Promise<string>;
   onUpdateDocument: (params: UpdateDocumentCallbackProps) => Promise<string>;
 }): DocumentHandler<T> {
   return {
     kind: config.kind,
-    onCreateDocument: async (args: CreateDocumentCallbackProps) => {
-      const draftContent = await config.onCreateDocument({
-        dataStream: args.dataStream,
-        id: args.id,
-        modelId: args.modelId,
-        session: args.session,
-        title: args.title,
-      });
-
-      if (args.session?.user?.id) {
-        await documentRepository.save({
-          content: draftContent,
-          id: args.id,
-          kind: config.kind,
-          title: args.title,
-          userId: args.session.user.id,
-        });
-      }
-    },
     onUpdateDocument: async (args: UpdateDocumentCallbackProps) => {
       const draftContent = await config.onUpdateDocument({
         dataStream: args.dataStream,

@@ -10,6 +10,73 @@ function run(script: string) {
   });
 }
 
+test("development admin uses the real password check and production keeps email login", () => {
+  run(`
+    const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript');
+    const {hashSync}=require('bcrypt-ts');
+    const account={id:'dev-account',email:'admin@chatnest.local',password:hashSync('123456',10)};
+    let config;
+    const modules={
+      'next-auth':{__esModule:true,default:value=>{config=value;return {handlers:{GET(){},POST(){}},auth(){},signIn(){},signOut(){}}}},
+      'next-auth/providers/credentials':{__esModule:true,default:value=>value},
+      '@/app/_lib/constants':{DUMMY_PASSWORD:hashSync('dummy-password',10)},
+      '@/server/composition':{getUseCases:()=>({users:{findByEmail:async email=>email===account.email?[account]:[]}})},
+      './auth.config':{authConfig:{}},
+    };
+    const mod={exports:{}};
+    vm.runInNewContext(ts.transpileModule(fs.readFileSync('app/(auth)/auth.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,esModuleInterop:true}}).outputText,{exports:mod.exports,module:mod,require:n=>n in modules?modules[n]:require(n.startsWith('@/')?process.cwd()+'/'+n.slice(2):n)});
+    (async()=>{
+      const authorize=config.providers[0].authorize;
+      for(const environment of ['development','test','production']){
+        process.env.NODE_ENV=environment;
+        const result=await authorize({email:'admin',password:'123456'});
+        assert.equal(result?.id??null,environment==='development'?account.id:null);
+        assert.equal(await authorize({email:'admin',password:'wrong-password'}),null);
+        assert.equal((await authorize({email:account.email,password:'123456'})).id,account.id);
+      }
+    })().catch(error=>{console.error(error);process.exitCode=1});
+  `);
+});
+
+test("only development login accepts admin while registration remains email based", () => {
+  run(`
+    const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript');
+    const calls=[];
+    const modules={
+      './auth':{signIn:async(...args)=>calls.push(args)},
+      '@/server/composition':{getUseCases:()=>({users:{findByEmail:async()=>[]}})},
+    };
+    const mod={exports:{}};
+    vm.runInNewContext(ts.transpileModule(fs.readFileSync('app/(auth)/actions.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports:mod.exports,module:mod,require:n=>n in modules?modules[n]:require(n.startsWith('@/')?process.cwd()+'/'+n.slice(2):n)});
+    (async()=>{
+      for(const environment of ['development','test','production']){
+        process.env.NODE_ENV=environment;
+        const form=new FormData();form.set('email','admin');form.set('password','123456');
+        const result=await mod.exports.login({status:'idle'},form);
+        assert.equal(result.status,environment==='development'?'success':'invalid_data');
+        assert.equal((await mod.exports.register({status:'idle'},form)).status,'invalid_data');
+      }
+      assert.equal(calls.length,1);
+      assert.equal(calls[0][1].email,'admin@chatnest.local');
+    })().catch(error=>{console.error(error);process.exitCode=1});
+  `);
+});
+
+test("development account follows env configuration and rejects bcrypt truncation", () => {
+  run(`
+    const assert=require('node:assert/strict');
+    const {getDevelopmentAccount,resolveLoginEmail}=require('./server/shared/login-identity.ts');
+    process.env.NODE_ENV='development';
+    process.env.DEV_ADMIN_USERNAME='demo_admin';
+    process.env.DEV_ADMIN_PASSWORD='different-password';
+    assert.equal(resolveLoginEmail('demo_admin'),'demo_admin@chatnest.local');
+    assert.equal(resolveLoginEmail('admin'),'admin');
+    assert.equal(getDevelopmentAccount().password,'different-password');
+    process.env.DEV_ADMIN_PASSWORD='密'.repeat(25);
+    assert.throws(()=>getDevelopmentAccount(),/DEV_ADMIN_PASSWORD/);
+  `);
+});
+
 test("guest and unauthenticated entries go to login before changing the workspace", () => {
   run(`
     const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript');

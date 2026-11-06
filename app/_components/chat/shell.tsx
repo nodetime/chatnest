@@ -32,6 +32,7 @@ import { Greeting } from "./greeting";
 import { submitEditedMessage } from "./message-editor";
 import { Messages } from "./messages";
 import { MultimodalInput } from "./multimodal-input";
+import { TaskProgress } from "./task-progress";
 import { WorkbenchSection } from "./workbench-section";
 import { Workspace } from "./workspace";
 import { WorkspaceHome } from "./workspace-home";
@@ -63,6 +64,8 @@ export function ChatShell() {
     error,
     getSendError,
     loadError,
+    taskProgress,
+    isTaskProgressRunning,
   } = useActiveChat();
 
   const { section, navigate } = useWorkbenchNavigation();
@@ -288,6 +291,13 @@ export function ChatShell() {
               data-testid="composer-dock"
             >
               {!!isEmpty && <Greeting />}
+              {!isEmpty && (
+                <TaskProgress
+                  isRunning={isTaskProgressRunning}
+                  key={chatId}
+                  plan={taskProgress}
+                />
+              )}
               <ConversationNotice onRestore={handleRestore} />
               {!isReadonly && (
                 <MultimodalInput

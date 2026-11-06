@@ -11,7 +11,6 @@ import {
 import { useActiveChat } from "@/app/_hooks/use-active-chat";
 import { useWorkspace } from "@/app/_hooks/use-workspace";
 import { ChatMenu } from "./chat-menu";
-import { TaskProgress } from "./task-progress";
 import type { VisibilityType } from "./visibility-selector";
 
 export function ChatHeader({
@@ -25,7 +24,7 @@ export function ChatHeader({
 }) {
   const { toggleSidebar, isMobile } = useSidebar();
   const workspace = useWorkspace();
-  const { chatTitle, startNewChat, messages, taskProgress } = useActiveChat();
+  const { chatTitle, startNewChat, messages } = useActiveChat();
   return (
     <header className="flex h-[52px] shrink-0 items-center gap-2 border-b border-border/70 bg-background px-4 sm:px-6">
       {!!isMobile && (
@@ -48,7 +47,6 @@ export function ChatHeader({
         </p>
       </div>
       <div className="ml-auto flex items-center gap-1">
-        <TaskProgress compact plan={taskProgress} />
         <Tooltip>
           <TooltipTrigger asChild>
             <Button

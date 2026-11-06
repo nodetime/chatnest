@@ -8,7 +8,23 @@ import {
   tool,
 } from "ai";
 import type { ChatMessage } from "@/server/domain/message/types";
+import { systemPrompt } from "../ai/prompts";
 import { agentInteractionTools } from "./tools/agent-interactions";
+
+test("通用提示词按能力注入交互规则，不向无工具模型许诺工具，也不硬编码业务 SOP", () => {
+  const plain = systemPrompt({ supportsTools: false });
+  const agent = systemPrompt({ supportsTools: true });
+  assert.doesNotMatch(plain, /askUser|updateTodo|createDocument/);
+  assert.match(agent, /askUser/);
+  assert.match(agent, /updateTodo/);
+  assert.match(agent, /follow host policy/i);
+  assert.match(agent, /unknown execution outcome/);
+  assert.match(agent, /requested outcome was actually achieved/i);
+  assert.doesNotMatch(
+    agent,
+    /1688|onebound|旅行包|infringement|lawyer|requestHints|About the origin|source material/
+  );
+});
 
 test("askUser 是无 execute 的客户端工具；Todo 用经过规范校验的完整快照执行", async () => {
   assert.equal(typeof agentInteractionTools, "function");

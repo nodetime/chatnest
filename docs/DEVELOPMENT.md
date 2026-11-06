@@ -4,7 +4,7 @@
 
 直接改造官方 `vercel/chatbot`，保留 Next.js、AI SDK 的流式会话、认证、历史、模型选择和文档产物能力。基础版本为 `c2f8235e1f3ea903ad8b7f61447c4f74164b5c58`；不是 Codex 桌面端源码，也没有引入 OpenCode 或 LibreChat。
 
-产品是 Chat Agent。用户给目标，模型决定下一步并使用实际可用能力；知识产权调查是一项 Skill，不是写死在后端的搜索→审核流水线。
+产品是 Chat Agent。用户给目标，模型决定下一步并使用实际可用能力；找相似商品是一项 Skill，不是写死在后端的搜索→审核流水线。
 
 | 层 | 职责 | 主要位置 |
 | --- | --- | --- |
@@ -13,7 +13,7 @@
 | 执行工具 | 官方 MCP 客户端发现现成工具；服务端白名单与确认策略 | `server/infrastructure/mcp/runtime.ts`、`server/infrastructure/mcp/agent.json` |
 | 展示 | 对话、真实工具状态、确认按钮、实际返回来源、能力配置 | `app/_components/chat/` |
 
-只新增 `loadSkill`、`readSkillResource` 两个通用技能读取工具。搜索和网页正文提取默认接 Exa 现成 MCP，也保留可选 Tavily MCP。调查中的内容比较由模型遵循 Skill 完成。保留官方文档编辑工具用于报告，未向 Agent 开放天气工具。
+技能通过 `loadSkill`、`readSkillResource` 按需读取；内置 `executeCode` 自动执行隔离JavaScript计算，`viewImage`将候选商品图片传入视觉模型。搜索和网页正文提取默认接 Exa 现成 MCP，也保留可选 Tavily MCP。相似点和差异比较由模型遵循唯一 `similar-products` Skill 完成。保留官方文档编辑工具用于报告，未向 Agent 开放天气工具。
 
 ## 本地运行
 
@@ -56,7 +56,7 @@ Skills 不能凭空赋予文件、联网或脚本执行权限。当前支持指�
 
 默认配置增加可选同级 Porta HTTP MCP；服务端设置 `PORTA_MCP_URL` 与 `PORTA_SERVICE_TOKEN` 后才连接，任意缺失只跳过该服务，不影响 Exa。供应商 OneBound key/secret 不放 ChatNest。默认严格 HTTPS；本机 HTTP 需要 `AGENT_MCP_ALLOW_LOOPBACK_HTTP=1` 且处于 development/test，仅允许 loopback，production 仍要求 HTTPS；MCP 不跟随重定向。
 
-仅开放6个 `onebound_1688_*` 原工具，全部默认需要确认，查询也可能收费。Porta工具失败保持UI错误状态，原错误JSON以脱敏文本保留，不自动重试；其他工具错误策略不变。新增 `source-1688` 商品与主体线索调查 Skill，与现有正文调查方法独立；保持供应商原参数、原返回，不假设图搜分页/100条，也不把上传返回 `name` 自动转换成 `imgid`。配置、安全门禁、TDD与离线验证边界见 [Porta 接入说明](docs/integrations/porta.md)。未进行真实模型或付费供应商验收。
+当前演示启用免 Key 的 Exa search/fetch 与百炼 `native_alibaba1688_product_find_product`，Tavily 为 `enabled:false`。查询可能收费，只读查询由现有配置自动批准；按用户授权集中少量真实调用。业务技能只保留相似商品检索与对比，缺实质参照时用 Ask 对齐，多步骤任务才用 Todo；不再将工具手册作为业务技能。配置及验收边界见 [Porta 接入说明](integrations/porta.md) 和[唯一研发 TODO](superpowers/plans/2026-11-04-core-launch-goal-and-todo.md)。
 
 ## 界面取舍
 

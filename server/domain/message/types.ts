@@ -16,6 +16,7 @@ import type {
   AskUserOutput,
   TodoPlan,
 } from "./agent-interactions";
+import type { ExecuteCodeOutput } from "./code-execution";
 import type { McpSourceMetadata } from "./result-evidence";
 
 // P2 从 app/_lib/types.ts 迁入:ChatMessage 是聊天域核心类型,应用层与 UI 共用(R4 允许 UI import domain 类型)
@@ -37,6 +38,20 @@ type requestSuggestionsTool = InferUITool<
 >;
 
 export type ChatTools = {
+  executeCode: { input: { code: string }; output: ExecuteCodeOutput };
+  viewImage: {
+    input: { sourceToolCallId: string; imagePath: string };
+    output:
+      | { status: "failed"; error: string }
+      | {
+          status: "viewed";
+          height: number;
+          width: number;
+          sourceToolCallId: string;
+          imagePath: string;
+          url: string;
+        };
+  };
   askUser: { input: AskUserInput; output: AskUserOutput };
   updateTodo: { input: TodoPlan; output: TodoPlan };
   createResultTable: InferUITool<ReturnType<typeof createResultTable>>;

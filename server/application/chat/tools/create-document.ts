@@ -1,89 +1,71 @@
 import { tool, type UIMessageStreamWriter } from "ai";
 import type { Session } from "next-auth";
 import { z } from "zod";
-import {
-  artifactKinds,
-  documentHandlersByArtifactKind,
-} from "@/server/application/document/artifact-service";
+import { artifactKinds } from "@/server/application/document/artifact-service";
 import { generateUUID } from "@/server/domain/message/ids";
 import type { ChatMessage } from "@/server/domain/message/types";
+import { documentRepository } from "@/server/infrastructure/persistence/drizzle/document-repository";
 
 type CreateDocumentProps = {
   session: Session;
   dataStream: UIMessageStreamWriter<ChatMessage>;
-  modelId: string;
 };
 
-export const createDocument = ({
-  session,
-  dataStream,
-  modelId,
-}: CreateDocumentProps) =>
+export const createDocument = ({ session, dataStream }: CreateDocumentProps) =>
   tool({
     description:
-      "Create an artifact. You MUST specify kind: use 'code' for any programming/algorithm request (creates a script), 'text' for essays/writing (creates a document), 'sheet' for spreadsheets/data.",
-    execute: async ({ title, kind }) => {
-      const id = generateUUID();
-
-      dataStream.write({
-        data: kind,
-        transient: true,
-        type: "data-kind",
-      });
-
-      dataStream.write({
-        data: id,
-        transient: true,
-        type: "data-id",
-      });
-
-      dataStream.write({
-        data: title,
-        transient: true,
-        type: "data-title",
-      });
-
-      dataStream.write({
-        data: null,
-        transient: true,
-        type: "data-clear",
-      });
-
-      const documentHandler = documentHandlersByArtifactKind.find(
-        (documentHandlerByArtifactKind) =>
-          documentHandlerByArtifactKind.kind === kind
-      );
-
-      if (!documentHandler) {
-        throw new Error(`No document handler found for kind: ${kind}`);
+      "Save the complete content you have composed as an editable artifact in the user's workspace. Use text for Markdown documents, code for source code and sheet for raw CSV. Include the actual content and relevant source links in this call; it is saved exactly as supplied, without another model generating it from the title. After successful creation, summarize the result briefly in chat and let the artifact hold the full deliverable. Follow the user's preferred output format.",
+    execute: async ({ title, kind, content }) => {
+      if (!session.user?.id) {
+        return { error: "Sign in required" };
       }
-
-      await documentHandler.onCreateDocument({
-        dataStream,
-        id,
-        modelId,
-        session,
-        title,
-      });
-
-      dataStream.write({ data: null, transient: true, type: "data-finish" });
-
-      return {
-        content:
-          kind === "code"
-            ? "A script was created and is now visible to the user."
-            : "A document was created and is now visible to the user.",
+      const id = generateUUID();
+      await documentRepository.save({
+        content,
         id,
         kind,
         title,
-      };
+        userId: session.user.id,
+      });
+
+      // Publish only after persistence succeeds; a failed save must not open a
+      // phantom document or leave the workspace permanently generating.
+      dataStream.write({ data: id, transient: true, type: "data-id" });
+      dataStream.write({ data: kind, transient: true, type: "data-kind" });
+      dataStream.write({ data: title, transient: true, type: "data-title" });
+      dataStream.write({ data: null, transient: true, type: "data-clear" });
+      if (kind === "code") {
+        dataStream.write({
+          data: content,
+          transient: true,
+          type: "data-codeDelta",
+        });
+      } else if (kind === "sheet") {
+        dataStream.write({
+          data: content,
+          transient: true,
+          type: "data-sheetDelta",
+        });
+      } else {
+        dataStream.write({
+          data: content,
+          transient: true,
+          type: "data-textDelta",
+        });
+      }
+      dataStream.write({ data: null, transient: true, type: "data-finish" });
+      return { content: "Saved and opened in the workspace.", id, kind, title };
     },
     inputSchema: z.object({
-      kind: z
-        .enum(artifactKinds)
+      content: z
+        .string()
+        .min(1)
+        .max(100_000)
+        .refine((value) => value.trim().length > 0, "Content must not be blank")
         .describe(
-          "REQUIRED. 'code' for programming/algorithms, 'text' for essays/writing, 'sheet' for spreadsheets"
+          "Complete artifact body: Markdown for text, source code for code, raw CSV for sheet."
         ),
-      title: z.string().describe("The title of the artifact"),
+      kind: z.enum(artifactKinds),
+      title: z.string().trim().min(1).max(200),
     }),
   });
