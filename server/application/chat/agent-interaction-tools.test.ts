@@ -139,7 +139,7 @@ test("真实 SDK 在既有步数内提示保存产物与交接，保留供应商
         "including completion steps, the current skill is present exactly once"
       );
       if (calls === maxSteps) {
-        assert.notDeepEqual(options.toolChoice, { type: "none" });
+        assert.deepEqual(options.toolChoice, { type: "none" });
         assert.equal(options.tools?.length, 2);
         assert.match(JSON.stringify(options.prompt), /Complete this turn/);
         assert.match(JSON.stringify(options.prompt), /RUNTIME_TOOL_CATALOG/);

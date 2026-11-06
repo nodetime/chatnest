@@ -188,6 +188,12 @@ test("CSV editor renders source links and images, wraps judgments and preserves 
     const image=grid.columns[3].renderCell({row:grid.rows[0]});assert.equal(nodes(image).find(n=>n.type==='img').props.referrerPolicy,'no-referrer');
     assert.ok(!nodes(grid.columns[2].renderCell({row:grid.rows[1]})).some(n=>n.type==='a'));
     assert.ok(!nodes(grid.columns[3].renderCell({row:grid.rows[1]})).some(n=>n.type==='img'));
+    const markdown=grid.columns[3].renderCell({row:{2:'![主图](https://example.com/product.jpg?x=1&y=2)'}});
+    assert.equal(nodes(markdown).find(n=>n.type==='img').props.src,'https://example.com/product.jpg?x=1&y=2');
+    for(const value of ['![主图](javascript:alert(1))','![主图](data:image/png;base64,bad)','前缀 ![主图](https://example.com/image.jpg)']){
+      assert.ok(!nodes(grid.columns[3].renderCell({row:{2:value}})).some(n=>n.type==='img'));
+    }
+    assert.ok(!nodes(grid.columns[2].renderCell({row:{1:'![主图](https://example.com/image.jpg)'}})).some(n=>n.type==='a'));
     const changed=grid.rows.map((r,i)=>i===0?{...r,3:'逗号, 引号"与\\n换行'}:r);
     grid.onRowsChange(changed);
     const saved=papa.parse(saves[0][0],{skipEmptyLines:true}).data;

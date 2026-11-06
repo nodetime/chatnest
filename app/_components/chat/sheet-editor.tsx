@@ -23,9 +23,12 @@ type SheetEditorProps = {
 };
 type Row = Record<string, string | number>;
 
-function sourceUrl(value: string) {
+function sourceUrl(value: string, imageColumn: boolean) {
+  const image = imageColumn
+    ? /^!\[[^\]\r\n]*\]\((https?:\/\/[^\s]+)\)$/.exec(value.trim())
+    : undefined;
   try {
-    const url = new URL(value);
+    const url = new URL(image?.[1] ?? value);
     return ["https:", "http:"].includes(url.protocol) ? url.href : undefined;
   } catch {
     // A non-URL cell is rendered as ordinary text.
@@ -71,7 +74,7 @@ const PureSpreadsheetEditor = ({
           name: header || `列 ${index + 1}`,
           renderCell: ({ row }: { row: Row }) => {
             const value = String(row[index] ?? "");
-            const href = sourceUrl(value);
+            const href = sourceUrl(value, imageColumn);
             return (
               <div className="h-full overflow-auto whitespace-pre-wrap break-words py-2 text-sm leading-relaxed">
                 {href ? (

@@ -29,6 +29,8 @@ export function completionStepSettings(
   }
   return {
     instructions: `${instructions}\n\n${sections[2].trim()}`,
+    // Reserve the last existing step for a truthful handoff, not another tool loop.
+    ...(stepNumber >= maxSteps - 1 ? { toolChoice: "none" as const } : {}),
   };
 }
 
