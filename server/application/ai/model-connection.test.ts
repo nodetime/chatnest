@@ -1,7 +1,18 @@
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import test from "node:test";
-import { generateText, streamText } from "ai";
+import {
+  convertToModelMessages,
+  generateText,
+  isStepCount,
+  readUIMessageStream,
+  streamText,
+  tool,
+  toUIMessageStream,
+  type UIMessage,
+} from "ai";
+import { z } from "zod";
+import { runWithModelEnvironment } from "./model-context";
 
 test("an OpenAI key and custom endpoint select direct access without a gateway key", async () => {
   const implementation = await import(
@@ -72,6 +83,197 @@ test("custom model catalog and capabilities do not query Vercel's gateway", asyn
   );
   assert.deepEqual(implementation.getDirectCapabilities(env), {
     "custom-research": { reasoning: false, tools: false, vision: true },
+  });
+});
+
+test("DeepSeek adapter selection is limited to its configured HTTPS Chat endpoint", async () => {
+  const { getDirectCapabilities, usesDeepSeekChat } = await import(
+    "./model-connection"
+  );
+  const { getLanguageModel } = await import("./providers");
+  const env = {
+    MODEL_PROVIDER: "openai",
+    OPENAI_BASE_URL: "https://api.deepseek.com/v1",
+    OPENAI_MODEL: "deepseek-flash",
+    OPENAI_MODEL_VISION: "1",
+  };
+  assert.equal(usesDeepSeekChat(env), true);
+  assert.deepEqual(getDirectCapabilities(env), {
+    "deepseek-flash": { reasoning: true, tools: true, vision: true },
+  });
+  assert.equal(
+    runWithModelEnvironment(
+      env,
+      () => getLanguageModel("deepseek-flash").provider
+    ),
+    "deepseek.chat"
+  );
+  for (const overrides of [
+    { OPENAI_BASE_URL: "https://api.deepseek.com.example/v1" },
+    { OPENAI_BASE_URL: "http://api.deepseek.com/v1" },
+    { OPENAI_BASE_URL: "https://api.deepseek.com:8443/v1" },
+    { OPENAI_API_MODE: "responses" },
+    { MODEL_PROVIDER: "gateway" },
+  ]) {
+    assert.equal(usesDeepSeekChat({ ...env, ...overrides }), false);
+  }
+  assert.equal(
+    runWithModelEnvironment(
+      { ...env, OPENAI_API_MODE: "responses" },
+      () => getLanguageModel("deepseek-flash").provider
+    ),
+    "openai.responses"
+  );
+});
+
+test("DeepSeek reasoning survives streaming, tool continuation and stored UI-message replay with image bytes intact", async (t) => {
+  const requests: Record<string, unknown>[] = [];
+  const env = {
+    MODEL_PROVIDER: "openai",
+    OPENAI_API_KEY: "offline-only-key",
+    OPENAI_BASE_URL: "https://api.deepseek.com/v1",
+    OPENAI_MODEL: "deepseek-flash",
+    OPENAI_MODEL_VISION: "1",
+  };
+  const reasons = [
+    "Check the supplied values.",
+    "The calculated result is five.",
+  ];
+  const image =
+    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a3uoAAAAASUVORK5CYII=";
+  t.mock.method(globalThis, "fetch", (url: string, init: RequestInit) => {
+    assert.equal(String(url), "https://api.deepseek.com/v1/chat/completions");
+    const body = JSON.parse(String(init.body));
+    requests.push(body);
+    const first = requests.length === 1;
+    const message = first
+      ? {
+          content: null,
+          role: "assistant",
+          tool_calls: [
+            {
+              function: { arguments: '{"a":2,"b":3}', name: "calculate" },
+              id: "sum",
+              type: "function",
+            },
+          ],
+        }
+      : { content: "5", role: "assistant" };
+    const common = {
+      created: 1,
+      id: `fixture-${requests.length}`,
+      model: "deepseek-flash",
+    };
+    if (!body.stream) {
+      return Response.json({
+        ...common,
+        choices: [{ finish_reason: "stop", index: 0, message }],
+        object: "chat.completion",
+      });
+    }
+    const chunks = [
+      {
+        delta: {
+          reasoning_content: reasons[requests.length - 1],
+          role: "assistant",
+        },
+        finish_reason: null,
+        index: 0,
+      },
+      {
+        delta: first
+          ? { tool_calls: [{ ...message.tool_calls?.[0], index: 0 }] }
+          : { content: "5" },
+        finish_reason: null,
+        index: 0,
+      },
+      { delta: {}, finish_reason: first ? "tool_calls" : "stop", index: 0 },
+    ];
+    return new Response(
+      `${chunks.map((choice) => `data: ${JSON.stringify({ ...common, choices: [choice], object: "chat.completion.chunk" })}\n\n`).join("")}data: [DONE]\n\n`,
+      { headers: { "content-type": "text/event-stream" } }
+    );
+  });
+  const { getLanguageModel } = await import("./providers");
+  await runWithModelEnvironment(env, async () => {
+    const tools = {
+      calculate: tool({
+        execute: ({ a, b }) => a + b,
+        inputSchema: z.object({ a: z.number(), b: z.number() }),
+      }),
+    };
+    const result = streamText({
+      maxRetries: 0,
+      messages: [
+        {
+          content: [
+            { text: "Add 2 and 3.", type: "text" },
+            { data: image, mediaType: "image/png", type: "file" },
+          ],
+          role: "user",
+        },
+      ],
+      model: getLanguageModel("deepseek-flash"),
+      stopWhen: isStepCount(3),
+      tools,
+    });
+    let saved: UIMessage | undefined;
+    for await (const message of readUIMessageStream({
+      stream: toUIMessageStream({ sendReasoning: true, stream: result.stream }),
+      terminateOnError: true,
+    })) {
+      saved = message;
+    }
+    assert.equal(await result.text, "5");
+    assert.equal(requests.length, 2);
+    assert.deepEqual(
+      saved?.parts
+        .filter((part) => part.type === "reasoning")
+        .map((part) => part.text),
+      reasons
+    );
+    const secondMessages = requests[1].messages as {
+      role: string;
+      reasoning_content?: string;
+      content?: unknown;
+    }[];
+    assert.equal(
+      secondMessages.find((message) => message.role === "assistant")
+        ?.reasoning_content,
+      reasons[0]
+    );
+    const firstMessages = requests[0].messages as {
+      content: { type: string; image_url?: { url: string } }[];
+    }[];
+    assert.equal(
+      firstMessages[0].content.find((part) => part.type === "image_url")
+        ?.image_url?.url,
+      image
+    );
+    assert.ok(saved);
+    await generateText({
+      maxRetries: 0,
+      messages: await convertToModelMessages(
+        [
+          JSON.parse(JSON.stringify(saved)),
+          {
+            id: "next",
+            parts: [{ text: "Confirm the result.", type: "text" }],
+            role: "user",
+          },
+        ],
+        { tools }
+      ),
+      model: getLanguageModel("deepseek-flash"),
+      tools,
+    });
+    const restored = (
+      requests[2].messages as { role: string; reasoning_content?: string }[]
+    ).filter((message) => message.role === "assistant");
+    assert.deepEqual(
+      restored.map((message) => message.reasoning_content),
+      reasons
+    );
   });
 });
 
