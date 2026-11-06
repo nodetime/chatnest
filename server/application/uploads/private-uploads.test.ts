@@ -560,43 +560,72 @@ test("public guest readers are accepted but writes remain regular-only and used 
     false
   );
 });
-test("SDK-swallowed send errors never clear draft, successful submissions clear only their own generation", async () => {
+test("draft clears on HTTP acceptance before stream completion, restores on late failure and ignores stale callbacks", async () => {
   const { completeDraftSubmission } = await import(
     "@/server/domain/attachment/client-admission"
   );
+  let draft = "sent";
   let clears = 0;
-  const failed = new Error("vision rejected");
-  await assert.rejects(
-    () =>
-      completeDraftSubmission(
-        async () => undefined,
-        () => failed,
-        () => true,
-        () => {
-          clears += 1;
-        }
-      ),
-    /vision rejected/
-  );
-  assert.equal(clears, 0);
-  await completeDraftSubmission(
-    async () => undefined,
-    () => undefined,
-    () => false,
-    () => {
-      clears += 1;
-    }
-  );
-  assert.equal(clears, 0);
-  await completeDraftSubmission(
-    async () => undefined,
-    () => undefined,
-    () => true,
-    () => {
-      clears += 1;
-    }
-  );
+  let current = true;
+  let accept!: () => void;
+  let finish!: () => void;
+  let error: Error | undefined;
+  const submit = () =>
+    completeDraftSubmission(
+      (onAccepted) => {
+        accept = onAccepted;
+        return new Promise<void>((resolve) => {
+          finish = resolve;
+        });
+      },
+      () => error,
+      () => current,
+      () => {
+        clears += 1;
+        draft = "";
+      },
+      () => {
+        draft ||= "sent";
+      }
+    );
+  let pending = submit();
+  assert.equal(draft, "sent");
+  accept();
+  assert.equal(draft, "", "HTTP accepted: do not wait for the model stream");
+  accept();
   assert.equal(clears, 1);
+  finish();
+  await pending;
+  assert.equal(clears, 1);
+  draft = "sent";
+  pending = submit();
+  error = new Error("HTTP rejected");
+  finish();
+  await assert.rejects(pending, /HTTP rejected/);
+  assert.equal(draft, "sent");
+  error = undefined;
+  pending = submit();
+  accept();
+  error = new Error("stream failed");
+  finish();
+  await assert.rejects(pending, /stream failed/);
+  assert.equal(draft, "sent");
+  error = undefined;
+  pending = submit();
+  accept();
+  draft = "next draft";
+  error = new Error("stream failed");
+  finish();
+  await assert.rejects(pending, /stream failed/);
+  assert.equal(draft, "next draft");
+  error = undefined;
+  draft = "new chat draft";
+  pending = submit();
+  current = false;
+  accept();
+  finish();
+  await pending;
+  assert.equal(draft, "new chat draft");
 });
 test("process upload admission rejects excess requests without reading their bodies and releases on failure", async () => {
   const { UploadCapacity } = await import(

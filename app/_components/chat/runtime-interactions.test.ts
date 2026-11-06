@@ -26,7 +26,7 @@ const harness = `
   const assert=require('node:assert/strict');const fs=require('node:fs');const vm=require('node:vm');const ts=require('typescript');
   const jsx=(type,props,key)=>({type,props,key});
   const hooks=()=>{const slots=[];let cursor=0,dirty=false;const react={useCallback:fn=>fn,useRef:initial=>{const i=cursor++;return slots[i]??(slots[i]={current:initial});},useState:initial=>{const i=cursor++;if(!(i in slots))slots[i]=typeof initial==='function'?initial():initial;return [slots[i],value=>{slots[i]=typeof value==='function'?value(slots[i]):value;dirty=true;}];}};return {react,render(fn,props){let tree;do{dirty=false;cursor=0;tree=fn(props);}while(dirty);return tree;}};};
-  const load=(file,modules)=>{const output={exports:{}};const code=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText;vm.runInNewContext(code,{exports:output.exports,module:output,require:name=>modules[name]??require(name)});return output.exports;};
+  const load=(file,modules)=>{const output={exports:{}};const code=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText;vm.runInNewContext(code,{exports:output.exports,module:output,URL,require:name=>modules[name]??require(name)});return output.exports;};
   const nodes=tree=>{const all=[];const walk=n=>{if(Array.isArray(n)){n.forEach(walk);return;}if(!n||typeof n!=='object')return;all.push(n);walk(n.props?.children);};walk(tree);return all;};
   const base={'react/jsx-runtime':{jsx,jsxs:jsx,Fragment:'fragment'},'@/app/_lib/utils':{cn:(...v)=>v.filter(Boolean).join(' ')},'@/app/_hooks/use-agent-info':{useAgentInfo:()=>({data:{servers:[]}})},'../ai-elements/tool':{Tool:'tool',ToolHeader:'header',ToolContent:'content'},'./tool-call-details':{ToolCallDetails:'details'},'./attachment-read-result':require('./app/_components/chat/attachment-read-result.tsx'),'./activity-groups':require('./app/_components/chat/activity-groups.ts'),'./tool-activity-state':require('./app/_components/chat/tool-activity-state.ts'),'./tool-presentation':require('./app/_components/chat/tool-presentation.ts'),'./tool-result-preview':{ToolResultPreview:'preview'}};
   const part={type:'dynamic-tool',toolName:'fixture__operation',toolCallId:'call',state:'approval-requested',input:{amount:7},approval:{id:'exact-id'}};
@@ -108,6 +108,17 @@ test("empty terminal assistant keeps its canonical owner without sender or answe
     let tree=PreviewMessage(props);assert.equal(tree.type,'div');assert.equal(tree.props['data-testid'],'message-assistant');assert.equal(tree.props.hidden,true);
     assert.equal(nodes(tree).filter(n=>n.type==='actions'||n.type?.name==='SenderLabel').length,0);
     const active=PreviewMessage({...props,isLoading:true});assert.ok(!active.props.hidden);assert.ok(nodes(active).some(n=>n.type?.name==='WaitingText'));
+    const finishedTool={...part,state:'output-available',output:{items:[]}};
+    const between=PreviewMessage({...props,isLoading:true,message:{...message,parts:[finishedTool]}});
+    assert.ok(nodes(between).some(n=>n.type?.name==='WaitingText'&&n.props.message==='正在继续处理…'));
+    for(const parts of [[finishedTool,{type:'text',text:'Actual answer',state:'streaming'}],[finishedTool,{...part,state:'input-available'}],[finishedTool,part],[finishedTool,{type:'tool-askUser',toolCallId:'ask',state:'input-available',input:{title:'目标',questions:[{id:'goal',label:'目标',type:'text',required:true}]}}]]){
+      const active=PreviewMessage({...props,isLoading:true,message:{...message,parts}});
+      assert.ok(!nodes(active).some(n=>n.type?.name==='WaitingText'),'text, running tools and pending user decisions own their presentation');
+    }
+    for(const isLoading of [false]){
+      const history=PreviewMessage({...props,isLoading,message:{...message,parts:[finishedTool]}});
+      assert.ok(!nodes(history).some(n=>n.type?.name==='WaitingText'),'reopened history never spins');
+    }
     for(const visible of [{type:'text',text:'Actual answer'},{...part,state:'output-error',errorText:'actual failure'},{type:'file',filename:'file.txt',mediaType:'text/plain',url:'/fixture'}]){
       const revealed=PreviewMessage({...props,message:{...message,parts:[visible]}});assert.equal(revealed.type,tree.type);assert.equal(revealed.props['data-testid'],tree.props['data-testid']);assert.ok(!revealed.props.hidden);assert.ok(!nodes(revealed).some(n=>n.type?.name==='SenderLabel'),'workspace title already identifies the Agent');
     }
@@ -155,3 +166,61 @@ function requireSource() {
     "utf8"
   );
 }
+
+test("CSV editor renders source links and images, wraps judgments and preserves original values on edit", () => {
+  clientScript(`${harness}
+    const papa=require('papaparse');
+    const content=papa.unparse([['商品名称','商品链接','商品主图','相似点'],['候选 A','https://example.com/item?id=1','https://example.com/item.jpg','造型相似，底座更高'],['候选 B','javascript:alert(1)','data:image/png;base64,not-source','信息不足']]);
+    const saves=[];const {SpreadsheetEditor}=load('app/_components/chat/sheet-editor.tsx',{'react/jsx-runtime':{jsx,jsxs:jsx},react:{memo:fn=>fn,useCallback:fn=>fn,useMemo:fn=>fn(),useState:initial=>[initial,()=>{}],useEffect:()=>{}},'next-themes':{useTheme:()=>({resolvedTheme:'light'})},'react-data-grid':{__esModule:true,default:'grid',textEditor:'editor'},'react-data-grid/lib/styles.css':{}});
+    const props={content,saveContent:(...args)=>saves.push(args),isCurrentVersion:true,status:'idle'};
+    const tree=SpreadsheetEditor(props);const grid=tree.props;
+    assert.equal(grid.rows.length,2);assert.equal(grid.columns[1].name,'商品名称');
+    const source=grid.columns[2].renderCell({row:grid.rows[0]});
+    const link=nodes(source).find(n=>n.type==='a');assert.equal(link.props.href,'https://example.com/item?id=1');assert.equal(link.props.rel,'noopener noreferrer');
+    const image=grid.columns[3].renderCell({row:grid.rows[0]});assert.equal(nodes(image).find(n=>n.type==='img').props.referrerPolicy,'no-referrer');
+    assert.ok(!nodes(grid.columns[2].renderCell({row:grid.rows[1]})).some(n=>n.type==='a'));
+    assert.ok(!nodes(grid.columns[3].renderCell({row:grid.rows[1]})).some(n=>n.type==='img'));
+    const changed=grid.rows.map((r,i)=>i===0?{...r,3:'逗号, 引号"与\\n换行'}:r);
+    grid.onRowsChange(changed);
+    const saved=papa.parse(saves[0][0],{skipEmptyLines:true}).data;
+    assert.deepEqual(saved[0],['商品名称','商品链接','商品主图','相似点']);assert.equal(saved[1][3],'逗号, 引号"与\\n换行');assert.equal(saved[1][1],'https://example.com/item?id=1');
+    SpreadsheetEditor({...props,isCurrentVersion:false}).props.onRowsChange(changed);assert.equal(saves.length,1,'history remains read-only');
+    SpreadsheetEditor({...props,status:'streaming'}).props.onRowsChange(changed);assert.equal(saves.length,1);
+  `);
+});
+
+test("accepted new-chat send restores late failures through the current draft key and preserves a whole new draft", () => {
+  clientScript(`${harness}
+    (async()=>{
+      for(const next of ['empty','text','attachment','navigate','immediate-error','pre-accept-draft']){
+        const slots=[],effects=[];let cursor=0,dirty=false,key='new',chatId='chat',draftHook,files=[{url:'/file/sent',name:'sent.txt',contentType:'text/plain'}],accept,reject,posts=0;
+        const same=(a,b)=>a&&b&&a.length===b.length&&a.every((v,i)=>Object.is(v,b[i]));
+        const react={memo:fn=>fn,useCallback:fn=>fn,useRef:initial=>{const i=cursor++;return slots[i]??(slots[i]={current:initial});},useState:initial=>{const i=cursor++;if(!(i in slots))slots[i]=typeof initial==='function'?initial():initial;return [slots[i],value=>{slots[i]=typeof value==='function'?value(slots[i]):value;dirty=true;}];},useEffect:(fn,deps)=>{const i=cursor++;if(!same(slots[i],deps)){slots[i]=deps;effects.push(fn);}}};
+        const storage=new Map([['new','sent text']]);
+        const globals={URL,process:{env:{}},sessionStorage:{getItem:k=>storage.get(k),setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},window:{history:{pushState(){key='saved';}}},setTimeout,clearTimeout};
+        const imported=(file,modules)=>{const out={exports:{}};vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText,{...globals,module:out,exports:out.exports,require:name=>modules[name]??require(name)});return out.exports;};
+        const {useChatDraft}=imported('app/_hooks/use-chat-draft.ts',{react});
+        const generic=new Proxy({},{get:(_,name)=>name});
+        const modules={react,'react/jsx-runtime':{jsx,jsxs:jsx},'lucide-react':generic,sonner:{toast:{error(){}}},swr:{__esModule:true,default:()=>({data:{capabilities:{fixture:{vision:true}}}})},'usehooks-ts':{useWindowSize:()=>({})},'@/app/_hooks/use-agent-info':{useAgentInfo:()=>({data:{uploadsConfigured:true}})},'@/app/_hooks/use-active-chat':{useActiveChat:()=>({searchMode:'auto',setSearchMode(){},getSendError:()=>undefined})},'@/app/_lib/utils':{cn:()=>'',fetcher(){}},'@/server/domain/model/models':{chatModels:[],DEFAULT_CHAT_MODEL:'fixture'},'@/app/_components/ai-elements/model-selector':generic,'../ai-elements/prompt-input':generic,'../ui/button':generic,'../ui/tooltip':generic,'./composer-menu':generic,'./icons':generic,'./preview-attachment':generic,'./task-capabilities':generic};
+        const {MultimodalInput}=imported('app/_components/chat/multimodal-input.tsx',modules);
+        const render=()=>{let tree;do{dirty=false;cursor=0;draftHook=useChatDraft(key,chatId);tree=MultimodalInput({chatId,input:draftHook[0],setInput:draftHook[1],attachments:files,setAttachments:action=>{files=typeof action==='function'?action(files):action;dirty=true;},status:'ready',messages:[],selectedModelId:'fixture',sendMessage:(_,options)=>{posts++;accept=options.metadata.onAccepted;return new Promise((_,r)=>{reject=r;});}});effects.splice(0).forEach(fn=>fn());}while(dirty);return tree;};
+        let tree=render();nodes(tree).find(n=>n.type==='PromptInput').props.onSubmit();
+        if(next==='pre-accept-draft'){draftHook[1]('next before acceptance');render();}
+        accept();
+        if(next==='immediate-error'){reject(new Error('immediate failure'));await new Promise(resolve=>setTimeout(resolve,0));render();assert.equal(draftHook[0],'sent text');assert.equal(storage.get('saved'),'sent text');assert.equal(storage.get('new'),undefined);continue;}
+        tree=render();assert.equal(key,'saved');assert.equal(draftHook[0],next==='pre-accept-draft'?'next before acceptance':'');assert.equal(files.length,0);
+        if(next==='text'){draftHook[1]('new draft');render();}
+        if(next==='attachment'){files=[{url:'/file/new',name:'new.txt',contentType:'text/plain'}];render();}
+        if(next==='navigate'){chatId='other';key='other';draftHook[1]('');render();}
+        reject(new Error('late stream failure'));await new Promise(resolve=>setTimeout(resolve,0));render();
+        assert.equal(posts,1);
+        if(next==='empty'){assert.equal(draftHook[0],'sent text');assert.equal(files[0].url,'/file/sent');assert.equal(storage.get('new'),undefined);assert.equal(storage.get('saved'),'sent text');}
+        if(next==='text'){assert.equal(draftHook[0],'new draft');assert.equal(files.length,0);}
+        if(next==='attachment'){assert.equal(draftHook[0],'');assert.equal(files[0].url,'/file/new');}
+        if(next==='navigate'){assert.equal(draftHook[0],'');assert.equal(files.length,0);}
+        if(next==='pre-accept-draft'){assert.equal(draftHook[0],'next before acceptance');assert.equal(storage.get('saved'),'next before acceptance');assert.equal(files.length,0);}
+      }
+      process.stdout.write('ASYNC_DONE');
+    })().catch(e=>{console.error(e);process.exitCode=1;});
+  `);
+});

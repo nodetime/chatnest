@@ -154,6 +154,8 @@ function PureMultimodalInput({
   const liveChatId = useRef(chatId);
   liveChatId.current = chatId;
   const selectedRef = useRef(attachments);
+  const draftRef = useRef({ attachments, input, setAttachments, setInput });
+  draftRef.current = { attachments, input, setAttachments, setInput };
   const submitting = useRef(false);
   const generationRef = useRef(0);
   const previousChatRef = useRef(chatId);
@@ -228,19 +230,24 @@ function PureMultimodalInput({
     const sentUrls = new Set(attachments.map((a) => a.url));
     try {
       await completeDraftSubmission(
-        () =>
-          sendMessage({
-            parts: [
-              ...attachments.map((a) => ({
-                filename: a.name,
-                mediaType: a.contentType,
-                type: "file" as const,
-                url: a.url,
-              })),
-              ...(input.trim() ? [{ text: input, type: "text" as const }] : []),
-            ],
-            role: "user",
-          }),
+        (onAccepted) =>
+          sendMessage(
+            {
+              parts: [
+                ...attachments.map((a) => ({
+                  filename: a.name,
+                  mediaType: a.contentType,
+                  type: "file" as const,
+                  url: a.url,
+                })),
+                ...(input.trim()
+                  ? [{ text: input, type: "text" as const }]
+                  : []),
+              ],
+              role: "user",
+            },
+            { metadata: { onAccepted } }
+          ),
         getSendError,
         () => generation === generationRef.current,
         () => {
@@ -252,6 +259,23 @@ function PureMultimodalInput({
             {},
             "",
             `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/chat/${chatId}`
+          );
+        },
+        () => {
+          const latest = draftRef.current;
+          if (
+            (latest.input && latest.input !== input) ||
+            latest.attachments.some(
+              (attachment) => !sentUrls.has(attachment.url)
+            )
+          ) {
+            return;
+          }
+          // The accepted new chat can change its draft key without changing its
+          // visit. Restore through the current setter, never the old :new key.
+          latest.setInput((current) => current || input);
+          latest.setAttachments((current) =>
+            current.length === 0 ? attachments : current
           );
         }
       );

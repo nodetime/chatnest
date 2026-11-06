@@ -3,6 +3,7 @@ import type { UseChatHelpers } from "@ai-sdk/react";
 import type { ChatMessage } from "@/app/_lib/types";
 import { cn, sanitizeText } from "@/app/_lib/utils";
 import type { AskUserPart } from "@/server/domain/message/agent-interactions";
+import { hasPendingInteraction } from "@/server/domain/message/agent-interactions";
 import { hasRunFailure } from "@/server/domain/message/run-failure";
 import type { Vote } from "@/server/domain/vote/types";
 import { MessageContent, MessageResponse } from "../ai-elements/message";
@@ -19,9 +20,9 @@ import { PreviewAttachment } from "./preview-attachment";
 import { ToolActivity } from "./tool-activity";
 import { Weather } from "./weather";
 
-function WaitingText() {
+function WaitingText({ message }: { message?: string }) {
   const { waitingStatus } = useDataStream();
-  const waitingText = waitingStatus?.message ?? "正在准备…";
+  const waitingText = message ?? waitingStatus?.message ?? "正在准备…";
 
   return (
     <div
@@ -102,6 +103,26 @@ const PurePreviewMessage = ({
   });
   const failedRun = !hideRunFailure && hasRunFailure(message);
   const isThinking = isAssistant && isLoading && !hasAnyContent && !failedRun;
+  const lastPart = message.parts.findLast(
+    (part) =>
+      part.type === "step-start" ||
+      ((part.type === "text" || part.type === "reasoning") &&
+        !!part.text.trim()) ||
+      part.type.startsWith("tool-") ||
+      part.type === "dynamic-tool"
+  );
+  const isBetweenSteps =
+    isAssistant &&
+    isLoading &&
+    hasAnyContent &&
+    !failedRun &&
+    !hasPendingInteraction([message]) &&
+    (lastPart?.type === "step-start" ||
+      (!!lastPart &&
+        "state" in lastPart &&
+        ["output-available", "output-error", "output-denied"].includes(
+          lastPart.state ?? ""
+        )));
   const isEmptyAssistant =
     isAssistant && !isLoading && !hasAnyContent && !failedRun;
 
@@ -349,6 +370,7 @@ const PurePreviewMessage = ({
     <>
       {attachments}
       {parts}
+      {!!isBetweenSteps && <WaitingText message="正在继续处理…" />}
       {actions}
     </>
   );

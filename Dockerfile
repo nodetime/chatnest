@@ -29,6 +29,7 @@ COPY --from=build /app/package.json /app/next.config.ts ./
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/public ./public
 COPY --from=build --chown=node:node /app/.next ./.next
+COPY --from=build /app/server/application/ai/core.md ./server/application/ai/core.md
 COPY --from=build /app/server/infrastructure/skills ./server/infrastructure/skills
 COPY --from=build /app/server/infrastructure/mcp/agent.json ./server/infrastructure/mcp/agent.json
 COPY --from=build /app/server/infrastructure/uploads/document-worker.cjs ./server/infrastructure/uploads/document-worker.cjs

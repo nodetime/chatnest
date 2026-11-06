@@ -31,16 +31,17 @@ flowchart LR
   L --> N
 ```
 
-图中展示当前源码和已配置链路，不代表所有外部服务此刻均在运行：ChatNest 与开发数据库运行中；DeepSeek Flash 已真实调用，Porta 本机服务已启动；Exa 已免 Key 真实查询。当前演示为 `PLATFORM_MODE=standalone`，Payload 业务后端、账务、支付和 CLI 不参与演示调用链，不绘制成已连接服务。
+图中展示当前源码的连接结构；各环境运行状态、发布版本及真实验收证据只记录在[唯一研发 TODO](superpowers/plans/2026-11-04-core-launch-goal-and-todo.md)。当前演示为 `PLATFORM_MODE=standalone`，Payload 业务后端、账务、支付和 CLI 不参与演示调用链，不绘制成已连接服务。
 
-- **产物交付**：`createDocument` 接收当轮 Agent 写好的正文，持久化成功后打开右侧工作区，不再仅凭标题二次调用模型。文本报告按候选分节保留图片与链接；原始 `createResultTable` 继续只存原始查询数据。`app/_lib/editor/markdown.ts` 统一正文与版本比较的 Markdown/schema，保留链接、图片、强调及表格；`config.ts` 约束单元格内回车与粘贴，保存重开不拆列。商品图省略来源页信息，避免来源站拒绝加载；编辑器链接经协议校验后独立页打开。
-- **核心规则**：`server/application/ai/prompts.ts` 仅提供通用目标推进、澄清、规划、执行、交互和完成判断。已删除模板地理信息、强制所有写作建文档、无条件浏览器长段指令；`send-message.ts` 按工具能力注入 runtime 说明，网页模式只传递当轮用户意图。工具 schema 和实际执行门控仍是权限边界。
+- **产物交付**：`createDocument` 接收当轮 Agent 写好的正文，持久化成功后打开右侧工作区，不再仅凭标题二次调用模型。相似商品默认走已有 `sheet` 原始CSV产物，表头/数据行、来源链接、主图预览和比较判断共用 `sheet-editor.tsx`，保存/导出仍为CSV；原始 `createResultTable` 继续只存原始查询数据。`app/_lib/editor/markdown.ts` 统一正文与版本比较的 Markdown/schema，保留链接、图片、强调及表格；`config.ts` 约束单元格内回车与粘贴，保存重开不拆列。商品图省略来源页信息，避免来源站拒绝加载；编辑器链接经协议校验后独立页打开。
+- **核心规则**：`server/application/ai/core.md` 是通用核心Prompt唯一正文，`prompts.ts` 读取并按工具能力组装；NFT与Docker显式携带同一路径。仅提供通用目标推进、澄清、规划、执行、交互和完成判断。已删除模板地理信息、强制所有写作建文档、无条件浏览器长段指令；`send-message.ts` 按工具能力注入 runtime 说明，网页模式只传递当轮用户意图。工具 schema 和实际执行门控仍是权限边界。
 - **技能方法**：应用仅内置 `server/infrastructure/skills/similar-products/SKILL.md`（找相似商品），按需加载。Ask/Todo、任务持续和工具策略属于核心；搜索/读取及1688属于 MCP 工具，不复制为技能手册。独立 Porta CLI skill 源码仍在 `nodetime/porta-cli/skills/porta`。
 - **Ask / Todo**：沿用 AI SDK 原生工具与 AI Elements Question / Task。Ask 询问需求，不重复授权；Todo 是完整任务快照，仅为实质性多步骤工作更新。服务端合并、消息持久化、属主校验、幂等和侧栏重开走既有实现，没有新增流程引擎。
 - **计算执行**：`application/chat/tools/execute-code.ts` 接入自动执行工具；`infrastructure/execution/` 每次以独立子进程运行 QuickJS/WASM，只提供同步 JavaScript、JSON结果与有限日志，无文件、网络、宿主env或shell。固定并发准入、guest内存/栈、执行中断、宿主输出检查及父进程取消/时限约束；V8参数不是整个进程RSS硬限。worker及依赖纳入现有NFT追踪与Docker交付。
 - **候选图片**：`application/chat/tools/view-image.ts` 仅允许读取当前会话成功MCP JSON的原始图片字段；`infrastructure/uploads/remote-image.ts` 解析并固定公网HTTPS地址、拒绝重定向，限制下载和解码，统一JPEG。图片仅在当轮模型请求中经现有视觉通路注入，数据库只存来源/尺寸等元数据；历史明确不含像素。
 - **MCP 文本上下文**：文本结果向模型传递正文（单次最多12,000字符并显式标记截断），不套用结构化表格的120字字段采样。历史恢复和每步模型请求使用同一投影，淘汰旧正文以保留现有总体上下文边界，数据库原文不改；非 JSON 正文不作为表格行证据。
 - **MCP**：`agent.json` 启用 Exa search/fetch 与 Porta 的单个百炼商品查询，Tavily 关闭。已允许的只读查询使用现有 `autoApproveTools` 自动执行，不新增权限模式；未知或未允许操作仍遵守宿主策略。模型验收按用户授权集中执行，真实验收记录见唯一研发 TODO。
+- **发送与运行状态**：沿用SDK请求metadata中的客户端回调，在HTTP成功返回可读流时清空该轮文字/附件；完整流Promise语义保持不变，迟到失败恢复草稿且不覆盖新草稿，会话visit隔离。工具完成而Agent仍运行时展示中性处理状态，待答/审批、正文流和历史不重复转圈，不制造模型思考。
 - **界面**：已知审批只显示用户需要的摘要；原始参数在详情。身份或能力目录加载时显示中性状态，避免原名称/参数闪现。历史已保存的问题或技能名称不伪装成重新执行后的新结果。
 
 参考公开实现的通用交互原则，未复制其终端/编码环境规则：[Codex 当前模板](https://github.com/openai/codex/blob/ddd1812a51f4aded35c3ec5446672474d5cb546b/codex-rs/models-manager/models.json)、[OpenCode 提示词组装](https://github.com/anomalyco/opencode/blob/05620f8ff9938ed3af3308cc40bb6cbac92b0f09/packages/core/src/session/system-prompt.ts)、[Claude Code 技能说明](https://code.claude.com/docs/en/skills)。这不是模型能力等同声明；通用交互已有本机真实 DeepSeek Flash 验收，范围见唯一研发 TODO。

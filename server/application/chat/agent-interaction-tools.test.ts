@@ -12,6 +12,16 @@ import { systemPrompt } from "../ai/prompts";
 import { agentInteractionTools } from "./tools/agent-interactions";
 
 test("通用提示词按能力注入交互规则，不向无工具模型许诺工具，也不硬编码业务 SOP", () => {
+  const markdown = readFileSync(
+    new URL("../ai/core.md", import.meta.url),
+    "utf8"
+  );
+  const [core, tools] = markdown.split("<!-- tools -->");
+  assert.equal(systemPrompt({ supportsTools: false }), core.trim());
+  assert.equal(
+    systemPrompt({ supportsTools: true }),
+    `${core.trim()}\n\n${tools.trim()}`
+  );
   const plain = systemPrompt({ supportsTools: false });
   const agent = systemPrompt({ supportsTools: true });
   assert.doesNotMatch(plain, /askUser|updateTodo|createDocument/);

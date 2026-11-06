@@ -257,7 +257,8 @@ export function ActiveChatProvider({
   }, [currentModelId]);
 
   const [input, setInput] = useChatDraft(
-    `research:draft:${ownerId}:${isNewChat ? "new" : chatId}`
+    `research:draft:${ownerId}:${isNewChat ? "new" : chatId}`,
+    `${ownerId}:${chatId}`
   );
   const [showCreditCardAlert, setShowCreditCardAlert] = useState(false);
   const [finishedHistoryWait, setFinishedHistoryWait] =
@@ -466,13 +467,24 @@ export function ActiveChatProvider({
           interactionGate.current.newUserTurn = false;
           return chatOptionsRef.current.transport.reconnectToStream(request);
         },
-        sendMessages: (request) => {
+        sendMessages: async (request) => {
           interactionGate.current.expectedHistory = undefined;
           interactionGate.current.newUserTurn =
             request.trigger === "submit-message" &&
             !("trigger" in (request.body ?? {})) &&
             request.messages.at(-1)?.role === "user";
-          return chatOptionsRef.current.transport.sendMessages(request);
+          const stream =
+            await chatOptionsRef.current.transport.sendMessages(request);
+          const metadata = request.metadata as
+            | { onAccepted?: () => void }
+            | undefined;
+          if (
+            chatInstanceRef.current === instance &&
+            typeof metadata?.onAccepted === "function"
+          ) {
+            metadata.onAccepted();
+          }
+          return stream;
         },
       },
     });

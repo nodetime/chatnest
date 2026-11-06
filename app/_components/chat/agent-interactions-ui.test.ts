@@ -155,15 +155,16 @@ test("Provider导航和卸载中止捕获的旧SDK请求，旧交互句柄既不
     const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript');
     const {Chat:SDKChat}=require('@ai-sdk/react');
     const jsx=(type,props,key)=>({type,props,key});
-    let pathname='/chat/A',cursor=0,generated=0;const slots=[],pendingEffects=[],requests=[],instances=[],finishHandlers=[];
+    let pathname='/chat/A',cursor=0,generated=0,holdSuccessfulStream=false;const slots=[],pendingEffects=[],requests=[],instances=[],finishHandlers=[];
     const same=(a,b)=>a&&b&&a.length===b.length&&a.every((value,index)=>Object.is(value,b[index]));
     const memo=(fn,deps)=>{const index=cursor++;if(!slots[index]||!same(slots[index].deps,deps))slots[index]={deps,value:fn()};return slots[index].value;};
     const react={createContext:()=>({Provider:'provider'}),useContext:()=>null,useRef:initial=>{const index=cursor++;return slots[index]??(slots[index]={current:initial});},useState:initial=>{const index=cursor++;if(!slots[index])slots[index]={value:typeof initial==='function'?initial():initial};return [slots[index].value,value=>{slots[index].value=typeof value==='function'?value(slots[index].value):value;}];},useMemo:memo,useCallback:(fn,deps)=>memo(()=>fn,deps),useEffect:(fn,deps)=>{const index=cursor++;if(!slots[index]||!same(slots[index].deps,deps)){const previous=slots[index];slots[index]={deps,cleanup:previous?.cleanup};pendingEffects.push(()=>{previous?.cleanup?.();slots[index].cleanup=fn();});}}};
     class Chat extends SDKChat {constructor(options){super(options);instances.push(this);finishHandlers.push(options.onFinish);}}
     class Transport {
+      constructor(options){this.options=options;}
       async sendMessages(request){
-        const record={id:request.chatId,signal:request.abortSignal,aborted:false};requests.push(record);
-        return new ReadableStream({start(controller){request.abortSignal.addEventListener('abort',()=>{record.aborted=true;controller.error(new DOMException('Stopped','AbortError'));},{once:true});if(request.chatId==='G'){controller.enqueue({type:'data-run-status',id:'run-status',data:{state:'failed'}});controller.enqueue({type:'error',errorText:'model rejected'});controller.close();return;}controller.enqueue({type:'start',messageId:'answer-'+requests.length});controller.enqueue({type:'text-start',id:'text'});if(request.chatId==='D')return;controller.enqueue({type:'text-delta',id:'text',delta:'pending'});if(request.chatId==='H'){controller.enqueue({type:'text-end',id:'text'});controller.enqueue({type:'finish',finishReason:'stop'});controller.close();}}});
+        const record={id:request.chatId,signal:request.abortSignal,aborted:false,body:this.options.prepareSendMessagesRequest({...request,id:request.chatId}).body};requests.push(record);
+        return new ReadableStream({start(controller){record.controller=controller;request.abortSignal.addEventListener('abort',()=>{record.aborted=true;controller.error(new DOMException('Stopped','AbortError'));},{once:true});if(request.chatId==='G'){controller.enqueue({type:'data-run-status',id:'run-status',data:{state:'failed'}});controller.enqueue({type:'error',errorText:'model rejected'});controller.close();return;}controller.enqueue({type:'start',messageId:'answer-'+requests.length});controller.enqueue({type:'text-start',id:'text'});if(request.chatId==='D')return;controller.enqueue({type:'text-delta',id:'text',delta:'pending'});if(request.chatId==='H'){controller.enqueue({type:'text-end',id:'text'});if(holdSuccessfulStream)return;controller.enqueue({type:'finish',finishReason:'stop'});controller.close();}}});
       }
       async reconnectToStream(){return null;}
     }
@@ -338,13 +339,21 @@ test("Provider导航和卸载中止捕获的旧SDK请求，旧交互句柄既不
       const beforeSuccess=requests.length;
       const {completeDraftSubmission}=require('./server/domain/attachment/client-admission.ts');
       let draft='one successful send';
-      delayRevalidation=true;
-      await completeDraftSubmission(
-        ()=>successful.sendMessage({role:'user',parts:[{type:'text',text:draft}]}),
+      delayRevalidation=true;holdSuccessfulStream=true;
+      let streamCompleted=false;
+      const submitting=completeDraftSubmission(
+        onAccepted=>successful.sendMessage({role:'user',parts:[{type:'text',text:draft}]},{metadata:{onAccepted}}),
         successful.getSendError,
         ()=>!render('/chat/H').isReadonly,
-        ()=>{draft='';}
-      );
+        ()=>{draft='';},
+        ()=>{draft ||= 'one successful send';}
+      ).then(()=>{streamCompleted=true;});
+      await tick();
+      assert.equal(draft,'','accepted request clears draft before model completes');
+      assert.equal(streamCompleted,false,'SDK promise still represents full stream completion');
+      assert.ok(!('metadata' in requests.at(-1).body),'client callback never enters HTTP body');
+      requests.at(-1).controller.enqueue({type:'finish',finishReason:'stop'});
+      requests.at(-1).controller.close();await submitting;holdSuccessfulStream=false;
       assert.equal(draft,'','successful send clears its draft even during delayed history revalidation');
       const saved=instances.at(-1).messages;
       assert.equal(saved.at(-1).parts[0].text,'pending');

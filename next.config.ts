@@ -57,11 +57,13 @@ const nextConfig: NextConfig = {
   },
   outputFileTracingIncludes: {
     "/api/agent": [
+      "./server/application/ai/core.md",
       "./server/infrastructure/mcp/agent.json",
       "./server/infrastructure/skills/**/*",
     ],
     "/api/agent/mcp": ["./server/infrastructure/mcp/agent.json"],
     "/api/chat": [
+      "./server/application/ai/core.md",
       "./server/infrastructure/mcp/agent.json",
       "./server/infrastructure/skills/**/*",
       "./server/infrastructure/execution/javascript-worker.cjs",

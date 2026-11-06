@@ -2,10 +2,16 @@
 
 import { useTheme } from "next-themes";
 import { parse, unparse } from "papaparse";
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  type MouseEvent,
+  memo,
+  type SyntheticEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import DataGrid, { textEditor } from "react-data-grid";
-import { cn } from "@/app/_lib/utils";
-
 import "react-data-grid/lib/styles.css";
 
 type SheetEditorProps = {
@@ -15,9 +21,23 @@ type SheetEditorProps = {
   isCurrentVersion: boolean;
   status: string;
 };
+type Row = Record<string, string | number>;
 
-const MIN_ROWS = 50;
-const MIN_COLS = 26;
+function sourceUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return ["https:", "http:"].includes(url.protocol) ? url.href : undefined;
+  } catch {
+    // A non-URL cell is rendered as ordinary text.
+  }
+}
+
+function keepSourceClick(event: MouseEvent<HTMLAnchorElement>) {
+  event.stopPropagation();
+}
+function hideUnavailableImage(event: SyntheticEvent<HTMLImageElement>) {
+  event.currentTarget.hidden = true;
+}
 
 const PureSpreadsheetEditor = ({
   content,
@@ -26,137 +46,130 @@ const PureSpreadsheetEditor = ({
   status,
 }: SheetEditorProps) => {
   const { resolvedTheme } = useTheme();
-
-  const parseData = useMemo(() => {
-    if (!content) {
-      return new Array(MIN_ROWS).fill(new Array(MIN_COLS).fill(""));
-    }
-    const result = parse<string[]>(content, { skipEmptyLines: true });
-
-    const paddedData = result.data.map((row) => {
-      const paddedRow = [...row];
-      while (paddedRow.length < MIN_COLS) {
-        paddedRow.push("");
-      }
-      return paddedRow;
-    });
-
-    while (paddedData.length < MIN_ROWS) {
-      paddedData.push(new Array(MIN_COLS).fill(""));
-    }
-
-    return paddedData;
-  }, [content]);
-
-  const columns = useMemo(() => {
-    const rowNumberColumn = {
-      cellClass: "border-t border-r dark:bg-neutral-950 dark:text-neutral-50",
-      frozen: true,
-      headerCellClass:
-        "border-t border-r dark:bg-neutral-900 dark:text-neutral-50",
-      key: "rowNumber",
-      name: "",
-      renderCell: ({ rowIdx }: { rowIdx: number }) => rowIdx + 1,
-      width: 50,
-    };
-
-    const dataColumns = Array.from({ length: MIN_COLS }, (_, i) => ({
-      cellClass: cn("border-t dark:bg-neutral-950 dark:text-neutral-50", {
-        "border-l": i !== 0,
+  const data = useMemo(
+    () => parse<string[]>(content, { skipEmptyLines: true }).data,
+    [content]
+  );
+  const headers = useMemo(() => {
+    const count = Math.max(1, ...data.map((row) => row.length));
+    return Array.from({ length: count }, (_, index) => data[0]?.[index] ?? "");
+  }, [data]);
+  const columns = useMemo(
+    () => [
+      {
+        frozen: true,
+        key: "rowNumber",
+        name: "",
+        renderCell: ({ rowIdx }: { rowIdx: number }) => rowIdx + 1,
+        width: 44,
+      },
+      ...headers.map((header, index) => {
+        const imageColumn = /主图|图片|image|photo/i.test(header);
+        return {
+          key: String(index),
+          minWidth: 100,
+          name: header || `列 ${index + 1}`,
+          renderCell: ({ row }: { row: Row }) => {
+            const value = String(row[index] ?? "");
+            const href = sourceUrl(value);
+            return (
+              <div className="h-full overflow-auto whitespace-pre-wrap break-words py-2 text-sm leading-relaxed">
+                {href ? (
+                  <a
+                    className="inline-flex max-w-full flex-col gap-1 text-primary underline underline-offset-2"
+                    href={href}
+                    onClick={keepSourceClick}
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  >
+                    {imageColumn && (
+                      // biome-ignore lint/performance/noImgElement: External source URLs are displayed unchanged without a Next image proxy.
+                      // biome-ignore lint/a11y/noNoninteractiveElementInteractions: onError handles resource failure, not user interaction.
+                      <img
+                        alt="商品主图"
+                        className="h-20 w-28 rounded object-contain"
+                        loading="lazy"
+                        onError={hideUnavailableImage}
+                        referrerPolicy="no-referrer"
+                        src={href}
+                      />
+                    )}
+                    {imageColumn
+                      ? "查看原图"
+                      : /链接|url|link/i.test(header)
+                        ? "打开来源"
+                        : value}
+                  </a>
+                ) : (
+                  value
+                )}
+              </div>
+            );
+          },
+          renderEditCell:
+            isCurrentVersion && status !== "streaming" ? textEditor : undefined,
+          width: imageColumn
+            ? 132
+            : /判断|等级|来源平台/.test(header)
+              ? 120
+              : /链接|url|link/i.test(header)
+                ? 140
+                : /名称|标题/.test(header)
+                  ? 190
+                  : 240,
+        };
       }),
-      headerCellClass: cn("border-t dark:bg-neutral-900 dark:text-neutral-50", {
-        "border-l": i !== 0,
-      }),
-      key: i.toString(),
-      name: String.fromCharCode(65 + i),
-      renderEditCell:
-        isCurrentVersion && status !== "streaming" ? textEditor : undefined,
-      width: 120,
-    }));
-
-    return [rowNumberColumn, ...dataColumns];
-  }, [isCurrentVersion, status]);
-
+    ],
+    [headers, isCurrentVersion, status]
+  );
   const initialRows = useMemo(
     () =>
-      parseData.map((row, rowIndex) => {
-        const rowData: Record<string, string | number> = {
-          id: rowIndex,
-          rowNumber: rowIndex + 1,
-        };
-
-        columns.slice(1).forEach((col, colIndex) => {
-          rowData[col.key] = row[colIndex] || "";
+      (data.length > 0 ? data.slice(1) : [[""]]).map((row, index) => {
+        const item: Row = { id: index };
+        headers.forEach((_, column) => {
+          item[column] = row[column] ?? "";
         });
-
-        return rowData;
+        return item;
       }),
-    [parseData, columns]
+    [data, headers]
   );
-
-  const [localRows, setLocalRows] = useState(initialRows);
-
+  const [rows, setRows] = useState(initialRows);
   useEffect(() => {
-    setLocalRows(initialRows);
+    setRows(initialRows);
   }, [initialRows]);
 
-  const generateCsv = (data: string[][]) => unparse(data);
-
-  const handleRowsChange = (newRows: Record<string, string | number>[]) => {
-    if (!isCurrentVersion || status === "streaming") {
-      return;
-    }
-    setLocalRows(newRows);
-
-    const updatedData = newRows.map((row) =>
-      columns.slice(1).map((col) => String(row[col.key] ?? ""))
-    );
-
-    const newCsvContent = generateCsv(updatedData);
-    saveContent(newCsvContent, true);
-  };
-
-  const handleCellClick = useCallback(
-    (args: {
-      column: { key: string };
-      selectCell: (enableEditor?: boolean) => void;
-    }) => {
-      if (
-        isCurrentVersion &&
-        status !== "streaming" &&
-        args.column.key !== "rowNumber"
-      ) {
-        args.selectCell(true);
+  const handleRowsChange = useCallback(
+    (newRows: Row[]) => {
+      if (!isCurrentVersion || status === "streaming") {
+        return;
       }
+      setRows(newRows);
+      saveContent(
+        unparse([
+          headers,
+          ...newRows.map((row) =>
+            headers.map((_, index) => String(row[index] ?? ""))
+          ),
+        ]),
+        true
+      );
     },
-    [isCurrentVersion, status]
+    [headers, isCurrentVersion, status, saveContent]
   );
-
   return (
     <DataGrid
+      aria-label="对比与数据表格"
       className={resolvedTheme === "dark" ? "rdg-dark" : "rdg-light"}
       columns={columns}
-      defaultColumnOptions={{
-        resizable: true,
-        sortable: true,
-      }}
+      defaultColumnOptions={{ resizable: true }}
       enableVirtualization
-      onCellClick={handleCellClick}
+      headerRowHeight={44}
       onRowsChange={handleRowsChange}
-      rows={localRows}
+      rowHeight={128}
+      rows={rows}
       style={{ height: "100%" }}
     />
   );
 };
 
-function areEqual(prevProps: SheetEditorProps, nextProps: SheetEditorProps) {
-  return (
-    prevProps.currentVersionIndex === nextProps.currentVersionIndex &&
-    prevProps.isCurrentVersion === nextProps.isCurrentVersion &&
-    !(prevProps.status === "streaming" && nextProps.status === "streaming") &&
-    prevProps.content === nextProps.content &&
-    prevProps.saveContent === nextProps.saveContent
-  );
-}
-
-export const SpreadsheetEditor = memo(PureSpreadsheetEditor, areEqual);
+export const SpreadsheetEditor = memo(PureSpreadsheetEditor);
