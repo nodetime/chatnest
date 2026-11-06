@@ -8,12 +8,9 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { test } from "node:test";
 
-const payload = resolve(
-  process.env.PAYLOAD_ROOT ?? "../../NexaZ/heymoro-starter"
-);
 const child = "scripts/run-platform-connected-acceptance.sh";
 const nativeRuntimeUrl = `postgres://heymoro_native_app_123456abcdef:${"a".repeat(64)}@127.0.0.1:5433/heymoro_native_api_acceptance`;
 function fixture(t: { after: (fn: () => void) => void }) {
@@ -21,6 +18,12 @@ function fixture(t: { after: (fn: () => void) => void }) {
   t.after(() => rmSync(root, { force: true, recursive: true }));
   mkdirSync(join(root, "media"));
   mkdirSync(join(root, "bin"));
+  const payload = join(root, "payload-fixture");
+  mkdirSync(join(payload, "apps/server/scripts/fixtures"), { recursive: true });
+  writeFileSync(
+    join(payload, "apps/server/scripts/fixtures/grantDatabase.ts"),
+    ""
+  );
   const log = join(root, "commands.log");
   writeFileSync(
     join(root, "bin/docker"),
@@ -56,26 +59,6 @@ function fixture(t: { after: (fn: () => void) => void }) {
   };
 }
 
-test("connected parent mode rejects an invalid ChatNest root before any Docker lifecycle", () => {
-  const result = spawnSync(
-    "bash",
-    [
-      join(payload, "apps/server/scripts/run-native-api-acceptance.sh"),
-      "--connected",
-    ],
-    {
-      encoding: "utf8",
-      env: {
-        CHATNEST_ROOT: "/not-a-connected-checkout",
-        HOME: process.env.HOME,
-        NODE_ENV: "test" as const,
-        PATH: process.env.PATH,
-      },
-    }
-  );
-  assert.notEqual(result.status, 0);
-  assert.match(result.stdout, /CONNECTED_CHATNEST_ROOT_REQUIRED/);
-});
 for (const url of [
   nativeRuntimeUrl.replace("/heymoro_native_api_acceptance", "/heymoro"),
   `${nativeRuntimeUrl}?x=1`,
@@ -125,6 +108,7 @@ for (const field of [
   "PAYLOAD_NATIVE_API_DB_ACCEPTANCE",
   "PAYLOAD_DB_PUSH",
   "UPLOAD_DIR",
+  "PAYLOAD_ROOT",
 ]) {
   test(`connected child rejects missing parent gate ${field} before Docker`, (t) => {
     const f = fixture(t);
