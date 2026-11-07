@@ -81,4 +81,12 @@ ChatNest / Porta 使用 `feat/deepseek/demo-delivery`。ChatNest发布tag：`fea
 
 本轮不增加功能范围、不设置“所有生成每次稳定命中”的无限验收条件；正式生产运维不属于研发TODO。
 
-**Goal：本次演示交付完成。当前范围没有未完成的研发项；停止追加打磨与重复付费复验。**
+**本次独立演示交付完成，不等于 Payload + ChatNest + Porta 的完整项目已闭环。**
+
+## 三项目集成缺口（2026-11-06 重新核对）
+
+- [ ] 定位并对齐本项目 Payload 业务后端与既有 connected 接口，完成三项目本地联调后再交付同一架构。当前服务器没有 Payload。
+
+ChatNest 中保留 identity exchange、账户/组织与账务的 connected 客户端。旧联验脚本依赖工作区外的另一项目，不能作为本项目三仓验收证据；当前 `nodetime/payload` 检出为 Payload 框架源码，尚未找到对应业务应用。当前 dev 启动和服务器演示均使用 standalone。关闭支付与暂不演示账务不代表取消 Payload；此前“全部研发闭环”的表述不成立。
+
+PR 对齐该事实，不自动合并 main，不把外部项目代码或凭据加入本项目。

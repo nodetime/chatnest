@@ -1,21 +1,21 @@
-# Tool records, not nested debug panels
+# 工具记录，而非嵌套调试面板
 
-## Problem verified in the real browser
+## 已在真实浏览器中确认的问题
 
-The user points at persisted PDF read UI. Root reproduced the exact page: one read is nested under `执行过程 1 次调用`, then `读取附件文字`, then attachment metrics, native original-text details and native technical details. The result feels like a debugger, not a general Agent assistant. The previous Artifact/Task pass did not address this inner interaction.
+用户指出的是已持久化的 PDF 读取 UI。主会话复现了该页面：一次读取嵌套在 `执行过程 1 次调用` 下，再依次是 `读取附件文字`、附件指标、原生原文详情和原生技术详情。呈现效果像调试器，而不像通用 Agent 助手。之前的 Artifact/Task 调整没有处理这一内部交互。
 
-Native Codex app UI access was denied by the available computer-use surface; do not bypass that restriction or claim a hands-on Codex session. Public official Codex article/docs were consulted as references, not runtime acceptance. The acceptance target is the actual ChatNest interaction, not an unverifiable parity claim. Root then actually opened an existing Computer Use test task in the signed-in Manus web app, expanded its low-emphasis work-history entry and inspected its lightweight browser action rows. No new task/message was submitted and no credits were spent. Reference screenshot stays ignored/private; do not publish account/history information.
+现有计算机操作能力拒绝了对原生 Codex 应用 UI 的访问；不得绕过该限制，也不得声称实际操作过 Codex。已查阅公开的 Codex 官方文章/文档作为参考，不作为运行时验收。验收目标是实际的 ChatNest 交互，而非无法验证的对齐声明。随后主会话实际在已登录的 Manus 网页应用中打开了已有的 Computer Use 测试任务，展开了其弱化显示的工作历史条目，并检查了轻量的浏览器动作行。没有提交新任务/消息，也没有消耗积分。参考截图保持忽略/私有；不得发布账户/历史信息。
 
-## Focused correction
+## 定向修正
 
-- A single generic tool step is a single action row directly in the conversation, not a one-item execution group. Adjacent tools inside one canonical assistant message may retain one group, but calls are steps in UI language. Render each canonical message through the same keyed PreviewMessage component regardless of whether answer text has arrived. Do not merge different assistant messages into a content-dependent outer Task: root twice reproduced that this remounts an open details Sheet on completion. This focused presentation trade-off avoids a second global inspector/DOM focus registry; canonical message and within-message tool identities remain stable. Preserve canonical message order/IDs, attention reopening, user disclosure choices and the general autonomous Agent flow.
-- Completed attachment row shows a readable action and actual filename. Running, awaiting approval, denied, stopped/incomplete and failed remain honest distinct states. No promise that the whole file was read if only a page was requested.
-- Opening a read shows actual returned source excerpts and exact position references immediately, not another `details` disclosure. Bound the excerpt area; retain warnings/partial-read notice. Unknown/malformed output must not crash or invent a successful read.
-- Internal segment counts, character counts, `非指令` trust-boundary wording and raw JSON are removed from the main reading surface only. They remain intact in original tool evidence and a separately opened details Sheet. Runtime untrusted-data boundaries are unchanged.
-- All calls rendered by ToolActivity (native attachment/skills, generic MCP and existing fallbacks) get a keyboard-accessible `查看调用详情` action at the row, opening a normal Sheet with exact original tool name, input, output and raw error. No inline native `技术详情` triangles. Existing special weather/document/table artifact renderers remain unchanged. Exact native createResultTable generation is a temporary handoff to the normal artifact preview, so its genuinely active nonterminal execution row does not offer an inspector that would disappear on success. Synthetic pending approval still exposes exact parameters; terminal failure/denial, historical incomplete and malformed returned fallbacks retain details. Dynamic/MCP same-name tools are not this exception. Exact falsey JSON results (`false`, `0`, empty string and `null`) must remain visible as their actual values, not be labeled absent. The Sheet must dismiss/focus-return without touching the right artifact viewer.
-- Approval/error bodies remain immediately visible. Approval shows actual canonical tool identity and meaningful input context (unknown args require opening exact details), never claims unknown MCP is harmless. Existing exact approval ids/readonly guards/callbacks remain.
-- Keep the existing quiet ChatNest tokens; this is a change in information hierarchy, not a new color/font/framework pass. No deps, Agent prompt/tool choice, MCP params/credentials, DB or artifact editor changes.
+- 单个通用工具步骤直接在对话中显示为一个动作行，不再套入仅含一项的执行组。同一条规范 assistant 消息内的相邻工具可保留一个分组，但在 UI 用语中调用应称为步骤。无论回答文本是否已经到达，每条规范消息都通过同一个带 key 的 PreviewMessage 组件渲染。不要将不同 assistant 消息合并到一个依赖内容的外层 Task 中：主会话已两次复现，这会在完成时重新挂载已经打开的详情 Sheet。这项聚焦呈现的取舍避免引入第二套全局检查器/DOM 焦点注册表；规范消息和消息内工具的身份保持稳定。保留规范消息顺序/ID、需关注事件的重新展开、用户的展开收起选择，以及通用自主 Agent 流程。
+- 已完成的附件行显示可读动作和实际文件名。运行中、等待审批、已拒绝、已停止/未完成和失败仍应如实区分。若只请求了一页，不得承诺已读完整个文件。
+- 打开读取记录时立即显示实际返回的来源摘录和精确位置引用，不再增加一层 `details` 展开收起。限制摘录区域大小；保留警告/部分读取说明。未知/格式异常的输出不得导致崩溃，也不得虚构读取成功。
+- 内部分段数、字符数、`非指令` 信任边界措辞和原始 JSON 仅从主要阅读表面移除。它们仍完整保留在原始工具证据和单独打开的详情 Sheet 中。运行时不可信数据边界保持不变。
+- ToolActivity 渲染的所有调用（原生附件/技能、通用 MCP 和现有兜底）都在行内提供可通过键盘访问的 `查看调用详情` 动作，打开正常 Sheet，展示精确的原始工具名、输入、输出和原始错误。不使用内联原生 `技术详情` 三角控件。现有特殊天气/文档/表格产物 renderer 保持不变。精确匹配的原生 createResultTable 生成过程会临时交接到正常产物预览，因此其确实处于活动状态且尚未终结的执行行不提供一个成功后就会消失的检查器。合成的待审批状态仍展示精确参数；终态失败/拒绝、历史未完成及格式异常返回的兜底仍保留详情。同名动态/MCP 工具不适用此例外。精确的假值 JSON 结果（`false`、`0`、空字符串和 `null`）必须按实际值保持可见，不能标记为缺失。Sheet 必须能够关闭并恢复焦点，且不影响右侧产物查看器。
+- 审批/错误正文仍须立即可见。审批展示实际规范工具身份和有意义的输入上下文（未知参数需要打开精确详情），绝不声称未知 MCP 无害。保留现有精确审批 ID/只读保护/回调。
+- 保留 ChatNest 现有低调的 token；这是信息层级调整，不是新一轮配色/字体/框架调整。不改依赖、Agent 提示词/工具选择、MCP 参数/凭据、数据库或产物编辑器。
 
-## Verification
+## 验证
 
-Red-green tests for canonical message rendering and within-message grouping (retain message actions/order and singleton-to-multi streaming, actual tool-only-to-answer transition identity and open Sheet survival), singleton vs multi-step composition, exact source evidence/no extra nested summary, malformed returned data, raw data details Sheet (including falsey results, actual keyboard opening/closing/focus return), honest states and unchanged approvals. Root actual browser on user's PDF, real larger DOCX and XLSX reads, keyboard expand/close details, approval/denial/error histories, multi-tool task and normal artifact pane. Root safe explicit suites, types, scoped lint and isolated direct production build; never migration build or all-unit wildcard. Mock fixtures are isolated and identified as mocks.
+为规范消息渲染和消息内分组编写红绿测试（保留消息动作/顺序、从单项到多项的流式过程、真实的仅工具到回答的转换身份，以及已打开 Sheet 的存续），并覆盖单步骤与多步骤组合、精确来源证据/无额外嵌套摘要、格式异常的返回数据、原始数据详情 Sheet（包括假值结果、真实键盘打开/关闭/焦点返回）、如实状态和不变的审批。主会话在真实浏览器中验证用户的 PDF、真实较大 DOCX 和 XLSX 的读取、键盘展开/关闭详情、审批/拒绝/错误历史、多工具任务及正常产物面板。主会话执行显式安全测试集、类型检查、限定范围 lint 和隔离的直接生产构建；绝不使用带迁移的构建或全部单元测试通配。模拟夹具保持隔离，并明确标识为模拟。

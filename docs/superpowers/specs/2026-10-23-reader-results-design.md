@@ -1,10 +1,10 @@
-# Reader-first results, quiet process, balanced artifacts
+# 阅读优先的结果、低调的过程与均衡的产物区
 
-User correction is explicit: primary results show title, actual summary and source, not raw item_id/price/seller fields. Extend the approved generic flat workbench direction; no new runtime behavior.
+用户的纠正很明确：主要结果展示标题、实际摘要和来源，不展示原始 item_id/price/seller 字段。沿用已批准的通用扁平工作台方向；不引入新的运行时行为。
 
-- Successful result UI has one reading surface: actual title, returned snippet/description/summary (if present), and associated source/domain. No invented summaries from commerce fields. Missing summary is simply absent. Raw record fields and unknown labeled structures belong to existing exact details, not inline chips or a reformatted debugger. Useful plain text, skill/reference excerpts, genuine empty/mixed/truncation warnings remain. Approval is a distinct parameter view: keep exact canonical identity and arguments before allowing an operation.
-- Make process quiet: one compact group control, plain aligned action rows, remove redundant per-step timeline/check decoration and repeated completed badges where appropriate; running/approval/failure/denied and loaded-skill meaning remain clear. Preserve disclosure logic and Sheet/message identities.
-- Balance the desktop workbench with 50% initial artifact width, user resizing preserved. One header and normal existing renderers; no new dashboard. Result-table links may display compact domain while preserving exact href/title/export/raw values; keep actual user-column labels/data. Improve header/toolbar balance only if necessary, avoid unrelated editor redesign.
-- Keyboard, narrow screens, dark theme, inspection, approvals, unsaved guards, table save/reopen and generic document switching must stay intact. Agent choice, original evidence, provider parameters, schemas, credentials and DB untouched.
+- 成功结果 UI 只有一个阅读表面：实际标题、返回的片段/描述/摘要（如有），以及关联来源/域名。不根据商品字段编造摘要。缺少摘要时直接不显示。原始记录字段和未知的带标签结构放在现有精确详情中，不呈现为内联标签或重新排版的调试器。保留有用的纯文本、技能/参考资料摘录，以及真实的空结果/混合内容/截断警告。审批是独立的参数视图：在允许运行操作前保留精确的规范身份和参数。
+- 让过程保持低调：一个紧凑的分组控件、朴素对齐的动作行，适当移除每步冗余的时间线/勾选装饰及重复完成标记；运行中/审批/失败/拒绝和技能已加载的含义仍须清晰。保留展开收起逻辑及 Sheet/消息身份。
+- 桌面工作台的产物初始宽度设为 50%，保持均衡，保留用户调整宽度。使用一个标题栏和正常的现有 renderer；不新增仪表盘。结果表格链接可显示紧凑域名，同时精确保留 href/title/导出/原始值；保留实际用户列标签/数据。仅在必要时改善标题栏/工具栏平衡，避免无关的编辑器重设计。
+- 键盘、窄屏、深色主题、查看详情、审批、未保存保护、表格保存/重开和通用文档切换必须保持完整。不改 Agent 选择、原始证据、供应商参数、schema、凭据或数据库。
 
-Root browser acceptance targets the actual existing source+skill+artifact conversation, real plain/text/empty/generic outcomes, raw details, and saved generic artifacts. Full safe tests/type/lint/direct isolated build, then local main regression; no paid provider calls or push.
+主会话的浏览器验收面向实际已有的来源+技能+产物对话、真实的纯文本/文本/空结果/通用结果、原始详情，以及已保存的通用产物。执行完整的安全测试/类型检查/lint/直接隔离构建，再进行本地 main 回归；不调用付费供应商，也不推送。

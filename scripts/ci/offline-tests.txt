@@ -133,3 +133,5 @@ server/infrastructure/execution/javascript.test.ts
 server/application/chat/tools/view-image.test.ts
 
 server/application/chat/tools/create-document.test.ts
+
+.claude/skills/copy-skills/scripts/copy-skills.test.mjs

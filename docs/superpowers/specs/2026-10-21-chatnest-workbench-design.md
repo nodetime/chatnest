@@ -1,7 +1,7 @@
 # ChatNest 简洁工作台设计
 
 **状态：** 用户已批准 Manus 式克制工作台方向；本文件仅固化设计，尚未实现 UI，无需重复方向审批。
-**基线/分支：** `e56c6b3` → `feat/ui/workbench`。
+**基线/分支：** `e56c6b3` -> `feat/ui/workbench`。
 **工作目录：** `/Users/nako/Documents/ChatGPT/ai-chat/.worktrees/chatnest-mcp-settings`。
 
 ## 方向与边界
@@ -28,6 +28,6 @@
 
 不新增固定Agent步骤、虚假进度、法律结论或模型调用；不改上传鉴权/原字节/提取、审批协议、证据快照、CAS expectedVersion/冲突、版本、CSV当前视图/防公式注入、JSON完整快照及下载语义。不改DB/API/schema，不引入云上传或生成中resume。
 
-三串行切片：①外壳/工具/附件；②工作区/来源/备注与保存；③RDG/中文状态。每片fresh implementer、先RED后GREEN、独立commit、主会话重新verification及spec/quality双审。仅运行计划显式安全单测、类型、定向Biome/diff；禁止unit全通配、真实.env、pnpm build/迁移、真实DB、浏览器操作、服务重启、付费调用；不触碰live worktree的`.local-review`。
+三串行切片：1)外壳/工具/附件；2)工作区/来源/备注与保存；3)RDG/中文状态。每片fresh implementer、先RED后GREEN、独立commit、主会话重新verification及spec/quality双审。仅运行计划显式安全单测、类型、定向Biome/diff；禁止unit全通配、真实.env、pnpm build/迁移、真实DB、浏览器操作、服务重启、付费调用；不触碰live worktree的`.local-review`。
 
 **主会话另行截图验收：** 首页/有消息/右侧表格 × 390/1280/1440宽 × light/dark；桌面1280×800量网格≥50%，1280×720保留旧溢出回归，侧栏开/收均覆盖。检查工具密度、审批转成功收起、附件操作、完整来源、独立保存和布局。静态SSR/class测试不冒充实际交互/几何通过，本文件不授权实现者操作浏览器。

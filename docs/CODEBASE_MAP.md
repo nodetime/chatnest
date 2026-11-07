@@ -1,4 +1,4 @@
-# ChatNest codebase map
+# ChatNest 代码库地图
 
 > 模块现状的权威地图:改结构必看、必更(AGENTS.md 纪律 6)。分层演变史与逐轮裁决见 [01_架构决策/20261025101500_DDD分层待办P1-P4.md](01_架构决策/20261025101500_DDD分层待办P1-P4.md);逐轮功能验证记录见 `docs/superpowers/plans/`。
 
@@ -143,6 +143,7 @@ server/
 - 一键闭环 `pnpm dev:up`(脚本 `.claude/skills/dev-env/scripts/dev-env-loop.mjs`:体检/装指引 -> .env.local -> compose PG(127.0.0.1:55432,命名卷) -> 迁移 -> `scripts/dev-seed.ts` 开发账号初始化 -> 启动);收尾 `pnpm dev:down`。
 - 本地开发默认登录 `admin / 123456`，账号保存在 `admin@chatnest.local`，用户名和密码由 `DEV_ADMIN_USERNAME` / `DEV_ADMIN_PASSWORD` 配置；`server/shared/login-identity.ts` 仅在 development 将 `admin` 解析为该邮箱；仍由既有 Credentials + bcrypt 校验。注册/生产保持邮箱登录；不授予 connected 平台管理员权限。初始化仅操作固定本地开发库与此专用账号，不触碰其他用户。
 - 进程工具 `scripts/governance/dev-env.mjs` 仅三能:nics / 绑 0.0.0.0:3003 启动 / 优雅杀;入口 `pnpm dev:nics|start|stop`。
+- 项目技能双向复制 `copy-skills` 同时存放于 `.claude/skills/copy-skills` 与 `.agents/skills/copy-skills`，使用真实目录副本；运行技能内 `scripts/copy-skills.mjs --from claude|codex` 默认比对，`--apply` 复制，`--overwrite` 才覆盖差异，目标独有内容保留。复制器测试仅从 `.claude` 路径显式加入离线白名单；`dev-env` 同样提供两端实际副本。
 
 ## 个人能力与本次使用（2026-10-27）
 

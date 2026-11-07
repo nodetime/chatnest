@@ -1,29 +1,29 @@
-# ChatNest: template-backed general Agent workspace
+# ChatNest：基于模板的通用 Agent 工作空间
 
-## User mandate and reference
+## 用户要求与参考
 
-The user rejects the previous visual pass and asks for actual Vercel ready-made templates/components, structural and interaction improvements rather than another palette/spacing edit. Existing general Agent behavior and normal right-hand text/code/image/sheet artifacts must remain. User delegates execution/testing without another design/debug questionnaire.
+用户否定了上一轮视觉调整，要求实际使用 Vercel 现成模板/组件，改进结构与交互，而不是再改一次配色/间距。必须保留现有通用 Agent 行为及正常的右侧 text/code/image/sheet 产物。用户授权执行/测试，无需再进行设计/调试问卷。
 
-Root inspected https://chatbot.ai-sdk.dev/demo (from https://vercel.com/templates/next.js/chatbot): input-local model selection, focused conversation and restrained navigation. The project already descends from Chatbot: reapplying its name alone is not an implementation.
+主会话检查了 https://chatbot.ai-sdk.dev/demo（来自 https://vercel.com/templates/next.js/chatbot）：输入区内的模型选择、聚焦的对话和克制的导航。本项目本就源自 Chatbot：仅再次套用其名称不算实现。
 
-Verified upstream AI Elements ca8be600bfd01b3131f9bf6134b51602a71f4374 supplies Artifact and Task (both absent locally), Apache-2.0. Local Conversation/PromptInput already exist. Pin/adapt the missing primitives with complete license, source and modification attribution. Do not use an unbounded latest installer or migrate to another SDK. The official docs announce an upcoming shadcn move; existing local compatibility takes priority.
+已核实上游 AI Elements ca8be600bfd01b3131f9bf6134b51602a71f4374 提供 Artifact 和 Task（本地均缺失），采用 Apache-2.0。现有本地 Conversation/PromptInput 已存在。锁定并适配缺失的基础组件，保留完整许可证、来源和修改归属说明。不得使用未限定版本的 latest 安装器，也不得迁移到其他 SDK。官方文档宣布即将迁往 shadcn；现有本地兼容性优先。
 
-## Structural design
+## 结构设计
 
-1. **Conversation identity and input ownership.** Header shows the actual conversation title, not the model name. Add only title to the existing authorized messages response (already fetched chat); project live native data-chat-title / persisted title / real first user text / new-chat fallback safely. Model selection moves into the existing PromptInput footer beside attachment controls, honoring current onModelChange and capabilities. PromptInputHeader/Body/Footer organize attachments, text and controls; upload admission and owned file URLs are unchanged.
-2. **One conversation scrolling system.** Actually compose existing Conversation/ConversationContent/ConversationScrollButton and reset its UI state per chat. Remove competing custom scroll container. Preserve original SDK message order, activity groups, edit/regenerate/approval callbacks and long-answer manual reading. Keep the composer grounded independently of message scrolling.
-3. **A single normal artifact header, not two stacked chrome bars.** Actually compose official Artifact primitives around existing business renderers. A shared workspace header holds current-file identity/chooser, original file actions and expand/close. Browser/sources use the same navigation/controls shell. Replace the old outer tab bar for active documents, while a clearly labeled keyboard menu still exposes all three workspace modes. Empty workspace lists available artifacts rather than telling users to scroll chat for them.
-4. **A real per-conversation artifact chooser.** Derive entries only from successful native tool-createDocument/tool-updateDocument/tool-createResultTable outputs with valid id/title/kind; reject known error envelopes, malformed or dynamic MCP lookalikes. Deduplicate by document id, preserve useful order and latest title/kind. No new persistence/database/file system. Selection reuses openArtifactPreview and explicitly opens document mode. Do not include arbitrary global active artifacts or old-chat items. While the active artifact is streaming or its edit has not saved, prevent a new chooser selection and show the honest reason; preserve content/version/evidence guards. Refresh rebuilds the collection from stored messages.
-5. **Actual Task composition.** Replace presentation-only grouping shell with official Task primitives while retaining activitySummary, real event identities, automatic attention reopening, manual choices and known native error handling. Native button trigger, no synthetic plan/progress or fixed tool pipeline.
-6. **Visual hierarchy.** Clear navigation rail/history, recognizable conversation identity, grounded composer, one file header and legible content. Pane boundaries are intentional; no random toolbar floats or nested cards covering the whole workspace. Preserve gentle light/dark chat theme, focus rings and readable type; no global/admin redesign. Text/code/image/sheet renderers and table-only controls remain distinct.
+1. **对话身份与输入归属。** 标题栏显示实际对话标题，而非模型名。只在现有已授权的消息响应中添加标题（聊天已获取）；安全投影实时原生 data-chat-title / 已持久化标题 / 真实首条用户文本 / 新聊天兜底。模型选择移到现有 PromptInput 页脚的附件控件旁，遵循当前 onModelChange 和能力。PromptInputHeader/Body/Footer 组织附件、文本和控件；上传准入与自有文件 URL 保持不变。
+2. **单一的对话滚动系统。** 实际组合现有 Conversation/ConversationContent/ConversationScrollButton，并按聊天重置 UI 状态。移除相互竞争的自定义滚动容器。保留原始 SDK 消息顺序、活动分组、编辑/重新生成/审批回调，以及长回答的手动阅读。输入框独立于消息滚动保持固定。
+3. **一个正常的产物标题栏，不堆叠两层界面栏。** 实际使用官方 Artifact 基础组件包裹现有业务 renderer。共享工作空间标题栏容纳当前文件身份/选择器、原有文件动作和展开/关闭。浏览器/来源使用相同的导航/控件外壳。活动文档用此结构替换旧外层标签栏，同时由标签清晰、可键盘操作的菜单继续提供全部三种工作空间模式。空工作空间列出可用产物，不再提示用户滚动聊天寻找。
+4. **真正按对话归属的产物选择器。** 仅从成功的原生 tool-createDocument/tool-updateDocument/tool-createResultTable 输出中推导条目，并要求 id/title/kind 有效；拒绝已知错误封装、格式异常内容或外观相似的动态 MCP 输出。按文档 ID 去重，保留有用顺序及最新 title/kind。不新增持久化/数据库/文件系统。选择复用 openArtifactPreview，并显式打开文档模式。不纳入任意全局活动产物或旧聊天条目。活动产物正在流式生成或其编辑尚未保存时，阻止新的选择器选择，并如实显示原因；保留内容/版本/证据保护。刷新时从已存储消息重建集合。
+5. **实际组合 Task。** 用官方 Task 基础组件替换仅用于呈现的分组外壳，同时保留 activitySummary、真实事件身份、需关注事件的自动重新展开、手动选择和已知原生错误处理。使用原生按钮触发，不生成虚构计划/进度或固定工具流水线。
+6. **视觉层级。** 清晰的导航栏/历史、可识别的对话身份、固定的输入框、单一文件标题栏和易读内容。面板边界应有明确作用；不使用随意悬浮的工具栏或覆盖整个工作空间的嵌套卡片。保留柔和的浅色/深色聊天主题、焦点环和可读排版；不重设计全局/admin。text/code/image/sheet renderer 与表格专属控件仍须区分。
 
-## Invariants and boundaries
+## 不变量与边界
 
-Do not change prompts, Agent routing/selection, MCP settings/credentials, paid providers, transport semantics, authentication, database queries beyond existing response title field, migrations or dependencies. All native tool params, message IDs/order, original source evidence, CAS/result-table immutability, historical readonly and ProseMirror undo/version isolation remain authoritative. No mock routing in tracked production code. No universal "safe/read-only" promise for unknown tools. No claiming durable background execution, OCR, cloud upload, resumable generation or commercial-agent parity.
+不改提示词、Agent 路由/选择、MCP 设置/凭据、付费供应商、传输语义、身份认证、现有响应标题字段之外的数据库查询、迁移或依赖。所有原生工具参数、消息 ID/顺序、原始来源证据、CAS/结果表格不可变性、历史只读及 ProseMirror 撤销/版本隔离仍是权威依据。纳入版本跟踪的生产代码不得包含模拟路由。不得对未知工具作出普遍“安全/只读”的承诺。不得声称已具备持久后台执行、OCR、云上传、可恢复生成或与商业 Agent 对齐的能力。
 
-## Acceptance
+## 验收
 
-- Observable structural difference: actual official Artifact + Task usage, Conversation ownership, composer-local model picker, contextual title, one active artifact header and a functioning per-chat file chooser.
-- Pure and behavioral offline tests for catalog validation/dedup/native boundary, title projection, selection reset/same-card reopen, readonly/evidence guards and structural composition. Retain earlier regressions, update only intentionally replaced presentation assertions.
-- Root independently reruns explicit safe unit list, types, changed-file formatting and isolated direct next build --webpack; never pnpm build (migrations) or tests/unit/*.test.ts.
-- Root CUA real browser: multiple artifact kinds selected without chat scrolling; close/reopen, mode menu, refresh, new-chat isolation; pending saves/streaming selection guards; source drawer and CSV/JSON; attachment upload+optional reads+HTTP MCP approval+optional table; reject/failure, stop/edit, long streaming answer with manual scroll and jump-to-latest. Check390/1280/1440 light/dark for overflow, single-header hierarchy and mobile close. Production browser smoke too. All data and models local synthetic mocks; no customer docs/real provider costs. Final screenshot is actual UI, not a replacement mockup.
+- 可观察到的结构差异：实际使用官方 Artifact + Task、Conversation 管理滚动、输入区内模型选择器、上下文标题、单一活动产物标题栏，以及可用的每聊天文件选择器。
+- 纯逻辑和行为离线测试覆盖目录校验/去重/原生边界、标题投影、选择重置/同卡片重开、只读/证据保护和结构组合。保留此前回归，仅更新有意替换的呈现断言。
+- 主会话独立重跑显式安全单元测试清单、类型检查、改动文件格式检查和隔离的直接 next build --webpack；绝不使用 pnpm build（会执行迁移）或 tests/unit/*.test.ts。
+- 主会话通过 CUA 在真实浏览器中验证：无需滚动聊天即可选择多种产物；关闭/重开、模式菜单、刷新、新聊天隔离；待保存/流式生成期间的选择保护；来源抽屉和 CSV/JSON；附件上传+可选读取+HTTP MCP 审批+可选表格；拒绝/失败、停止/编辑、长流式回答的手动滚动与跳到最新。检查 390/1280/1440 视口下浅色/深色的溢出、单标题栏层级和移动端关闭。同时执行生产浏览器冒烟。所有数据和模型均为本地合成模拟；不使用客户文档/不产生真实供应商费用。最终截图必须是实际 UI，不能用替代效果图。

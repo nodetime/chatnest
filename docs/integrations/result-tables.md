@@ -1,30 +1,30 @@
-# Optional result tables
+# 可选结果表格
 
-The Agent may choose `createResultTable`; no keyword, supplier, or successful MCP call automatically creates a table. Ordinary answers and no-table branches remain first-class. This tool never calls another model to invent or rewrite retrieved rows.
+Agent 可以选择 `createResultTable`；任何关键词、供应商或成功的 MCP 调用都不会自动创建表格。普通回答和不生成表格的分支仍是一等路径。此工具绝不会调用另一个模型来编造或改写检索返回的行。
 
-## Evidence and context
+## 证据与上下文
 
-Only actual successful MCP calls enter the per-task evidence ledger. JSON `structuredContent` is preferred; otherwise the entire single text content block must parse as JSON. Prose JSON extraction, client message outputs, pending/denied/failed calls, and sources over 2 MiB are not eligible. The ledger retains at most the most recent 20 eligible calls within a cumulative 2 MiB, evicting oldest eligible calls explicitly rather than partially copying rows.
+只有实际成功的 MCP 调用才会进入每项任务的证据台账。优先使用 JSON `structuredContent`；否则，唯一的文本内容块必须整体可解析为 JSON。从叙述中提取 JSON、客户端消息输出、待处理/被拒绝/失败的调用，以及超过 2 MiB 的来源均不符合条件。台账在累计 2 MiB 以内保留最多最近 20 次符合条件的调用，并明确淘汰最旧的符合条件调用，而不是部分复制行。
 
-The SDK's `toModelOutput` adapter exposes the actual `sourceToolCallId`, JSON Pointer array paths/counts/fields, and a clearly marked bounded row/text preview. Raw UI/database outputs stay unchanged. Each full serialized projection is at most 2,000 UTF-8 bytes. Projection is cached at source completion, so repeated SDK conversion is pure. History restores eligible evidence only from authorized stored assistant outputs; model history shares 20 MCP projection slots, prioritizing retained eligible sources and filling spare slots with recent noneligible outcomes, and a round admits at most 32 current MCP executions. Thus at most 52 successful source projections consume 104,000 bytes combined, below the 128 KiB round budget. Duplicate call IDs across history or current calls are marked ambiguous, removed from evidence/projections, and never overwrite another source; ambiguous history occurrences are omitted rather than multiplying the prompt. Older tool outcomes are omitted from the model-only history copy, not UI/storage. Oversized field names/previews are explicitly omitted, never passed through as a fallback.
+SDK 的 `toModelOutput` 适配器暴露实际的 `sourceToolCallId`、JSON Pointer 数组路径/数量/字段，以及明确标记且有界的行/文本预览。原始 UI/数据库输出保持不变。每份完整序列化投影最多为 2,000 UTF-8 字节。投影在来源完成时缓存，因此 SDK 重复转换是纯操作。历史仅从经过授权且已存储的 assistant 输出恢复符合条件的证据；模型历史共享 20 个 MCP 投影名额，优先分配给保留下来的合格来源，再用近期不符合证据条件的结果填充剩余名额，每轮最多接纳 32 次当前 MCP 执行。因此，最多 52 份成功来源投影合计消耗 104,000 字节，低于每轮 128 KiB 的预算。历史或当前调用中重复的调用 ID 会被标记为有歧义，从证据/投影中移除，绝不覆盖另一个来源；有歧义的历史记录会被省略，而不是重复加入提示词。更旧的工具结果只会从供模型使用的历史副本中省略，不影响 UI/存储。超大字段名/预览会被明确省略，绝不会作为兜底原样传入。
 
-Persisted `data-mcp-source` identifies tool/server/call and actual server completion time. Legacy history without completion metadata uses the original message creation time labeled `message-recorded`, never the current clock. Approval continuation transports assistant IDs and approval decisions only, not duplicated vendor results, table contents, or attachments; stored calls remain authoritative.
+持久化的 `data-mcp-source` 标识工具/服务器/调用及实际服务端完成时间。缺少完成元数据的旧历史使用原始消息创建时间，并标记为 `message-recorded`，绝不使用当前时钟。审批续接只传输 assistant ID 和审批决定，不会重复传输供应商结果、表格内容或附件；已存储的调用仍是权威依据。
 
-## Tool and persisted envelope
+## 工具与持久化封装
 
-Input: `{title, sourceToolCallId, rowsPath, columns?: [{path, label?}]}`. Paths are strict RFC 6901 JSON Pointers with canonical array indexes, own-property-only traversal, and prototype-related traversal denied. Rows must be an object array. Limits are 500 rows, 30 selected columns, and a 1 MiB UTF-8 envelope; exceeding any limit rejects the entire request rather than silently truncating it.
+输入：`{title, sourceToolCallId, rowsPath, columns?: [{path, label?}]}`。路径为严格遵循 RFC 6901 的 JSON Pointer，使用规范数组索引，仅遍历自有属性，禁止与原型相关的遍历。行必须是对象数组。上限为 500 行、30 个选中列，以及 1 MiB UTF-8 封装；超出任一限制均拒绝整个请求，而不会静默截断。
 
-A `Document` with `kind: "sheet"` stores `{type:"result-table",version:1,chatId,source,rowsPath,rows,columns,view,notes}`. `rows` are deep-copied original JSON objects, preserving every original own field including fields that cannot be selected by a pointer. Cell values are deterministic pointer reads; missing fields are empty. A single persisted `data-resultTable` event atomically identifies the document, kind, title, content, version, and bound chat. Legacy CSV sheets remain supported separately.
+`kind: "sheet"` 的 `Document` 存储 `{type:"result-table",version:1,chatId,source,rowsPath,rows,columns,view,notes}`。`rows` 是原始 JSON 对象的深拷贝，保留所有原始自有字段，包括无法通过指针选择的字段。单元格值通过确定性的指针读取获得；缺失字段为空。单个持久化的 `data-resultTable` 事件原子地标识文档、类型、标题、内容、版本和绑定聊天。旧版 CSV 表格另行保持兼容。
 
-The pane provides filtering, numeric/null sorting, column selection, raw-row details, separate user notes, CSV of the current view, full-envelope JSON export, versions and reopen. CSV protects formula-leading values (including whitespace/control prefixes). Only an exact original HTTP(S) URL field value becomes a link; incidental prose URLs are not extracted. The provenance label is **工具返回 · 未核验**, not independent website verification or legal certainty.
+面板提供筛选、数值/null 排序、列选择、原始行详情、独立用户备注、当前视图 CSV、完整封装 JSON 导出、版本及重新打开功能。CSV 会防护以公式起始字符开头的值（包括空白/控制字符前缀）。只有精确的原始 HTTP(S) URL 字段值才会成为链接；不会从附带叙述中提取 URL。来源标签为**工具返回 · 未核验**，不代表独立网站核验或法律确定性。
 
-## Mutation and ownership
+## 修改与归属
 
-- `GET /api/document?id=ID&chatId=CHAT_ID` requires both document ownership and the result table's bound owned chat. Legacy document reads retain compatibility.
-- `PATCH /api/document/result-table` accepts only `{id,chatId,expectedVersion,view,notes}`. `expectedVersion` is the exact latest `createdAt` ISO string. A transaction/advisory lock and latest-row lock compare versions and create a strictly later version. Stale writes return 409. The complete updated envelope must still fit its byte/schema limits before any insert.
-- Generic document POST, central generic database writes, edit/update/suggestion tools reject result-table evidence, including unknown versions or damaged discriminators. No generic CSV downgrade or generic version deletion can erase the protected history and reuse its ID. View/notes updates cannot replace rows, columns, provenance or chat binding.
-- No automatic refresh tool is shipped: a later Agent-selected table may use a new actual MCP source. Existing original evidence is immutable.
+- `GET /api/document?id=ID&chatId=CHAT_ID` 同时要求文档归当前用户所有，以及结果表格绑定的聊天归当前用户所有。旧版文档读取保持兼容。
+- `PATCH /api/document/result-table` 仅接受 `{id,chatId,expectedVersion,view,notes}`。`expectedVersion` 是最新 `createdAt` 的精确 ISO 字符串。通过事务/咨询锁和最新行锁比较版本，并创建时间严格晚于前一版的版本。过期写入返回 409。在任何插入发生前，完整更新封装仍必须满足字节/schema 限制。
+- 通用文档 POST、中央通用数据库写入、编辑/更新/建议工具都会拒绝结果表格证据，包括未知版本或损坏的判别字段。通用 CSV 降级或通用版本删除均不能清除受保护的历史并复用其 ID。视图/备注更新不能替换行、列、来源或聊天绑定。
+- 未提供自动刷新工具：后续由 Agent 自选生成的表格可以使用新的真实 MCP 来源。现有原始证据不可变。
 
-Verification uses synthetic fixtures and isolated mock MCP/model endpoints. This validates wire behavior and provenance, not live model decision quality or a paid supplier's acceptance.
+验证使用合成夹具及隔离的模拟 MCP/模型端点。这验证的是传输行为与来源，不代表真实模型的决策质量或付费供应商验收。
 
-Final local verification covered isolated HTTP/PostgreSQL/mock-model flows, production packaging and parser-worker smoke checks, plus server-rendered table structure. Interactive browser QA was not executed because browser navigation was blocked by the tool policy; SSR evidence is not an interaction test, and the policy block is not an application failure. No paid model/supplier requests were used.
+最终本地验证覆盖了隔离的 HTTP/PostgreSQL/模拟模型流程、生产打包和解析器 worker 冒烟检查，以及服务端渲染的表格结构。由于工具策略阻止了浏览器导航，未执行交互式浏览器 QA；SSR 证据不等于交互测试，策略阻止也不等于应用故障。未使用任何付费模型/供应商请求。
