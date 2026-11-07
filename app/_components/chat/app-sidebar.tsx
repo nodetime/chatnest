@@ -28,15 +28,16 @@ import {
   type WorkbenchSection,
 } from "@/app/_hooks/use-workbench-navigation";
 import { ChatSearch } from "./chat-search";
+import { OrganizationSwitcher } from "./organization-switcher";
 import { SidebarHistory } from "./sidebar-history";
 import { SidebarUserNav } from "./sidebar-user-nav";
 
 export function AppSidebar({
+  showOrganizations = false,
   user,
-  isPlatformAdmin = false,
 }: {
+  showOrganizations?: boolean;
   user: User | undefined;
-  isPlatformAdmin?: boolean;
 }) {
   const { toggleSidebar, setOpenMobile } = useSidebar();
   const { startNewChat } = useActiveChat();
@@ -84,9 +85,14 @@ export function AppSidebar({
               <span>新对话</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
+          {showOrganizations ? (
+            <SidebarMenuItem className="group-data-[collapsible=icon]:hidden">
+              <OrganizationSwitcher userType={user?.type} />
+            </SidebarMenuItem>
+          ) : null}
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarContent className="gap-5 overflow-x-hidden px-3">
+      <SidebarContent className="gap-3 overflow-x-hidden px-3">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
@@ -143,7 +149,7 @@ export function AppSidebar({
         </div>
       </SidebarContent>
       <SidebarFooter className="gap-1 px-3 py-4">
-        <SidebarUserNav isPlatformAdmin={isPlatformAdmin} user={user} />
+        <SidebarUserNav user={user} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

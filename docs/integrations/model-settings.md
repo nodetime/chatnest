@@ -8,6 +8,8 @@
 4. “测试连接”只对默认模型发起短文本推理，可能产生小额费用；不会保存配置，也不代表文件/工具能力已验收。
 5. 保存后新请求生效；当前生成继续使用自身快照。工作台只暴露已开放模型，不暴露地址或 Key。
 
+官方 `https://api.deepseek.com` 的 Chat Completions 连接由 Vercel 的 `@ai-sdk/openai-compatible` 适配器处理，版本与现有 SDK 协议依赖一致，复用上述同一份地址、Key、模型 ID 和受控网络连接。它保留流式 `reasoning_content`、工具多轮回传及已保存会话中的思考内容，前端使用已有折叠展示，同时请求实际用量。其他地址和显式 Responses 配置继续由对应适配器处理；没有新增配置、转发服务或失败降级。依据见[DeepSeek 工具思考协议](https://api-docs.deepseek.com/guides/thinking_mode/)。
+
 ## 安全与状态
 
 | 项目 | 行为 |

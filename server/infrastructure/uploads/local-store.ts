@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { constants } from "node:fs";
+import { constants, type Stats } from "node:fs";
 import { lstat, mkdir, open, realpath, unlink } from "node:fs/promises";
 import { isAbsolute, join, parse, resolve } from "node:path";
 import { MAX_DOCUMENT_BYTES } from "@/server/domain/attachment/document-types";
@@ -39,15 +39,17 @@ export function quotaLimits(env: Env = process.env) {
     user: quota("UPLOAD_USER_QUOTA_BYTES", 100 * 1024 ** 2),
   };
 }
+function hasPrivateOwner(info: Stats) {
+  const uid = process.getuid?.();
+  return (info.mode & 0o077) === 0 && (uid === undefined || uid === info.uid);
+}
+
 export class LocalUploadStore {
   private readonly root: string;
   constructor(root: string) {
     this.root = root;
   }
-  private async path(id: string) {
-    if (!UUID_PATTERN.test(id)) {
-      throw new UploadError(400, "文件标识无效。");
-    }
+  async checkDirectory() {
     // Reject symlinks in every existing parent, including the storage root.
     const absolute = resolve(this.root);
     let cursor = parse(absolute).root;
@@ -71,7 +73,17 @@ export class LocalUploadStore {
     if ((await realpath(absolute)) !== absolute) {
       throw new Error("noncanonical storage directory");
     }
-    return join(absolute, id);
+    const info = await lstat(absolute);
+    if (!info.isDirectory() || !hasPrivateOwner(info)) {
+      throw new Error("storage directory is not private");
+    }
+    return absolute;
+  }
+  private async path(id: string) {
+    if (!UUID_PATTERN.test(id)) {
+      throw new UploadError(400, "文件标识无效。");
+    }
+    return join(await this.checkDirectory(), id);
   }
   async write(id: string, bytes: Buffer) {
     const file = await open(
@@ -103,8 +115,8 @@ export class LocalUploadStore {
     );
     try {
       const info = await file.stat();
-      if (!info.isFile() || info.size !== expected) {
-        throw new Error("size mismatch");
+      if (!info.isFile() || !hasPrivateOwner(info) || info.size !== expected) {
+        throw new Error("file metadata mismatch");
       }
       const bytes = Buffer.alloc(expected);
       const { bytesRead } = await file.read(bytes, 0, expected, 0);
@@ -130,8 +142,8 @@ export class LocalUploadStore {
     );
     try {
       const info = await file.stat();
-      if (!info.isFile() || info.size !== expected) {
-        throw new Error("size mismatch");
+      if (!info.isFile() || !hasPrivateOwner(info) || info.size !== expected) {
+        throw new Error("file metadata mismatch");
       }
       const hash = createHash("sha256");
       for await (const chunk of file.createReadStream({

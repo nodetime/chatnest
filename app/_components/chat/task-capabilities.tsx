@@ -128,8 +128,7 @@ function TaskScopeEditor({
           </div>
         )}
         <p className="text-xs leading-5 text-muted-foreground">
-          Agent
-          自主决定是否使用所选连接和技能。内置工具保留，外部调用仍按权限确认。
+          Agent 会按任务需要使用所选连接和技能。内置工具始终可用。
         </p>
         {!!pendingInteraction && !locked && (
           <p className="text-xs leading-5 text-muted-foreground" role="status">
@@ -212,11 +211,20 @@ export function TaskCapabilities() {
       name: s.displayName ?? s.name,
       note: s.source === "personal" ? "个人技能" : "内置技能",
     })) ?? [];
-  const initial = capabilitySelection ??
-    scope.data?.selection ?? {
-      serverIds: servers.filter((s) => s.available).map((s) => s.id),
-      skillIds: skills.filter((s) => s.available).map((s) => s.id),
-    };
+  const selected = capabilitySelection ?? scope.data?.selection;
+  const initial = selected
+    ? {
+        serverIds: selected.serverIds.filter((id) =>
+          servers.some((s) => s.id === id && s.available)
+        ),
+        skillIds: selected.skillIds.filter((id) =>
+          skills.some((s) => s.id === id && s.available)
+        ),
+      }
+    : {
+        serverIds: servers.filter((s) => s.available).map((s) => s.id),
+        skillIds: skills.filter((s) => s.available).map((s) => s.id),
+      };
   const locked = isReadonly || status === "submitted" || status === "streaming";
   const pendingInteraction = hasPendingInteraction(messages);
   return (

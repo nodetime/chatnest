@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  activityFailureMessage,
   activitySummary,
   groupActivityMessages,
   groupActivityParts,
@@ -24,6 +25,40 @@ const message = (
   parts: ChatMessage["parts"],
   role: ChatMessage["role"] = "assistant"
 ): ChatMessage => ({ id, parts, role });
+
+test("failure summaries distinguish confirmed no-write conflicts from unknown outcomes", () => {
+  const conflict = {
+    ...tool("conflict"),
+    output: {
+      error: "old_string not found in document",
+      savedContent: "private document body",
+    },
+    type: "tool-editDocument",
+  } as Parameters<typeof activityFailureMessage>[0];
+  const before = JSON.stringify(conflict);
+  assert.match(activityFailureMessage(conflict), /原文件未改动/);
+  assert.equal(JSON.stringify(conflict), before);
+  const unknown = {
+    ...conflict,
+    errorText: "old_string not found in document",
+    output: undefined,
+    state: "output-error",
+  } as typeof conflict;
+  assert.match(activityFailureMessage(unknown), /保存结果尚未确认/);
+  assert.doesNotMatch(activityFailureMessage(unknown), /原文件未改动/);
+  const supplier = tool("supplier", "output-error", {
+    errorText: "private provider trace",
+    output: { error: "old_string not found in document" },
+  });
+  for (const kind of ["tool", "web", "search"]) {
+    const summary = activityFailureMessage(supplier, kind);
+    assert.doesNotMatch(
+      summary,
+      /原文件未改动|private|old_string|错误原文保留/
+    );
+    assert.match(summary, /尚未/);
+  }
+});
 
 test("consecutive tool-only messages group without changing messages, parts or identities", () => {
   const a = message("a", [{ type: "step-start" }, tool("a")]);
@@ -58,6 +93,7 @@ test("mixed parts retain every visible boundary and special renderer outside gro
       "getWeather",
       "createDocument",
       "updateDocument",
+      "editDocument",
       "requestSuggestions",
       "createResultTable",
     ].map((name) => ({ ...tool(name), type: `tool-${name}` })),

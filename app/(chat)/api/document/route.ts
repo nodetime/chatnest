@@ -111,20 +111,30 @@ export async function POST(request: Request) {
     return new ChatbotError("forbidden:document").toResponse();
   }
 
-  if (isManualEdit && documents.length > 0) {
-    const result = await getUseCases().documents.updateContent({ content, id });
-    return Response.json(result, { status: 200 });
+  try {
+    if (isManualEdit && documents.length > 0) {
+      const result = await getUseCases().documents.updateContent({
+        content,
+        id,
+      });
+      return Response.json(result, { status: 200 });
+    }
+
+    const document = await getUseCases().documents.save({
+      content,
+      id,
+      kind,
+      title,
+      userId: session.user.id,
+    });
+
+    return Response.json(document, { status: 200 });
+  } catch (error) {
+    if (error instanceof ChatbotError) {
+      return error.toResponse();
+    }
+    throw error;
   }
-
-  const document = await getUseCases().documents.save({
-    content,
-    id,
-    kind,
-    title,
-    userId: session.user.id,
-  });
-
-  return Response.json(document, { status: 200 });
 }
 
 export async function DELETE(request: Request) {

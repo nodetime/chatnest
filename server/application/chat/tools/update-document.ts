@@ -19,7 +19,7 @@ export const updateDocument = ({
 }: UpdateDocumentProps) =>
   tool({
     description:
-      "Full rewrite of an existing artifact. Only use for major changes where most content needs replacing. Prefer editDocument for targeted changes.",
+      "Revise an existing artifact as a whole using its latest saved content. Use for changes spanning many sections, rows or columns, such as shortening a whole table. Describe exactly what to change and what to preserve. Returns previousContent and savedContent for checking the actual changes. For a small exact replacement, use editDocument.",
     execute: async ({ id, description }) => {
       const document = await documentRepository.findLatestById(id);
 
@@ -40,12 +40,6 @@ export const updateDocument = ({
         };
       }
 
-      dataStream.write({
-        data: null,
-        transient: true,
-        type: "data-clear",
-      });
-
       const documentHandler = documentHandlersByArtifactKind.find(
         (documentHandlerByArtifactKind) =>
           documentHandlerByArtifactKind.kind === document.kind
@@ -55,14 +49,51 @@ export const updateDocument = ({
         throw new Error(`No document handler found for kind: ${document.kind}`);
       }
 
+      let content = "";
       await documentHandler.onUpdateDocument({
-        dataStream,
+        dataStream: {
+          ...dataStream,
+          write: (part) => {
+            if (part.type === "data-textDelta") {
+              content += part.data;
+            } else if (
+              part.type === "data-codeDelta" ||
+              part.type === "data-sheetDelta"
+            ) {
+              content = part.data;
+            }
+          },
+        },
         description,
         document,
         modelId,
         session,
       });
 
+      // Keep the saved version visible on failure, and target the actual
+      // document even when its workspace was closed or showing another file.
+      dataStream.write({ data: document.id, transient: true, type: "data-id" });
+      dataStream.write({
+        data: document.kind,
+        transient: true,
+        type: "data-kind",
+      });
+      dataStream.write({
+        data: document.title,
+        transient: true,
+        type: "data-title",
+      });
+      dataStream.write({ data: null, transient: true, type: "data-clear" });
+      dataStream.write({
+        data: content,
+        transient: true,
+        type:
+          document.kind === "code"
+            ? "data-codeDelta"
+            : document.kind === "sheet"
+              ? "data-sheetDelta"
+              : "data-textDelta",
+      });
       dataStream.write({ data: null, transient: true, type: "data-finish" });
 
       return {
@@ -72,6 +103,8 @@ export const updateDocument = ({
             : "The document has been updated successfully.",
         id,
         kind: document.kind,
+        previousContent: document.content,
+        savedContent: content,
         title: document.title,
       };
     },

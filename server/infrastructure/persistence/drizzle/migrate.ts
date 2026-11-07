@@ -9,13 +9,12 @@ config({
 });
 
 const runMigrate = async () => {
-  const { POSTGRES_URL } = getEnv();
-  if (!POSTGRES_URL) {
-    console.log("POSTGRES_URL not defined, skipping migrations");
-    process.exit(0);
+  const { MIGRATION_POSTGRES_URL } = getEnv();
+  if (!MIGRATION_POSTGRES_URL) {
+    throw new Error("MIGRATION_POSTGRES_URL_REQUIRED");
   }
 
-  const connection = postgres(POSTGRES_URL, { max: 1 });
+  const connection = postgres(MIGRATION_POSTGRES_URL, { max: 1 });
   const db = drizzle(connection);
 
   console.log("Running migrations...");
@@ -30,8 +29,7 @@ const runMigrate = async () => {
   process.exit(0);
 };
 
-runMigrate().catch((err) => {
-  console.error("Migration failed");
-  console.error(err);
+runMigrate().catch(() => {
+  console.error("MIGRATION_FAILED_CHECK_MIGRATION_POSTGRES_URL_AND_SCHEMA");
   process.exit(1);
 });

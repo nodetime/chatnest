@@ -4,39 +4,148 @@ import {
   boolean,
   check,
   foreignKey,
+  index,
   integer,
   json,
   pgTable,
   primaryKey,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
 
 // 用户账号表:认证体系(better-auth)的用户主档,其余业务表经外键引用。
-export const user = pgTable("users", {
-  // 账号创建时间
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  // 登录邮箱,认证与账号找回的凭证
-  email: varchar("email", { length: 64 }).notNull(),
-  // 邮箱是否已完成验证
-  emailVerified: boolean("email_verified").notNull().default(false),
-  // 用户唯一标识(uuid),全库各表通过外键引用
-  id: uuid("id").primaryKey().notNull().defaultRandom(),
-  // 头像图片 URL
-  image: text("image"),
-  // 是否匿名(访客)账号:无持久登录凭证
-  isAnonymous: boolean("is_anonymous").notNull().default(false),
-  // 展示昵称
-  name: text("name"),
-  // 登录口令散列;匿名或第三方登录账号为空
-  password: varchar("password", { length: 64 }),
-  // 账号资料最近一次更新时间
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
+export const user = pgTable(
+  "users",
+  {
+    // 账号创建时间
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    // 登录邮箱,认证与账号找回的凭证
+    email: varchar("email", { length: 64 }).notNull(),
+    // 邮箱是否已完成验证
+    emailVerified: boolean("email_verified").notNull().default(false),
+    // 用户唯一标识(uuid),全库各表通过外键引用
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    // 头像图片 URL
+    image: text("image"),
+    // 是否匿名(访客)账号:无持久登录凭证
+    isAnonymous: boolean("is_anonymous").notNull().default(false),
+    // 展示昵称
+    name: text("name"),
+    // 登录口令散列;匿名或第三方登录账号为空
+    password: varchar("password", { length: 64 }),
+    // 认证会话修订号;变更后旧 JWT 全部失效
+    sessionRevision: integer("session_revision").notNull().default(1),
+    // 账号资料最近一次更新时间
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    // 会话修订号必须为正整数。
+    check("users_session_revision", sql`${table.sessionRevision} > 0`),
+  ]
+);
 
 export type User = InferSelectModel<typeof user>;
+
+// 个人偏好表：保存用户级通知和默认模型选择，不混入平台工作区配置。
+export const userPreferences = pgTable(
+  "user_preferences",
+  {
+    // 偏好创建时间。
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    // 默认模型标识；为空时使用部署默认模型。
+    defaultModelId: text("default_model_id"),
+    // 是否接收产品通知邮件。
+    emailNotifications: boolean("email_notifications").notNull().default(true),
+    // 偏好修订号；更新接口用来防止旧表单覆盖新设置。
+    revision: integer("revision").notNull().default(1),
+    // 偏好最近更新时间。
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    // 所属用户，也是偏好聚合主键。
+    userId: uuid("user_id")
+      .primaryKey()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    // 修订号必须为正整数。
+    check("user_preferences_revision", sql`${table.revision} > 0`),
+  ]
+);
+
+// 账号删除申请表：记录用户申请和撤回事实，不直接删除账务与审计数据。
+export const accountDeletionRequest = pgTable(
+  "account_deletion_requests",
+  {
+    // 撤回时间。
+    cancelledAt: timestamp("cancelled_at"),
+    // 管理员完成处理时间。
+    completedAt: timestamp("completed_at"),
+    // 完成处理的管理员主体标识或系统 worker 标识。
+    completedBy: text("completed_by"),
+    // 申请唯一标识。
+    id: uuid("id").primaryKey().defaultRandom(),
+    // 当前部署没有邮件适配器时保留 not_configured，不假装已发送通知。
+    notificationAddress: text("notification_address"),
+    notificationStatus: varchar("notification_status", {
+      enum: ["not_configured", "pending", "sent"],
+    })
+      .notNull()
+      .default("not_configured"),
+    // 申请原因，可为空，不保存额外敏感资料。
+    reason: text("reason"),
+    // 远端平台身份停用请求结果，不把远端错误伪装成已完成。
+    remoteDeactivationError: text("remote_deactivation_error"),
+    remoteDeactivationRequestId: text("remote_deactivation_request_id"),
+    remoteDeactivationStatus: varchar("remote_deactivation_status", {
+      enum: ["not_required", "pending", "completed", "failed"],
+    })
+      .notNull()
+      .default("not_required"),
+    // 提交时间。
+    requestedAt: timestamp("requested_at").notNull().defaultNow(),
+    // 期限到达后完成个人内容清理的时间；保留 tombstone 账务事实。
+    retentionPurgedAt: timestamp("retention_purged_at"),
+    // 删除完成后的最短保留期限，期限内只保留脱敏事实。
+    retentionUntil: timestamp("retention_until"),
+    // 申请状态：requested/cancelled/completed。
+    status: varchar("status", {
+      enum: ["requested", "cancelled", "completed"],
+    })
+      .notNull()
+      .default("requested"),
+    // 脱敏后的不可变 tombstone 标识。
+    tombstoneId: text("tombstone_id"),
+    // 所属用户。
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    // 用户状态查询索引；事务内仍会锁定用户行避免重复申请。
+    index("account_deletion_requests_user_status_idx").on(
+      table.userId,
+      table.status
+    ),
+    check(
+      "account_deletion_requests_status",
+      sql`${table.status} in ('requested','cancelled','completed')`
+    ),
+    check(
+      "account_deletion_requests_remote_status",
+      sql`${table.remoteDeactivationStatus} in ('not_required','pending','completed','failed')`
+    ),
+    check(
+      "account_deletion_requests_notification_status",
+      sql`${table.notificationStatus} in ('not_configured','pending','sent')`
+    ),
+    uniqueIndex("account_deletion_requests_tombstone_idx").on(
+      table.tombstoneId
+    ),
+  ]
+);
 
 // 会话表:一次完整对话的元信息与可见范围。
 export const chat = pgTable("chats", {
@@ -401,5 +510,163 @@ export const chatCapabilityScope = pgTable(
     }).onDelete("cascade"),
     // 修订约束：范围修订必须为正整数。
     check("chat_capability_scopes_revision", sql`${table.revision} > 0`),
+  ]
+);
+
+// 外部身份映射表：把平台 issuer/subject 稳定映射到 ChatNest 本地 actor。
+export const externalIdentity = pgTable(
+  "external_identities",
+  {
+    // 映射创建时间。
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    // 外部身份签发方标识。
+    issuer: text("issuer").notNull(),
+    // 外部身份所属平台实例标识。
+    platformId: text("platform_id").notNull(),
+    // 外部身份主体标识。
+    subject: text("subject").notNull(),
+    // 映射最近确认时间。
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    // 映射到本地 users.id 的账号外键。
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    // 外部主体三元组唯一，防止同一平台主体串号。
+    primaryKey({
+      columns: [table.platformId, table.issuer, table.subject],
+      name: "external_identities_pk",
+    }),
+    // 一个本地账号在本期最多关联一个平台主体。
+    index("external_identities_user_idx").on(table.userId),
+  ]
+);
+
+// Agent 执行操作表：记录一次需要平台准入或收据恢复的模型/工具 operation。
+export const executionOperation = pgTable(
+  "execution_operations",
+  {
+    // 一次真实出站 attempt 唯一标识。
+    attemptId: text("attempt_id").notNull(),
+    // canonical provider/platform/api 工具身份。
+    canonicalToolKey: text("canonical_tool_key").notNull(),
+    // 所属聊天。
+    chatId: uuid("chat_id")
+      .notNull()
+      .references(() => chat.id, { onDelete: "cascade" }),
+    // 创建时间。
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    // Porta 出站证据状态。
+    dispatchEvidence: text("dispatch_evidence"),
+    // 模型步骤对应的模型标识。
+    modelId: text("model_id"),
+    // 平台 operation 唯一标识。
+    operationId: text("operation_id").primaryKey().notNull(),
+    // 平台价格版本快照。
+    priceVersion: text("price_version"),
+    // Porta receipt 不可变 JSON 快照。
+    receipt: json("receipt"),
+    // 平台预留积分十进制字符串。
+    reservedPoints: text("reserved_points"),
+    // Agent run 标识，允许同一聊天多轮执行关联。
+    runId: text("run_id"),
+    // 平台账务会话组，同一 ChatNest 对话内模型/工具步骤共享。
+    sessionGroupId: text("session_group_id").notNull(),
+    // 本地执行状态。
+    state: text("state").notNull(),
+    // 会话内步骤顺序，用于用户查看明细。
+    stepIndex: integer("step_index"),
+    // 账务 subject 类型：model 或 tool。
+    subjectType: text("subject_type").notNull(),
+    // 最近状态更新时间。
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    // 本地用户属主。
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    // attempt 全局唯一，阻止同一次出站被重复接管。
+    check(
+      "execution_operations_attempt_nonempty",
+      sql`${table.attemptId} <> ''`
+    ),
+    // 只允许已定义的本地执行状态。
+    check(
+      "execution_operations_state",
+      sql`${table.state} in ('ready','sending','sent','settled','failed','reconcile_pending')`
+    ),
+    // 只允许模型或工具两类账务主体。
+    check(
+      "execution_operations_subject_type",
+      sql`${table.subjectType} in ('model','tool')`
+    ),
+    index("execution_operations_user_idx").on(table.userId, table.createdAt),
+    uniqueIndex("execution_operations_attempt_idx").on(table.attemptId),
+  ]
+);
+
+// 执行 receipt 表：保存不依赖消息 parts 的不可变结算证据。
+export const executionReceipt = pgTable(
+  "execution_receipts",
+  {
+    // 对应 attempt。
+    attemptId: text("attempt_id").notNull(),
+    // 保存时间。
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    // 对应 operation。
+    operationId: text("operation_id").notNull(),
+    // 签名后的 receipt JSON。
+    payload: json("payload").notNull(),
+    // receipt 唯一标识。
+    receiptId: text("receipt_id").primaryKey().notNull(),
+    // receipt 版本。
+    revision: integer("revision").notNull().default(1),
+  },
+  (table) => [
+    // 同一 attempt 只允许一个当前 receipt。
+    index("execution_receipts_attempt_idx").on(table.attemptId),
+    check("execution_receipts_revision", sql`${table.revision} > 0`),
+  ]
+);
+
+// 结算 outbox：只恢复平台账务命令，不重放供应商调用。
+export const settlementOutbox = pgTable(
+  "settlement_outbox",
+  {
+    // 已尝试次数。
+    attempts: integer("attempts").notNull().default(0),
+    // 账务命令类型。
+    command: text("command").notNull(),
+    // 创建时间。
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    // outbox 行唯一标识。
+    id: uuid("id").primaryKey().defaultRandom(),
+    // 平台幂等键。
+    idempotencyKey: text("idempotency_key").notNull(),
+    // 下次尝试时间。
+    nextAttemptAt: timestamp("next_attempt_at").notNull().defaultNow(),
+    // 对应 operation。
+    operationId: text("operation_id").notNull(),
+    // 命令 JSON，不包含原始响应正文和凭据。
+    payload: json("payload").notNull(),
+    // outbox 状态。
+    state: text("state").notNull().default("pending"),
+    // 最近更新时间。
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    // 同一账务命令幂等键唯一。
+    uniqueIndex("settlement_outbox_idempotency_idx").on(table.idempotencyKey),
+    // 只允许有限命令和状态。
+    check(
+      "settlement_outbox_command",
+      sql`${table.command} in ('report','cancel','reconcile')`
+    ),
+    check(
+      "settlement_outbox_state",
+      sql`${table.state} in ('pending','processing','succeeded','failed','dead_letter')`
+    ),
   ]
 );

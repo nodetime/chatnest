@@ -5,6 +5,7 @@ type CatalogMessage = { role: string; parts?: readonly unknown[] };
 const nativeTools = new Set([
   "tool-createDocument",
   "tool-updateDocument",
+  "tool-editDocument",
   "tool-createResultTable",
 ]);
 const documentId =

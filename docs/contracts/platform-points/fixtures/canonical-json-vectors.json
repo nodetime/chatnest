@@ -1,0 +1,17 @@
+{
+  "permit": {
+    "attemptId": "attempt-1",
+    "canonicalToolKey": "onebound/1688/item_search",
+    "chargeMode": "attempt",
+    "deploymentId": "deployment-fixture",
+    "expiresAt": "2099-10-30T00:00:05.000Z",
+    "issuedAt": "2026-10-30T00:00:00.000Z",
+    "keyId": "key-1",
+    "operationId": "op-1",
+    "platformId": "platform-fixture",
+    "priceVersion": "2026-10-30.1",
+    "protocolVersion": "v1",
+    "reservedPoints": "2"
+  },
+  "schemaRevision": "2026-11-05.16"
+}

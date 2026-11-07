@@ -42,15 +42,22 @@ export function projectToolIdentity(
   const skill = loadedSkill(part);
   const nativeTitles: Record<string, string> = {
     "tool-askUser": "补充信息",
+    "tool-createDocument": "整理产物",
     "tool-createResultTable": "生成表格产物",
+    "tool-editDocument": "修改产物",
+    "tool-executeCode": "计算与处理数据",
     "tool-loadSkill": "加载技能",
     "tool-readAttachment": "读取文件",
     "tool-readSkillResource": "读取技能参考",
+    "tool-updateDocument": "更新产物",
     "tool-updateTodo": "更新任务进度",
+    "tool-viewImage": "查看商品图片",
   };
   const match = aliases.find((item) => item.alias === name);
   // Exact conventional operations only; unknown operations keep their real name.
   const knownActions: Record<string, string> = {
+    native_alibaba1688_product_find_product: "查询1688商品",
+    onebound_1688_item_get: "查询商品详情",
     search: "搜索资料",
     search_web: "搜索资料",
     "search.web": "搜索资料",
@@ -58,6 +65,7 @@ export function projectToolIdentity(
     tavily_search: "搜索资料",
     "tavily-extract": "读取网页正文",
     "tavily-search": "搜索资料",
+    web_fetch_exa: "读取网页正文",
     web_search_exa: "搜索资料",
   };
   const knownAction =
@@ -86,7 +94,41 @@ export function projectToolIdentity(
     (value): value is string =>
       typeof value === "string" && value.trim().length > 0 && value !== title
   );
+  const productLookup = match?.name === "onebound_1688_item_get";
+  const productSearch =
+    match?.name === "native_alibaba1688_product_find_product";
+  const approvalInput =
+    productLookup && input
+      ? {
+          商品编号: input.num_iid,
+          ...(input.agent === undefined || input.agent === null
+            ? {}
+            : {
+                价格选项:
+                  String(input.agent) === "1"
+                    ? "分销代发价"
+                    : "已指定，见调用详情",
+              }),
+        }
+      : productSearch && input
+        ? {
+            ...(input.query ? { 关键词: input.query } : {}),
+            ...(input.pageSize === undefined
+              ? {}
+              : { 最多返回条数: input.pageSize }),
+            ...(input.imgBase64 || input.imageUrl
+              ? { 查询图片: "使用提供的图片" }
+              : {}),
+            ...(Object.keys(input).some(
+              (key) =>
+                !["query", "pageSize", "imgBase64", "imageUrl"].includes(key)
+            )
+              ? { 其他筛选: "已指定，可在详情中查看" }
+              : {}),
+          }
+        : part.input;
   return {
+    approvalInput,
     context: skill || (match && !knownAction) ? undefined : context,
     kind:
       knownAction === "搜索资料"
@@ -95,7 +137,7 @@ export function projectToolIdentity(
           ? "web"
           : "tool",
     name,
-    nativeName: match?.name,
+    nativeName: productLookup || productSearch ? undefined : match?.name,
     origin: match?.serverName,
     skillLoaded: Boolean(skill),
     title,
@@ -163,7 +205,7 @@ export function projectResult(
   const sourceFor = (
     object: Record<string, unknown>
   ): PreviewSource | undefined => {
-    for (const key of ["url", "source_url", "href", "item_url"]) {
+    for (const key of ["url", "source_url", "href", "item_url", "detailUrl"]) {
       const rawUrl = object[key];
       if (typeof rawUrl !== "string" || rawUrl.length > 2048) {
         continue;
@@ -250,6 +292,7 @@ export function projectResult(
           "source_url",
           "href",
           "item_url",
+          "detailUrl",
           "snippet",
           "description",
           "summary",
@@ -263,7 +306,9 @@ export function projectResult(
         const represented =
           key === titleKey ||
           key === textKey ||
-          (["url", "source_url", "href", "item_url"].includes(key) &&
+          (["url", "source_url", "href", "item_url", "detailUrl"].includes(
+            key
+          ) &&
             object[key] === source?.url);
         if (!represented) {
           preview.truncated = true;

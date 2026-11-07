@@ -1,0 +1,101 @@
+{
+  "fixture": "tool-success",
+  "apiVersion": "v1",
+  "schemaRevision": "2026-11-05.16",
+  "pointScale": 1000000,
+  "reserve": {
+    "request": {
+      "operationId": "op_tool_001",
+      "attemptId": "att_tool_001",
+      "sessionGroupId": "chat_personal_001",
+      "stepIndex": 1,
+      "subjectType": "tool",
+      "subjectId": "tool:onebound/1688/item_search",
+      "canonicalToolKey": "onebound/1688/item_search",
+      "billingDimensions": {
+        "mode": "basic"
+      },
+      "policyRevision": "policy_2026_10_31_1"
+    },
+    "response": {
+      "holdId": "hold_tool_001",
+      "priceVersion": "price_tool_fixture_1",
+      "reservedPoints": "2.000000"
+    }
+  },
+  "dispatch": {
+    "response": {
+      "permit": "fixture-tool-permit-token"
+    },
+    "permitPayload": {
+      "protocolVersion": "v1",
+      "platformId": "platform-fixture",
+      "deploymentId": "deployment-fixture",
+      "operationId": "op_tool_001",
+      "attemptId": "att_tool_001",
+      "canonicalToolKey": "onebound/1688/item_search",
+      "priceVersion": "price_tool_fixture_1",
+      "reservedPoints": "2.000000",
+      "chargeMode": "success",
+      "keyId": "key-1",
+      "issuedAt": "2026-10-31T00:00:00.000Z",
+      "expiresAt": "2099-10-31T00:00:30.000Z",
+      "signature": "fixture-permit-signature"
+    }
+  },
+  "porta": {
+    "supplierCallCount": 1,
+    "receipt": {
+      "receiptId": "receipt_tool_001",
+      "operationId": "op_tool_001",
+      "attemptId": "att_tool_001",
+      "canonicalToolKey": "onebound/1688/item_search",
+      "dispatchEvidence": "response",
+      "outcome": "response",
+      "httpStatus": 200,
+      "supplierUnits": {
+        "supplierCredits": "1"
+      },
+      "receiptRevision": 1,
+      "signature": "fixture-receipt-signature"
+    }
+  },
+  "report": {
+    "request": {
+      "operationId": "op_tool_001",
+      "attemptId": "att_tool_001",
+      "outcome": "response",
+      "usage": null,
+      "executionReceipt": {
+        "receiptId": "receipt_tool_001",
+        "operationId": "op_tool_001",
+        "attemptId": "att_tool_001",
+        "canonicalToolKey": "onebound/1688/item_search",
+        "dispatchEvidence": "response",
+        "outcome": "response",
+        "httpStatus": 200,
+        "supplierUnits": {
+          "supplierCredits": "1"
+        },
+        "receiptRevision": 1,
+        "signature": "fixture-receipt-signature"
+      }
+    },
+    "response": {
+      "state": "settled"
+    }
+  },
+  "trace": {
+    "requestId": "req_tool_001",
+    "traceId": "trace_tool_001",
+    "chatId": "chat_personal_001",
+    "sessionGroupId": "chat_personal_001",
+    "stepIndex": 1,
+    "operationId": "op_tool_001",
+    "attemptId": "att_tool_001",
+    "priceVersion": "price_tool_fixture_1",
+    "policyRevision": "policy_2026_10_31_1",
+    "receiptId": "receipt_tool_001",
+    "ledgerEntryId": "ledger_tool_001"
+  }
+}

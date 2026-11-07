@@ -1,5 +1,6 @@
 import { createMCPClient, type MCPClient } from "@ai-sdk/mcp";
 import { dynamicTool, type ToolSet } from "ai";
+import { currentExecutionPermit } from "@/server/application/chat/tool-billing";
 import {
   abortable,
   closeManagedClient,
@@ -13,6 +14,7 @@ import {
   guardedFetch,
 } from "@/server/application/mcp/network";
 import {
+  canonicalToolKey,
   type RuntimeConfig,
   type RuntimeServer,
   readRuntimeConfig,
@@ -43,6 +45,13 @@ export async function createAgentRuntime(
     skills?: Skill[];
     authorizeTool?: (server: RuntimeServer) => Promise<void>;
     authorizeSkill?: (skill: Skill) => Promise<void>;
+    onSkillLoaded?: (name: string, instructions: string) => void;
+    billToolCall?: (input: {
+      args: unknown;
+      canonicalToolKey: string;
+      next: () => Promise<unknown>;
+      toolCallId: string;
+    }) => Promise<unknown>;
   } = {}
 ) {
   const [config, skills] = await Promise.all([
@@ -56,7 +65,11 @@ export async function createAgentRuntime(
     AbortSignal.timeout(config.timeoutMs),
   ]);
   const tools: ToolSet = {
-    ...createSkillTools(skills, evidence.authorizeSkill),
+    ...createSkillTools(
+      skills,
+      evidence.authorizeSkill,
+      evidence.onSkillLoaded
+    ),
   };
   const unavailable: string[] = [];
   const close = async () => {
@@ -95,10 +108,37 @@ export async function createAgentRuntime(
                 ...(server.managed ? { maxRetries: 0 } : {}),
                 transport: {
                   fetch: server.managed
-                    ? guardedFetch({ headers, url }, process.env, runSignal)
+                    ? guardedFetch(
+                        { headers, url },
+                        process.env,
+                        runSignal,
+                        (input, init) => {
+                          const permit = currentExecutionPermit();
+                          const requestHeaders = new Headers(init?.headers);
+                          if (permit) {
+                            requestHeaders.set(
+                              "X-Porta-Execution-Permit",
+                              permit
+                            );
+                          }
+                          return fetch(input, {
+                            ...init,
+                            headers: requestHeaders,
+                          });
+                        }
+                      )
                     : (input, init) =>
                         fetch(input, {
                           ...init,
+                          headers: {
+                            ...Object.fromEntries(new Headers(init?.headers)),
+                            ...(currentExecutionPermit()
+                              ? {
+                                  "X-Porta-Execution-Permit":
+                                    currentExecutionPermit(),
+                                }
+                              : {}),
+                          },
                           // Do not let redirects evade endpoint policy or move credentials.
                           redirect: "error",
                           signal: AbortSignal.any([
@@ -134,6 +174,14 @@ export async function createAgentRuntime(
             if (tools[alias]) {
               throw new Error("MCP tool alias collision");
             }
+            const nativeMeta =
+              remote._meta && typeof remote._meta === "object"
+                ? (remote._meta as Record<string, unknown>)["porta/native"]
+                : undefined;
+            const billingToolKey =
+              nativeMeta && typeof nativeMeta === "object"
+                ? `native_mcp/${String((nativeMeta as Record<string, unknown>).service)}/${String((nativeMeta as Record<string, unknown>).name)}`
+                : canonicalToolKey(server, name);
             serverTools[alias] = dynamicTool({
               description: `${server.name}: ${remote.description ?? name}`,
               execute: (input, options) => {
@@ -149,14 +197,23 @@ export async function createAgentRuntime(
                       AbortSignal.timeout(config.toolTimeoutMs),
                       ...(options.abortSignal ? [options.abortSignal] : []),
                     ]);
-                    output = await abortable(
-                      () =>
-                        remote.execute(input, {
-                          ...options,
-                          abortSignal: callSignal,
-                        }),
-                      callSignal
-                    );
+                    const execute = () =>
+                      abortable(
+                        () =>
+                          remote.execute(input, {
+                            ...options,
+                            abortSignal: callSignal,
+                          }),
+                        callSignal
+                      );
+                    output = await (evidence.billToolCall
+                      ? evidence.billToolCall({
+                          args: input,
+                          canonicalToolKey: billingToolKey,
+                          next: execute,
+                          toolCallId: options.toolCallId,
+                        })
+                      : execute());
                   } catch {
                     // SDK exceptions can contain the full URL and authorization headers.
                     // biome-ignore lint/style/useErrorCause: Raw SDK/crypto causes may contain credentials; intentionally discard.

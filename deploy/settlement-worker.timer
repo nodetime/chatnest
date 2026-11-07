@@ -1,0 +1,11 @@
+[Unit]
+Description=Run ChatNest settlement worker every minute
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=60s
+Unit=settlement-worker.service
+Persistent=true
+
+[Install]
+WantedBy=timers.target

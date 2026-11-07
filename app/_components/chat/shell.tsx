@@ -32,6 +32,7 @@ import { Greeting } from "./greeting";
 import { submitEditedMessage } from "./message-editor";
 import { Messages } from "./messages";
 import { MultimodalInput } from "./multimodal-input";
+import { TaskProgress } from "./task-progress";
 import { WorkbenchSection } from "./workbench-section";
 import { Workspace } from "./workspace";
 import { WorkspaceHome } from "./workspace-home";
@@ -49,8 +50,6 @@ export function ChatShell() {
     addToolApprovalResponse,
     answerAskUser,
     reviseAskUser,
-    agentPaused,
-    continueAgent,
     input,
     setInput,
     visibilityType,
@@ -65,6 +64,8 @@ export function ChatShell() {
     error,
     getSendError,
     loadError,
+    taskProgress,
+    isTaskProgressRunning,
   } = useActiveChat();
 
   const { section, navigate } = useWorkbenchNavigation();
@@ -263,14 +264,12 @@ export function ChatShell() {
             {!isEmpty && (
               <Messages
                 addToolApprovalResponse={addToolApprovalResponse}
-                agentPaused={agentPaused}
                 answerAskUser={answerAskUser}
                 chatId={chatId}
                 isArtifactVisible={isArtifactVisible}
                 isLoading={isLoading}
                 isReadonly={isReadonly}
                 messages={messages}
-                onContinue={continueAgent}
                 onEditMessage={handleEditMessage}
                 onRegenerateAnswer={regenerateAnswer}
                 regenerate={regenerate}
@@ -286,13 +285,23 @@ export function ChatShell() {
               className={cn(
                 "mx-auto flex w-full min-w-0 shrink-0 flex-col",
                 isEmpty
-                  ? "max-w-[840px] px-5 pb-10 pt-12 sm:px-8 sm:pt-16"
+                  ? "max-w-[800px] px-4 pb-10 pt-10 sm:px-6 sm:pt-[clamp(3rem,9vh,6rem)]"
                   : "max-w-[800px] px-4 pt-2 pb-4 sm:px-6"
               )}
               data-testid="composer-dock"
             >
               {!!isEmpty && <Greeting />}
-              <ConversationNotice onRestore={handleRestore} />
+              {!isEmpty && (
+                <TaskProgress
+                  isRunning={isTaskProgressRunning}
+                  key={chatId}
+                  plan={taskProgress}
+                />
+              )}
+              <ConversationNotice
+                attachments={attachments}
+                onRestore={handleRestore}
+              />
               {!isReadonly && (
                 <MultimodalInput
                   attachments={attachments}
@@ -317,7 +326,7 @@ export function ChatShell() {
                 />
               )}
               {!!isEmpty && (
-                <div className="mt-10">
+                <div className="mt-8 border-t border-border/60 pt-6">
                   <WorkspaceHome />
                 </div>
               )}

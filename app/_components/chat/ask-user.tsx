@@ -1,6 +1,7 @@
 // biome-ignore-all lint/performance/noJsxPropsBind: Model-defined question fields capture their validated question ID.
 "use client";
 
+import { CheckIcon, MessageCircleQuestion } from "lucide-react";
 import { type FormEvent, useCallback, useId, useRef, useState } from "react";
 import {
   Question,
@@ -53,11 +54,9 @@ export function AskUser({
     answers: AskUserOutput["answers"];
   }>({ answers: {}, identity });
   const [mode, setMode] = useState({
-    collapsed: false,
     identity,
     revising: false,
   });
-  const collapsed = mode.identity === identity && mode.collapsed;
   const revising = mode.identity === identity && mode.revising;
   const [submission, setSubmission] = useState({
     error: "",
@@ -98,7 +97,7 @@ export function AskUser({
         if (current.current === request) {
           request.pending = false;
           if (revising) {
-            setMode({ collapsed: false, identity, revising: false });
+            setMode({ identity, revising: false });
           }
           setSubmission({ error: "", identity, pending: false });
         }
@@ -127,18 +126,10 @@ export function AskUser({
   const input = parsed.success ? parsed.data : null;
   const completed = part.state === "output-available";
   const output = completed ? part.output : undefined;
-  const handleResume = useCallback(
-    () => setMode({ collapsed: false, identity, revising }),
-    [identity, revising]
-  );
-  const handleDefer = useCallback(
-    () => setMode({ collapsed: true, identity, revising }),
-    [identity, revising]
-  );
-  const handleCancelRevision = useCallback(
-    () => setMode({ collapsed: false, identity, revising: false }),
-    [identity]
-  );
+  const handleCancelRevision = useCallback(() => {
+    setMode({ identity, revising: false });
+    setSubmission({ error: "", identity, pending: false });
+  }, [identity]);
   const handleSkip = useCallback(
     () => submit({ answers: {}, status: "cancelled" }),
     [submit]
@@ -153,11 +144,16 @@ export function AskUser({
   const handleRevise = useCallback(() => {
     current.current.pending = false;
     setDraft({ answers: output?.answers ?? {}, identity });
-    setMode({ collapsed: false, identity, revising: true });
+    setMode({ identity, revising: true });
   }, [identity, output]);
   const handleRetry = useCallback(
-    () => (output ? submit(output) : undefined),
-    [output, submit]
+    () =>
+      revising
+        ? submit({ answers, status: "answered" })
+        : output
+          ? submit(output)
+          : undefined,
+    [answers, output, revising, submit]
   );
   const handleQuestionChange = useCallback(
     (id: string, type: "text" | "single" | "multi", value: QuestionValue) => {
@@ -177,6 +173,16 @@ export function AskUser({
     [identity]
   );
 
+  let canSubmit = false;
+  if (input) {
+    try {
+      validateAskUserOutput(input, { answers, status: "answered" });
+      canSubmit = true;
+    } catch {
+      // 必填未完成时禁用提交；服务端仍独立校验最终答案。
+    }
+  }
+
   if (!input || part.state === "input-streaming") {
     return (
       <div
@@ -192,13 +198,25 @@ export function AskUser({
   return (
     <section
       aria-label="Agent 提问"
-      className="w-full overflow-hidden rounded-xl border border-border/80 bg-card p-4 text-[13px] shadow-[var(--shadow-composer)]"
+      className={`w-full overflow-hidden rounded-xl border border-border/70 p-4 text-[13px] ${completed && !revising ? "bg-transparent" : "bg-card/70"}`}
       data-testid="ask-user"
     >
-      <div className="mb-3 flex items-start gap-2">
-        <span className="size-1.5 rounded-full bg-foreground/60" />
-        <h3 className="text-sm font-medium text-foreground">{input.title}</h3>
-        <span className="ml-auto text-xs text-muted-foreground">
+      <div className="mb-3 flex items-start gap-2.5">
+        {completed && !revising ? (
+          <CheckIcon
+            aria-hidden
+            className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+          />
+        ) : (
+          <MessageCircleQuestion
+            aria-hidden
+            className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+          />
+        )}
+        <h3 className="min-w-0 flex-1 text-sm font-medium leading-5 text-foreground">
+          {input.title}
+        </h3>
+        <span className="shrink-0 text-xs leading-5 text-muted-foreground">
           {pending
             ? "正在提交…"
             : error
@@ -212,19 +230,7 @@ export function AskUser({
                 : "等待你的回答"}
         </span>
       </div>
-      {collapsed && available ? (
-        <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
-          <span>草稿已保留，稍后可继续回答。</span>
-          <Button
-            onClick={handleResume}
-            size="sm"
-            type="button"
-            variant="outline"
-          >
-            继续回答
-          </Button>
-        </div>
-      ) : (completed && !revising) || !available ? (
+      {(completed && !revising) || !available ? (
         <details data-testid="ask-answer-summary" open={!completed}>
           <summary className="w-fit cursor-pointer text-xs text-muted-foreground focus-visible:outline-2 focus-visible:outline-ring">
             查看回答
@@ -265,7 +271,7 @@ export function AskUser({
           onSubmit={handleSubmit}
         >
           <div
-            className="max-h-[min(50dvh,360px)] space-y-4 overflow-y-auto overscroll-contain pr-1"
+            className="max-h-[min(50dvh,400px)] space-y-5 overflow-y-auto overscroll-contain pr-1"
             data-testid="ask-questions"
           >
             {input.questions.map((question) => {
@@ -281,6 +287,11 @@ export function AskUser({
                     id={`${formId}-${question.id}-label`}
                   >
                     {question.label}
+                    {question.type === "multi" && (
+                      <span className="ml-2 text-xs font-normal text-muted-foreground">
+                        可多选
+                      </span>
+                    )}
                     {!!question.required && (
                       <span aria-hidden className="ml-1 text-muted-foreground">
                         *
@@ -322,13 +333,27 @@ export function AskUser({
                       <QuestionOptions
                         aria-labelledby={`${formId}-${question.id}-label`}
                         aria-required={question.required}
+                        className="grid grid-cols-1 gap-2 sm:grid-cols-2"
                       >
                         {question.options?.map((option) => (
                           <QuestionOption
-                            className="min-h-8 rounded-lg px-3 py-1.5 text-[13px]"
+                            className="min-h-10 justify-start gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] font-normal aria-checked:border-foreground/35 aria-checked:bg-muted aria-checked:text-foreground"
                             key={option.value}
                             value={option.value}
+                            variant="outline"
                           >
+                            <span
+                              aria-hidden
+                              className={`flex size-4 shrink-0 items-center justify-center border ${question.type === "multi" ? "rounded" : "rounded-full"}`}
+                            >
+                              {(
+                                Array.isArray(answer)
+                                  ? answer.includes(option.value)
+                                  : answer === option.value
+                              ) ? (
+                                <CheckIcon className="size-3" />
+                              ) : null}
+                            </span>
                             {option.label}
                           </QuestionOption>
                         ))}
@@ -340,15 +365,6 @@ export function AskUser({
             })}
           </div>
           <QuestionActions className="flex flex-wrap items-center justify-end gap-1.5 border-t border-border/60 pt-3">
-            <Button
-              disabled={pending}
-              onClick={handleDefer}
-              size="sm"
-              type="button"
-              variant="ghost"
-            >
-              稍后回答
-            </Button>
             {revising ? (
               <Button
                 disabled={pending}
@@ -370,14 +386,13 @@ export function AskUser({
                 跳过
               </Button>
             )}
-            <Button disabled={pending} size="sm" type="submit">
+            <Button disabled={pending || !canSubmit} size="sm" type="submit">
               {pending ? "正在提交…" : revising ? "提交修改" : "提交回答"}
             </Button>
           </QuestionActions>
         </form>
       )}
       {completed &&
-        !collapsed &&
         !revising &&
         available &&
         onRevise &&

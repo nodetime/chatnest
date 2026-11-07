@@ -44,8 +44,15 @@
 ### 设计与验收档案(superpowers/)
 
 - `specs/` - 10 份设计定稿,文件名即日期与主题
-- `plans/` - 32 份逐轮实施计划与验收记录,文件名即日期与主题
+- `plans/` - 逐轮实施记录；当前研发状态只看下方唯一 TODO
 - 每轮固定节拍:spec -> plan -> 独立审查 -> 真实验证 -> verification 文档
+
+### 当前研发状态
+
+| 文档 | 内容 |
+| --- | --- |
+| [superpowers/plans/2026-11-04-core-launch-goal-and-todo.md](superpowers/plans/2026-11-04-core-launch-goal-and-todo.md) | 三仓唯一研发 TODO、锁定 SHA 与本机验收边界 |
+| [contracts/platform-points/contract-matrix.md](contracts/platform-points/contract-matrix.md) | v1 endpoint、owner、幂等键、错误码和兼容矩阵 |
 
 ### 历史快照(冻结,不再更新)
 

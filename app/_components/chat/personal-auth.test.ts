@@ -10,6 +10,73 @@ function run(script: string) {
   });
 }
 
+test("development admin uses the real password check and production keeps email login", () => {
+  run(`
+    const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript');
+    const {hashSync}=require('bcrypt-ts');
+    const account={id:'dev-account',email:'admin@chatnest.local',password:hashSync('123456',10)};
+    let config;
+    const modules={
+      'next-auth':{__esModule:true,default:value=>{config=value;return {handlers:{GET(){},POST(){}},auth(){},signIn(){},signOut(){}}}},
+      'next-auth/providers/credentials':{__esModule:true,default:value=>value},
+      '@/app/_lib/constants':{DUMMY_PASSWORD:hashSync('dummy-password',10)},
+      '@/server/composition':{getUseCases:()=>({users:{findByEmail:async email=>email===account.email?[account]:[]}})},
+      './auth.config':{authConfig:{}},
+    };
+    const mod={exports:{}};
+    vm.runInNewContext(ts.transpileModule(fs.readFileSync('app/(auth)/auth.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,esModuleInterop:true}}).outputText,{exports:mod.exports,module:mod,require:n=>n in modules?modules[n]:require(n.startsWith('@/')?process.cwd()+'/'+n.slice(2):n)});
+    (async()=>{
+      const authorize=config.providers[0].authorize;
+      for(const environment of ['development','test','production']){
+        process.env.NODE_ENV=environment;
+        const result=await authorize({email:'admin',password:'123456'});
+        assert.equal(result?.id??null,environment==='development'?account.id:null);
+        assert.equal(await authorize({email:'admin',password:'wrong-password'}),null);
+        assert.equal((await authorize({email:account.email,password:'123456'})).id,account.id);
+      }
+    })().catch(error=>{console.error(error);process.exitCode=1});
+  `);
+});
+
+test("only development login accepts admin while registration remains email based", () => {
+  run(`
+    const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript');
+    const calls=[];
+    const modules={
+      './auth':{signIn:async(...args)=>calls.push(args)},
+      '@/server/composition':{getUseCases:()=>({users:{findByEmail:async()=>[]}})},
+    };
+    const mod={exports:{}};
+    vm.runInNewContext(ts.transpileModule(fs.readFileSync('app/(auth)/actions.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports:mod.exports,module:mod,require:n=>n in modules?modules[n]:require(n.startsWith('@/')?process.cwd()+'/'+n.slice(2):n)});
+    (async()=>{
+      for(const environment of ['development','test','production']){
+        process.env.NODE_ENV=environment;
+        const form=new FormData();form.set('email','admin');form.set('password','123456');
+        const result=await mod.exports.login({status:'idle'},form);
+        assert.equal(result.status,environment==='development'?'success':'invalid_data');
+        assert.equal((await mod.exports.register({status:'idle'},form)).status,'invalid_data');
+      }
+      assert.equal(calls.length,1);
+      assert.equal(calls[0][1].email,'admin@chatnest.local');
+    })().catch(error=>{console.error(error);process.exitCode=1});
+  `);
+});
+
+test("development account follows env configuration and rejects bcrypt truncation", () => {
+  run(`
+    const assert=require('node:assert/strict');
+    const {getDevelopmentAccount,resolveLoginEmail}=require('./server/shared/login-identity.ts');
+    process.env.NODE_ENV='development';
+    process.env.DEV_ADMIN_USERNAME='demo_admin';
+    process.env.DEV_ADMIN_PASSWORD='different-password';
+    assert.equal(resolveLoginEmail('demo_admin'),'demo_admin@chatnest.local');
+    assert.equal(resolveLoginEmail('admin'),'admin');
+    assert.equal(getDevelopmentAccount().password,'different-password');
+    process.env.DEV_ADMIN_PASSWORD='密'.repeat(25);
+    assert.throws(()=>getDevelopmentAccount(),/DEV_ADMIN_PASSWORD/);
+  `);
+});
+
 test("guest and unauthenticated entries go to login before changing the workspace", () => {
   run(`
     const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript');
@@ -54,6 +121,13 @@ test("login destinations are allowlisted and cannot navigate outside the app", (
     }
     for(const value of [null,'','//attacker.example','https://attacker.example','/\\\\attacker.example','/%2f%2fattacker.example','/chat/private-id','/?section=connections&next=//attacker.example','/?section=skills#fragment','/?section=connections%0a']){
       assert.equal(authReturnPath(value),'/');assert.equal(authPageHref('/login',value),'/login');
+    }
+    for(const path of ['/billing','/usage','/organizations','/account','/account/billing','/account/usage','/account/organizations']){
+      assert.equal(authReturnPath(path),path);
+      assert.equal(authPageHref('/login',path),'/login?next='+encodeURIComponent(path));
+    }
+    for(const path of ['/admin','/admin/billing','/admin/connections','/admin/models','/admin/storage']){
+      assert.equal(authReturnPath(path),path);
     }
   `);
 });
@@ -109,6 +183,36 @@ test("direct personal links require login before guest creation and preserve the
   `);
 });
 
+test("account pages and APIs stay out of the guest workspace boundary", () => {
+  run(`
+    const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript');
+    const {NextResponse}=require('next/server');
+    (async()=>{for(const token of [null,{email:'guest-1',type:'guest'},{email:'account@example.test',type:'regular'}]){
+      const modules={'next/server':{NextResponse},'next-auth/jwt':{getToken:async()=>token},uuid:{v7:()=> 'trace'},'@/server/shared/auth-cookies':{usesSecureAuthCookies:()=>false}};
+      const mod={exports:{}};
+      vm.runInNewContext(ts.transpileModule(fs.readFileSync('proxy.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports:mod.exports,module:mod,process:{env:{}},URL,Headers,Response,require:n=>n in modules?modules[n]:require(n.startsWith('@/')?process.cwd()+'/'+n.slice(2):n)});
+      for(const path of ['/billing','/usage','/organizations','/account','/account/billing','/account/usage','/account/organizations']){
+        const url=new URL('https://chat.example'+path);
+        const result=await mod.exports.proxy({nextUrl:url,url:url.href,headers:new Headers()});
+        if(token?.type==='regular')assert.equal(result.status,200);
+        else {const target=new URL(result.headers.get('location'));assert.equal(target.pathname,'/login');assert.equal(target.searchParams.get('next'),path)}
+      }
+      for(const path of ['/admin','/admin/billing']){
+        const url=new URL('https://chat.example'+path);
+        const result=await mod.exports.proxy({nextUrl:url,url:url.href,headers:new Headers()});
+        if(token?.type==='regular')assert.equal(result.status,200);
+        else {const target=new URL(result.headers.get('location'));assert.equal(target.pathname,'/login');assert.equal(target.searchParams.get('next'),path)}
+      }
+      for(const path of ['/api/billing','/api/billing/plans','/api/organizations','/api/organizations/1/members']){
+        const url=new URL('https://chat.example'+path);
+        const result=await mod.exports.proxy({nextUrl:url,url:url.href,headers:new Headers()});
+        if(token?.type==='regular')assert.equal(result.status,200);
+        else {assert.equal(result.status,401);assert.deepEqual(await result.json(),{code:'UNAUTHORIZED'})}
+      }
+    }})().catch(error=>{console.error(error);process.exitCode=1});
+  `);
+});
+
 test("failed credentials produce an inline form alert without depending on a missing toaster", () => {
   const form = readFileSync("app/_components/chat/auth-form.tsx", "utf8");
   assert.match(form, /role="alert"/);
@@ -142,4 +246,33 @@ test("authentication pages use Chinese labels and a real 数知探AI form, not a
       /Welcome back|Create account|Sign in|Sign up|Get started for free|No account\?|Have an account\?|Submit form|Loading/
     );
   }
+});
+
+test("message reads return JSON without guest bootstrap and validate chat IDs before storage", () => {
+  run(`
+    const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript');
+    function load(file,mocks){const mod={exports:{}};vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{module:mod,exports:mod.exports,process:{env:{}},URL,Headers,Response,require:n=>mocks[n]??require(n.startsWith('@/')?process.cwd()+'/'+n.slice(2):n)});return mod.exports;}
+    const path='/api/messages', id='27db2c24-140d-44e0-a16d-7fcc2c3f6b90';
+    const req=value=>new Request('http://localhost'+path+(value===undefined?'':'?chatId='+value));
+    const {proxy}=load('proxy.ts',{'next-auth/jwt':{getToken:async()=>null},uuid:{v7:()=> 'trace'}});
+    let owner='owner',visibility='private',session=null,chatReads=0,messageReads=0;
+    const {GET}=load('app/(chat)/api/messages/route.ts',{
+      '@/app/_lib/utils':{convertToUIMessages:x=>x},'@/app/(auth)/auth':{auth:async()=>session},
+      '@/server/composition':{getUseCases:()=>({chats:{findById:async()=>{chatReads++;return {userId:owner,visibility};}},messages:{listByChatId:async()=>{messageReads++;return ['reply'];}}})},
+      '@/server/domain/capability/projection':{redactPersonalSkillOutputs:x=>x},
+    });
+    (async()=>{
+      const url=new URL(req(id).url), forwarded=await proxy({nextUrl:url,url:url.href,headers:new Headers()});
+      assert.equal(forwarded.headers.get('location'),null,'messages must reach the visibility guard, not the guest redirect');
+      for(const value of [undefined,'','not-a-uuid']){
+        const r=await GET(req(value)); assert.equal(r.status,400); assert.equal((await r.json()).code,'INVALID_CHAT_ID');
+      }
+      assert.equal(chatReads,0);
+      let r=await GET(req(id));assert.equal(r.status,401);assert.equal((await r.json()).code,'UNAUTHORIZED');
+      session={user:{id:'other'}};r=await GET(req(id));assert.equal(r.status,403);assert.equal((await r.json()).code,'FORBIDDEN');
+      assert.equal(messageReads,0,'private messages must not be loaded before authorization');
+      session={user:{id:owner}};r=await GET(req(id));assert.equal(r.status,200);assert.equal((await r.json()).messages[0],'reply');assert.equal(r.headers.get('cache-control'),'private, no-store');
+      session=null;visibility='public';r=await GET(req(id));assert.equal(r.status,200);assert.equal((await r.json()).isReadonly,true);
+    })().catch(error=>{console.error(error);process.exitCode=1;});
+  `);
 });

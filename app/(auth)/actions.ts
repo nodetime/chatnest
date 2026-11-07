@@ -3,6 +3,7 @@
 import { z } from "zod";
 
 import { getUseCases } from "@/server/composition";
+import { resolveLoginEmail } from "@/server/shared/login-identity";
 
 import { signIn } from "./auth";
 
@@ -21,7 +22,7 @@ export const login = async (
 ): Promise<LoginActionState> => {
   try {
     const validatedData = authFormSchema.parse({
-      email: formData.get("email"),
+      email: resolveLoginEmail(String(formData.get("email") ?? "")),
       password: formData.get("password"),
     });
 

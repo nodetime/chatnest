@@ -1,0 +1,38 @@
+{
+  "fixture": "payment-completed",
+  "apiVersion": "v1",
+  "schemaRevision": "2026-11-05.16",
+  "checkoutIntent": {
+    "checkoutId": "checkout_fixture_001",
+    "userId": "user-a",
+    "subjectType": "personal",
+    "walletId": "wallet_user_a",
+    "planId": "plan_personal_100",
+    "priceVersion": "price_plan_fixture_1",
+    "currency": "USD",
+    "grossAmountMinor": 999,
+    "taxAmountMinor": 0,
+    "grantPoints": "100.000000",
+    "status": "pending",
+    "expiresAt": "2099-10-31T01:00:00.000Z"
+  },
+  "webhook": {
+    "providerEventId": "evt_payment_fixture_001",
+    "eventType": "checkout.completed",
+    "occurredAt": "2026-10-31T00:10:00.000Z",
+    "signature": "fixture-webhook-signature",
+    "checkoutId": "checkout_fixture_001",
+    "currency": "USD",
+    "grossAmountMinor": 999,
+    "customerRef": "user-a"
+  },
+  "transactionResult": {
+    "paymentStatus": "completed",
+    "walletGrantId": "grant_fixture_001",
+    "ledgerEntryId": "ledger_payment_fixture_001",
+    "balanceBefore": "100.000000",
+    "balanceAfter": "200.000000",
+    "idempotencyKey": "payment:synthetic:evt_payment_fixture_001"
+  },
+  "provider": "synthetic"
+}

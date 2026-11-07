@@ -12,7 +12,8 @@ export type ConversationProps = ComponentProps<typeof StickToBottom>;
 
 export const Conversation = ({ className, ...props }: ConversationProps) => (
   <StickToBottom
-    className={cn("relative flex-1 overflow-y-hidden", className)}
+    // Content owns scrolling; this wrapper must not scroll when a child receives focus.
+    className={cn("relative flex-1 overflow-clip", className)}
     initial="smooth"
     resize="smooth"
     role="log"

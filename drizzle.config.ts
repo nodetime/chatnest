@@ -7,7 +7,7 @@ config({
 
 export default defineConfig({
   dbCredentials: {
-    url: process.env.POSTGRES_URL ?? "",
+    url: process.env.MIGRATION_POSTGRES_URL ?? "",
   },
   dialect: "postgresql",
   out: "./server/infrastructure/persistence/drizzle/migrations",

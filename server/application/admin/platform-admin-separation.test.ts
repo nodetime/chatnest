@@ -93,13 +93,14 @@ test("standalone admin shell has only real navigation and return-to-workspace li
   assert.match(html, /href="\/admin\/storage"/);
   assert.match(html, /href="\/"[^>]*>[\s\S]*?返回工作台<\/a>/);
   assert.match(html, /\/admin\/models/);
-  assert.doesNotMatch(html, /\/admin\/(?:billing|logs)/);
+  assert.match(html, /\/admin\/billing/);
+  assert.doesNotMatch(html, /\/admin\/logs/);
   const layout = readFileSync("app/admin/layout.tsx", "utf8");
   assert.match(layout, /Suspense/);
   assert.match(layout, /await auth\(/);
-  assert.match(layout, /requirePlatformAdmin\(session\?\.user, notFound\)/);
+  assert.match(layout, /resolvePlatformAdmin\(session\?\.user\)/);
   assert.ok(
-    layout.indexOf("requirePlatformAdmin(session?.user, notFound)") <
+    layout.indexOf("resolvePlatformAdmin(session?.user)") <
       layout.lastIndexOf("<AdminShell")
   );
   assert.doesNotMatch(layout, /ChatShell|AppSidebar|export const runtime/);
@@ -146,18 +147,67 @@ test("platform menu link is controlled by server-computed props, not a client ro
   assert.equal(html(false), "");
   assert.match(html(true), /href="\/admin"/);
   assert.match(html(true), /平台管理/);
+  const accountLayout = readFileSync("app/(account)/layout.tsx", "utf8");
   assert.match(
-    readFileSync("app/(chat)/layout.tsx", "utf8"),
-    /isPlatformAdmin=\{isPlatformAdmin\(session\?\.user\)\}/
+    accountLayout,
+    /isPlatformAdmin=\{await resolvePlatformAdmin\(session\?\.user\)\}/
   );
   assert.match(
-    readFileSync("app/_components/chat/app-sidebar.tsx", "utf8"),
-    /<SidebarUserNav isPlatformAdmin=\{isPlatformAdmin\}/
+    readFileSync("app/_components/account/account-shell.tsx", "utf8"),
+    /href="\/admin"/
   );
+});
+
+test("workspace navigation separates account surfaces from the platform admin shell", () => {
+  const sidebar = readFileSync("app/_components/chat/app-sidebar.tsx", "utf8");
+  assert.doesNotMatch(sidebar, /href="\/billing"/);
+  assert.doesNotMatch(sidebar, /href="\/usage"/);
+  assert.doesNotMatch(sidebar, /href="\/organizations"/);
+  assert.match(sidebar, /showOrganizations/);
+  assert.match(sidebar, /<OrganizationSwitcher userType=\{user\?\.type\} \/>/);
+
+  const accountMenu = readFileSync(
+    "app/_components/chat/sidebar-user-nav.tsx",
+    "utf8"
+  );
+  assert.match(accountMenu, /href="\/account"/);
+  for (const href of [
+    "/account/billing",
+    "/account/usage",
+    "/account/organizations",
+  ]) {
+    assert.doesNotMatch(accountMenu, new RegExp(`href=\\"${href}\\"`));
+  }
+  assert.doesNotMatch(accountMenu, /PlatformAdminLink/);
   assert.match(
-    readFileSync("app/_components/chat/sidebar-user-nav.tsx", "utf8"),
-    /<PlatformAdminLink isPlatformAdmin=\{isPlatformAdmin\}/
+    readFileSync("app/_components/admin/platform-admin-link.tsx", "utf8"),
+    /平台管理后台/
   );
+
+  const organizationSwitcher = readFileSync(
+    "app/_components/chat/organization-switcher.tsx",
+    "utf8"
+  );
+  assert.match(organizationSwitcher, /userType !== "regular"/);
+  assert.match(organizationSwitcher, /组织设置/);
+
+  const accountLayout = readFileSync("app/(account)/layout.tsx", "utf8");
+  const accountShell = readFileSync(
+    "app/_components/account/account-shell.tsx",
+    "utf8"
+  );
+  assert.doesNotMatch(accountLayout, /ChatShell|AppSidebar/);
+  assert.doesNotMatch(accountShell, /ChatShell|AppSidebar/);
+  assert.doesNotMatch(accountShell, /showOrganizations/);
+  assert.doesNotMatch(accountShell, /account\/organizations/);
+  for (const href of [
+    "/account",
+    "/account/billing",
+    "/account/usage",
+    "/account/settings",
+  ]) {
+    assert.match(accountShell, new RegExp(`href: \\"${href}\\"`));
+  }
 });
 
 test("missing upload storage points users to administrators instead of a nonexistent personal setting", () => {

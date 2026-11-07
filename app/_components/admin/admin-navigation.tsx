@@ -1,6 +1,13 @@
 "use client";
 // Adapted upstream NavMain/NavLinkItem composition; see THIRD_PARTY_NOTICES.md.
-import { BrainCircuit, HardDrive, LayoutDashboard, Plug } from "lucide-react";
+import {
+  Banknote,
+  BrainCircuit,
+  HardDrive,
+  LayoutDashboard,
+  Plug,
+  UserRound,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback } from "react";
@@ -19,7 +26,17 @@ export const adminLinks = [
   { href: "/admin/models", icon: BrainCircuit, label: "模型" },
   { href: "/admin/connections", icon: Plug, label: "工具连接" },
   { href: "/admin/storage", icon: HardDrive, label: "文件存储" },
+  { href: "/admin/billing", icon: Banknote, label: "账务" },
+  { href: "/admin/accounts", icon: UserRound, label: "账户与数据" },
 ];
+const adminGroups = [
+  { hrefs: ["/admin"], label: "运营" },
+  {
+    hrefs: ["/admin/models", "/admin/connections", "/admin/storage"],
+    label: "平台能力",
+  },
+  { hrefs: ["/admin/billing", "/admin/accounts"], label: "账户与账务" },
+] as const;
 export function adminLocation(pathname: string) {
   const current = pathname.replace(/^\/demo(?=\/)/, "").replace(/\/$/, "");
   return adminLinks.find(({ href }) => current === href);
@@ -34,31 +51,42 @@ export function AdminNavigationItems({
   const current = adminLocation(pathname);
   return (
     <nav aria-label="平台管理">
-      <SidebarGroup>
-        <SidebarGroupLabel>平台管理</SidebarGroupLabel>
-        <SidebarGroupContent>
-          <SidebarMenu>
-            {adminLinks.map(({ href, label, icon: Icon }) => (
-              <SidebarMenuItem key={href}>
-                <SidebarMenuButton
-                  asChild
-                  isActive={current?.href === href}
-                  tooltip={label}
-                >
-                  <Link
-                    aria-current={current?.href === href ? "page" : undefined}
-                    href={href}
-                    onClick={onNavigate}
-                  >
-                    <Icon aria-hidden="true" />
-                    <span>{label}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        </SidebarGroupContent>
-      </SidebarGroup>
+      {adminGroups.map((group) => (
+        <SidebarGroup key={group.label}>
+          <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {group.hrefs.map((href) => {
+                const item = adminLinks.find((link) => link.href === href);
+                if (!item) {
+                  return null;
+                }
+                const Icon = item.icon;
+                return (
+                  <SidebarMenuItem key={href}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={current?.href === href}
+                      tooltip={item.label}
+                    >
+                      <Link
+                        aria-current={
+                          current?.href === href ? "page" : undefined
+                        }
+                        href={href}
+                        onClick={onNavigate}
+                      >
+                        <Icon aria-hidden="true" />
+                        <span>{item.label}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      ))}
     </nav>
   );
 }

@@ -38,10 +38,13 @@ test("home reads actual history and artifact library without sample supplier rec
   assert.doesNotMatch(home, /咖啡杯|山野日用|补查生活|已完成.*条/);
 });
 
-test("stopping exposes a real continuation without replaying tool approvals", () => {
-  assert.match(source("messages"), /AgentPauseNotice/);
-  assert.match(source("shell"), /agentPaused=\{agentPaused\}/);
-  assert.match(source("shell"), /onContinue=\{continueAgent\}/);
+test("stop is a composer action and does not insert a continuation footer", () => {
+  assert.match(source("multimodal-input"), /aria-label="停止生成"/);
+  assert.doesNotMatch(
+    source("messages"),
+    /AgentPauseNotice|agentPaused|onContinue/
+  );
+  assert.doesNotMatch(source("shell"), /agentPaused|continueAgent/);
 });
 
 test("native progress tool has a readable label without renaming dynamic provider tools", async () => {

@@ -5,11 +5,55 @@ import { test } from "node:test";
 import type { MCPClient } from "@ai-sdk/mcp";
 import { capabilityServers } from "@/server/application/mcp/projection";
 import {
+  canonicalToolKey,
   mergeManagedConfig,
   toolAlias,
 } from "@/server/application/mcp/runtime-config";
 import { agentConfigSchema } from "@/server/infrastructure/mcp/config";
 import { createAgentRuntime } from "@/server/infrastructure/mcp/runtime";
+
+test("disabled file MCP servers are never connected or discovered", async () => {
+  const file = agentConfigSchema.parse({
+    servers: [
+      {
+        enabled: false,
+        id: "exa",
+        name: "Exa",
+        url: "https://exa.example/mcp",
+      },
+      {
+        enabled: true,
+        id: "porta",
+        name: "1688",
+        url: "https://porta.example/mcp",
+      },
+    ],
+  });
+  const config = mergeManagedConfig(file, []);
+  const connections: string[] = [];
+  const runtime = await createAgentRuntime(
+    new AbortController().signal,
+    async (options) => {
+      if ("url" in options.transport) {
+        connections.push(options.transport.url);
+      }
+      return {
+        close: async () => undefined,
+        tools: async () => ({}),
+      } as unknown as MCPClient;
+    },
+    async () => config
+  );
+  try {
+    assert.deepEqual(
+      config.servers.map((s) => s.id),
+      ["porta"]
+    );
+    assert.deepEqual(connections, ["https://porta.example/mcp"]);
+  } finally {
+    await runtime.close();
+  }
+});
 
 test("native dot/128 names have stable bounded aliases, legacy aliases preserved", () => {
   assert.equal(toolAlias("exa", "search"), "exa__search");
@@ -32,6 +76,24 @@ test("native dot/128 names have stable bounded aliases, legacy aliases preserved
     }).success,
     true
   );
+});
+
+test("Porta MCP names map to the documented billing identity", () => {
+  const [server] = agentConfigSchema.parse({
+    servers: [
+      {
+        allowedTools: ["onebound_1688_item_search"],
+        id: "porta",
+        name: "Porta",
+        url: "https://porta.example/mcp",
+      },
+    ],
+  }).servers;
+  assert.equal(
+    canonicalToolKey(server, "onebound_1688_item_search"),
+    "onebound/1688/item_search"
+  );
+  assert.equal(canonicalToolKey(server, "custom_tool"), "porta/custom_tool");
 });
 test("new tasks snapshot enabled managed tools, all require approval, prior task unaffected, legacy stays intact", async () => {
   const file = agentConfigSchema.parse({ servers: [] });

@@ -302,8 +302,11 @@ export function shouldContinueAgent(
   );
 }
 
-export function deriveTaskProgress(messages: ChatMessage[]): TodoPlan | null {
-  let latest: TodoPlan | null = null;
+export function deriveTaskProgress(messages: ChatMessage[]): {
+  messageId: string;
+  plan: TodoPlan;
+} | null {
+  let latest: { messageId: string; plan: TodoPlan } | null = null;
   for (const message of messages) {
     if (message.role !== "assistant") {
       continue;
@@ -317,7 +320,7 @@ export function deriveTaskProgress(messages: ChatMessage[]): TodoPlan | null {
       }
       const parsed = todoPlanSchema.safeParse(part.output);
       if (parsed.success) {
-        latest = parsed.data;
+        latest = { messageId: message.id, plan: parsed.data };
       }
     }
   }

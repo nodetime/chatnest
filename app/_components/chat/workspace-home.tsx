@@ -134,10 +134,7 @@ export function WorkspaceHome() {
   );
   const router = useRouter();
   return (
-    <div
-      className="grid items-start gap-8 sm:grid-cols-2"
-      data-testid="workspace-home-content"
-    >
+    <div className="flex flex-col gap-7" data-testid="workspace-home-content">
       <section
         aria-label="最近对话"
         className="min-w-0 space-y-3"
@@ -176,7 +173,7 @@ export function WorkspaceHome() {
             ))}
           </div>
         ) : (
-          <p className="py-1 text-sm text-muted-foreground">
+          <p className="py-3 text-[13px] text-muted-foreground">
             开始一段对话，随时回来继续。
           </p>
         )}
@@ -185,7 +182,7 @@ export function WorkspaceHome() {
         <h2 className="text-[13px] font-medium text-muted-foreground">
           最近成果
         </h2>
-        <SavedArtifactCards compact limit={4} />
+        <SavedArtifactCards compact limit={3} />
       </section>
     </div>
   );

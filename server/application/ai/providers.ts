@@ -1,9 +1,14 @@
 import { createOpenAI } from "@ai-sdk/openai";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { customProvider, gateway, wrapLanguageModel } from "ai";
 import { titleModel } from "@/server/domain/model/models";
 import { isTestEnvironment } from "@/server/shared/runtime";
 import { openAIInlineImageMiddleware } from "./inline-image-middleware";
-import { getModelConnection, resolveModelId } from "./model-connection";
+import {
+  getModelConnection,
+  resolveModelId,
+  usesDeepSeekChat,
+} from "./model-connection";
 import { getModelEnvironment } from "./model-context";
 import { modelFetch } from "./model-settings/network";
 
@@ -29,13 +34,21 @@ export function getLanguageModel(modelId: string) {
 
   const connection = getModelConnection();
   if (connection.provider === "openai") {
-    const provider = createOpenAI({
+    const options = {
       apiKey: getModelEnvironment().OPENAI_API_KEY,
       ...(getModelEnvironment().OPENAI_MANAGED_CONNECTION === "1"
         ? { fetch: modelFetch(connection.baseURL, getModelEnvironment()) }
         : {}),
       baseURL: connection.baseURL,
-    });
+    };
+    if (usesDeepSeekChat()) {
+      return createOpenAICompatible({
+        ...options,
+        includeUsage: true,
+        name: "deepseek",
+      }).chatModel(resolveModelId(modelId));
+    }
+    const provider = createOpenAI(options);
     return connection.apiMode === "responses"
       ? provider.responses(resolveModelId(modelId))
       : wrapLanguageModel({

@@ -32,10 +32,7 @@ test("template shell provides inset, collapsible navigation, current identity an
   assert.match(html, /返回工作台/);
   assert.match(html, /数知探AI <span[^>]*>\/ 管理后台<\/span>/);
   assert.doesNotMatch(html, /Research/);
-  assert.doesNotMatch(
-    html,
-    /Billing|Notifications|Quick Create|\/admin\/(users|billing|logs)/
-  );
+  assert.doesNotMatch(html, /Notifications|Quick Create|\/admin\/(users|logs)/);
   const shell = readFileSync("app/_components/admin/admin-shell.tsx", "utf8");
   assert.match(shell, /tooltip="数知探AI 管理后台"/);
   assert.match(shell, /SheetContent/);
@@ -47,6 +44,61 @@ test("template shell provides inset, collapsible navigation, current identity an
       layout.lastIndexOf("<AdminShell")
   );
   assert.match(layout, /identity=/);
+});
+
+test("billing and account navigation uses user-facing language and personal mode stays focused", () => {
+  const navigation = readFileSync(
+    "app/_components/admin/admin-navigation.tsx",
+    "utf8"
+  );
+  assert.match(navigation, /label: "账务"/);
+  assert.doesNotMatch(navigation, /label: "积分运营"/);
+
+  const billing = readFileSync(
+    "app/(account)/account/billing/billing-page-client.tsx",
+    "utf8"
+  );
+  assert.doesNotMatch(
+    billing,
+    /hasOrganizationBilling|OrganizationSwitcher|当前仅开放个人账户。/
+  );
+});
+
+test("admin navigation groups real pages by operator task", () => {
+  const navigation = readFileSync(
+    "app/_components/admin/admin-navigation.tsx",
+    "utf8"
+  );
+  for (const group of ["运营", "平台能力", "账户与账务"]) {
+    assert.match(navigation, new RegExp(`label: "${group}"`));
+  }
+  assert.doesNotMatch(navigation, /href="\/admin\/(payments|audit|runtime)"/);
+});
+
+test("billing page separates urgent work from overview and history", () => {
+  const billing = readFileSync("app/admin/billing/page.tsx", "utf8");
+  assert.match(billing, /需要处理/);
+  assert.match(billing, /运行概况/);
+  assert.match(billing, /最近记录/);
+  assert.match(billing, /auditResponse/);
+  assert.match(billing, /error && data/);
+  assert.match(billing, /error && !data/);
+  assert.match(billing, /账务数据暂时无法读取/);
+  assert.match(billing, /待处理事项/);
+  assert.match(billing, /已扣除积分/);
+  assert.match(billing, /支付异常/);
+  assert.match(billing, /待审批的申请需要另一位管理员确认/);
+  assert.match(billing, /扣除本次积分/);
+  assert.match(billing, /退回本次预留/);
+  assert.match(billing, /待处理事项/);
+  assert.doesNotMatch(billing, /value=\{data\?\.[^}]+\?\? "—"\}/);
+  assert.ok(
+    billing.indexOf('id="billing-attention-heading"') <
+      billing.indexOf('id="billing-overview-heading"'),
+    "screen-reader and keyboard order must match the visual priority order"
+  );
+  assert.doesNotMatch(billing, /className="order-[12] space-y-4"/);
+  assert.doesNotMatch(billing, /待处理支付/);
 });
 
 test("navigation marks exactly the current real route including demo base path", () => {
@@ -249,6 +301,14 @@ test("overview stays focused on three real readiness cards without instructional
   assert.doesNotMatch(html, /配置与使用分离|固定执行流程/);
 });
 
+test("overview shows when its readiness snapshot was refreshed", () => {
+  const overview = readFileSync(
+    "app/_components/admin/admin-overview.tsx",
+    "utf8"
+  );
+  assert.match(overview, /最近刷新/);
+});
+
 test("current breadcrumb location is text, not an unfocusable simulated link", () => {
   const html = render(
     "const {BreadcrumbPage}=require('./app/_components/ui/breadcrumb.tsx');process.stdout.write(renderToStaticMarkup(React.createElement(BreadcrumbPage,null,'文件存储')));"
@@ -277,4 +337,11 @@ test("model administration has masked credentials, real protocol controls and ed
   assert.match(html, /https:\/\/models.example\/v1/);
   assert.match(html, /aria-label="默认模型 2"[^>]*checked/);
   assert.doesNotMatch(html, /sk-|Bearer /);
+});
+
+test("billing history names audit exports instead of presenting them as money mutations", () => {
+  const billing = readFileSync("app/admin/billing/page.tsx", "utf8");
+  assert.match(billing, /"billing\.audit\.exported": "导出账务审计"/);
+  assert.match(billing, /显示账务变更、审批及审计导出记录/);
+  assert.doesNotMatch(billing, /只显示会影响余额或支付状态的变更/);
 });

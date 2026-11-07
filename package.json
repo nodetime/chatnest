@@ -9,7 +9,7 @@
     "dev:nics": "node scripts/governance/dev-env.mjs nics",
     "dev:start": "node scripts/governance/dev-env.mjs start",
     "dev:stop": "node scripts/governance/dev-env.mjs stop",
-    "build": "tsx server/infrastructure/persistence/drizzle/migrate && next build",
+    "build": "next build",
     "start": "next start",
     "check": "ultracite check",
     "fix": "ultracite fix",
@@ -22,11 +22,24 @@
     "db:pull": "drizzle-kit pull",
     "db:check": "drizzle-kit check",
     "db:up": "drizzle-kit up",
-    "test": "export PLAYWRIGHT=True && node node_modules/@playwright/test/cli.js test"
+    "billing:worker": "node scripts/platform-settlement-worker.mjs",
+    "billing:acceptance": "node scripts/production-acceptance.mjs",
+    "model:acceptance": "tsx --conditions=react-server scripts/model-gateway-acceptance.mjs",
+    "payment:gate": "node scripts/ci/production-gate.mjs --production --payment",
+    "production:gate": "node scripts/ci/production-gate.mjs --production",
+    "production:worker:gate": "node scripts/ci/production-gate.mjs --production --worker",
+    "release:gate": "node scripts/ci/release-gate.mjs",
+    "contract:generate": "node scripts/ci/generate-contract-constants.mjs",
+    "contract:parity": "node scripts/ci/contract-parity.mjs",
+    "test": "export PLAYWRIGHT=True && node node_modules/@playwright/test/cli.js test",
+    "contract:check": "node scripts/ci/check-contract-artifacts.mjs",
+    "contract:runtime": "tsx --test scripts/ci/contract-runtime.test.ts",
+    "contract:http:acceptance": "tsx scripts/ci/contract-http-acceptance.ts"
   },
   "dependencies": {
     "@ai-sdk/mcp": "2.0.7",
     "@ai-sdk/openai": "4.0.7",
+    "@ai-sdk/openai-compatible": "3.0.5",
     "@ai-sdk/otel": "^1.0.15",
     "@ai-sdk/provider": "^4.0.2",
     "@ai-sdk/react": "4.0.16",
@@ -85,6 +98,7 @@
     "prosemirror-schema-list": "^1.5.1",
     "prosemirror-state": "^1.4.4",
     "prosemirror-view": "^1.42.0",
+    "quickjs-emscripten": "0.32.0",
     "radix-ui": "^1.6.1",
     "react": "19.2.7",
     "react-data-grid": "7.0.0-beta.47",
@@ -119,6 +133,8 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "@vercel/nft": "1.11.0",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
     "babel-plugin-react-compiler": "^1.0.0",
     "drizzle-kit": "^0.31.10",
     "husky": "^9.1.7",
@@ -128,7 +144,8 @@
     "tailwindcss": "^4.3.2",
     "tsx": "^4.23.0",
     "typescript": "^5.6.3",
-    "ultracite": "^7.8.4"
+    "ultracite": "^7.8.4",
+    "yaml": "2.9.0"
   },
   "lint-staged": {
     "*": "corepack pnpm run fix --"

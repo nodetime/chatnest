@@ -48,18 +48,33 @@ export class UploadAdmission {
   }
 }
 export async function completeDraftSubmission(
-  send: () => Promise<unknown>,
+  send: (onAccepted: () => void) => Promise<unknown>,
   getError: () => Error | undefined,
   isCurrent: () => boolean,
-  clear: () => void
+  clear: () => void,
+  restore: () => void
 ) {
-  await send();
-  if (!isCurrent()) {
-    return;
-  }
-  const error = getError();
-  if (error) {
+  let accepted = false;
+  const onAccepted = () => {
+    if (!accepted && isCurrent()) {
+      accepted = true;
+      clear();
+    }
+  };
+  try {
+    await send(onAccepted);
+    if (!isCurrent()) {
+      return;
+    }
+    const error = getError();
+    if (error) {
+      throw error;
+    }
+    onAccepted();
+  } catch (error) {
+    if (accepted && isCurrent()) {
+      restore();
+    }
     throw error;
   }
-  clear();
 }

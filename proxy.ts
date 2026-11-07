@@ -41,8 +41,24 @@ export async function proxy(request: NextRequest) {
     return nextWithTrace();
   }
 
-  // Admin APIs own their authorization and return 401/403, never create guest sessions.
-  if (pathname.startsWith("/api/auth") || pathname.startsWith("/api/admin/")) {
+  // These APIs own authorization; message reads also support public sharing.
+  if (
+    pathname === "/api/health/ready" ||
+    pathname === "/api/messages" ||
+    pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/api/admin/")
+  ) {
+    return nextWithTrace();
+  }
+
+  // Internal billing workers authenticate with a deployment-scoped control token
+  // and must not be redirected into the browser guest flow.
+  if (
+    pathname.startsWith("/api/internal/") &&
+    process.env.CHATNEST_CONTROL_TOKEN &&
+    request.headers.get("x-chatnest-control-token") ===
+      process.env.CHATNEST_CONTROL_TOKEN
+  ) {
     return nextWithTrace();
   }
 
@@ -62,6 +78,46 @@ export async function proxy(request: NextRequest) {
   });
 
   const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+
+  const isAccountPage =
+    [
+      "/billing",
+      "/usage",
+      "/organizations",
+      "/account",
+      "/account/billing",
+      "/account/usage",
+      "/account/organizations",
+    ].includes(pathname) || pathname.startsWith("/account/");
+  const isAdminPage = pathname === "/admin" || pathname.startsWith("/admin/");
+  const isAccountApi =
+    pathname.startsWith("/api/account/") ||
+    pathname === "/api/billing" ||
+    pathname.startsWith("/api/billing/") ||
+    pathname === "/api/organizations" ||
+    pathname.startsWith("/api/organizations/");
+
+  // Account surfaces belong to authenticated regular users. Keep them out of
+  // the guest bootstrap flow so a direct URL never renders a misleading
+  // platform-connection error, and APIs return a machine-readable 401.
+  if (isAccountApi && token?.type !== "regular") {
+    return Response.json({ code: "UNAUTHORIZED" }, { status: 401 });
+  }
+
+  if (isAccountPage && token?.type !== "regular") {
+    return NextResponse.redirect(
+      new URL(`${base}/login?next=${encodeURIComponent(pathname)}`, request.url)
+    );
+  }
+
+  // Keep the platform-admin shell out of the guest workspace. The admin
+  // layout performs the final staff authorization and returns 404 for regular
+  // users without admin membership.
+  if (isAdminPage && token?.type !== "regular") {
+    return NextResponse.redirect(
+      new URL(`${base}/login?next=${encodeURIComponent(pathname)}`, request.url)
+    );
+  }
 
   const requestedSection = request.nextUrl.searchParams.get("section") ?? "";
   if (
@@ -105,10 +161,11 @@ export const config = {
   matcher: [
     "/",
     "/chat/:id",
-    "/api/:path*",
     "/login",
     "/register",
 
-    "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)",
+    // The upload handler owns authentication, origin and body admission.
+    // Matching it here makes Next.js clone and drain the body before the handler.
+    "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|api/files/upload/?$).*)",
   ],
 };

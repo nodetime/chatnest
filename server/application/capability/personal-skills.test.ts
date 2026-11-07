@@ -87,7 +87,7 @@ test("内置技能按用户启停，不改部署目录且可建立单文件个�
   const { createPersonalSkillsService } = await import("./personal-skills");
   const { discoverSkills } = await import("@/server/infrastructure/mcp/skills");
   const builtin = (await discoverSkills()).find(
-    (item) => item.name === "porta"
+    (item) => item.name === "similar-products"
   );
   assert.ok(builtin);
   const service = createPersonalSkillsService({
@@ -99,17 +99,17 @@ test("内置技能按用户启停，不改部署目录且可建立单文件个�
   await service.execute({
     action: "toggle",
     enabled: false,
-    id: "builtin:porta",
+    id: "builtin:similar-products",
     revision: 0,
   });
   assert.equal((await service.get()).skills[0].enabled, false);
   await service.execute({
     action: "copy",
-    id: "builtin:porta",
-    newId: "my-porta",
+    id: "builtin:similar-products",
+    newId: "my-research",
     revision: 1,
   });
-  assert.equal((await service.get()).skills[1].id, "personal:my-porta");
+  assert.equal((await service.get()).skills[1].id, "personal:my-research");
 });
 test("导入格式错误映射为用户可修正的400，不作为服务端故障", async () => {
   const { createPersonalSkillsService } = await import("./personal-skills");

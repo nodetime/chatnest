@@ -17,7 +17,7 @@ export function PlatformAdminLink({
       href="/admin"
     >
       <Shield aria-hidden="true" className="size-4" />
-      平台管理
+      平台管理后台
     </Link>
   );
 }

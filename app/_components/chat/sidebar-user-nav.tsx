@@ -1,13 +1,12 @@
 "use client";
 
-import { ChevronUp, LogIn, Settings2 } from "lucide-react";
+import { ChevronUp, CircleUserRound, LogIn, Settings2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { User } from "next-auth";
 import { signOut, useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
 import { useCallback, useState } from "react";
-import { PlatformAdminLink } from "@/app/_components/admin/platform-admin-link";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,13 +23,7 @@ import { AgentLibrary } from "./agent-library";
 import { LoaderIcon } from "./icons";
 import { toast } from "./toast";
 
-export function SidebarUserNav({
-  user,
-  isPlatformAdmin = false,
-}: {
-  user: User | undefined;
-  isPlatformAdmin?: boolean;
-}) {
+export function SidebarUserNav({ user }: { user: User | undefined }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const openSettings = useCallback(() => setSettingsOpen(true), []);
   const router = useRouter();
@@ -123,15 +116,17 @@ export function SidebarUserNav({
               data-testid="user-nav-menu"
               side="top"
             >
+              <DropdownMenuItem asChild>
+                <Link className="flex items-center gap-2" href="/account">
+                  <CircleUserRound className="size-4" />
+                  个人账户
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={openSettings}>
                 <Settings2 className="size-4" />
                 设置
               </DropdownMenuItem>
-              {!!isPlatformAdmin && (
-                <DropdownMenuItem asChild>
-                  <PlatformAdminLink isPlatformAdmin={isPlatformAdmin} />
-                </DropdownMenuItem>
-              )}
               <DropdownMenuItem
                 className="cursor-pointer text-[13px]"
                 data-testid="user-nav-item-theme"

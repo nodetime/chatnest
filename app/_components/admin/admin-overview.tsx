@@ -1,7 +1,7 @@
 "use client";
 import { ArrowRight, Bot, HardDrive, Plug, RotateCw } from "lucide-react";
 import Link from "next/link";
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import useSWR from "swr";
 import { Button } from "@/app/_components/ui/button";
 import {
@@ -23,13 +23,19 @@ async function load(url: string): Promise<AdminOverviewData> {
   return response.json();
 }
 export function AdminOverview() {
+  const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null);
   const { data, error, isLoading, mutate } = useSWR(endpoint, load, {
     revalidateOnFocus: false,
     shouldRetryOnError: false,
   });
   const refresh = useCallback(() => {
-    mutate();
+    mutate().catch(() => undefined);
   }, [mutate]);
+  useEffect(() => {
+    if (data) {
+      setLastRefreshedAt(new Date());
+    }
+  }, [data]);
   return (
     <>
       <div className="flex items-start justify-between gap-4">
@@ -37,6 +43,12 @@ export function AdminOverview() {
           <h1 className="text-2xl font-semibold tracking-tight">平台概览</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             查看助手基础能力的配置状态。
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            最近刷新：
+            {lastRefreshedAt
+              ? lastRefreshedAt.toLocaleTimeString("zh-CN")
+              : "读取中"}
           </p>
         </div>
         <Button

@@ -82,6 +82,21 @@ test("result renderer presents actual records and safe title/domain links as tex
   assert.doesNotMatch(html, /<script|<img|<pre/);
 });
 
+test("native product detailUrl renders a clickable source without mutating the returned record", () => {
+  const html = client(`
+    const assert=require('node:assert/strict');const React=require('react');const {renderToStaticMarkup}=require('react-dom/server');
+    const {ToolResultPreview}=require('./app/_components/chat/tool-result-preview.tsx');const {projectResult}=require('./app/_components/chat/tool-presentation.ts');
+    const product={title:'真实商品',detailUrl:'https://detail.1688.com/offer/123.html',imageUrl:'https://images.example.com/product.jpg'};
+    const before=JSON.stringify(product);const preview=projectResult({structuredContent:[product]});
+    assert.equal(preview.records[0].source.url,product.detailUrl);assert.equal(JSON.stringify(product),before);
+    assert.equal(projectResult({title:product.title,detailUrl:product.detailUrl}).truncated,false);
+    assert.equal(projectResult({title:'Bad',detailUrl:'javascript:alert(1)'}).sources.length,0);
+    process.stdout.write(renderToStaticMarkup(React.createElement(ToolResultPreview,{preview})));
+  `);
+  assert.match(html, /href="https:\/\/detail\.1688\.com\/offer\/123\.html"/);
+  assert.match(html, /真实商品/);
+});
+
 test("exact catalog aliases provide friendly actions without hiding unknown or destructive tool names", () => {
   client(`
     const assert=require('node:assert/strict');const {projectToolIdentity,projectResult}=require('./app/_components/chat/tool-presentation.ts');
@@ -226,5 +241,18 @@ test("generic structured falsey results use one details fallback without losing 
     assert.doesNotMatch(html,/结构化结果预览|仅展示部分返回内容|nullable|count/);assert.equal(JSON.stringify(value),before);
     const empty=render({isError:false,structuredContent:{items:[]},content:[]});assert.match(empty,/返回列表为空/);assert.doesNotMatch(empty,/结果已返回/);
     const mixed=render({...value,content:[{type:'image',data:'original-media'}]});assert.match(mixed,/非文本或未识别内容/);assert.doesNotMatch(mixed,/结果已返回|original-media/);
+  `);
+});
+
+test("native compute/image failures are visible without misclassifying dynamic outputs", () => {
+  client(`
+    const assert=require('node:assert/strict');
+    const {activityDisplayState,activitySummary}=require('./app/_components/chat/activity-groups.ts');
+    for (const name of ['executeCode','viewImage']) {
+      const part={type:'tool-'+name,state:'output-available',input:{},output:{status:'failed',error:'failed'},toolCallId:name};
+      assert.equal(activityDisplayState(part),'output-error');
+      assert.equal(activitySummary([part]).label,'失败');
+      assert.equal(activityDisplayState({...part,type:'dynamic-tool',toolName:name}),'output-available');
+    }
   `);
 });

@@ -77,9 +77,11 @@ until [ "$(docker inspect -f '{{.State.Health.Status}}' chatnest-postgres)" = "h
 ### 第 5 步:数据库迁移
 
 ```bash
-pnpm db:migrate
+MIGRATION_POSTGRES_URL=postgres://chatnest:chatnest@127.0.0.1:55432/chatnest pnpm db:migrate
 ```
-预期:输出 `Migrations completed`(幂等,重复执行无害)。失败:检查 `.env.local` 的 POSTGRES_URL、看 `docker logs chatnest-postgres`。
+预期:输出 `Migrations completed`(幂等,重复执行无害)。失败:检查显式 MIGRATION_POSTGRES_URL(不从运行 POSTGRES_URL 回退)、看 `docker logs chatnest-postgres`。
+
+随后执行 `NODE_ENV=development pnpm exec tsx scripts/dev-seed.ts` 初始化开发账号 `admin / 123456`；`pnpm dev:up` 已包含此步。仅允许固定的本地开发库，不初始化生产账号，不授予 connected 后端管理员权限。
 
 ### 第 6 步:启动 dev(绑定全部网卡)
 

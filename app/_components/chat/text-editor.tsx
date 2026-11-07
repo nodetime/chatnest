@@ -8,6 +8,8 @@ import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   documentSchema,
+  handleTableEnter,
+  handleTablePaste,
   handleTransaction,
   headingRule,
 } from "@/app/_lib/editor/config";
@@ -76,6 +78,18 @@ function PureEditor({
         handleDOMEvents: {
           click(_view, event) {
             const target = event.target as HTMLElement;
+            const link = target.closest<HTMLAnchorElement>("a[href]");
+            if (link) {
+              event.preventDefault();
+              if (
+                ["http:", "https:", "mailto:", "tel:"].includes(
+                  new URL(link.href).protocol
+                )
+              ) {
+                window.open(link.href, "_blank", "noopener,noreferrer");
+              }
+              return true;
+            }
             const highlight = target.closest(".suggestion-highlight");
             if (highlight) {
               const id = highlight.getAttribute("data-suggestion-id");
@@ -88,6 +102,8 @@ function PureEditor({
             return false;
           },
         },
+        handleKeyDown: handleTableEnter,
+        handlePaste: handleTablePaste,
         state,
       });
     }

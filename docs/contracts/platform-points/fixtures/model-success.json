@@ -1,0 +1,74 @@
+{
+  "fixture": "model-success",
+  "apiVersion": "v1",
+  "schemaRevision": "2026-11-05.16",
+  "pointScale": 1000000,
+  "reserve": {
+    "request": {
+      "operationId": "op_model_001",
+      "attemptId": "att_model_001",
+      "sessionGroupId": "chat_personal_001",
+      "stepIndex": 0,
+      "subjectType": "model",
+      "subjectId": "model:gpt-fixture",
+      "modelId": "gpt-fixture",
+      "billingDimensions": {
+        "inputTokensEstimate": 1200,
+        "outputTokensEstimate": 600
+      },
+      "policyRevision": "policy_2026_10_31_1"
+    },
+    "response": {
+      "holdId": "hold_model_001",
+      "priceVersion": "price_model_fixture_1",
+      "reservedPoints": "1.500000"
+    }
+  },
+  "dispatch": {
+    "response": {
+      "permit": "fixture-model-permit-token"
+    },
+    "permitPayload": {
+      "protocolVersion": "v1",
+      "platformId": "platform-fixture",
+      "deploymentId": "deployment-fixture",
+      "operationId": "op_model_001",
+      "attemptId": "att_model_001",
+      "canonicalToolKey": "model/gpt-fixture",
+      "priceVersion": "price_model_fixture_1",
+      "reservedPoints": "1.500000",
+      "chargeMode": "success",
+      "keyId": "key-1",
+      "issuedAt": "2026-10-31T00:00:00.000Z",
+      "expiresAt": "2099-10-31T00:00:30.000Z",
+      "signature": "fixture-permit-signature"
+    }
+  },
+  "report": {
+    "request": {
+      "operationId": "op_model_001",
+      "attemptId": "att_model_001",
+      "outcome": "response",
+      "usage": {
+        "inputTokens": 1184,
+        "outputTokens": 544
+      },
+      "executionReceipt": null
+    },
+    "response": {
+      "state": "settled"
+    }
+  },
+  "trace": {
+    "requestId": "req_model_001",
+    "traceId": "trace_model_001",
+    "chatId": "chat_personal_001",
+    "sessionGroupId": "chat_personal_001",
+    "stepIndex": 0,
+    "operationId": "op_model_001",
+    "attemptId": "att_model_001",
+    "priceVersion": "price_model_fixture_1",
+    "policyRevision": "policy_2026_10_31_1",
+    "ledgerEntryId": "ledger_model_001"
+  }
+}

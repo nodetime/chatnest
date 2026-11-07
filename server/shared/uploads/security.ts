@@ -1,4 +1,8 @@
-import { isPlatformAdmin } from "@/server/application/admin/access";
+import {
+  type AdminEnvironment,
+  isPlatformAdmin,
+  resolvePlatformAdmin,
+} from "@/server/application/admin/access";
 import { UploadCapacityError } from "@/server/domain/attachment/capacity";
 import { sameOriginBrowserControl } from "@/server/shared/browser-policy";
 import { UploadError } from "@/server/shared/uploads/validation";
@@ -21,6 +25,37 @@ export function authorizeUploadRequest(
       403,
       admin ? "仅平台管理员可以管理存储。" : "请使用正式账号上传附件。"
     );
+  }
+  const sameOrigin = request.headers.has("host")
+    ? sameOriginBrowserControl(request)
+    : request.headers.get("origin") === new URL(request.url).origin;
+  if (write && !sameOrigin) {
+    throw new UploadError(403, "请求来源不匹配。");
+  }
+  return user.id;
+}
+
+export async function authorizeUploadRequestAsync(
+  user: User,
+  request: Request,
+  write: boolean,
+  admin = false,
+  env: AdminEnvironment = process.env
+) {
+  if (!admin) {
+    return authorizeUploadRequest(user, request, write, false);
+  }
+  if (!user?.id) {
+    throw new UploadError(401, "请登录后访问附件。");
+  }
+  if ((write || admin) && user.type !== "regular") {
+    throw new UploadError(
+      403,
+      admin ? "仅平台管理员可以管理存储。" : "请使用正式账号上传附件。"
+    );
+  }
+  if (!(await resolvePlatformAdmin(user, env))) {
+    throw new UploadError(403, "仅平台管理员可以管理存储。");
   }
   const sameOrigin = request.headers.has("host")
     ? sameOriginBrowserControl(request)

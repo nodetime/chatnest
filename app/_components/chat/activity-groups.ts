@@ -9,6 +9,7 @@ const specialTools = new Set([
   "askUser",
   "createDocument",
   "updateDocument",
+  "editDocument",
   "requestSuggestions",
   "createResultTable",
 ]);
@@ -103,15 +104,18 @@ export function groupActivityMessages(messages: ChatMessage[]): MessageGroup[] {
   return groups;
 }
 
-// Only these native document tools define { error: string } business failures.
+// Only these exact native tools define { error: string } business failures.
 // A similarly named field in dynamic/MCP output remains raw evidence.
-function nativeDocumentError(part: ToolPart) {
+function nativeToolError(part: ToolPart) {
   if (
     [
       "tool-createResultTable",
       "tool-createDocument",
       "tool-updateDocument",
+      "tool-editDocument",
       "tool-requestSuggestions",
+      "tool-executeCode",
+      "tool-viewImage",
     ].includes(part.type) &&
     part.state === "output-available" &&
     part.output !== null &&
@@ -123,15 +127,93 @@ function nativeDocumentError(part: ToolPart) {
   }
 }
 
-export function activityErrorText(part: ToolPart) {
-  return nativeDocumentError(part) ?? part.errorText;
+/** A confirmed no-write conflict can be followed by a successful save in this turn. */
+export function artifactEditHasLaterSave(part: ToolPart, following: Part[]) {
+  if (
+    part.type !== "tool-editDocument" ||
+    nativeToolError(part) !== "old_string not found in document" ||
+    !part.input ||
+    typeof part.input !== "object" ||
+    !("id" in part.input) ||
+    typeof part.input.id !== "string"
+  ) {
+    return false;
+  }
+  const { id } = part.input;
+  return following.some((later) => {
+    if (
+      (later.type !== "tool-editDocument" &&
+        later.type !== "tool-updateDocument") ||
+      later.state !== "output-available" ||
+      !later.output ||
+      typeof later.output !== "object" ||
+      "error" in later.output ||
+      ("content" in later.output &&
+        later.output.content ===
+          "No changes needed; the saved content already matches.")
+    ) {
+      return false;
+    }
+    return (
+      "id" in later.output &&
+      later.output.id === id &&
+      "savedContent" in later.output &&
+      typeof later.output.savedContent === "string"
+    );
+  });
+}
+
+/** 只解释已知工具契约；任意供应商错误不作为保存状态或用户指令。 */
+export function activityFailureMessage(part: ToolPart, kind = "tool") {
+  const error = nativeToolError(part);
+  if (
+    part.type === "tool-editDocument" &&
+    error === "old_string not found in document"
+  ) {
+    return "修改未保存：待替换内容与当前文件不匹配，原文件未改动。";
+  }
+  if (
+    [
+      "tool-createDocument",
+      "tool-editDocument",
+      "tool-updateDocument",
+    ].includes(part.type) &&
+    error === "Forbidden"
+  ) {
+    return "当前没有权限访问这份文件。";
+  }
+  if (
+    ["tool-editDocument", "tool-updateDocument"].includes(part.type) &&
+    error === "Document not found"
+  ) {
+    return "未找到要修改的文件，本次修改未保存。";
+  }
+  if (part.type === "tool-readAttachment") {
+    return "附件内容未能读取，相关内容尚未核实。";
+  }
+  if (part.type === "tool-viewImage") {
+    return "图片未能读取，相关外观尚未核实。";
+  }
+  if (["tool-editDocument", "tool-updateDocument"].includes(part.type)) {
+    return "文件修改未完成，保存结果尚未确认。";
+  }
+  if (["tool-createDocument", "tool-createResultTable"].includes(part.type)) {
+    return "文件生成未完成，保存结果尚未确认。";
+  }
+  if (kind === "web") {
+    return "网页内容未能读取，相关信息尚未核实。";
+  }
+  if (kind === "search") {
+    return "本次搜索未返回有效结果，相关信息尚未核实。";
+  }
+  return "本次操作未返回有效结果，完成情况尚未确认。";
 }
 
 export function activityDisplayState(
   part: ToolPart,
   isRunning = false
 ): ToolPart["state"] {
-  if (nativeDocumentError(part) !== undefined) {
+  if (nativeToolError(part) !== undefined) {
     return "output-error";
   }
   if (
@@ -201,8 +283,7 @@ export function activitySummary(parts: ToolPart[], isRunning = false) {
       state === "output-error" &&
       !parts.some(
         (part) =>
-          part.state === "output-error" ||
-          nativeDocumentError(part) !== undefined
+          part.state === "output-error" || nativeToolError(part) !== undefined
       )
         ? "未完成"
         : state === "approval-responded" && isRunning

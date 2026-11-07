@@ -155,7 +155,7 @@ export const sheetArtifact = new Artifact<"sheet", Metadata>({
         sendMessage({
           parts: [
             {
-              text: "Can you please analyze and visualize the data by creating a new code artifact in python?",
+              text: "请分析当前表格中的数据，说明主要发现；需要计算时使用当前可用的计算工具。",
               type: "text",
             },
           ],

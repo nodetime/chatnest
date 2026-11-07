@@ -1,10 +1,12 @@
-import { geolocation, ipAddress } from "@vercel/functions";
+import { ipAddress } from "@vercel/functions";
 import { checkBotId } from "botid/server";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { auth } from "@/app/(auth)/auth";
 import { withModelSettings } from "@/server/application/ai/model-settings/runtime";
+import { exchangePlatformIdentity } from "@/server/application/platform/identity";
 import { getUseCases } from "@/server/composition";
 import type { ChatSession } from "@/server/domain/user/types";
+import { getEnv, organizationsEnabled } from "@/server/shared/env";
 import { ChatbotError } from "@/server/shared/errors";
 import { getLogger } from "@/server/shared/logger";
 import { runWithTraceId } from "@/server/shared/request-context";
@@ -35,8 +37,34 @@ async function handleChatPost(request: Request) {
     return new ChatbotError("unauthorized:chat").toResponse();
   }
   try {
+    const env = getEnv();
+    let connectedSession: ChatSession = session;
+    if (
+      env.PLATFORM_MODE === "connected" &&
+      env.PLATFORM_BASE_URL &&
+      env.PLATFORM_SERVICE_TOKEN
+    ) {
+      try {
+        const exchanged = await exchangePlatformIdentity({
+          baseUrl: env.PLATFORM_BASE_URL,
+          issuer: env.PLATFORM_USER_ISSUER ?? "chatnest",
+          serviceToken: env.PLATFORM_SERVICE_TOKEN,
+          subject: session.user.id,
+        });
+        connectedSession = {
+          ...session,
+          platform: {
+            issuer: exchanged.issuer,
+            subject: exchanged.subject,
+            token: exchanged.token,
+          },
+        };
+      } catch {
+        // connected mode remains fail-closed in composition when exchange fails
+      }
+    }
     return await withModelSettings(() =>
-      postWithModelSettings(request, session)
+      postWithModelSettings(request, connectedSession)
     );
   } catch {
     return new ChatbotError("offline:configuration").toResponse();
@@ -55,11 +83,13 @@ async function postWithModelSettings(request: Request, session: ChatSession) {
       return new ChatbotError("forbidden:api").toResponse();
     }
 
-    const { longitude, latitude, city, country } = geolocation(request);
+    const organizationId = organizationsEnabled(getEnv())
+      ? (await cookies()).get("chatnest-organization-id")?.value
+      : undefined;
     const stream = await getUseCases().sendMessage({
       body: parsed.body,
       ip: ipAddress(request),
-      requestHints: { city, country, latitude, longitude },
+      organizationId,
       session,
       signal: request.signal,
     });

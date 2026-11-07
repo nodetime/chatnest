@@ -89,12 +89,13 @@ export async function readSkillFile(skill: Skill, resource: string) {
 }
 
 export function buildSkillsPrompt(skills: Skill[]) {
-  return `Available skills (metadata only):\n${skills.map((skill) => `- ${skill.name}${skill.displayName ? ` (${skill.displayName})` : ""}: ${skill.description}`).join("\n")}\nWhen relevant, call loadSkill before doing the specialized work. Read referenced resources only as needed. Explain the chosen method briefly in the user's language using its display name. Progress notes must describe actual actions; never invent a fixed progress percentage or a background task. A skill teaches a method; it does not grant tools, permissions, or script execution. Do not pretend unavailable capabilities exist.`;
+  return `Available skills (metadata only):\n${skills.map((skill) => `- ${skill.name}${skill.displayName ? ` (${skill.displayName})` : ""}: ${skill.description}`).join("\n")}\nLoad a relevant skill before specialized work, using its described scope rather than a tool-name match. Read supporting references only as needed. Simple requests need no skill-loading ceremony. A skill provides a method; it does not supply missing tools, script execution or permissions.`;
 }
 
 export function createSkillTools(
   skills: Skill[],
-  authorize?: (skill: Skill) => Promise<void>
+  authorize?: (skill: Skill) => Promise<void>,
+  onLoaded?: (name: string, instructions: string) => void
 ) {
   const getSkill = (name: string) => {
     const skill = skills.find((item) => item.name === name);
@@ -112,13 +113,17 @@ export function createSkillTools(
     loadSkill: tool({
       description:
         "Load the full instructions for a skill from the available catalog.",
-      execute: async ({ name }) => ({
-        description:
-          getSkill(name).shortDescription ?? getSkill(name).description,
-        displayName: getSkill(name).displayName ?? name,
-        instructions: matter(await read(name, "SKILL.md")).content,
-        name,
-      }),
+      execute: async ({ name }) => {
+        const instructions = matter(await read(name, "SKILL.md")).content;
+        onLoaded?.(name, instructions);
+        return {
+          description:
+            getSkill(name).shortDescription ?? getSkill(name).description,
+          displayName: getSkill(name).displayName ?? name,
+          instructions,
+          name,
+        };
+      },
       inputSchema: z.object({ name: z.string() }),
     }),
     readSkillResource: tool({

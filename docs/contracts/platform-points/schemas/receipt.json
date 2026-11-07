@@ -1,0 +1,82 @@
+{
+  "$id": "platform-points/receipt",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "receiptId",
+    "operationId",
+    "attemptId",
+    "canonicalToolKey",
+    "dispatchEvidence",
+    "outcome",
+    "httpStatus",
+    "receiptRevision",
+    "supplierUnits"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "receiptId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "operationId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "attemptId": {
+      "$ref": "#/$defs/AttemptId"
+    },
+    "canonicalToolKey": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512
+    },
+    "dispatchEvidence": {
+      "enum": ["not_dispatched", "started", "response", "unknown"]
+    },
+    "outcome": {
+      "enum": [
+        "response",
+        "timeout",
+        "cancelled",
+        "network_error",
+        "response_too_large"
+      ]
+    },
+    "httpStatus": {
+      "type": ["integer", "null"],
+      "minimum": 100,
+      "maximum": 599
+    },
+    "supplierUnits": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "maxLength": 128
+      },
+      "propertyNames": {
+        "type": "string",
+        "maxLength": 128
+      }
+    },
+    "receiptRevision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "signature": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+    }
+  },
+  "$defs": {
+    "AttemptId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^(?!\\.{1,2}(?![\\s\\S]))[^\\u0000\\uD800-\\uDFFF]+$"
+    }
+  }
+}

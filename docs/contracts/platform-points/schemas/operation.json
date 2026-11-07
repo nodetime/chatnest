@@ -1,0 +1,110 @@
+{
+  "$id": "platform-points/operation",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "operationId",
+    "attemptId",
+    "state",
+    "priceVersion",
+    "reservedPoints"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "operationId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "attemptId": {
+      "$ref": "#/$defs/AttemptId"
+    },
+    "sessionGroupId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "stepIndex": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "subjectType": {
+      "enum": ["model", "tool"]
+    },
+    "canonicalToolKey": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512
+    },
+    "modelId": {
+      "type": ["string", "null"],
+      "maxLength": 256
+    },
+    "holdId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "state": {
+      "enum": [
+        "reserved",
+        "dispatched",
+        "settled",
+        "released",
+        "reconcile_pending",
+        "overage_pending"
+      ]
+    },
+    "priceVersion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "reservedPoints": {
+      "type": "string",
+      "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+    },
+    "capturedPoints": {
+      "type": "string",
+      "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+    },
+    "releasedPoints": {
+      "type": "string",
+      "pattern": "^(?:0|[1-9][0-9]{0,18})(?:\\.[0-9]{1,6})?$"
+    },
+    "policyRevision": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "outcome": {
+      "type": ["string", "null"]
+    },
+    "receiptId": {
+      "type": ["string", "null"],
+      "maxLength": 128
+    },
+    "usage": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "inputTokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "outputTokens": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  },
+  "$defs": {
+    "AttemptId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^(?!\\.{1,2}(?![\\s\\S]))[^\\u0000\\uD800-\\uDFFF]+$"
+    }
+  }
+}

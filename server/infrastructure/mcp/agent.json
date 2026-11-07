@@ -6,6 +6,7 @@
   "servers": [
     {
       "id": "exa",
+      "enabled": true,
       "name": "Exa 网页搜索",
       "url": "https://mcp.exa.ai/mcp",
       "headers": {},
@@ -14,6 +15,7 @@
     },
     {
       "id": "tavily",
+      "enabled": false,
       "name": "Tavily Search",
       "url": "https://mcp.tavily.com/mcp/",
       "headers": {
@@ -34,20 +36,14 @@
     },
     {
       "id": "porta",
-      "name": "Porta 1688 数据查询",
+      "enabled": true,
+      "name": "1688 商品查询",
       "url": "${PORTA_MCP_URL}",
       "headers": {
         "Authorization": "Bearer ${PORTA_SERVICE_TOKEN}"
       },
-      "allowedTools": [
-        "onebound_1688_item_search",
-        "onebound_1688_item_get",
-        "onebound_1688_item_get_shop",
-        "onebound_1688_item_get_company",
-        "onebound_1688_upload_img",
-        "onebound_1688_item_search_img"
-      ],
-      "autoApproveTools": []
+      "allowedTools": ["native_alibaba1688_product_find_product"],
+      "autoApproveTools": ["native_alibaba1688_product_find_product"]
     }
   ]
 }

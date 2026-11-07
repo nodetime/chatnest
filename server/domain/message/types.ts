@@ -4,6 +4,8 @@ import { z } from "zod";
 import type { createDocument } from "@/server/application/chat/tools/create-document";
 // biome-ignore lint/style/noRestrictedImports: 已登记豁免:ChatTools 依赖工具定义的 InferUITool 推导,翻转需重写工具类型声明(裁决见 P5 待办)
 import type { createResultTable } from "@/server/application/chat/tools/create-result-table";
+// biome-ignore lint/style/noRestrictedImports: ChatTools follows the registered native tool's inferred schema.
+import type { editDocument } from "@/server/application/chat/tools/edit-document";
 // biome-ignore lint/style/noRestrictedImports: 已登记豁免:ChatTools 依赖工具定义的 InferUITool 推导,翻转需重写工具类型声明(裁决见 P5 待办)
 import type { getWeather } from "@/server/application/chat/tools/get-weather";
 // biome-ignore lint/style/noRestrictedImports: 已登记豁免:ChatTools 依赖工具定义的 InferUITool 推导,翻转需重写工具类型声明(裁决见 P5 待办)
@@ -16,6 +18,7 @@ import type {
   AskUserOutput,
   TodoPlan,
 } from "./agent-interactions";
+import type { ExecuteCodeOutput } from "./code-execution";
 import type { McpSourceMetadata } from "./result-evidence";
 
 // P2 从 app/_lib/types.ts 迁入:ChatMessage 是聊天域核心类型,应用层与 UI 共用(R4 允许 UI import domain 类型)
@@ -37,11 +40,26 @@ type requestSuggestionsTool = InferUITool<
 >;
 
 export type ChatTools = {
+  executeCode: { input: { code: string }; output: ExecuteCodeOutput };
+  viewImage: {
+    input: { sourceToolCallId: string; imagePath: string };
+    output:
+      | { status: "failed"; error: string }
+      | {
+          status: "viewed";
+          height: number;
+          width: number;
+          sourceToolCallId: string;
+          imagePath: string;
+          url: string;
+        };
+  };
   askUser: { input: AskUserInput; output: AskUserOutput };
   updateTodo: { input: TodoPlan; output: TodoPlan };
   createResultTable: InferUITool<ReturnType<typeof createResultTable>>;
   getWeather: weatherTool;
   createDocument: createDocumentTool;
+  editDocument: InferUITool<ReturnType<typeof editDocument>>;
   updateDocument: updateDocumentTool;
   requestSuggestions: requestSuggestionsTool;
 };

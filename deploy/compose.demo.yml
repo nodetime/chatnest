@@ -1,0 +1,100 @@
+name: chatnest-demo
+
+x-logs: &logs
+  driver: json-file
+  options:
+    max-size: "5m"
+    max-file: "2"
+
+services:
+  postgres:
+    image: postgres:16-bookworm
+    env_file: database.env
+    volumes:
+      - database:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    cpus: 0.5
+    mem_limit: 256m
+    pids_limit: 128
+    logging: *logs
+    restart: unless-stopped
+
+  migrator:
+    image: ${CHATNEST_MIGRATOR_IMAGE:?Set immutable migrator image}
+    profiles: [init]
+    env_file: migration.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    cpus: 0.5
+    mem_limit: 256m
+    pids_limit: 64
+    logging: *logs
+
+  porta:
+    image: ${PORTA_IMAGE:?Set immutable Porta image}
+    env_file: porta.env
+    environment:
+      PORTA_HOST: 0.0.0.0
+    volumes:
+      - porta-data:/var/lib/porta
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    cpus: 0.5
+    mem_limit: 256m
+    pids_limit: 128
+    logging: *logs
+    restart: unless-stopped
+
+  porta-tls:
+    image: nginx:stable-alpine
+    volumes:
+      - ./porta-tls.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./tls:/etc/nginx/tls:ro
+    depends_on: [porta]
+    cpus: 0.25
+    mem_limit: 64m
+    pids_limit: 32
+    logging: *logs
+    restart: unless-stopped
+
+  app:
+    image: ${CHATNEST_IMAGE:?Set immutable app image}
+    env_file: app.env
+    environment:
+      NODE_EXTRA_CA_CERTS: /run/chatnest/porta-ca.crt
+    ports:
+      - "127.0.0.1:3340:3000"
+    volumes:
+      - uploads:/var/lib/chatnest/uploads
+      - ./tls/ca.crt:/run/chatnest/porta-ca.crt:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      porta-tls:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 45s
+      retries: 3
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    cpus: 1.0
+    mem_limit: 768m
+    pids_limit: 128
+    logging: *logs
+    restart: unless-stopped
+
+volumes:
+  database:
+  porta-data:
+  uploads:

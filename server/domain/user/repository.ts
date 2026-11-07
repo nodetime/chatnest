@@ -12,4 +12,8 @@ export interface UserRepository {
   createGuest: () => Promise<GuestUser[]>;
   // 按邮箱查用户(含密码哈希,供鉴权比对),不存在返回空数组
   findByEmail: (email: string) => Promise<UserRow[]>;
+  // 读取用户当前认证会话修订号;不存在返回 null
+  getSessionRevision: (userId: string) => Promise<number | null>;
+  // 递增用户认证会话修订号,使已签发 JWT 全部失效
+  revokeSessions: (userId: string) => Promise<number | null>;
 }

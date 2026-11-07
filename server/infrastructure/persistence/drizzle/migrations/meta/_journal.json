@@ -57,6 +57,83 @@
       "when": 1793102400000,
       "tag": "0007_personal_capabilities",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793372669672,
+      "tag": "0008_platform_points",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793447545453,
+      "tag": "0009_amused_deathstrike",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793449502701,
+      "tag": "0010_windy_masked_marvel",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793455348469,
+      "tag": "0011_account_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793456125080,
+      "tag": "0012_account_session_revision",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793456464949,
+      "tag": "0013_deletion_request_processor",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1793469200000,
+      "tag": "0014_deletion_tombstone_retention",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1793470858314,
+      "tag": "0015_retention_purge_marker",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1793471742583,
+      "tag": "0016_deletion_notification_address",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1793590600000,
+      "tag": "0017_alert_delivery_events",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1793781100000,
+      "tag": "0018_drop_alert_delivery_events",
+      "breakpoints": true
     }
   ]
 }

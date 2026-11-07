@@ -14,7 +14,11 @@ const registryKey = Symbol.for("chatnest.database.pools.v1");
 const host = globalThis as typeof globalThis & { [registryKey]?: Registry };
 
 export function getDatabaseClient(role: Role = "orm"): Client {
-  const url = getEnv().POSTGRES_URL ?? "";
+  const env = getEnv();
+  const url = env.POSTGRES_URL ?? "";
+  if (env.NODE_ENV === "production" && !url.trim()) {
+    throw new Error("DATABASE_RUNTIME_CONFIGURATION_INVALID");
+  }
   let registry = host[registryKey];
   if (registry && registry.url !== url) {
     // 不缓存任意连接串列表；也不把旧请求静默切换至另一数据库。

@@ -66,6 +66,7 @@ export async function listRemoteModels(
   settings: PrivateModelSettings,
   env: Environment
 ) {
+  let status: number | undefined;
   try {
     const response = await modelFetch(settings.baseURL, env)(
       `${settings.baseURL}/models`,
@@ -74,6 +75,7 @@ export async function listRemoteModels(
         signal: AbortSignal.timeout(15_000),
       }
     );
+    ({ status } = response);
     if (!response.ok) {
       await response.body?.cancel();
       return {
@@ -94,6 +96,7 @@ export async function listRemoteModels(
         message: "服务未提供标准模型目录，可手动填写模型 ID。",
         models: [],
         ok: false,
+        status,
       };
     }
     const models: string[] = [
@@ -112,8 +115,13 @@ export async function listRemoteModels(
       message: "已获取模型目录；列出不代表具有调用权限。",
       models,
       ok: true,
+      status,
     };
   } catch (error) {
-    return { ...connectionFailure(error), models: [] };
+    return {
+      ...connectionFailure(error),
+      models: [],
+      ...(status === undefined ? {} : { status }),
+    };
   }
 }

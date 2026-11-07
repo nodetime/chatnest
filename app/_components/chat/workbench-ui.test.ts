@@ -24,7 +24,7 @@ function renderActivity(
     const {SessionContext}=require('next-auth/react');
     const { ToolActivity } = require('./app/_components/chat/tool-activity.tsx');
     global.fetch = () => { throw new Error('Unexpected network access'); };
-    const info = { skills: [{ name: 'fixture-skill', displayName: '调查方法', shortDescription: '技能说明只在详情中' }], servers: [{toolAliases:[{alias:'fixture__search',name:'search',serverName:'Fixture'}]}] };
+    const info = { skills: [{ name: 'fixture-skill', displayName: '调查方法', shortDescription: '技能说明只在详情中' }], servers: [{toolAliases:[{alias:'fixture__search',name:'search',serverName:'Fixture'},{alias:'fixture__product',name:'onebound_1688_item_get',serverName:'Fixture'},{alias:'fixture__1688',name:'native_alibaba1688_product_find_product',serverName:'1688 商品查询'}]}] };
     const value = { provider: () => new Map(), fallback: { [unstable_serialize(['/api/agent','fixture-owner'])]: info }, revalidateOnMount: false, revalidateOnFocus: false };
     process.stdout.write(renderToStaticMarkup(React.createElement(SessionContext.Provider,{value:{data:{user:{id:'fixture-owner'}},status:'authenticated'}},React.createElement(SWRConfig, { value }, React.createElement(ToolActivity, {
       part: ${JSON.stringify(part)}, approve: () => { throw new Error('SSR must not approve'); }, isReadonly: ${isReadonly}, isRunning: ${isRunning}
@@ -142,20 +142,20 @@ test("readonly approval shows its state but not mutation controls; approval IDs 
   assert.match(source, /approved \? \{\} : \{ reason: "用户拒绝执行" \}/);
 });
 
-test("generic SDK error has a Chinese visible explanation without inlining its raw evidence", () => {
+test("generic SDK error explains an unconfirmed outcome without promising unavailable details", () => {
   const html = renderActivity({
     ...success,
     errorText: "An error occurred.",
     state: "output-error",
   });
-  assert.match(html, /role="alert">这一步未能完成。错误原文保留在调用详情中。/);
+  assert.match(html, /role="alert">本次搜索未返回有效结果，相关信息尚未核实。/);
   assert.doesNotMatch(html, /An error occurred\./);
   const custom = renderActivity({
     ...success,
     errorText: "Provider fixture error",
     state: "output-error",
   });
-  assert.match(custom, /role="alert">这一步未能完成/);
+  assert.match(custom, /role="alert">本次搜索未返回有效结果/);
   assert.doesNotMatch(custom, /Provider fixture error/);
   assert.match(
     renderCallDetails({
@@ -173,6 +173,26 @@ test("generic SDK error has a Chinese visible explanation without inlining its r
     }),
     /An error occurred\./
   );
+});
+
+test("stale document edits explain why no change was saved and retain exact evidence", () => {
+  const part = {
+    input: { id: "document", new_string: "new", old_string: "stale" },
+    output: {
+      error: "old_string not found in document",
+      savedContent: "current content",
+    },
+    state: "output-available",
+    toolCallId: "stale-edit",
+    type: "tool-editDocument",
+  };
+  const before = JSON.stringify(part);
+  const html = renderActivity(part);
+  assert.match(html, /修改未保存：待替换内容与当前文件不匹配，原文件未改动。/);
+  assert.match(html, /失败/);
+  assert.doesNotMatch(html, /这一步未能完成|错误原文保留|current content/);
+  assert.match(renderCallDetails(part), /old_string not found in document/);
+  assert.equal(JSON.stringify(part), before);
 });
 
 test("disclosure transitions collapse success, open new attention states, and preserve manual choices on same-state rerenders", () => {
@@ -566,7 +586,7 @@ test("version footer exposes Chinese version labels and keeps restore protection
   assert.doesNotMatch(source, /Show changes|\bRestore\b|\bLatest\b|\} of \{/);
 });
 
-test("all artifact action and toolbar descriptions and copy toasts are Chinese without translating agent messages", () => {
+test("artifact controls are Chinese and action messages request supported capabilities", () => {
   const expected: Record<string, string[]> = {
     code: [
       "运行代码",
@@ -616,7 +636,7 @@ test("all artifact action and toolbar descriptions and copy toasts are Chinese w
     ["sheet", "Can you please format and clean the data?"],
     [
       "sheet",
-      "Can you please analyze and visualize the data by creating a new code artifact in python?",
+      "请分析当前表格中的数据，说明主要发现；需要计算时使用当前可用的计算工具。",
     ],
     [
       "text",
@@ -630,6 +650,12 @@ test("all artifact action and toolbar descriptions and copy toasts are Chinese w
       )
     );
   }
+});
+
+test("sheet analysis uses the available compute tool instead of requesting an unsupported Python artifact", () => {
+  const source = readFileSync("app/_artifacts/sheet/client.tsx", "utf8");
+  assert.doesNotMatch(source, /new code artifact in python/);
+  assert.match(source, /需要计算时使用当前可用的计算工具/);
 });
 
 test("source and raw-result Sheets localize close controls without changing the shared Sheet", () => {
@@ -795,6 +821,7 @@ test("mixed reasoning and tools render in their original SDK order rather than m
       'react/jsx-runtime': {jsx, jsxs:jsx, Fragment:'fragment'},
       '@/app/_lib/utils': {cn:()=>'', sanitizeText: text=>text},
       '@/server/domain/message/run-failure': require('./server/domain/message/run-failure.ts'),
+      '@/server/domain/message/agent-interactions': require('./server/domain/message/agent-interactions.ts'),
       '../ai-elements/message': {MessageContent:'text', MessageResponse:'response'},
       '../ai-elements/shimmer': {Shimmer:'shimmer'},
       '../ai-elements/tool': {},
@@ -827,25 +854,33 @@ test("mixed reasoning and tools render in their original SDK order rather than m
   `);
 });
 
-test("native createResultTable validation errors are failed open activities with exact error in call details", () => {
-  const part = {
-    input: {},
-    output: { error: "Source fixture is unavailable" },
-    state: "output-available",
-    toolCallId: "native-table-error",
-    type: "tool-createResultTable",
-  };
-  const before = JSON.stringify(part);
-  const html = renderActivity(part);
-  assert.match(html, /生成表格产物/);
-  assert.match(html, /失败/);
-  assert.match(html, /aria-expanded="true"/);
-  assert.match(html, /role="alert">这一步未能完成/);
-  assert.doesNotMatch(html, /Source fixture is unavailable/);
-  assert.match(renderCallDetails(part), /Source fixture is unavailable/);
-  assert.doesNotMatch(html, /未完成|本轮没有收到执行结果/);
-  assert.equal(JSON.stringify(part), before);
-});
+for (const [type, title] of [
+  ["tool-createResultTable", "生成表格产物"],
+  ["tool-editDocument", "修改产物"],
+] as const) {
+  test(`native ${type} validation errors are failed open activities with exact error in call details`, () => {
+    const part = {
+      input: {},
+      output: { error: "Source fixture is unavailable" },
+      state: "output-available",
+      toolCallId: "native-table-error",
+      type,
+    };
+    const before = JSON.stringify(part);
+    const html = renderActivity(part);
+    assert.ok(html.includes(title));
+    assert.match(html, /失败/);
+    assert.match(html, /aria-expanded="true"/);
+    assert.match(
+      html,
+      /role="alert">文件(?:修改|生成)未完成，保存结果尚未确认。/
+    );
+    assert.doesNotMatch(html, /Source fixture is unavailable/);
+    assert.match(renderCallDetails(part), /Source fixture is unavailable/);
+    assert.doesNotMatch(html, /本轮没有收到执行结果/);
+    assert.equal(JSON.stringify(part), before);
+  });
+}
 
 test("dynamic MCP output error fields are evidence data, not the native table failure contract", () => {
   for (const toolName of ["fixture__search", "createResultTable"]) {
@@ -955,6 +990,24 @@ test("approval presents a human action summary while raw arguments are reachable
   });
   assert.match(unknown, /fixture__custom_alias/);
   assert.doesNotMatch(unknown, /只读操作|安全操作/);
+});
+
+test("product lookup approval shows the action and product number, not the protocol keys", () => {
+  const part = {
+    ...success,
+    approval: { id: "fixture-approval" },
+    input: { agent: "1", num_iid: "001" },
+    state: "approval-requested",
+    toolName: "fixture__product",
+  };
+  const html = renderActivity(part);
+  assert.match(html, /查询商品详情/);
+  assert.match(html, /商品编号/);
+  assert.match(html, /001/);
+  assert.match(html, /查看调用详情/);
+  assert.match(html, /分销代发价/);
+  assert.doesNotMatch(html, />agent<|num_iid|onebound_1688_item_get/);
+  assert.match(renderCallDetails(part), /num_iid/);
 });
 
 test("artifact and table actions keep readable 36px targets without leaking table controls to the viewer", () => {
@@ -1165,10 +1218,10 @@ test("workspace resize grip stretches across the pane with an 8px hit area and a
   assert.match(source, /tabIndex=\{0\}/);
 });
 
-test("Lessie composition uses neutral panes, purposeful mint and narrower chat beside broad artifacts", () => {
+test("chat composition continues the landing palette and keeps broad artifacts", () => {
   const css = readFileSync("app/globals.css", "utf8");
   const scoped = css.slice(css.indexOf(".chat-workbench {"));
-  assert.match(scoped, /--background: #ffffff/);
+  assert.match(scoped, /--background: #fafafb/);
   assert.match(scoped, /--workbench-selection:/);
   assert.doesNotMatch(scoped, /0\.00[1-8] (?:65|85)\)/);
   assert.match(
@@ -1246,13 +1299,13 @@ test("formal chat avoids repeated assistant branding without changing canonical 
   assert.match(messages, /key=\{message.id\}/);
 });
 
-test("Lessie refinement uses a white task canvas, bounded home and aligned title rails", () => {
+test("chat refinement uses a soft task canvas, bounded home and aligned title rails", () => {
   const css = readFileSync("app/globals.css", "utf8");
   const shell = readFileSync("app/_components/chat/shell.tsx", "utf8");
-  assert.match(css, /--workbench-canvas: #ffffff/);
+  assert.match(css, /--workbench-canvas: #fafafb/);
   assert.match(css, /--sidebar-width: 13rem/);
   assert.doesNotMatch(css, /--workbench-canvas: #f0f1f2/);
-  assert.match(shell, /max-w-\[840px\]/);
+  assert.match(shell, /max-w-\[800px\]/);
   const home = readFileSync("app/_components/chat/workspace-home.tsx", "utf8");
   assert.match(home, /data-testid="home-recent-grid"/);
   assert.match(home, /useSavedArtifacts/);
@@ -1292,4 +1345,42 @@ test("settings has responsive navigation and independently scrollable content wi
   assert.match(source, /min-h-0[^"\n]*overflow-y-auto/);
   assert.match(source, /<PersonalConnections/);
   assert.match(source, /<PersonalSkills/);
+});
+
+test("1688 approval presents the query and result count while protocol fields stay in details", () => {
+  const part = {
+    ...success,
+    approval: { id: "fixture-1688-approval" },
+    input: { pageSize: 5, query: "旅行包" },
+    state: "approval-requested",
+    toolName: "fixture__1688",
+  };
+  const html = renderActivity(part);
+  assert.match(html, /查询1688商品/);
+  assert.match(html, /关键词/);
+  assert.match(html, /旅行包/);
+  assert.match(html, /最多返回条数/);
+  assert.match(html, /允许执行/);
+  assert.doesNotMatch(
+    html,
+    /native_alibaba1688_product_find_product|pageSize|>query<|完整参数|提交回答|稍后回答/
+  );
+  const details = renderCallDetails(part);
+  assert.match(details, /pageSize/);
+  assert.match(details, /旅行包/);
+});
+
+test("approval stays neutral while the real session hook waits before starting its catalog request", () => {
+  const html = clientScript(`
+    const React=require('react');const {renderToStaticMarkup}=require('react-dom/server');
+    const {SessionContext}=require('next-auth/react');const {SWRConfig}=require('swr');
+    const {ToolActivity}=require('./app/_components/chat/tool-activity.tsx');
+    global.fetch=()=>{throw new Error('No network expected');};
+    const part={type:'dynamic-tool',toolName:'opaque__alias',toolCallId:'pending',state:'approval-requested',input:{query:'旅行包',pageSize:5},approval:{id:'exact'}};
+    process.stdout.write(renderToStaticMarkup(React.createElement(SessionContext.Provider,{value:{data:undefined,status:'loading',update:async()=>{}}},React.createElement(SWRConfig,{value:{provider:()=>new Map(),revalidateOnMount:false}},React.createElement(ToolActivity,{part,approve:()=>{throw new Error('Must not approve');},isReadonly:false,isRunning:false})))));
+  `);
+  assert.match(html, /正在读取操作说明/);
+  assert.doesNotMatch(html, /opaque__alias|pageSize|>query</);
+  assert.match(html, /disabled=""[^>]*>允许执行/);
+  assert.match(html, /查看调用详情/);
 });

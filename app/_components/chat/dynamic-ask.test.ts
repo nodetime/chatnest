@@ -39,7 +39,7 @@ test("Long Ask bodies are bounded; actions remain outside the scrolling form con
     "utf8"
   );
   assert.match(source, /data-testid="ask-questions"/);
-  assert.match(source, /max-h-\[min\(50dvh,360px\)\]/);
+  assert.match(source, /max-h-\[min\(50dvh,400px\)\]/);
   assert.match(source, /overflow-y-auto/);
   assert.doesNotMatch(source, /min-h-20/);
 });

@@ -2,6 +2,7 @@ import { generateText, type UIMessage } from "ai";
 import { getModelConnection } from "@/server/application/ai/model-connection";
 import { titlePrompt } from "@/server/application/ai/prompts";
 import { getTitleModel } from "@/server/application/ai/providers";
+import { normalizeChatTitle } from "@/server/domain/chat/types";
 import { getTextFromMessage } from "@/server/domain/message/convert";
 import { titleModel } from "@/server/domain/model/models";
 import { metadataOnlyTelemetry } from "@/server/shared/telemetry";
@@ -14,6 +15,8 @@ export async function generateTitleFromUserMessage({
 }) {
   const { text } = await generateText({
     instructions: titlePrompt,
+    maxOutputTokens: 128,
+    maxRetries: 0,
     model: getTitleModel(),
     prompt: getTextFromMessage(message),
     providerOptions: {
@@ -23,8 +26,5 @@ export async function generateTitleFromUserMessage({
     },
     telemetry: metadataOnlyTelemetry,
   });
-  return text
-    .replace(/^[#*"\s]+/, "")
-    .replace(/["]+$/, "")
-    .trim();
+  return normalizeChatTitle(text, getTextFromMessage(message));
 }

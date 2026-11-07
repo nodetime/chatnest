@@ -1,0 +1,31 @@
+{
+  "fixture": "payment-refund",
+  "apiVersion": "v1",
+  "schemaRevision": "2026-11-05.16",
+  "webhook": {
+    "providerEventId": "evt_refund_fixture_001",
+    "eventType": "charge.refunded",
+    "occurredAt": "2026-10-31T00:20:00.000Z",
+    "signature": "fixture-refund-signature",
+    "checkoutId": "checkout_fixture_001",
+    "refundId": "refund_fixture_001",
+    "currency": "USD",
+    "refundAmountMinor": 999,
+    "refundedGrantPoints": "100.000000"
+  },
+  "transactionResult": {
+    "paymentStatus": "refunded",
+    "ledgerEntryId": "ledger_refund_fixture_001",
+    "adjustmentType": "refund",
+    "adjustmentPoints": "-100.000000",
+    "balanceBefore": "200.000000",
+    "balanceAfter": "100.000000",
+    "idempotencyKey": "refund:synthetic:evt_refund_fixture_001"
+  },
+  "replay": {
+    "sameProviderEventId": true,
+    "expectedNewLedgerEntries": 0,
+    "expectedStatus": "already_processed"
+  },
+  "provider": "synthetic"
+}

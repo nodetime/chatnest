@@ -59,6 +59,16 @@ export function getModelConnection(env: Environment = getModelEnvironment()) {
   };
 }
 
+/** The official DeepSeek Chat endpoint requires reasoning-content round trips. */
+export function usesDeepSeekChat(env: Environment = getModelEnvironment()) {
+  const connection = getModelConnection(env);
+  return (
+    connection.provider === "openai" &&
+    connection.apiMode === "chat" &&
+    new URL(connection.baseURL).origin === "https://api.deepseek.com"
+  );
+}
+
 function directModels(env: Environment) {
   const { modelId } = getModelConnection(env);
   return env.OPENAI_MANAGED_MODELS
@@ -106,7 +116,7 @@ export function getDirectCapabilities(
   return Object.fromEntries(
     directModels(env).map(({ id, tools, vision }) => [
       id,
-      { reasoning: false, tools, vision },
+      { reasoning: usesDeepSeekChat(env), tools, vision },
     ])
   );
 }

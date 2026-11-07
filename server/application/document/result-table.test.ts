@@ -12,9 +12,11 @@ import {
   safeSourceUrl,
 } from "@/server/domain/document/result-table";
 import {
+  projectMcpModelMessages,
   ResultEvidenceLedger,
   restoreResultEvidence,
   sourceModelOutput,
+  sourceUrlPaths,
 } from "@/server/domain/message/result-evidence";
 
 const source = {
@@ -25,6 +27,50 @@ const source = {
   toolCallId: "actual-call",
   toolName: "fixture__search",
 };
+
+test("rich structured previews preserve actual candidate sources after nested metadata", () => {
+  const metadata = {
+    priceTags: Object.fromEntries(
+      Array.from({ length: 8 }, (_tag, n) => [`tag${n}`, "x".repeat(120)])
+    ),
+    promotionTags: new Array(8).fill({ long: "metadata".repeat(20) }),
+  };
+  const candidates = Array.from({ length: 3 }, (_, index) => ({
+    ...metadata,
+    currentPrice: index + 1,
+    detailUrl: `https://example.com/product/${index}`,
+    imageUrl: `https://images.example.com/candidate-${index}.jpg`,
+    qualityTags: { nested: { long: "quality".repeat(100) } },
+    title: `candidate-${index}`,
+  }));
+  const evidence = new ResultEvidenceLedger();
+  const original = { structuredContent: candidates };
+  evidence.record(source, original);
+  const preview = sourceModelOutput(evidence, source.toolCallId, original);
+  for (const candidate of candidates) {
+    assert.ok(preview.value.includes(candidate.title));
+    assert.ok(preview.value.includes(candidate.imageUrl));
+    assert.ok(preview.value.includes(candidate.detailUrl));
+  }
+  assert.ok(Buffer.byteLength(JSON.stringify(preview)) <= 12_000);
+  assert.ok(JSON.parse(preview.value).urlPaths.includes("/0/imageUrl"));
+  assert.deepEqual(evidence.get(source.toolCallId)?.value, candidates);
+});
+
+test("URL hints address original root-array fields with exact JSON Pointer escaping", () => {
+  const original = [{ "image~/url": "https://images.example.com/actual.jpg" }];
+  const paths = sourceUrlPaths(original);
+  assert.deepEqual(paths, ["/0/image~0~1url"]);
+  assert.equal(resolvePointer(original, paths[0]), original[0]["image~/url"]);
+  assert.equal(
+    sourceUrlPaths(
+      Array.from({ length: 100 }, (_, i) => ({
+        image: `https://images.example.com/${i}`,
+      }))
+    ).length,
+    8
+  );
+});
 const rows = [
   {
     item_url: "https://example.test/one",
@@ -793,4 +839,138 @@ test("Agent 可设置通用表格显示筛选，原始证据行仍完整保留",
   assert.equal(table.view.filter, "旅行包");
   assert.equal(resultRows(table).length, 2);
   assert.equal(parseResultTable(JSON.stringify(table))?.view.filter, "旅行包");
+});
+
+test("MCP文本正文保留关键段落，超长显式截断，历史恢复保持一致且不伪造表格证据", () => {
+  const value = new ResultEvidenceLedger();
+  const output = {
+    content: [
+      {
+        text: `${"页面开头。".repeat(100)}正文关键结论：支持自动工具结果续跑。`,
+        type: "text",
+      },
+      { text: "另一段正文。", type: "text" },
+    ],
+  };
+  const original = JSON.stringify(output);
+  assert.equal(value.record(source, output).available, false);
+  const projected = JSON.parse(
+    sourceModelOutput(value, source.toolCallId, output).value
+  );
+  assert.equal(
+    projected.content,
+    output.content.map((block) => block.text).join("\n\n")
+  );
+  assert.equal(projected.truncated, false);
+  assert.equal(value.get(source.toolCallId), undefined);
+  assert.equal(JSON.stringify(output), original);
+  const history = new ResultEvidenceLedger();
+  restoreResultEvidence(history, [
+    {
+      createdAt: source.completedAt,
+      parts: [
+        {
+          output,
+          state: "output-available",
+          toolCallId: source.toolCallId,
+          toolName: source.toolName,
+          type: "dynamic-tool",
+        },
+      ],
+      role: "assistant",
+    },
+  ]);
+  assert.equal(
+    JSON.parse(sourceModelOutput(history, source.toolCallId, output).value)
+      .content,
+    projected.content
+  );
+  const large = { content: [{ text: "正文".repeat(20_000), type: "text" }] };
+  value.record({ ...source, toolCallId: "large-text" }, large);
+  const bounded = JSON.parse(
+    sourceModelOutput(value, "large-text", large).value
+  );
+  assert.equal(bounded.truncated, true);
+  assert.equal(bounded.content.length, 12_000);
+  assert.ok(Buffer.byteLength(bounded.content, "utf8") <= 36_000);
+  const oversized = {
+    content: [{ text: "x".repeat(2 * 1024 * 1024 + 1), type: "text" }],
+  };
+  const oversizedLedger = new ResultEvidenceLedger();
+  restoreResultEvidence(oversizedLedger, [
+    {
+      createdAt: source.completedAt,
+      parts: [
+        {
+          output: oversized,
+          state: "output-available",
+          toolCallId: source.toolCallId,
+          toolName: source.toolName,
+          type: "dynamic-tool",
+        },
+      ],
+      role: "assistant",
+    },
+  ]);
+  assert.equal(
+    JSON.parse(
+      sourceModelOutput(oversizedLedger, source.toolCallId, oversized).value
+    ).content,
+    undefined
+  );
+});
+
+test("纯文本和结构化结果共用有界模型投影，重复读取不耗减正文且原始结果保留", () => {
+  const value = new ResultEvidenceLedger();
+  const outputs = Array.from({ length: 52 }, (_, i) => ({
+    id: `mixed-${i}`,
+    output:
+      i % 3 === 0
+        ? { structuredContent: { items: [{ name: "实际条目" }] } }
+        : { content: [{ text: "实际正文".repeat(3000), type: "text" }] },
+  }));
+  const messages: import("ai").ModelMessage[] = [];
+  for (const entry of outputs) {
+    value.record({ ...source, toolCallId: entry.id }, entry.output);
+    const first = sourceModelOutput(value, entry.id, entry.output);
+    assert.deepEqual(sourceModelOutput(value, entry.id, entry.output), first);
+    // 模拟SDK每步立即固化结果，而非全部record后才读取。
+    messages.push({
+      content: [
+        {
+          output: first,
+          toolCallId: entry.id,
+          toolName: source.toolName,
+          type: "tool-result",
+        },
+      ],
+      role: "tool",
+    });
+    const projected = projectMcpModelMessages(messages, value);
+    const bytes = projected.reduce(
+      (total, message) =>
+        total +
+        (message.role === "tool"
+          ? message.content.reduce(
+              (n, part) =>
+                n +
+                (part.type === "tool-result"
+                  ? Buffer.byteLength(JSON.stringify(part.output), "utf8")
+                  : 0),
+              0
+            )
+          : 0),
+      0
+    );
+    assert.ok(bytes <= 128 * 1024, String(bytes));
+  }
+  const original = JSON.stringify(messages);
+  projectMcpModelMessages(messages, value);
+  assert.equal(JSON.stringify(messages), original);
+  const latest = outputs.at(-2)!;
+  assert.ok(
+    JSON.parse(
+      sourceModelOutput(value, latest.id, latest.output).value
+    ).content.includes("实际正文")
+  );
 });

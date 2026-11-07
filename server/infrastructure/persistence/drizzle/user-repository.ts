@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { generateUUID } from "@/server/domain/message/ids";
 import type { UserRepository } from "@/server/domain/user/repository";
 import { ChatbotError } from "@/server/shared/errors";
@@ -33,6 +33,31 @@ export const userRepository: UserRepository = {
       .select()
       .from(user)
       .where(eq(user.email, email))
+      .catch((error: unknown) => {
+        throw new ChatbotError("bad_request:database", { cause: error });
+      });
+  },
+  getSessionRevision(userId) {
+    return db
+      .select({ revision: user.sessionRevision })
+      .from(user)
+      .where(eq(user.id, userId))
+      .limit(1)
+      .then(([row]) => row?.revision ?? null)
+      .catch((error: unknown) => {
+        throw new ChatbotError("bad_request:database", { cause: error });
+      });
+  },
+  revokeSessions(userId) {
+    return db
+      .update(user)
+      .set({
+        sessionRevision: sql`${user.sessionRevision} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(eq(user.id, userId))
+      .returning({ revision: user.sessionRevision })
+      .then(([row]) => row?.revision ?? null)
       .catch((error: unknown) => {
         throw new ChatbotError("bad_request:database", { cause: error });
       });

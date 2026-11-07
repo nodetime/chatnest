@@ -10,19 +10,8 @@ import {
   resolveServerConnection,
 } from "@/server/infrastructure/mcp/config";
 import { createAgentRuntime } from "@/server/infrastructure/mcp/runtime";
-import {
-  discoverSkills,
-  readSkillFile,
-} from "@/server/infrastructure/mcp/skills";
 
-const toolNames = [
-  "item_search",
-  "item_get",
-  "item_get_shop",
-  "item_get_company",
-  "upload_img",
-  "item_search_img",
-].map((name) => `onebound_1688_${name}`);
+const toolNames = ["native_alibaba1688_product_find_product"];
 const defaultConfig = JSON.parse(
   readFileSync("server/infrastructure/mcp/agent.json", "utf8")
 );
@@ -34,21 +23,28 @@ const porta = () => {
   return server;
 };
 
-test("default Porta registers exactly six native tools without auto approval; Exa remains unchanged", () => {
+test("demo enables free Exa and only Bailian product lookup; read-only calls are auto-approved", () => {
   const server = porta();
   assert.deepEqual(server.allowedTools, toolNames);
-  assert.deepEqual(server.autoApproveTools, []);
+  assert.deepEqual(server.autoApproveTools, toolNames);
+  assert.equal(server.enabled, true);
   assert.equal(server.url, "${PORTA_MCP_URL}");
   assert.deepEqual(
     defaultConfig.servers.find((item: { id: string }) => item.id === "exa"),
     {
       allowedTools: ["web_search_exa", "web_fetch_exa"],
       autoApproveTools: ["web_search_exa", "web_fetch_exa"],
+      enabled: true,
       headers: {},
       id: "exa",
       name: "Exa 网页搜索",
       url: "https://mcp.exa.ai/mcp",
     }
+  );
+  assert.equal(
+    defaultConfig.servers.find((item: { id: string }) => item.id === "tavily")
+      .enabled,
+    false
   );
 });
 
@@ -163,7 +159,7 @@ test("loopback HTTP needs explicit development opt-in, never opens arbitrary HTT
   }
 });
 
-test("missing, malformed and unapproved local Porta settings skip only Porta", async () => {
+test("missing or malformed Porta settings leave free Exa available", async () => {
   const keys = [
     "AGENT_CONFIG_PATH",
     "PORTA_MCP_URL",
@@ -207,7 +203,7 @@ test("missing, malformed and unapproved local Porta settings skip only Porta", a
       assert.deepEqual(connections, ["https://mcp.exa.ai/mcp"]);
       assert.match(
         runtime.instructions,
-        /Porta.*(?:not configured|configuration is invalid)/
+        /1688 商品查询.*(?:not configured|configuration is invalid)/
       );
       await runtime.close();
     }
@@ -222,7 +218,7 @@ test("missing, malformed and unapproved local Porta settings skip only Porta", a
   }
 });
 
-test("configured Porta passes native input/output unchanged and gates every paid tool", async () => {
+test("configured read-only tools auto-approve and pass native input/output unchanged", async () => {
   const keys = [
     "AGENT_CONFIG_PATH",
     "PORTA_MCP_URL",
@@ -230,7 +226,7 @@ test("configured Porta passes native input/output unchanged and gates every paid
     "TAVILY_API_KEY",
   ];
   const previous = keys.map((key) => process.env[key]);
-  const input = { page: "2", page_size: "7", q: "fixture query", sort: "bid" };
+  const input = { pageSize: 5, query: "fixture query" };
   const output = {
     content: [{ text: '{"items":{"item":[],"page_size":"7"}}', type: "text" }],
     structuredContent: { items: { item: [], page_size: "7" } },
@@ -274,10 +270,11 @@ test("configured Porta passes native input/output unchanged and gates every paid
     }) as typeof createMCPClient);
     assert.equal(runtime.tools.exa__web_search_exa.needsApproval, false);
     for (const name of toolNames) {
-      assert.equal(runtime.tools[`porta__${name}`].needsApproval, true);
+      assert.equal(runtime.tools[`porta__${name}`].needsApproval, false);
     }
     assert.equal(runtime.tools.porta__unlisted_delete, undefined);
-    const { execute } = runtime.tools.porta__onebound_1688_item_search;
+    const { execute } =
+      runtime.tools.porta__native_alibaba1688_product_find_product;
     assert.ok(execute);
     assert.equal(
       await execute(input, {
@@ -299,27 +296,6 @@ test("configured Porta passes native input/output unchanged and gates every paid
       }
     });
   }
-});
-
-test("independent 1688 investigation skill loads on demand while content investigation remains intact", async () => {
-  const skills = await discoverSkills();
-  const procurement = skills.find((skill) => skill.name === "source-1688");
-  assert.ok(procurement);
-  assert.equal(procurement.displayName, "1688商品与主体线索调查");
-  assert.match(procurement.description, /律师/);
-  const body = await readSkillFile(procurement, "SKILL.md");
-  for (const name of toolNames) {
-    assert.ok(body.includes(name), name);
-  }
-  assert.match(body, /imgcode/);
-  assert.match(body, /imgid/);
-  assert.match(body, /100/);
-  assert.match(body, /收费/);
-  const investigation = skills.find(
-    (skill) => skill.name === "investigate-content"
-  );
-  assert.ok(investigation);
-  assert.match(await readSkillFile(investigation, "SKILL.md"), /## 调查方法/);
 });
 
 test("MCP transport rejects redirects instead of forwarding a loopback connection elsewhere", async () => {
@@ -376,7 +352,7 @@ test("MCP transport rejects redirects instead of forwarding a loopback connectio
     );
     assert.match(
       runtime.instructions,
-      /Porta.*connection or tool discovery failed/
+      /1688 商品查询.*connection or tool discovery failed/
     );
     await runtime.close();
   } finally {

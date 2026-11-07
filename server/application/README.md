@@ -11,7 +11,7 @@
 ## 禁止项
 
 - 禁止 import `@/app/**`、`next/server`、`next/headers`、`next/navigation`(R2)
-- 请求上下文(userId、signal、requestHints 等)一律作为参数传入,不从框架取
+- 请求上下文(userId、signal、ip 等)一律作为参数传入,不从框架取
 - 禁止直写 SQL 或 import 驱动细节——那是 infrastructure 的事;登记例外:uploads/service.ts 自带连接(P8 收口为仓储)
 
 ## 硬约定

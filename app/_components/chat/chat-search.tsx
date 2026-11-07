@@ -69,7 +69,7 @@ export function ChatSearch() {
       <DialogTrigger asChild>
         <SidebarMenuButton
           aria-label="搜索对话"
-          className="h-10 gap-3 rounded-lg px-2.5 text-sm"
+          className="h-9 gap-2 rounded-lg px-2.5 text-[13px]"
         >
           <Search className="size-[18px]" />
           <span>搜索对话</span>

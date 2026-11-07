@@ -293,3 +293,54 @@ test("缺少服务端原范围的旧审批不能默认获取新添个人能力",
   });
   await assert.rejects(() => service.prepare(undefined, true), /原范围/);
 });
+
+test("新轮次剔除已删除能力且不默认添加新能力，显式选择与旧续跑仍严格校验", async () => {
+  const { createTaskCapabilityService } = await import("./runtime");
+  let snapshot: ScopeSnapshot = {
+    grants: { "skill:builtin:removed": "v1" },
+    revision: 1,
+    selection: { serverIds: [], skillIds: ["builtin:removed"] },
+  };
+  const service = createTaskCapabilityService({
+    chatId: "c",
+    load: async () => ({
+      config: {
+        maxOutputTokens: 512,
+        maxSteps: 1,
+        servers: [],
+        timeoutMs: 1000,
+        toolTimeoutMs: 1000,
+      },
+      grants: { "skill:builtin:new": "v1" },
+      skills: [
+        {
+          description: "New skill",
+          directory: "",
+          id: "builtin:new",
+          name: "new",
+        },
+      ],
+    }),
+    scopes: {
+      bind: async (_u, _c, expected, next) => {
+        assert.equal(expected, snapshot.revision);
+        snapshot = { revision: expected + 1, ...next };
+        return snapshot;
+      },
+      read: async () => snapshot,
+    },
+    userId: "A",
+  });
+  await assert.rejects(() => service.prepare(undefined, true), /所选能力/);
+  await assert.rejects(
+    () =>
+      service.prepare({ serverIds: [], skillIds: ["builtin:removed"] }, false),
+    /所选能力/
+  );
+  const prepared = await service.prepare(undefined, false);
+  assert.deepEqual(prepared.snapshot.selection, {
+    serverIds: [],
+    skillIds: [],
+  });
+  assert.equal(prepared.skills.length, 0);
+});

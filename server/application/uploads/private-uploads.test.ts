@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import {
+  chmod,
   mkdtemp,
   readFile,
   realpath,
@@ -64,6 +66,32 @@ test("private driver preserves bytes and rejects symlinks/path locators with pri
     await assert.rejects(() => readFile(join(root, id)));
     await symlink("/etc/passwd", join(root, id));
     await assert.rejects(() => store.read(id, 1024 * 1024));
+  } finally {
+    await rm(root, { force: true, recursive: true });
+  }
+});
+test("restored storage refuses group-readable directories and files before serving bytes", async () => {
+  const { LocalUploadStore } = await import(
+    "@/server/infrastructure/uploads/local-store"
+  );
+  const root = await realpath(
+    await mkdtemp(join(tmpdir(), "private-restore-"))
+  );
+  const id = "11111111-1111-4111-8111-111111111111";
+  const other = "22222222-2222-4222-8222-222222222222";
+  try {
+    const store = new LocalUploadStore(root);
+    await store.write(id, png);
+    await chmod(root, 0o750);
+    await assert.rejects(() => store.write(other, png));
+    await assert.rejects(() => store.read(id, png.length));
+    await chmod(root, 0o700);
+    await chmod(join(root, id), 0o640);
+    await assert.rejects(() => store.read(id, png.length));
+    const hash = createHash("sha256").update(png).digest("hex");
+    await assert.rejects(() => store.verify(id, png.length, hash));
+    await chmod(join(root, id), 0o600);
+    assert.deepEqual(await store.read(id, png.length), png);
   } finally {
     await rm(root, { force: true, recursive: true });
   }
@@ -139,6 +167,185 @@ test("multipart input is stream bounded before parsing and rejects duplicate fil
       })
     )
   );
+});
+test("an idle upload read returns 408 even when cancellation never completes", async (t) => {
+  const { readBoundedBody, UploadError } = await import(
+    "@/server/shared/uploads/validation"
+  );
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  let cancelled = false;
+  const body = new ReadableStream<Uint8Array>({
+    cancel() {
+      cancelled = true;
+      return new Promise<void>(() => undefined);
+    },
+  });
+  const init = { body, duplex: "half", method: "POST" };
+  const pending = readBoundedBody(new Request("http://localhost", init), 64, {
+    idleTimeoutMs: 30,
+  });
+  const result = assert.rejects(
+    pending,
+    (error) => error instanceof UploadError && error.status === 408
+  );
+  t.mock.timers.tick(30);
+  if (!cancelled) {
+    t.mock.timers.reset();
+    throw new Error("idle upload stream was not cancelled");
+  }
+  await result;
+});
+test("upload progress restarts the idle budget until EOF", async (t) => {
+  const { readBoundedBody } = await import(
+    "@/server/shared/uploads/validation"
+  );
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  let stream!: ReadableStreamDefaultController<Uint8Array>;
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      stream = controller;
+    },
+  });
+  const init = { body, duplex: "half", method: "POST" };
+  const pending = readBoundedBody(new Request("http://localhost", init), 64, {
+    idleTimeoutMs: 30,
+  });
+  t.mock.timers.tick(20);
+  stream.enqueue(Uint8Array.of(1));
+  await Promise.resolve();
+  t.mock.timers.tick(20);
+  stream.enqueue(Uint8Array.of(2));
+  stream.close();
+  assert.deepEqual(await pending, Buffer.from([1, 2]));
+});
+
+test("only the self-authenticating upload endpoint skips the Next proxy", async () => {
+  const { unstable_doesMiddlewareMatch } = await import(
+    "next/experimental/testing/server"
+  );
+  const { config } = await import("@/proxy");
+  const match = (path: string) =>
+    unstable_doesMiddlewareMatch({ config, url: `http://localhost${path}` });
+  assert.equal(match("/api/files/upload"), false);
+  assert.equal(match("/api/files/upload/?x=1"), false);
+  assert.equal(match("/api/files/upload-other"), true);
+  assert.equal(match("/api/files/123"), true);
+  assert.equal(match("/api/chat"), true);
+  assert.equal(match("/api/admin/storage"), true);
+});
+test("download capacity is held until consumption, cancellation, or stalled response expiry", async (t) => {
+  const { DownloadCapacity, downloadBody } = await import(
+    "@/server/domain/attachment/capacity"
+  );
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const capacity = new DownloadCapacity(8);
+  const first = downloadBody(Uint8Array.of(1, 2, 3, 4, 5), capacity.take(5));
+  assert.throws(() => capacity.take(4), { status: 429 });
+  await first.cancel();
+  const finished = downloadBody(Uint8Array.of(6, 7), capacity.take(8));
+  assert.deepEqual(
+    new Uint8Array(await new Response(finished).arrayBuffer()),
+    Uint8Array.of(6, 7)
+  );
+  const stalled = downloadBody(Uint8Array.of(8), capacity.take(8));
+  t.mock.timers.tick(30_000);
+  await assert.rejects(stalled.getReader().read(), /下载超时/);
+  capacity.take(8)();
+});
+
+test("private attachment HEAD uses authorized metadata even with no download capacity or stored body", async () => {
+  const { execFileSync } = await import("node:child_process");
+  const root = await realpath(await mkdtemp(join(tmpdir(), "private-head-")));
+  try {
+    execFileSync(
+      process.execPath,
+      [
+        "--conditions=react-server",
+        "--import",
+        "tsx",
+        "-e",
+        String.raw`
+          const assert = require("node:assert/strict");
+          const { createHash } = require("node:crypto");
+          const Module = require("node:module");
+          const { autoImplementMethods } = require("next/dist/server/route-modules/app-route/helpers/auto-implement-methods");
+          const id = "11111111-1111-4111-8111-111111111111";
+          const bytes = Buffer.from("private attachment");
+          const asset = {
+            id, ownerId: "owner", chatId: "chat", chatOwnerId: "owner",
+            state: "used", visibility: "private", associated: true,
+            mime: "text/plain", name: "样本.txt", size: bytes.length,
+            sha256: createHash("sha256").update(bytes).digest("hex"),
+          };
+          let user = { id: "owner", type: "regular" };
+          const sql = async (strings, ...values) => {
+            assert.match(strings.join(" "), /FROM upload_assets/);
+            return values.includes(id) ? [asset] : [];
+          };
+          sql.json = JSON.stringify;
+          // Only the external identity and database boundaries are fixtures.
+          const load = Module._load;
+          Module._load = function (name, ...args) {
+            if (name === "@/app/(auth)/auth") return { auth: async () => ({ user }) };
+            if (name === "@/server/infrastructure/persistence/drizzle/connection") {
+              return { getDatabaseClient: () => sql };
+            }
+            return load.call(this, name, ...args);
+          };
+          const methods = autoImplementMethods(require("./app/(chat)/api/files/[id]/route.ts"));
+          const { downloadCapacity } = require("./server/domain/attachment/capacity");
+          const { MAX_DOCUMENT_BYTES } = require("./server/domain/attachment/document-types");
+          const { LocalUploadStore } = require("./server/infrastructure/uploads/local-store");
+          const request = (method) => methods[method](
+            new Request("http://localhost/api/files/" + id, { method }),
+            { params: Promise.resolve({ id }) }
+          );
+          (async () => {
+            const release = downloadCapacity.take(2 * MAX_DOCUMENT_BYTES);
+            let head;
+            try {
+              head = await request("HEAD");
+              assert.equal(head.status, 200, "HEAD must not take the GET download budget");
+              assert.equal(head.body, null);
+              assert.equal(head.headers.get("content-length"), String(bytes.length));
+              assert.equal(head.headers.get("content-type"), "text/plain");
+              assert.equal(head.headers.get("cache-control"), "private, no-store");
+              assert.match(head.headers.get("content-disposition"), /%E6%A0%B7%E6%9C%AC\.txt$/);
+            } finally {
+              release();
+            }
+            user = { id: "outsider", type: "regular" };
+            const denied = await request("HEAD");
+            assert.equal(denied.status, 404);
+            assert.equal(denied.body, null);
+            assert.equal(denied.headers.has("content-disposition"), false);
+            user = undefined;
+            const signedOut = await request("HEAD");
+            assert.equal(signedOut.status, 401);
+            assert.equal(signedOut.body, null);
+            user = { id: "owner", type: "regular" };
+            await new LocalUploadStore(process.env.UPLOAD_STORAGE_DIR).write(id, bytes);
+            const get = await request("GET");
+            assert.equal(get.status, 200);
+            assert.deepEqual([...get.headers], [...head.headers]);
+            assert.deepEqual(Buffer.from(await get.arrayBuffer()), bytes);
+            downloadCapacity.take(2 * MAX_DOCUMENT_BYTES)();
+          })().catch((error) => { console.error(error); process.exitCode = 1; });
+        `,
+      ],
+      {
+        env: {
+          HOME: process.env.HOME,
+          NODE_ENV: "test",
+          PATH: process.env.PATH,
+          UPLOAD_STORAGE_DIR: root,
+        },
+        timeout: 10_000,
+      }
+    );
+  } finally {
+    await rm(root, { force: true, recursive: true });
+  }
 });
 test("generation admission is synchronous, A B A invalidates stale completions and cancellation", async () => {
   const { UploadAdmission } = await import(
@@ -353,43 +560,72 @@ test("public guest readers are accepted but writes remain regular-only and used 
     false
   );
 });
-test("SDK-swallowed send errors never clear draft, successful submissions clear only their own generation", async () => {
+test("draft clears on HTTP acceptance before stream completion, restores on late failure and ignores stale callbacks", async () => {
   const { completeDraftSubmission } = await import(
     "@/server/domain/attachment/client-admission"
   );
+  let draft = "sent";
   let clears = 0;
-  const failed = new Error("vision rejected");
-  await assert.rejects(
-    () =>
-      completeDraftSubmission(
-        async () => undefined,
-        () => failed,
-        () => true,
-        () => {
-          clears += 1;
-        }
-      ),
-    /vision rejected/
-  );
-  assert.equal(clears, 0);
-  await completeDraftSubmission(
-    async () => undefined,
-    () => undefined,
-    () => false,
-    () => {
-      clears += 1;
-    }
-  );
-  assert.equal(clears, 0);
-  await completeDraftSubmission(
-    async () => undefined,
-    () => undefined,
-    () => true,
-    () => {
-      clears += 1;
-    }
-  );
+  let current = true;
+  let accept!: () => void;
+  let finish!: () => void;
+  let error: Error | undefined;
+  const submit = () =>
+    completeDraftSubmission(
+      (onAccepted) => {
+        accept = onAccepted;
+        return new Promise<void>((resolve) => {
+          finish = resolve;
+        });
+      },
+      () => error,
+      () => current,
+      () => {
+        clears += 1;
+        draft = "";
+      },
+      () => {
+        draft ||= "sent";
+      }
+    );
+  let pending = submit();
+  assert.equal(draft, "sent");
+  accept();
+  assert.equal(draft, "", "HTTP accepted: do not wait for the model stream");
+  accept();
   assert.equal(clears, 1);
+  finish();
+  await pending;
+  assert.equal(clears, 1);
+  draft = "sent";
+  pending = submit();
+  error = new Error("HTTP rejected");
+  finish();
+  await assert.rejects(pending, /HTTP rejected/);
+  assert.equal(draft, "sent");
+  error = undefined;
+  pending = submit();
+  accept();
+  error = new Error("stream failed");
+  finish();
+  await assert.rejects(pending, /stream failed/);
+  assert.equal(draft, "sent");
+  error = undefined;
+  pending = submit();
+  accept();
+  draft = "next draft";
+  error = new Error("stream failed");
+  finish();
+  await assert.rejects(pending, /stream failed/);
+  assert.equal(draft, "next draft");
+  error = undefined;
+  draft = "new chat draft";
+  pending = submit();
+  current = false;
+  accept();
+  finish();
+  await pending;
+  assert.equal(draft, "new chat draft");
 });
 test("process upload admission rejects excess requests without reading their bodies and releases on failure", async () => {
   const { UploadCapacity } = await import(

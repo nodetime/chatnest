@@ -7,6 +7,18 @@ export function isPersonalSection(value: string): value is PersonalSection {
 /** Auth returns only to known personal views, never an external URL or another user's chat. */
 export function authReturnPath(value: string | null): string {
   return value === "/chat" ||
+    value === "/billing" ||
+    value === "/usage" ||
+    value === "/organizations" ||
+    value === "/account" ||
+    value === "/account/billing" ||
+    value === "/account/usage" ||
+    value === "/account/organizations" ||
+    value === "/admin" ||
+    value === "/admin/billing" ||
+    value === "/admin/connections" ||
+    value === "/admin/models" ||
+    value === "/admin/storage" ||
     value === "/?section=connections" ||
     value === "/?section=skills"
     ? value

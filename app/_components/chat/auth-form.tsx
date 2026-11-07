@@ -22,6 +22,9 @@ export function AuthForm({
   passwordAutoComplete?: "current-password" | "new-password";
 }) {
   const instance = useId();
+  const acceptsDevelopmentAccount =
+    process.env.NODE_ENV === "development" &&
+    passwordAutoComplete === "current-password";
   // Cached login/register pages can coexist. Keep labels scoped to this form.
   const prefix = passwordAutoComplete === "new-password" ? "register" : "login";
   const emailId = `${prefix}-${instance}-email`;
@@ -35,17 +38,19 @@ export function AuthForm({
       )}
       <div className="flex flex-col gap-2">
         <Label className="font-normal text-muted-foreground" htmlFor={emailId}>
-          邮箱
+          {acceptsDevelopmentAccount ? "账号或邮箱" : "邮箱"}
         </Label>
         <Input
-          autoComplete="email"
+          autoComplete={acceptsDevelopmentAccount ? "username" : "email"}
           className="h-10 rounded-lg border-border/50 bg-muted/50 text-sm transition-colors focus:border-foreground/20 focus:bg-muted"
           defaultValue={defaultEmail}
           id={emailId}
           name="email"
-          placeholder="请输入邮箱"
+          placeholder={
+            acceptsDevelopmentAccount ? "请输入账号或邮箱" : "请输入邮箱"
+          }
           required
-          type="email"
+          type={acceptsDevelopmentAccount ? "text" : "email"}
         />
       </div>
 

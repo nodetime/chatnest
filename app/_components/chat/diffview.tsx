@@ -1,23 +1,18 @@
 import OrderedMap from "orderedmap";
 import {
-  DOMParser,
   type MarkSpec,
   type Node as ProsemirrorNode,
   Schema,
 } from "prosemirror-model";
-import { schema } from "prosemirror-schema-basic";
-import { addListNodes } from "prosemirror-schema-list";
 import { EditorState } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
 import { useEffect, useRef } from "react";
-import { renderToString } from "react-dom/server";
-
-import { MessageResponse } from "@/app/_components/ai-elements/message";
 import { DiffType, diffEditor } from "@/app/_lib/editor/diff";
+import { documentSchema, parseMarkdown } from "@/app/_lib/editor/markdown";
 
 const diffSchema = new Schema({
   marks: OrderedMap.from({
-    ...schema.spec.marks.toObject(),
+    ...documentSchema.spec.marks.toObject(),
     diffMark: {
       attrs: { type: { default: "" } },
       toDOM(mark) {
@@ -39,7 +34,7 @@ const diffSchema = new Schema({
       },
     } as MarkSpec,
   }),
-  nodes: addListNodes(schema.spec.nodes, "paragraph block*", "block"),
+  nodes: documentSchema.spec.nodes,
 });
 
 function computeDiff(oldDoc: ProsemirrorNode, newDoc: ProsemirrorNode) {
@@ -57,23 +52,8 @@ export const DiffView = ({ oldContent, newContent }: DiffEditorProps) => {
 
   useEffect(() => {
     if (editorRef.current && !viewRef.current) {
-      const parser = DOMParser.fromSchema(diffSchema);
-
-      const oldHtmlContent = renderToString(
-        <MessageResponse>{oldContent}</MessageResponse>
-      );
-      const newHtmlContent = renderToString(
-        <MessageResponse>{newContent}</MessageResponse>
-      );
-
-      const oldContainer = document.createElement("div");
-      oldContainer.innerHTML = oldHtmlContent;
-
-      const newContainer = document.createElement("div");
-      newContainer.innerHTML = newHtmlContent;
-
-      const oldDoc = parser.parse(oldContainer);
-      const newDoc = parser.parse(newContainer);
+      const oldDoc = parseMarkdown(oldContent, diffSchema);
+      const newDoc = parseMarkdown(newContent, diffSchema);
 
       const diffedDoc = computeDiff(oldDoc, newDoc);
 

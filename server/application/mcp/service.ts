@@ -82,7 +82,7 @@ export function createSettingsService({
         servers: [
           ...file.map((s) => ({
             allowedTools: s.allowedTools,
-            enabled: true,
+            enabled: s.enabled !== false,
             headerNames: Object.keys(s.headers),
             id: s.id,
             name: s.name,

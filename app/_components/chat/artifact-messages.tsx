@@ -30,6 +30,7 @@ function PureArtifactMessages({
   regenerate,
   isReadonly,
 }: ArtifactMessagesProps) {
+  const isActive = status === "submitted" || status === "streaming";
   const {
     containerRef: messagesContainerRef,
     endRef: messagesEndRef,
@@ -49,7 +50,7 @@ function PureArtifactMessages({
         <PreviewMessage
           addToolApprovalResponse={addToolApprovalResponse}
           chatId={chatId}
-          isLoading={status === "streaming" && index === messages.length - 1}
+          isLoading={isActive && index === messages.length - 1}
           isReadonly={isReadonly}
           key={message.id}
           message={message}
@@ -67,12 +68,9 @@ function PureArtifactMessages({
       ))}
 
       <AnimatePresence mode="wait">
-        {status === "submitted" &&
-          !messages.some((msg) =>
-            msg.parts?.some(
-              (part) => "state" in part && part.state === "approval-responded"
-            )
-          ) && <ThinkingMessage key="thinking" />}
+        {status === "submitted" && messages.at(-1)?.role !== "assistant" && (
+          <ThinkingMessage key="thinking" />
+        )}
       </AnimatePresence>
 
       <motion.div

@@ -37,6 +37,6 @@
 ## 文档导航
 
 - [docs/CODEBASE_MAP.md](docs/CODEBASE_MAP.md) 模块现状(改结构必看、必更)
-- [docs/task.md](docs/task.md) 任务台账;[docs/lesson.md](docs/lesson.md) 验收教训
+- [唯一研发 TODO](docs/superpowers/plans/2026-11-04-core-launch-goal-and-todo.md) 当前Goal、范围、版本和验收状态；以其中用户最新确认的范围为准，不从历史文档恢复已暂停任务；[docs/lesson.md](docs/lesson.md) 验收教训
 - [docs/integrations/](docs/integrations/) 各集成细节;[docs/superpowers/](docs/superpowers/) 逐轮 spec 与 plan
 - 跨工具共享的 agent 资产放 `.agents/`(规则见 .agents/README.md);Claude 专属配置放 `.claude/`

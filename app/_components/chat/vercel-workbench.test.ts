@@ -34,6 +34,7 @@ test("artifact collection accepts successful native outputs only, deduplicating 
     native("a", "First"),
     native("b", "Code", "tool-createDocument", { kind: "code" }),
     native("a", "Renamed", "tool-updateDocument"),
+    native("a", "Edited", "tool-editDocument"),
     native("table", "Rows", "tool-createResultTable", { kind: "sheet" }),
     native("dynamic", "Fake", "dynamic-tool"),
     native("mcp", "Fake", "tool-fixture__createDocument"),
@@ -49,7 +50,7 @@ test("artifact collection accepts successful native outputs only, deduplicating 
   ]);
   const snapshot = JSON.stringify(input);
   assert.deepEqual(artifactCatalog(input), [
-    { id: uuid("a"), kind: "text", title: "Renamed" },
+    { id: uuid("a"), kind: "text", title: "Edited" },
     { id: uuid("b"), kind: "code", title: "Code" },
     { id: uuid("table"), kind: "sheet", title: "Rows" },
   ]);

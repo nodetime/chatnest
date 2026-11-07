@@ -11,6 +11,91 @@ import {
 } from "@/server/domain/message/run-failure";
 import type { ChatMessage } from "@/server/domain/message/types";
 
+test("SDK 工具循环耗尽持久保存一次失败标记，并保留所有已执行证据", async () => {
+  const { streamText, toUIMessageStream, jsonSchema, isStepCount } =
+    await import("ai");
+  const { MockLanguageModelV4 } = await import("ai/test");
+  const reporter = createRunFailureReporter();
+  let calls = 0;
+  let executions = 0;
+  let persisted: ChatMessage | undefined;
+  const model = new MockLanguageModelV4({
+    doStream: () => {
+      calls += 1;
+      return Promise.resolve({
+        stream: new ReadableStream({
+          start(controller) {
+            controller.enqueue({ type: "stream-start", warnings: [] });
+            controller.enqueue({
+              input: "{}",
+              toolCallId: `loop-${calls}`,
+              toolName: "test",
+              type: "tool-call",
+            });
+            controller.enqueue({
+              finishReason: { raw: "tool_calls", unified: "tool-calls" },
+              type: "finish",
+              usage: {
+                inputTokens: {
+                  cacheRead: 0,
+                  cacheWrite: 0,
+                  noCache: 1,
+                  total: 1,
+                },
+                outputTokens: { reasoning: 0, text: 1, total: 1 },
+              },
+            });
+            controller.close();
+          },
+        }),
+      });
+    },
+  });
+  const stream = createUIMessageStream<ChatMessage>({
+    execute: async ({ writer }) => {
+      const reachedLimit = isStepCount(2);
+      const result = streamText({
+        model,
+        prompt: "test",
+        stopWhen: async (context) => {
+          const reached = await reachedLimit(context);
+          if (reached) {
+            reporter.report((part) => writer.write(part));
+          }
+          return reached;
+        },
+        tools: {
+          test: {
+            execute: () => {
+              executions += 1;
+              return `evidence-${executions}`;
+            },
+            inputSchema: jsonSchema({ properties: {}, type: "object" }),
+          },
+        },
+      });
+      writer.merge(toUIMessageStream({ stream: result.stream }));
+      await result.text;
+    },
+    onEnd: ({ responseMessage }) => {
+      persisted = responseMessage;
+    },
+  });
+  for await (const _ of readUIMessageStream({ stream })) {
+    /* Consume the actual SDK stream and persistence lifecycle. */
+  }
+  assert.equal(calls, 2);
+  assert.equal(executions, 2);
+  assert.ok(persisted);
+  assert.ok(reporter.failed && hasRunFailure(persisted));
+  assert.equal(
+    persisted.parts.filter((part) => part.type === "data-run-status").length,
+    1
+  );
+  assert.match(JSON.stringify(persisted), /evidence-1/);
+  assert.match(JSON.stringify(persisted), /evidence-2/);
+});
+
 test("actual SDK persists a sanitized failure marker without inventing model text", async () => {
   const failure = createRunFailureReporter();
   let persisted: ChatMessage | undefined;
