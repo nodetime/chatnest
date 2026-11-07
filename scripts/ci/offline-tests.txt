@@ -117,11 +117,9 @@ app/(account)/account/usage/usage-pagination.test.ts
 
 server/application/admin/billing-routes.test.ts
 
-server/application/admin/platform-connected-runner.test.ts
 
 server/application/account/platform-routes.test.ts
 
-scripts/owned-payload-runtime.test.mjs
 
 server/infrastructure/persistence/drizzle/runtime-role.test.ts
 

@@ -4,6 +4,8 @@
 
 仓库名保留 ChatNest，产品显示名为「数知探AI」。
 
+当前交付是 **ChatNest 全栈应用 + PostgreSQL + Porta MCP** 的独立演示，使用真实模型和百炼1688商品查询。Payload二次开发和接入已暂停，CLI不参与Web演示。当前Goal、待办、版本及真实验收结果只看[唯一研发TODO](docs/superpowers/plans/2026-11-04-core-launch-goal-and-todo.md)；历史计划不作为新任务依据。
+
 基于官方 [vercel/chatbot](https://github.com/vercel/chatbot) 改造，采用 Next.js、Vercel AI SDK 和原模板组件。保留上游代码历史与 Apache 2.0 许可；领域方法由 Skills 封装，执行能力优先接入现成 MCP 工具。
 
 - 对话、浏览器/文档/来源工作区，以及可暂停和接管的浏览器会话。

@@ -6,7 +6,7 @@
 
 项目仅包含 `nodetime/payload`（业务后端承载仓库）、`nodetime/chatnest`（Chat/Agent 应用）、`nodetime/porta`（MCP 服务）、`nodetime/porta-cli`（CLI 客户端）。ChatNest 自身是 Next.js 全栈应用；`PLATFORM_BASE_URL` 是其对接业务后端的 HTTP 入口。
 
-当前 `nodetime/payload` 检出内容为 Payload 框架，已查分支尚未找到本项目业务应用。此前部分联验脚本硬编码的 `NexaZ/heymoro-starter` 属于其他项目，不是本项目 Payload；这些脚本及历史账务证据不能作为四仓交付依据。待处理事项仅记在[唯一研发 TODO](superpowers/plans/2026-11-04-core-launch-goal-and-todo.md)。
+Payload 唯一来源为工作区内的 `../payload`（远程 `nodetime/payload`）。协议生成、差异检查及跨仓运行时校验固定读取该仓库，不接受其他 Payload 仓库路径。依赖项目外后端的旧联验 runner、seed、browser 脚本及其失效验收记录已删除；ChatNest 自身的数据库运行角色检查保留。当前 Payload 检出为框架源码，尚无本项目业务应用接入的验收证据。用户于 2026-11-07 暂停该项，保留独立演示；现有接入代码不代表运行时已连接。当前范围及验收状态仅记在[唯一研发 TODO](superpowers/plans/2026-11-04-core-launch-goal-and-todo.md)。
 
 ## 当前演示架构与 Agent 分层（2026-11-06）
 

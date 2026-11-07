@@ -135,50 +135,6 @@ test("production pool rejects missing POSTGRES_URL before driver defaults", asyn
   }
 });
 
-test("role rejection evidence requires its structured policy marker, not just exit 1", async () => {
-  const { mkdtempSync, writeFileSync, rmSync } = await import("node:fs");
-  const { tmpdir } = await import("node:os");
-  const { join } = await import("node:path");
-  const { spawnSync } = await import("node:child_process");
-  const dir = mkdtempSync(join(tmpdir(), "chatnest-role-marker-"));
-  try {
-    const file = join(dir, "probe.log");
-    const run = (text: string) => {
-      writeFileSync(file, text);
-      return spawnSync("bash", [
-        "-c",
-        'source scripts/fixtures/runtime-role.sh; verify_connected_role_rejection "$1"',
-        "marker",
-        file,
-      ]).status;
-    };
-    assert.equal(
-      run(
-        JSON.stringify({
-          productionInitAccepted: false,
-          rejection: "role_policy",
-          scope: "owned-chatnest-runtime-role",
-        })
-      ),
-      0
-    );
-    for (const text of [
-      "TransformError",
-      "",
-      JSON.stringify({ rejection: "unavailable" }),
-      JSON.stringify({
-        productionInitAccepted: false,
-        rejection: "unavailable",
-        scope: "owned-chatnest-runtime-role",
-      }),
-    ]) {
-      assert.notEqual(run(text), 0);
-    }
-  } finally {
-    rmSync(dir, { recursive: true });
-  }
-});
-
 test("dev migration rejects duplicate and parent-overridden runtime targets without editing env", async () => {
   const { runInNewContext } = await import("node:vm");
   const source = readFileSync(

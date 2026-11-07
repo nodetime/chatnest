@@ -1,12 +1,34 @@
 # AI Chat：唯一研发 TODO
 
-更新：2026-11-06。本文件是当前范围、版本及验收状态的唯一来源；操作步骤见[演示手册](../../demo-cases.md)，结构见[架构地图](../../CODEBASE_MAP.md)。
+更新：2026-11-07。本文件是当前范围、版本及验收状态的唯一来源；操作步骤见[演示手册](../../demo-cases.md)，结构见[架构地图](../../CODEBASE_MAP.md)。
 
 ## Goal 与范围
 
-完成相似商品演示：上传参照 → 真实模型理解 → 1688检索 → 查看候选图片 → 右侧可追溯比较表 → 续改、下载与侧栏重开。配合通用 Ask、Todo 和自动 JavaScript 计算。review 后在功能分支提交、发布 CI 镜像并更新已授权独立演示入口，不合并 main。
+产品方向：用户提供图片、设计、商标、链接或文件，寻找相似对象、比较异同，交付有来源的表格，辅助识别疑似抄袭线索。当前真实验收主案例是相似商品，不将单一案例表述成全部商业计划能力完成。
+
+当前 Goal：保留并维护已经验收的独立演示——上传参照 → 真实模型理解 → 1688检索 → 查看候选图片 → 右侧可追溯比较表 → 续改、下载与侧栏重开，配合通用 Ask、Todo 和自动 JavaScript 计算。本轮只收尾旧联调清理及范围对齐，不新增业务功能、不重启 Payload 开发，不自动合并 main 或更新服务器。
 
 运行形态：ChatNest 全栈应用 + PostgreSQL + DeepSeek Flash + Porta 百炼1688。Exa 搜索/网页读取可用；其他业务不扩入本次验收。应用没有用户累计调用次数限制；费用设置由供应平台管理。
+
+## 后续工作边界
+
+| 项目 | 当前约定 |
+| --- | --- |
+| 业务实现 | ChatNest 已承接登录、会话、上传、Agent 编排、产物及设置等应用后端；当前运行无需 Payload |
+| Agent 架构 | 一个通用核心 Prompt + 一个按需业务 Skill + 内置交互工具及 MCP，不另造 Agent 引擎或固定业务流水线 |
+| Prompt / Skill / 工具 | 核心正文在 `server/application/ai/core.md`；业务SOP在 `server/infrastructure/skills/similar-products/SKILL.md`；外部能力通过 MCP 接入，不把商品规则塞进核心 |
+| 用户体验 | 缺实质信息才 Ask，多步骤工作用 Todo；已允许的只读查询自动执行。聊天简短交接，比较详情放右侧表格，技术参数放工具详情 |
+| 当前启用工具 | Exa搜索/网页读取；Porta仅百炼1688 `find_product`。其他供应商及Tavily保持关闭，CLI不参与Web演示 |
+| Payload | 暂停二次开发及接入；保留仓库和既有客户端，不列为当前未完成任务，不描述为已接通 |
+| 真实验收 | 只以本次实际请求、页面与保存结果证明对应能力；本机、服务器及历史版本分别记录，readiness不代表模型或工具成功 |
+| 变更纪律 | 只修确定问题；不新增兼容路径、审批系统、调用次数限制或应用告警投递系统。密钥不入Git，付费调用按用户授权集中验证 |
+| 状态来源 | 本文件唯一维护Goal、TODO、版本与验收状态；架构地图描述结构，演示手册描述操作，历史文档不产生新任务 |
+
+## 当前待办
+
+- [x] 本次旧联调清理及范围对齐经独立review，随本记录单独提交至当前功能分支，并更新现有PR。相关回归已完成；不为文档和提交重复调用付费服务。
+
+除此之外，当前范围没有新增开发任务。Payload、CLI、完整商标/文档业务验收、工商补查及批量监测均不因历史文档自动加入当前TODO；恢复或扩展时先明确需求。支付及部署运维不列为研发待办。
 
 ## 唯一版本记录
 
@@ -16,9 +38,11 @@
 | Porta | `6cd66138a1c2d1fd301e0499fbe0af1327b96756` | MCP 服务，移除重复技能和导出器 |
 | porta-cli | `fe46637c815baa4d89c285f668f6b70695b2992d` | 独立 CLI，本轮未改，不参与 Web 演示 |
 
-ChatNest / Porta 使用 `feat/deepseek/demo-delivery`。ChatNest发布tag：`feat/deepseek/demo-delivery-20261106-r5`。文档提交可以位于镜像源码提交之后，不为纯文档变更重建镜像。
+以上为已交付运行代码，区别于后续清理和文档提交。ChatNest 本次收尾基于 `7a72244e3de39e7010d9d927ceb9735bc8b9d18b`，保留应用运行逻辑和 Payload 对接客户端；本次单独提交清除失效验收工具及范围歧义。最新审阅提交由下方 PR 标识，不把后续清理提交描述为已部署镜像。Porta和porta-cli的HEAD为表中SHA。
 
-应用入口：[数知探AI](https://chat.miaokit.cloud)。本机 dev 为 `http://127.0.0.1:3003`，Porta为 `127.0.0.1:3334`。`admin / 123456` 仅用于显式启用开发初始化的 development 环境；服务器使用私下配置的演示账号。
+ChatNest / Porta 使用 `feat/deepseek/demo-delivery`。ChatNest发布tag：`feat/deepseek/demo-delivery-20261106-r5`。已有PR为 [ChatNest #17](https://github.com/nodetime/chatnest/pull/17) 与 [Porta #25](https://github.com/nodetime/porta/pull/25)，当前均为草稿、目标main，尚未合并。完整分支CI以PR当前提交的检查结果为准，不用上一个提交的通过结果代替；当前提交不生成发布tag、不更新服务器镜像。
+
+应用入口：[数知探AI](https://chat.miaokit.cloud)。本机约定开发地址为 `http://127.0.0.1:3003`，Porta为 `127.0.0.1:3334`；地址约定不代表进程当前正在运行。`admin / 123456` 仅用于显式启用开发初始化的 development 环境；服务器使用私下配置的演示账号。
 
 服务器独立 Compose 项目 `/opt/chatnest-demo`；应用只绑定 `127.0.0.1:3340`，由既有 HTTPS 入口转发。数据库执行现有19条完整迁移，应用使用非owner身份；未修改其他站点。只交付镜像和私有环境配置，密钥、日志、截图不进入Git。
 
@@ -81,12 +105,13 @@ ChatNest / Porta 使用 `feat/deepseek/demo-delivery`。ChatNest发布tag：`fea
 
 本轮不增加功能范围、不设置“所有生成每次稳定命中”的无限验收条件；正式生产运维不属于研发TODO。
 
-**本次独立演示交付完成，不等于 Payload + ChatNest + Porta 的完整项目已闭环。**
+当前交付范围为已验证的独立演示。用户于 2026-11-07 确认可保留该形态，暂停 Payload 二次开发和接入；该项不再列入当前研发待办，也不计为已接通。
 
-## 三项目集成缺口（2026-11-06 重新核对）
+## Payload 接入：暂停（2026-11-07）
 
-- [ ] 定位并对齐本项目 Payload 业务后端与既有 connected 接口，完成三项目本地联调后再交付同一架构。当前服务器没有 Payload。
+核对当前 Payload 仓库的本地历史及原联调记录，未找到本项目 ChatNest 与该仓库业务应用已打通的证据。当前检出为框架源码，服务器没有 Payload。ChatNest 保留既有对接客户端；本轮未新增 Payload 应用或接口实现。接入工作按用户要求暂停，恢复须另行明确范围；不作为现有独立演示的收尾条件。
 
-ChatNest 中保留 identity exchange、账户/组织与账务的 connected 客户端。旧联验脚本依赖工作区外的另一项目，不能作为本项目三仓验收证据；当前 `nodetime/payload` 检出为 Payload 框架源码，尚未找到对应业务应用。当前 dev 启动和服务器演示均使用 standalone。关闭支付与暂不演示账务不代表取消 Payload；此前“全部研发闭环”的表述不成立。
+- [x] 清除项目外后端依赖：协议脚本固定读取 `../payload`，删除旧联验 runner、seed、browser 及失效验收记录；保留 ChatNest 数据库运行角色检查。此项仅代表清理完成，不代表 Payload 已接通。
+- 清理验证：28 项相关回归通过；类型检查、变更 lint、ChatNest 协议生成一致性与 23 项协议产物检查通过，测试白名单无失效路径。此记录不包含三仓联调通过结论。
 
 PR 对齐该事实，不自动合并 main，不把外部项目代码或凭据加入本项目。

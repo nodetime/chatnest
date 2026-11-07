@@ -46,7 +46,7 @@ pnpm contract:http:acceptance
 pnpm contract:parity
 ```
 
-- 默认三仓生成；非标准 checkout 位置用 `PAYLOAD_ROOT` / `PORTA_ROOT` 显式传入。格式化使用各仓已安装的 formatter，生成前先安装依赖。
+- 默认三仓生成；Payload 固定为工作区内的 `../payload`，Porta 默认 `../porta`，可用 `PORTA_ROOT` 指定其位置。格式化使用各仓已安装的 formatter，生成前先安装依赖。跨仓检查要求 Payload 中存在对应业务模块；文件缺失应报错，不代表三仓已接通。
 - 每仓 `pnpm contract:check` 只读取本仓：校验 source digest、产物必需集合、版本常量、schema/fixture/类型/validator 的内容 hash，缺失或变更非零退出。
 - 本地 hash 检查是**误改检测**，不是重新编译或可信签名证明。producer CI 仍需 `contract:generate --check`；`contract:parity` 的历史字符串检查不是 runtime 协议证明。
 - `contract:runtime` 明确依赖三个 checkout：实际调用 Payload 签发 → Porta 验签、Porta 签发 → Payload 验签，并以独立 AJV 校验对照三仓实际生成模块。密钥仅内存临时生成，不调用模型/供应商，不写生产环境。

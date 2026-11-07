@@ -3,9 +3,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const chatnestRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
-const payloadRoot =
-  process.env.PAYLOAD_ROOT ||
-  resolve(chatnestRoot, "../../NexaZ/heymoro-starter");
+const payloadRoot = resolve(chatnestRoot, "../payload");
 const portaRoot = process.env.PORTA_ROOT || resolve(chatnestRoot, "../porta");
 const manifest = JSON.parse(
   await readFile(

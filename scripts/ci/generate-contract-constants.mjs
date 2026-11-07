@@ -7,9 +7,7 @@ import { renderContract } from "./contract-artifacts.mjs";
 import { formatContract as format } from "./contract-formatter.mjs";
 
 const chatnestRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
-const payloadRoot =
-  process.env.PAYLOAD_ROOT ||
-  resolve(chatnestRoot, "../../NexaZ/heymoro-starter");
+const payloadRoot = resolve(chatnestRoot, "../payload");
 const portaRoot = process.env.PORTA_ROOT || resolve(chatnestRoot, "../porta");
 const manifest = JSON.parse(
   await readFile(

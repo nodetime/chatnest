@@ -3,7 +3,7 @@ import { generateKeyPairSync } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import Ajv2020 from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
 import {
@@ -14,8 +14,7 @@ import {
 const chatnestSchemas = { ExecutionPermitSchema, ExecutionReceiptSchema };
 
 // Explicit three-checkout acceptance. Never included in standalone offline CI.
-const payloadRoot =
-  process.env.PAYLOAD_ROOT ?? resolve("../../NexaZ/heymoro-starter");
+const payloadRoot = fileURLToPath(new URL("../../../payload", import.meta.url));
 const portaRoot = process.env.PORTA_ROOT ?? resolve("../porta");
 async function moduleAt(root: string, path: string) {
   const loaded = await import(pathToFileURL(resolve(root, path)).href);
