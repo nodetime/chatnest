@@ -1,6 +1,12 @@
 "use client";
 
-import { ArrowUpRight, FileText, Globe, MapPin } from "lucide-react";
+import {
+  ArrowLeftRight,
+  ArrowUpRight,
+  FileText,
+  Globe,
+  MapPin,
+} from "lucide-react";
 import { useCallback, useState } from "react";
 import { Button } from "@/app/_components/ui/button";
 import {
@@ -120,8 +126,12 @@ export function LandingPreview() {
       id="product"
     >
       <div className="landing-preview__caption">
-        <span>商品线索对照</span>
-        <span>结果示例</span>
+        <div>
+          <p className="landing-kicker">让信息井然有序</p>
+          <h2>线索与来源，一目了然。</h2>
+          <p>在表格中比较，打开详情继续了解。</p>
+        </div>
+        <span className="landing-preview__label">结果示例</span>
       </div>
       <div className="landing-preview__scroll">
         <table>
@@ -183,6 +193,10 @@ export function LandingPreview() {
           </tbody>
         </table>
       </div>
+      <p className="landing-preview__hint">
+        <ArrowLeftRight aria-hidden="true" size={12} />
+        左右滑动查看完整表格
+      </p>
       <Sheet onOpenChange={changeOpen} open={selected !== null}>
         <SheetContent className="landing-menu landing-detail">
           <SheetHeader>

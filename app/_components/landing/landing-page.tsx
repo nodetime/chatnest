@@ -41,31 +41,32 @@ const links = [
 ];
 const examples = [
   {
+    description: "从一张图片出发，比较相似点与差异。",
     icon: Search,
-    name: "查找与比较",
-    text: "查找旅行包的公开资料，比较价格和商家，并整理成一份带来源的表格。",
+    name: "查找相似",
+    text: "查找与我提供的图片或设计相似的商品，比较相似点与差异，整理成带来源的表格。",
   },
   {
+    description: "梳理内容重合与差异，保留各自出处。",
     icon: Files,
-    name: "整理文件",
-    text: "整理我提供的文件，提炼关键信息，并标明出处与待核对事项。",
+    name: "对照材料",
+    text: "比较我提供的文件，整理内容重合、关键差异和各自的出处。",
   },
   {
+    description: "把散落的链接与资料，变成清晰的表格。",
     icon: BookOpen,
-    name: "研究一个主题",
-    text: "研究我关心的主题，对照不同来源，形成有引用、说明资料局限的报告。",
+    name: "整理线索",
+    text: "整理我提供的链接和材料，提炼关键信息，形成带来源的表格。",
   },
 ];
 
 export function LandingPage() {
   const { data: session, status } = useSession();
-  const [request, setRequest] = useState(examples[0].text);
+  const [request, setRequest] = useState("");
   const [error, setError] = useState("");
-  const [editing, setEditing] = useState(false);
   const input = useRef<HTMLTextAreaElement>(null);
   const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
   const workspace = `${base}/chat`;
-  const illustrated = request === examples[0].text && !editing;
   const submit = useCallback(
     (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
@@ -85,8 +86,6 @@ export function LandingPage() {
     },
     [request, session?.user?.id, status, workspace]
   );
-  const handleBlur = useCallback(() => setEditing(false), []);
-  const handleFocus = useCallback(() => setEditing(true), []);
   const handleInput = useCallback((event: ChangeEvent<HTMLTextAreaElement>) => {
     setRequest(event.target.value);
     setError("");
@@ -97,7 +96,6 @@ export function LandingPage() {
       return;
     }
     setRequest(example.text);
-    setEditing(true);
     setError("");
     input.current?.focus();
     input.current?.scrollIntoView({ behavior: "instant", block: "center" });
@@ -173,14 +171,20 @@ export function LandingPage() {
         </div>
       </header>
       <section aria-labelledby="landing-heading" className="landing-hero">
-        <p className="landing-hero__eyebrow">你的 AI 资料助手</p>
+        <p className="landing-hero__eyebrow">
+          <Sparkles aria-hidden="true" size={14} />
+          你的 AI 资料助手
+        </p>
         <h1 id="landing-heading">
           让<span>线索</span>，成为答案
         </h1>
+        <p className="landing-hero__description">
+          查找相似，比较差异。把图片、文件与问题，整理成清晰的结果。
+        </p>
         <Button asChild className="landing-pill landing-hero__start">
           <a href={workspace}>
-            <Sparkles aria-hidden="true" size={17} />
-            开始使用
+            进入工作台
+            <ArrowUpRight aria-hidden="true" size={16} />
           </a>
         </Button>
         <form className="landing-request" onSubmit={submit}>
@@ -189,36 +193,28 @@ export function LandingPage() {
               描述你的任务
             </label>
             <textarea
-              className={
-                illustrated
-                  ? "landing-request__textarea landing-request__textarea--illustrated"
-                  : "landing-request__textarea"
-              }
+              className="landing-request__textarea"
               id="landing-request"
               maxLength={8000}
-              onBlur={handleBlur}
               onChange={handleInput}
-              onFocus={handleFocus}
+              placeholder="想查找相似商品，还是比较一份材料？告诉我你的目标…"
               ref={input}
               rows={2}
               value={request}
             />
-            {!!illustrated && (
-              <div aria-hidden="true" className="landing-request__example">
-                查找<mark>旅行包</mark>的公开资料，比较<mark>价格和商家</mark>
-                ，并整理成一份带来源的表格。
-              </div>
-            )}
           </div>
-          <Button
-            className="landing-request__submit"
-            disabled={!request.trim() || status === "loading"}
-            type="submit"
-            variant="outline"
-          >
-            开始
-            <CornerDownLeft aria-hidden="true" size={14} />
-          </Button>
+          <div className="landing-request__toolbar">
+            <span>从一个问题开始，进入对话后可添加材料</span>
+            <Button
+              className="landing-request__submit"
+              disabled={!request.trim() || status === "loading"}
+              type="submit"
+              variant="outline"
+            >
+              开始
+              <CornerDownLeft aria-hidden="true" size={14} />
+            </Button>
+          </div>
         </form>
         {!!error && (
           <p className="landing-request__error" role="alert">
@@ -226,25 +222,27 @@ export function LandingPage() {
           </p>
         )}
       </section>
-      <LandingPreview />
       <section
         aria-labelledby="landing-scenarios-heading"
         className="landing-section landing-scenarios"
         id="scenarios"
       >
-        <p className="landing-kicker">从一个目标开始</p>
-        <h2 id="landing-scenarios-heading">少一点翻找，多一点进展。</h2>
+        <h2 className="sr-only" id="landing-scenarios-heading">
+          少一点翻找，多一点进展。
+        </h2>
         <div className="landing-scenarios__grid">
-          {examples.map(({ name, text, icon: Icon }, index) => (
+          {examples.map(({ name, description, icon: Icon }, index) => (
             <button
               data-example={index}
               key={name}
               onClick={chooseExample}
               type="button"
             >
-              <Icon aria-hidden="true" size={21} />
+              <span className="landing-scenario-icon">
+                <Icon aria-hidden="true" size={18} />
+              </span>
               <h3>{name}</h3>
-              <p>{text}</p>
+              <p>{description}</p>
               <span>
                 试试这个目标 <ArrowUpRight aria-hidden="true" size={15} />
               </span>
@@ -252,6 +250,7 @@ export function LandingPage() {
           ))}
         </div>
       </section>
+      <LandingPreview />
       <section
         aria-labelledby="landing-faq-heading"
         className="landing-section landing-faq"

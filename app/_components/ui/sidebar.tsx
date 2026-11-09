@@ -192,16 +192,16 @@ function Sidebar({
           data-sidebar="sidebar"
           data-slot="sidebar"
           data-mobile="true"
-          className="inset-x-0 bottom-0 top-auto h-[70dvh] w-full rounded-t-2xl border-t border-border/30 bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden"
+          className="inset-x-0 bottom-0 top-auto w-full overflow-hidden rounded-t-2xl border-t border-border/30 bg-sidebar p-0 text-sidebar-foreground data-[side=bottom]:h-[70dvh] data-[side=bottom]:max-h-[70dvh] [&>button]:hidden"
           showCloseButton={false}
           side="bottom"
         >
           <SheetHeader className="sr-only">
-            <SheetTitle>Sidebar</SheetTitle>
-            <SheetDescription>Displays the mobile sidebar.</SheetDescription>
+            <SheetTitle>侧栏</SheetTitle>
+            <SheetDescription>开始新对话、查看历史与管理个人设置。</SheetDescription>
           </SheetHeader>
-          <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-sidebar-foreground/20" />
-          <div className="flex h-full w-full flex-col overflow-y-auto pt-2">{children}</div>
+          <div className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-sidebar-foreground/20" />
+          <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden pt-2">{children}</div>
         </SheetContent>
       </Sheet>
     )

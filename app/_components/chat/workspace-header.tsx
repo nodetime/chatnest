@@ -49,7 +49,7 @@ export function WorkspaceHeader({
   const Icon = mode.icon;
   return (
     <ArtifactHeader
-      className="@container shrink-0 flex-col items-stretch gap-0 border-border/70 bg-background p-0"
+      className="workbench-header @container shrink-0 flex-col items-stretch gap-0 border-border/70 bg-background p-0"
       data-testid="workspace-header"
     >
       <div
@@ -73,7 +73,7 @@ export function WorkspaceHeader({
             >
               <Icon className="size-4" />
               {!(workspace.tab === "document" && children) && (
-                <span className="sr-only sm:not-sr-only text-xs">
+                <span className="sr-only @min-[600px]:not-sr-only text-xs">
                   {mode.title}
                 </span>
               )}

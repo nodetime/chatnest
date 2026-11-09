@@ -9,7 +9,7 @@ export default function AuthLayout({
 }) {
   return (
     <div
-      className="flex min-h-svh flex-col bg-background"
+      className="auth-surface flex min-h-svh flex-col bg-background"
       data-testid="auth-shell"
     >
       <header className="flex items-center justify-between gap-4 px-6 py-5 sm:px-8">
@@ -32,7 +32,7 @@ export default function AuthLayout({
       <main className="flex flex-1 items-center justify-center px-6 pt-8 pb-20 sm:pb-28">
         <section
           aria-label="账户登录与注册"
-          className="w-full max-w-sm space-y-2"
+          className="w-full max-w-[420px] space-y-2 rounded-3xl border border-border/80 bg-card p-7 shadow-[var(--shadow-float)] sm:p-9"
         >
           {children}
         </section>

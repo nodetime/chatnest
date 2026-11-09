@@ -654,7 +654,7 @@ function PureMultimodalInput({
                 home && "w-[84px] rounded-lg",
                 input.trim() || attachments.length > 0
                   ? "bg-foreground text-background hover:opacity-85 active:scale-95"
-                  : "bg-muted text-muted-foreground/25 cursor-not-allowed"
+                  : "bg-muted text-muted-foreground cursor-not-allowed disabled:opacity-60"
               )}
               data-testid="send-button"
               disabled={

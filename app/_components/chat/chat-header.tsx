@@ -26,7 +26,7 @@ export function ChatHeader({
   const workspace = useWorkspace();
   const { chatTitle, startNewChat, messages } = useActiveChat();
   return (
-    <header className="flex h-[52px] shrink-0 items-center gap-2 border-b border-border/70 bg-background px-4 sm:px-6">
+    <header className="workbench-header flex h-[52px] shrink-0 items-center gap-2 border-b border-border/70 bg-background px-4 sm:px-6">
       {!!isMobile && (
         <Button
           aria-label="打开侧栏"
@@ -52,7 +52,7 @@ export function ChatHeader({
             <Button
               aria-expanded={workspace.open}
               aria-label={workspace.open ? "隐藏工作区" : "打开工作区"}
-              className="size-9 rounded-md"
+              className="size-9 rounded-lg aria-expanded:bg-accent aria-expanded:text-foreground"
               onClick={() =>
                 workspace.open ? workspace.close() : workspace.show()
               }

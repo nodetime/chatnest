@@ -534,6 +534,7 @@ textarea:focus-visible {
 
 /* The workbench palette is local to chat; admin and global fonts stay unchanged. */
 .chat-workbench {
+  --workbench-display-font: "Songti SC", STSong, "Noto Serif CJK SC", serif;
   --background: #fafafb;
   --foreground: #25242a;
   --card: oklch(1 0 0);
@@ -550,8 +551,8 @@ textarea:focus-visible {
   --accent-foreground: var(--foreground);
   --border: #eaeaee;
   --input: var(--border);
-  --ring: #7774b6;
-  --sidebar: #f4f3f6;
+  --ring: #6561ba;
+  --sidebar: #f6f6f9;
   --sidebar-foreground: var(--foreground);
   --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: var(--primary-foreground);
@@ -559,11 +560,12 @@ textarea:focus-visible {
   --sidebar-accent-foreground: var(--foreground);
   --sidebar-border: var(--border);
   --sidebar-ring: var(--ring);
-  --workbench-selection: #eae8f2;
+  --workbench-selection: #eeedf8;
   --workbench-canvas: #fafafb;
   --workbench-shell: var(--sidebar);
   --workbench-surface: var(--background);
-  --shadow-composer: 0 2px 8px -3px oklch(0.3 0.005 250 / 0.06);
+  --shadow-composer: 0 2px 4px #25242a03, 0 8px 28px #25242a06;
+  --shadow-composer-focus: 0 0 0 3px #6561ba0a, 0 8px 28px #25242a08;
   color: var(--foreground);
   background: var(--workbench-shell);
 }
@@ -588,10 +590,62 @@ textarea:focus-visible {
   --muted-foreground: oklch(0.72 0.01 250);
   --accent: oklch(0.29 0.008 260);
   --border: oklch(0.34 0.008 260);
-  --ring: oklch(0.75 0.08 165);
+  --ring: oklch(0.75 0.08 285);
   --sidebar: oklch(0.185 0.006 260);
-  --workbench-selection: oklch(0.32 0.045 165);
+  --workbench-selection: oklch(0.32 0.035 285);
   --shadow-composer: 0 2px 8px -3px oklch(0 0 0 / 0.3);
+  --shadow-composer-focus:
+    0 0 0 3px oklch(0.75 0.08 285 / 0.08), 0 8px 28px #00000020;
+}
+
+.chat-workbench .chat-home-canvas {
+  background:
+    radial-gradient(ellipse 65% 40% at 85% 0%, #eeeaf84d, transparent),
+    radial-gradient(ellipse 55% 35% at 10% 0%, #e5f3ee66, transparent),
+    var(--workbench-canvas);
+}
+
+.dark .chat-workbench .chat-home-canvas {
+  background:
+    radial-gradient(ellipse 65% 40% at 85% 0%, #7970b00a, transparent),
+    var(--workbench-canvas);
+}
+
+.chat-workbench .workspace-home-panel {
+  box-shadow: var(--shadow-card);
+}
+
+.chat-workbench .workspace-home-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+}
+
+.chat-workbench .workbench-header {
+  background: var(--card);
+}
+
+/* Hover controls stay discoverable on touch screens and with keyboard focus. */
+@media (hover: hover) and (pointer: fine) {
+  .chat-workbench .message-actions {
+    opacity: 0;
+  }
+
+  .chat-workbench [data-role]:hover .message-actions,
+  .chat-workbench .message-actions:focus-within {
+    opacity: 1;
+  }
+}
+
+.auth-surface {
+  background:
+    radial-gradient(ellipse 70% 55% at 0% 0%, #d9f4e870, transparent),
+    radial-gradient(ellipse 55% 55% at 100% 0%, #ede2f570, transparent),
+    var(--background);
+}
+
+.dark .auth-surface {
+  background:
+    radial-gradient(ellipse 70% 55% at 100% 0%, #7970b012, transparent),
+    var(--background);
 }
 
 .chat-workbench [data-slot="sidebar-inner"] {

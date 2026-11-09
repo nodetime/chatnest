@@ -197,7 +197,10 @@ const DocumentHeader = ({
   <div className="flex min-h-14 items-center gap-2.5 px-3 py-2.5 pr-10">
     <FileSymbol kind={kind} />
     <div className="min-w-0 flex-1">
-      <div className="truncate text-[13px] font-medium" title={title}>
+      <div
+        className="line-clamp-2 break-words text-[13px] font-medium leading-5"
+        title={title}
+      >
         {title}
       </div>
       <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
