@@ -29,6 +29,7 @@ export AUTH_URL=http://127.0.0.1:3003
 export PLATFORM_MODE=standalone
 MIGRATION_POSTGRES_URL="$POSTGRES_URL" corepack pnpm db:migrate
 NODE_ENV=development corepack pnpm exec tsx scripts/dev-seed.ts
+corepack pnpm execution:up
 corepack pnpm dev --hostname 127.0.0.1 --port 3003
 ```
 

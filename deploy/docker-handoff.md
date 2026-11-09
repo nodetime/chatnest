@@ -4,13 +4,14 @@
 
 ## 当前独立演示
 
-`feat/**` tag 触发 `.github/workflows/demo-images.yml`，只发布 `linux/amd64` 的应用与迁移镜像到 GHCR，标签为 `sha-完整提交SHA`。Porta 使用它自己仓库的同类工作流；不把源码或私有配置复制进其他仓库。服务器从镜像启动，不在服务器构建源码。
+`feat/**` tag 触发 `.github/workflows/demo-images.yml`，只发布 `linux/amd64` 的应用、迁移与执行镜像到 GHCR，标签为 `sha-完整提交SHA`。Porta 使用它自己仓库的同类工作流；不把源码或私有配置复制进其他仓库。服务器从镜像启动，不在服务器构建源码。
 
-[compose.demo.yml](compose.demo.yml) 作为独立项目运行：PostgreSQL、Porta、Porta 内网 TLS 代理和 ChatNest。只向宿主机 loopback 的 `3340` 绑定应用端口；既有入口代理再按独立域名转发。数据库和 MCP 不开放宿主端口，不改现有站点。常驻容器合计内存上限约1.3GiB、日志每容器最多10MiB；迁移为一次性任务。
+[compose.demo.yml](compose.demo.yml) 作为独立项目运行：PostgreSQL、Porta、Porta 内网 TLS 代理和 ChatNest，以及仅内部可达的命令执行 broker。只向宿主机 loopback 的 `3340` 绑定应用端口；既有入口代理再按独立域名转发。数据库和 MCP 不开放宿主端口，不改现有站点。broker 固定128MiB，最多保留4个会话容器各256MiB（0.5 CPU、64 PID、无网络与宿主挂载），同时最多执行2条命令；合计需另预留1152MiB，日志每容器最多10MiB；迁移为一次性任务。
 
 在服务器专用目录准备以下私密文件（均不进入 Git）：
 
-- `.env`：`CHATNEST_IMAGE`、`CHATNEST_MIGRATOR_IMAGE`、`PORTA_IMAGE` 三个不可变镜像地址。
+- `.env`：`CHATNEST_IMAGE`、`CHATNEST_MIGRATOR_IMAGE`、`PORTA_IMAGE` 以及 `CHATNEST_EXECUTION_IMAGE` 四个不可变镜像地址。
+- `execution.env`：随机 `EXECUTION_SERVICE_TOKEN`，与 `app.env` 相同；不带模型、数据库或 MCP 凭据。Docker socket 仅挂载 broker，执行 API 不公开宿主端口，命令容器没有该 socket。运行镜像预先由部署环境拉取，broker 不接受模型指定镜像、挂载或 Docker 参数。
 - `database.env`：专属空库的 owner 配置；`migration.env` 仅保存该库的迁移连接。
 - `app.env`：`AUTH_URL`、随机 `AUTH_SECRET`、非 owner 的 `POSTGRES_URL`、真实 Flash 模型配置、上传配额、`PLATFORM_MODE=standalone`。`PORTA_MCP_URL=https://porta-tls/mcp`，服务 token 与 Porta 相同；不复制本机 Fake-IP DNS pins 或开发 HTTP 开关。
 - `porta.env`：随机服务 token、百炼凭据、`PORTA_ALLOWED_HOSTS=porta-tls,localhost`、`PORTA_PROVIDERS=none`、`PORTA_NATIVE_MCP_SERVICES=alibaba1688_product`、`PORTA_NATIVE_MCP_TOOLS={"alibaba1688_product":["find_product"]}`，其他供应商保持关闭。允许的主机名须与内网 TLS 代理转发的 Host 一致。
@@ -20,17 +21,18 @@
 
 ## 构建交付物
 
-从干净的 ChatNest 发布检出根目录（不带本地环境文件、工作树或测试产物），用同一个发布标识构建两份镜像：
+从干净的 ChatNest 发布检出根目录（不带本地环境文件、工作树或测试产物），用同一个发布标识构建三份镜像：
 
 ```sh
 RELEASE=local
 docker build --target app -t "chatnest:${RELEASE}" .
 docker build --target migrator -t "chatnest-migrator:${RELEASE}" .
+docker build --target execution -t "chatnest-execution:${RELEASE}" .
 ```
 
 应用镜像监听容器端口 3000，以非 root 用户运行。依赖安装后，编译复用 CI 的断网构建入口：Next 收集页面数据时只使用不可连接的 loopback 占位配置，不注入实际 env 或凭据，也不跑迁移。镜像包含现有 worker 入口，不在 Web 进程里自动启动 worker。
 
-验收口径：从干净的源码构建两个镜像，在专属空 PostgreSQL 库运行完整迁移链；以非 owner 数据库账号启动应用并验证 readiness。演示入口另验真实模型和 MCP 调用，readiness 仅代表数据库就绪。历史 0017→0018 告警删除回归不替代空库初始化。
+验收口径：从干净的源码构建应用、迁移和执行三份镜像，在专属空 PostgreSQL 库运行完整迁移链；以非 owner 数据库账号启动应用并验证 readiness。演示入口另验真实模型和 MCP 调用，readiness 仅代表数据库就绪。历史 0017→0018 告警删除回归不替代空库初始化。
 
 ## 通用配置与启动顺序
 

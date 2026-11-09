@@ -139,9 +139,13 @@ test("真实 SDK 在既有步数内提示保存产物与交接，保留供应商
         "including completion steps, the current skill is present exactly once"
       );
       if (calls === maxSteps) {
-        assert.deepEqual(options.toolChoice, { type: "none" });
+        assert.deepEqual(options.toolChoice, { type: "auto" });
         assert.equal(options.tools?.length, 2);
         assert.match(JSON.stringify(options.prompt), /Complete this turn/);
+        assert.doesNotMatch(
+          JSON.stringify(options.prompt),
+          /Tool use is disabled|answer-only/
+        );
         assert.match(JSON.stringify(options.prompt), /RUNTIME_TOOL_CATALOG/);
         return Promise.resolve({
           content: [
@@ -152,8 +156,8 @@ test("真实 SDK 在既有步数内提示保存产物与交接，保留供应商
           warnings: [],
         });
       }
-      const toolName = calls === maxSteps - 1 ? "createDocument" : "search";
-      if (toolName === "createDocument") {
+      const toolName = calls === maxSteps - 1 ? "writeFile" : "search";
+      if (toolName === "writeFile") {
         assert.match(JSON.stringify(options.prompt), /Complete this turn/);
       } else {
         assert.doesNotMatch(
@@ -184,12 +188,12 @@ test("真实 SDK 在既有步数内提示保存产物与交接，保留供应商
     prompt: "比较已有候选并保存表格",
     stopWhen: isStepCount(maxSteps),
     tools: Object.fromEntries(
-      ["search", "createDocument"].map((name) => [
+      ["search", "writeFile"].map((name) => [
         name,
         tool({
           execute: () => {
             executed.push(name);
-            return { saved: name === "createDocument" };
+            return { saved: name === "writeFile" };
           },
           inputSchema: z.object({}),
         }),
@@ -197,7 +201,7 @@ test("真实 SDK 在既有步数内提示保存产物与交接，保留供应商
     ),
   });
   assert.equal(calls, maxSteps);
-  assert.deepEqual(executed, ["search", "search", "createDocument"]);
+  assert.deepEqual(executed, ["search", "search", "writeFile"]);
   assert.equal(result.text, "对比表已保存，另有一项待补充。");
 });
 

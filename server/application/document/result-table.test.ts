@@ -28,6 +28,42 @@ const source = {
   toolName: "fixture__search",
 };
 
+test("workspace sources preserve large original JSON and omit invalid paths without blocking other files", () => {
+  const evidence = new ResultEvidenceLedger();
+  const small = [{ price: 18, title: "原始结果" }];
+  evidence.record(source, { structuredContent: small });
+  const largeSource = { ...source, toolCallId: "large-call" };
+  const large = { body: "x".repeat(513 * 1024) };
+  assert.equal(
+    evidence.record(largeSource, { structuredContent: large }).available,
+    true,
+    "the source ledger retains data for non-workspace consumers"
+  );
+  const pathSource = { ...source, toolCallId: "中".repeat(100) };
+  evidence.record(pathSource, { structuredContent: small });
+  assert.deepEqual(evidence.files(), {
+    "sources/actual-call.json": JSON.stringify(small),
+    "sources/large-call.json": JSON.stringify(large),
+  });
+  const projection = (id: string) =>
+    JSON.parse(sourceModelOutput(evidence, id, null).value);
+  assert.equal(
+    projection(source.toolCallId).sourceFile,
+    "sources/actual-call.json"
+  );
+  assert.equal(
+    projection(largeSource.toolCallId).sourceFile,
+    "sources/large-call.json"
+  );
+  assert.equal(projection(largeSource.toolCallId).sourceFileReason, null);
+  assert.equal(projection(pathSource.toolCallId).sourceFile, null);
+  assert.equal(
+    projection(pathSource.toolCallId).sourceFileReason,
+    "workspace-path-limit"
+  );
+  assert.deepEqual(evidence.get(largeSource.toolCallId)?.value, large);
+});
+
 test("rich structured previews preserve actual candidate sources after nested metadata", () => {
   const metadata = {
     priceTags: Object.fromEntries(
@@ -158,7 +194,7 @@ test("object arrays, empty arrays, source and table limits are explicit not trun
   assert.equal(
     value.record(
       { ...source, toolCallId: "huge" },
-      { structuredContent: { x: "a".repeat(2 * 1024 * 1024) } }
+      { structuredContent: { x: "a".repeat(4 * 1024 * 1024) } }
     ).available,
     false
   );
@@ -287,7 +323,8 @@ test("installed SDK projects current and persisted MCP results without replacing
   );
   const value = new ResultEvidenceLedger();
   const events: unknown[] = [];
-  const raw = { structuredContent: { items: rows } };
+  let raw: unknown = { structuredContent: { items: rows } };
+  const persisted = new Map<string, string>();
   const config = agentConfigSchema.parse({
     servers: [
       {
@@ -312,7 +349,20 @@ test("installed SDK projects current and persisted MCP results without replacing
         }),
       }) as never,
     async () => config,
-    { ledger: value, onSource: (metadata) => events.push(metadata) }
+    {
+      ledger: value,
+      onSource: (metadata) => {
+        assert.ok(persisted.has("sources/literal-sdk-id.json"));
+        events.push(metadata);
+      },
+      persistSources: async (files, signal) => {
+        assert.equal(signal.aborted, false);
+        await Promise.resolve();
+        for (const [path, content] of Object.entries(files)) {
+          persisted.set(path, content);
+        }
+      },
+    }
   );
   try {
     const tool = runtime.tools.fixture__search;
@@ -353,6 +403,30 @@ test("installed SDK projects current and persisted MCP results without replacing
     });
     assert.match(JSON.stringify(model), /sourceToolCallId/);
     assert.deepEqual(stored[0].parts[0].output, raw);
+    assert.deepEqual(
+      JSON.parse(persisted.get("sources/literal-sdk-id.json") ?? "null"),
+      { items: rows }
+    );
+    raw = {
+      content: [
+        {
+          text: JSON.stringify({ __largeTextTips__: "内容超过阈值." }),
+          type: "text",
+        },
+      ],
+    };
+    await assert.rejects(
+      Promise.resolve(
+        tool.execute!(
+          {},
+          { context: {}, messages: [], toolCallId: "omitted-call" }
+        )
+      ),
+      /overflow notice/
+    );
+    assert.equal(events.length, 1);
+    assert.equal(persisted.size, 1);
+    assert.equal(value.get("omitted-call"), undefined);
   } finally {
     await runtime.close();
   }
@@ -894,7 +968,7 @@ test("MCP文本正文保留关键段落，超长显式截断，历史恢复保�
   assert.equal(bounded.content.length, 12_000);
   assert.ok(Buffer.byteLength(bounded.content, "utf8") <= 36_000);
   const oversized = {
-    content: [{ text: "x".repeat(2 * 1024 * 1024 + 1), type: "text" }],
+    content: [{ text: "x".repeat(4 * 1024 * 1024 + 1), type: "text" }],
   };
   const oversizedLedger = new ResultEvidenceLedger();
   restoreResultEvidence(oversizedLedger, [
@@ -972,5 +1046,65 @@ test("纯文本和结构化结果共用有界模型投影，重复读取不耗�
     JSON.parse(
       sourceModelOutput(value, latest.id, latest.output).value
     ).content.includes("实际正文")
+  );
+});
+
+test("upstream overflow placeholders are not usable evidence or source files", () => {
+  const evidence = new ResultEvidenceLedger();
+  const output = {
+    content: [
+      {
+        text: JSON.stringify({ __largeTextTips__: "内容超过阈值." }),
+        type: "text",
+      },
+    ],
+  };
+  assert.equal(evidence.record(source, output).available, false);
+  assert.deepEqual(evidence.files(), {});
+  assert.match(
+    sourceModelOutput(evidence, source.toolCallId, output).value,
+    /upstream-result-omitted/
+  );
+});
+
+test("large text tools expose their complete original envelope as a file, not table evidence", () => {
+  const evidence = new ResultEvidenceLedger();
+  const output = {
+    content: [
+      {
+        text: `Beginning\n${"正文".repeat(20_000)}\nEND-OF-ORIGINAL`,
+        type: "text",
+      },
+    ],
+  };
+  assert.equal(evidence.record(source, output).available, false);
+  const projected = JSON.parse(
+    sourceModelOutput(evidence, source.toolCallId, output).value
+  );
+  assert.equal(projected.sourceFile, "sources/actual-call.json");
+  assert.equal(projected.truncated, true);
+  assert.deepEqual(JSON.parse(evidence.files()[projected.sourceFile]), output);
+  assert.equal(evidence.get(source.toolCallId), undefined);
+});
+
+test("a full 3MiB MCP result remains file-readable with a bounded model preview", () => {
+  const evidence = new ResultEvidenceLedger();
+  const original = {
+    records: [{ data: "x".repeat(3 * 1024 * 1024), title: "actual" }],
+  };
+  assert.equal(
+    evidence.record(source, { structuredContent: original }).available,
+    true
+  );
+  const snapshot = evidence.files(source.toolCallId);
+  evidence.record(
+    { ...source, toolCallId: "next" },
+    { structuredContent: { other: "x".repeat(1024 * 1024) } }
+  );
+  assert.deepEqual(JSON.parse(snapshot["sources/actual-call.json"]), original);
+  assert.ok(
+    Buffer.byteLength(
+      sourceModelOutput(evidence, source.toolCallId, null).value
+    ) < 12_000
   );
 });

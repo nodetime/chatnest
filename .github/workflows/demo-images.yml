@@ -29,6 +29,8 @@ jobs:
             image: chatnest
           - target: migrator
             image: chatnest-migrator
+          - target: execution
+            image: chatnest-execution
     steps:
       - uses: actions/checkout@v4
         with:

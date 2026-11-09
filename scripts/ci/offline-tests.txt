@@ -126,10 +126,13 @@ server/infrastructure/persistence/drizzle/runtime-role.test.ts
 scripts/ci/model-gateway-acceptance.test.mjs
 scripts/ci/contract-formatter.test.mjs
 
-server/infrastructure/execution/javascript.test.ts
+server/infrastructure/execution/bash-broker.test.mjs
 
 server/application/chat/tools/view-image.test.ts
 
-server/application/chat/tools/create-document.test.ts
 
 .claude/skills/copy-skills/scripts/copy-skills.test.mjs
+
+server/application/chat/workspace.test.ts
+
+server/infrastructure/persistence/drizzle/document-repository.test.ts

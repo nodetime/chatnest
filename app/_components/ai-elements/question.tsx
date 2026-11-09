@@ -12,6 +12,7 @@ import type {
 import { Button } from "@/app/_components/ui/button";
 import { Textarea } from "@/app/_components/ui/textarea";
 import { cn } from "@/app/_lib/utils";
+import { RadioGroup } from "radix-ui";
 import {
   createContext,
   useCallback,
@@ -80,7 +81,7 @@ const getSelectedValues = (
   const isSelected = currentValues.includes(optionValue);
 
   if (selectionMode === "single") {
-    return isSelected ? [] : [optionValue];
+    return [optionValue];
   }
 
   if (isSelected) {
@@ -209,12 +210,28 @@ export const QuestionOptions = ({
   className,
   ...props
 }: QuestionOptionsProps) => {
-  const { selectionMode } = useQuestion();
+  const { disabled, selectedValues, selectionMode, toggleValue } = useQuestion();
+
+  if (selectionMode === "single") {
+    return (
+      <RadioGroup.Root
+        asChild
+        disabled={disabled}
+        onValueChange={toggleValue}
+        value={selectedValues[0] ?? ""}
+      >
+        <div
+          className={cn("flex flex-wrap gap-2", className)}
+          {...props}
+        />
+      </RadioGroup.Root>
+    );
+  }
 
   return (
     <div
       className={cn("flex flex-wrap gap-2", className)}
-      role={selectionMode === "single" ? "radiogroup" : "group"}
+      role="group"
       {...props}
     />
   );
@@ -247,12 +264,12 @@ export const QuestionOption = ({
     [onClick, question, value]
   );
 
-  return (
+  const button = (
     <Button
       aria-checked={isSelected}
       className={cn("h-auto whitespace-normal", className)}
       disabled={question.disabled || disabled}
-      onClick={handleClick}
+      onClick={question.selectionMode === "single" ? onClick : handleClick}
       role={role}
       type="button"
       variant={variant ?? (isSelected ? "default" : "outline")}
@@ -261,6 +278,16 @@ export const QuestionOption = ({
       {children ?? value}
     </Button>
   );
+
+  return question.selectionMode === "single" ? (
+    <RadioGroup.Item
+      asChild
+      disabled={question.disabled || disabled}
+      value={value}
+    >
+      {button}
+    </RadioGroup.Item>
+  ) : button;
 };
 
 export type QuestionInputProps = Omit<

@@ -19,11 +19,16 @@ flowchart LR
   N --> L[AI SDK Agent 循环]
   P[通用核心 Prompt] --> L
   S[唯一按需 Skill：相似检索与比较] --> L
-  L --> Q[内置 Ask / Todo / 附件 / 产物工具]
-  L --> J[隔离 JavaScript 计算]
+  L --> Q[内置 Ask / Todo / 附件工具]
+  L --> J[Bash / Read / Write 基础工具]
+  J --> K[内部执行 broker]
+  K --> T[会话复用容器：Bash / Python / pandas]
+  T --> J
+  J --> D
+  J --> W[右侧产物工作区]
   L --> I[候选图片读取]
   Q --> D
-  Q --> W[右侧产物工作区]
+
   L --> M["DeepSeek Flash<br/>文本和图片"]
   L --> X["Exa HTTP MCP<br/>免 Key 搜索与网页读取"]
   L --> R["Porta HTTP MCP"]
@@ -33,11 +38,13 @@ flowchart LR
 
 图中展示当前源码的连接结构；各环境运行状态、发布版本及真实验收证据只记录在[唯一研发 TODO](superpowers/plans/2026-11-04-core-launch-goal-and-todo.md)。当前演示为 `PLATFORM_MODE=standalone`，Payload 业务后端、账务、支付和 CLI 不参与演示调用链，不绘制成已连接服务。
 
-- **产物交付**：`createDocument` 接收当轮 Agent 写好的正文，持久化成功后打开右侧工作区，不再仅凭标题二次调用模型。相似商品默认走已有 `sheet` 原始CSV产物，表头/数据行、来源链接、主图预览和比较判断共用 `sheet-editor.tsx`（图片列支持HTTP(S)原图URL及单一Markdown图片，链接仍校验协议，保存/导出保留原值），保存/导出仍为CSV。整体修改复用`updateDocument`，完整生成并保存后只发布最终正文（代码/表格仅留最终快照，文本拼接增量）；修改工具携带目标id/kind/title，流入口显式打开工作区，关闭后同文件更新也可打开。不同目标的流切换复用未保存/生成中保护，被拦截的产物事件不覆盖当前编辑器；对话标题等独立事件仍处理。成功finish使同文件文档缓存重新校验；查看最新版时跟随新增版本，主动查看历史时保持所选版本。sheet子生成错误、截断或空内容不覆盖保存版本；普通CSV在仓储版本保存与手工保存入口共用`domain/document/sheet-csv.ts`校验，拒绝错列及破损引号，不自动补列或改写。普通sheet编辑以同模块解析的完整单元格快照核对旧表，仅CSV引号/行尾格式差异可匹配；保留空单元格数据行与空格，真实值或行列差异拒绝覆盖，新CSV按提交原字节保存。文档POST将校验失败转为既有JSON400；新建工具在登录校验及保存后返回 `savedContent`；编辑工具在属主/保护校验及保存后返回实际正文；整表更新另返回修改前正文供前后核对，匹配失败仅返回当前已存正文供纠正；原始 `createResultTable` 继续只存原始查询数据。`app/_lib/editor/markdown.ts` 统一正文与版本比较的 Markdown/schema，保留链接、图片、强调及表格；`config.ts` 约束单元格内回车与粘贴，保存重开不拆列。商品图省略来源页信息，避免来源站拒绝加载；编辑器链接经协议校验后独立页打开。
-- **核心规则**：`server/application/ai/core.md` 是通用核心Prompt唯一正文，`prompts.ts` 读取核心、工具交互及条件收尾三段；NFT与Docker显式携带同一路径。业务SOP只在技能中。`send-message.ts` 保留既有`maxSteps`，倒数第二步提醒保存，最后一步通过原生`toolChoice: none`只做如实交接，不提高调用上限；真正耗尽工具循环时复用`data-run-status`保存失败，客户端也据此恢复草稿或回滚重新生成。正常文本结束与等待Ask不误报失败。网页模式只传递当轮用户意图，工具schema和实际执行门控仍是权限边界。
-- **技能方法**：应用仅内置 `server/infrastructure/skills/similar-products/SKILL.md`（相似检索与比较），按需加载；先识别用户材料中的参照，按商品、商标、设计或文档采用同口径比较，区分普通共性与有区分度的重合；抄袭排查交付线索及时间/权属等缺口，图片一致不外推供货关系。事实依据只列本次比较已读信息，“图片/原文与来源已核对”状态覆盖本行依据；影响判断的关键缺口在状态中保持待核对，避免通用已核实与无关待确认并存。交付约定在技能前部，逐项比较在表内，聊天简短交接。候选不足也交付有效结果，补查无新增即收敛，默认先整理完结果、一次保存完整sheet/CSV对比表；续改合并本轮修改后整表保存，核对用户保留字段，聊天简短交接。续聊只恢复历史实际使用且当前仍选中、通过`assertCurrent`校验的技能最新正文；`projectSkillContextForModel`把正文放到当轮独立技能指令段，历史工具结果仅留元数据，避免正文埋在早期调用中或重复注入。旧正文、禁用技能和旧资源不重放，未使用技能不预加载；核心MD和持久原始证据不变，末步收尾保留完整技能上下文。Ask/Todo属于核心，搜索/读取及1688属于MCP工具。独立Porta CLI skill源码仍在`nodetime/porta-cli/skills/porta`。
-- **Ask / Todo**：沿用 AI SDK 原生工具与 AI Elements Question / Task。Ask 询问需求，不重复授权；Todo 是完整任务快照，仅为实质性多步骤工作更新。服务端合并、消息持久化、属主校验、幂等和侧栏重开走既有实现，没有新增流程引擎。
-- **计算执行**：`application/chat/tools/execute-code.ts` 接入自动执行工具；`infrastructure/execution/` 每次以独立子进程运行 QuickJS/WASM，只提供同步 JavaScript、JSON结果与有限日志，无文件、网络、宿主env或shell。固定并发准入、guest内存/栈、执行中断、宿主输出检查及父进程取消/时限约束；V8参数不是整个进程RSS硬限。worker及依赖纳入现有NFT追踪与Docker交付。
+- **产物交付 / 基础工具**：复用 Vercel `bash-tool`（`bash`、`readFile`、`writeFile`），`application/chat/workspace-tools.ts` 适配 `BashWorkspace`。完整 MCP JSON 按 `sourceFile` 放入 `sources/`，纯文本工具保存原始 MCP 信封 JSON；`runtime.ts` 固定每次调用的原文快照，await 同一工作区落盘后再交给模型，避免缓存淘汰导致路径指向未保存文件。模型只接收短预览，避免把预览结构当原始结构。单源硬上限4MiB（区别于2MiB软缓存目标），输入文件总上限12MiB；上游仅返回单字段 `__largeTextTips__` 时按失败处理，不当记录、不自动重试，也不宣称落盘恢复了未收到的数据。工作区只接收当前属主的已保存产物；执行前读最新版，保存时在同一仓储锁内校验 expectedVersion 与正文快照，冲突不覆盖用户修改。`outputs/` 下变更的 CSV / Markdown / 文本 / 源码经全量校验后保存，用现有产物事件与编辑器展示；成功工具结果中的 artifacts 支持侧栏重开和产物索引。普通 CSV 仍由 `domain/document/sheet-csv.ts` 校验，不补列、不改写。已移除专用 createResultTable/createDocument/editDocument/updateDocument/requestSuggestions 执行入口及其二次模型生成器、QuickJS；历史消息和已保存原始表格只保留读取/展示。核心 MD 保持通用，业务 SOP 放唯一 similar-products Skill。
+- **命令运行环境**：`infrastructure/execution/bash.ts` 以私密认证请求内部 `bash-broker.mjs`；broker 是唯一持有 Docker socket 的进程，App 不挂载 socket。按服务端属主与会话哈希复用非 root、无网、只读根目录的固定镜像容器，通过 `docker exec` 执行原生 Bash / Python；`/workspace` 与 `/tmp` 跨命令及跨轮保留，shell 状态每次重置。最多4个环境、同时2条执行；空闲30分钟、容量回收或服务重启清理临时环境，已保存产物从真库恢复。每次执行前仅以真库产物重建 `outputs/`，普通临时文件不再全目录 JSON 往返；会话 lease 延续到 CAS 保存结束后释放，失败草稿不补发布。runner 有30秒超时，停止进程组并确认已清除脱离的后台进程；取消、响应异常或清理不确定时重置容器。stdout/stderr 全文保存到 `.tool-output/`，只返回有界预览、字节数及完整路径，超预览长度不再杀命令；`readFile` 的大内容预览也明确指向完整文件，可用 Bash 按需读取。App、数据库、模型及 MCP 凭据不进入执行容器，无宿主执行回退。Docker `execution` target 供受信 broker 和无密钥会话 runner 使用；开发用 `pnpm execution:up` 启动依赖，应用仍用 `pnpm dev`。
+- **核心规则**：`server/application/ai/core.md` 是通用核心 Prompt 唯一正文，`prompts.ts` 读取核心、工具交互、收尾提醒三段；NFT 与 Docker 显式携带同一路径。文件按需创建，续改原地保存；业务 SOP 只在技能中。`send-message.ts` 使用 AI SDK 原生工具循环与现有 `isStepCount(maxSteps)`，接近上限只提醒交付，不修改工具列表或强制 `toolChoice: none`，不加供应商专用正文解析/执行路径。真正耗尽工具循环时复用 `data-run-status` 保存失败；正常文本结束与等待 Ask 不误报失败。网页模式只传递当轮用户意图，工具 schema 和执行门控仍是权限边界。
+- **技能方法**：应用仅内置 `server/infrastructure/skills/similar-products/SKILL.md`（相似检索与比较），按需加载；先识别用户材料中的参照，按商品、商标、设计或文档采用同口径比较，区分普通共性与有区分度的重合；抄袭排查交付线索及时间/权属等缺口，图片一致不外推供货关系。事实依据只列本次比较已读信息，“图片/原文与来源已核对”状态覆盖本行依据；影响判断的关键缺口在状态中保持待核对，避免通用已核实与无关待确认并存。交付约定在技能前部，逐项比较在表内，聊天简短交接。候选不足也交付有效结果，补查无新增即收敛，需要表格时先整理完结果、一次保存完整CSV；简单商家链接请求按目标直接交付；续改合并本轮修改后整表保存，核对用户保留字段，聊天简短交接。续聊只恢复历史实际使用且当前仍选中、通过`assertCurrent`校验的技能最新正文；`projectSkillContextForModel`把正文放到当轮独立技能指令段，历史工具结果仅留元数据，避免正文埋在早期调用中或重复注入。旧正文、禁用技能和旧资源不重放，未使用技能不预加载；技能恢复流程不改核心MD和持久原始证据，收尾提醒保留完整技能上下文。Ask/Todo属于核心，搜索/读取及1688属于MCP工具。独立Porta CLI skill源码仍在`nodetime/porta-cli/skills/porta`。
+- **源码编辑**：CodeMirror 实例在同一文档内保持稳定，Compartment 更新语言与只读状态；外部内容同步不触发保存或加入撤销栈。不同文档按文档 ID 隔离实例，避免相同正文串用撤销历史。SVG 沿现有源码产物保存，支持图片预览、源码及原格式下载。
+- **Ask / Todo**：沿用 AI SDK 原生工具与 AI Elements Question / Task。Question 单选复用现有 Radix RadioGroup 的方向键、焦点与禁用状态，不自行维护第二套键盘选择逻辑；多选保留独立勾选。Ask 询问需求，不重复授权；Todo 是完整任务快照，仅为实质性多步骤工作更新。服务端合并、消息持久化、属主校验、幂等和侧栏重开走既有实现，没有新增流程引擎。
+- **SDK 状态接线**：`workspace-tools.ts` 将 AI SDK 每次调用的取消信号与整轮信号合并，经 AsyncLocalStorage 传给官方 Bash / Read 执行适配；Write 沿用同一工作区与取消语义。`run-failure.ts` 统一区分正常文本结束、工具交接及长度/过滤等未完成结束，供服务端持久化和客户端草稿处理使用。正文与推理按 SDK 的消息分段状态停止流式展示；历史消息即使保留旧 streaming 标记也不重新播放。MessageResponse 按全部 props 更新，正文不变时也响应结束状态。`bash-tool@1.3.19` 的实验性 TeeTransform 会改写部分原生 Bash/Python 语法，当前保持默认关闭，完整输出仍由既有 runner 文件化。
 - **候选图片**：`application/chat/tools/view-image.ts` 仅允许读取当前会话成功MCP JSON的原始图片字段；`infrastructure/uploads/remote-image.ts` 解析并固定公网HTTPS地址、拒绝重定向，限制下载和解码，统一JPEG。成功看图同时返回该图片直接父记录的 `sourceRecord` 原始标量字段，让采样预览以外的候选也能关联实际链接和SKU；最多32字段、单字符串512字符、整段8000 UTF8字节，省略标 `partial`，不另抓来源、不拼其他行。失败不返回该字段。图片像素仅在当轮模型请求中经现有视觉通路注入，数据库只存来源/尺寸及有界来源字段等元数据；历史明确不含像素。
 - **MCP 文本上下文**：文本结果向模型传递正文（单次最多12,000字符并显式标记截断），不套用结构化表格的120字字段采样。历史恢复和每步模型请求使用同一投影，淘汰旧正文以保留现有总体上下文边界，数据库原文不改；非 JSON 正文不作为表格行证据。
 - **MCP**：`agent.json` 启用 Exa search/fetch 与 Porta 的单个百炼商品查询，Tavily 关闭。已允许的只读查询使用现有 `autoApproveTools` 自动执行，不新增权限模式；未知或未允许操作仍遵守宿主策略。模型验收按用户授权集中执行，真实验收记录见唯一研发 TODO。
@@ -166,7 +173,7 @@ server/
 ## 模型实测补齐（2026-10-27）
 
 - `domain/message/result-evidence.ts` 的模型证据预览允许深层原始字段与最多 3 行样本，超限先缩样本，仍维持 2000 字节信封上限；来源账本不改。
-- `createResultTable` 可设置通用初始 substring `filter`，返回 visibleRowCount/viewFilter；只改保存视图，原始行和来源指针仍保留，不实现业务选品流程。
+- 历史原始结果表的视图、来源与不可改写保护保留读取；新任务统一走基础文件工具，不再注册 `createResultTable`。
 - 当轮真实模型与真实 Porta 服务验收记录见 `docs/integrations/2026-10-27-real-model-verification.md`；上游仅为合成供应商数据。
 
 ## 个人入口登录（2026-10-28）
@@ -218,7 +225,7 @@ server/
 ## 独立C端首页（2026-10-28）
 
 - 聊天新会话页由 `greeting.tsx`、`shell.tsx`、`workspace-home.tsx` 统一内容宽度和左边界，最近对话与成果纵向排列。失败草稿提示由 `conversation-notice.tsx` 比较末次用户文本与 Shell 传入附件，已恢复时明确提示且不重复展示恢复按钮。
-- 普通 sheet 的 `editDocument` 只接受完整当前CSV与完整目标CSV，拒绝局部表头/单元格写入造成中间错位版本；替换按字面值处理。该工具与create/update共用消息类型、产物索引、打开入口及原生业务错误分类，错误结果不显示为成功产物。相似商品Skill提供“事实依据 / 是否核实”两列的业务口径；表格编辑器保持普通CSV渲染，不新增核实状态存储系统，核心Prompt不承载商品规则。
+- 普通 sheet 由基础文件工具保存完整 CSV，统一校验列数与引号，拒绝错位文件；保存结果复用产物索引与打开入口。下载保留文件扩展名，避免重复 `.csv` 或把 JavaScript 等源码导出为 `.py`。SVG 沿同一源码产物保存、续改及原格式导出；右栏提供图片上下文的预览与源码切换，不把 SVG 标记插入应用 DOM，Python 运行入口只对 `.py` 展示。相似商品Skill提供“事实依据 / 是否核实”两列的业务口径；表格编辑器保持普通CSV渲染，不新增核实状态存储系统，核心Prompt不承载商品规则。
 
 - `app/_components/landing/`：HomeEntry按路径/个人section分流，LandingPage为独立全宽首页；LandingPreview的示例只在此页面展示，不进入聊天/证据/库；局部landing.css不改变后台或工作台主题。
 - `/chat`空页复用既有聊天layout与ActiveChatProvider；`/chat/:id`不变。proxy只精确公开非个人root，旧个人root仍走认证；导航消费section后归一/chat，新对话也留在/chat。空对话跨旧root/chat不重新生成chatId，保留草稿与附件身份。

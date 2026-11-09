@@ -41,10 +41,10 @@ ChatNest 私密配置放在忽略的 `.env.local` 中；Porta 使用其根目录
 | 通用核心 Prompt | `server/application/ai/core.md`，保持通用任务执行和交互原则 |
 | 业务 Skill | `server/infrastructure/skills/similar-products/SKILL.md`，按需加载相似检索、比较及表格交付方法 |
 | Ask / Todo | 复用 AI SDK 工具和现有交互组件；Ask 补实质信息，Todo 展示多步骤工作的真实进度 |
-| 自动计算 | `executeCode` 执行隔离 JavaScript，不提供宿主文件、网络或 shell 能力 |
+| 基础执行 | Vercel `bash-tool` 的 Bash / readFile / writeFile，独立 Docker 运行原生 Python / pandas；无宿主文件或网络 |
 | 图片查看 | `viewImage` 读取当前会话已有 MCP 结果中的候选图片，供视觉比较 |
 | MCP | 官方客户端发现并调用已配置工具，允许的只读查询自动执行 |
-| 产物 | 原生文档工具与右侧工作区；相似商品比较采用 sheet/CSV，保存、续改和下载共用实际正文 |
+| 产物 | 基础工具写入 `outputs/` 的完整 CSV / Markdown / 源码自动校验保存到右侧；同路径续改，跨轮恢复数据库最新版本 |
 
 业务 SOP 放 Skill，工具能力放实际 schema 与 MCP，不把商品规则写入核心 Prompt，不另建固定业务流水线或第二套 Agent 引擎。网页及工具返回内容不作为系统指令。
 
@@ -73,3 +73,7 @@ pnpm typecheck
 真实模型和供应商调用可能收费，按用户授权集中验证，不为文档更新、重开会话或重复汇报重新调用。夹具测试只证明对应规则，不作为真实服务验收。
 
 `.env*`、密钥、日志、截图和 `.local-review/` 不提交。修改保持单一实现路径，不新增兼容层或恢复已暂停任务。当前 `origin` 为 `nodetime/chatnest`；按 `AGENTS.md` 的工程纪律及唯一 TODO 的范围工作，不从历史上游记录生成新待办。功能分支提交、推送、镜像发布和部署是不同操作，按当前用户指令执行，不自动合并 main。
+
+## 本地命令执行依赖
+
+首次运行 `pnpm execution:up`，自动构建执行镜像、生成私密服务 token 写入被忽略的 `.env.local`，仅在 `127.0.0.1:3345` 启动内部 broker。之后仍使用现有 `pnpm dev`；已运行的 dev 需重启加载配置。停止执行依赖用 `pnpm execution:down`。同一会话复用无网容器，`/workspace` 和 `/tmp` 在环境存活期间保留（空闲30分钟、容量回收或服务重启后只恢复已保存产物）；Web 服务不直接执行模型生成的 shell。大 stdout/stderr 全文保留在工作区 `.tool-output/`，模型读取短预览和完整路径，不因展示截断失败。当前只交付 UTF-8 文件；CSV 不冒充 XLSX。

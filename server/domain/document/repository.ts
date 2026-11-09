@@ -16,6 +16,10 @@ export interface DocumentRepository {
   // 全版本(按创建时间升序)
   listById: (id: string) => Promise<Document[]>;
   save: (input: {
+    // 命令读取的版本；null 表示只允许新建，防止覆盖用户并发编辑。
+    expectedVersion?: string | null;
+    // 手工保存可能原位更新同一版本，正文快照同样参与并发校验。
+    expectedContent?: string | null;
     id: string;
     title: string;
     kind: ArtifactKind;

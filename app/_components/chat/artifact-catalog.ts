@@ -1,3 +1,4 @@
+import { workspaceArtifactSchema } from "@/server/domain/message/bash";
 import type { ArtifactKind } from "./artifact";
 
 export type ArtifactEntry = { id: string; title: string; kind: ArtifactKind };
@@ -26,6 +27,22 @@ export function artifactCatalog(
       continue;
     }
     for (const part of message.parts ?? []) {
+      if (
+        record(part) &&
+        (part.type === "tool-bash" || part.type === "tool-writeFile") &&
+        part.state === "output-available" &&
+        record(part.output) &&
+        Array.isArray(part.output.artifacts)
+      ) {
+        for (const raw of part.output.artifacts) {
+          const parsed = workspaceArtifactSchema.safeParse(raw);
+          if (parsed.success) {
+            const { id, title, kind } = parsed.data;
+            entries.set(id, { id, kind, title });
+          }
+        }
+        continue;
+      }
       if (
         !record(part) ||
         typeof part.type !== "string" ||

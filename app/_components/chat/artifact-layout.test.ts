@@ -40,6 +40,204 @@ function find(tree: any, type: string): Node | undefined {
     : (find(tree.props?.children, type) ?? find(tree.props?.actions, type));
 }
 
+test("code editor keeps its view and selection across saves, reconfigures readonly and accepts empty content", () => {
+  const stateModule = require("@codemirror/state");
+  const viewModule = require("@codemirror/view");
+  const views: any[] = [];
+  class View {
+    static editable = viewModule.EditorView.editable;
+    static updateListener = viewModule.EditorView.updateListener;
+    static domEventHandlers = viewModule.EditorView.domEventHandlers;
+    state: any;
+    destroyed = false;
+    constructor({ state }: { state: any }) {
+      this.state = state;
+      views.push(this);
+    }
+    dispatch(spec: any) {
+      const transaction = spec.startState ? spec : this.state.update(spec);
+      this.state = transaction.state;
+      for (const listener of this.state.facet(View.updateListener)) {
+        listener({
+          docChanged: transaction.docChanged,
+          state: this.state,
+          transactions: [transaction],
+        });
+      }
+    }
+    setState(state: any) {
+      this.state = state;
+    }
+    destroy() {
+      this.destroyed = true;
+    }
+  }
+  const slots: any[] = [];
+  let cursor = 0;
+  let effects: (() => void)[] = [];
+  const { CodeEditor } = load(
+    "app/_components/chat/code-editor.tsx",
+    {
+      "@codemirror/lang-python": require("@codemirror/lang-python"),
+      "@codemirror/state": stateModule,
+      "@codemirror/theme-one-dark": require("@codemirror/theme-one-dark"),
+      "@codemirror/view": { EditorView: View },
+      codemirror: require("codemirror"),
+      react: {
+        memo: (component: unknown) => component,
+        useEffect: (
+          effect: () => (() => void) | undefined,
+          deps: unknown[]
+        ) => {
+          const index = cursor;
+          cursor += 1;
+          const old = slots[index];
+          if (!old || deps.some((dep, i) => !Object.is(dep, old.deps[i]))) {
+            slots[index] = { deps };
+            effects.push(() => {
+              old?.cleanup?.();
+              slots[index].cleanup = effect();
+            });
+          }
+        },
+        useRef: (initial: unknown) => {
+          const index = cursor;
+          cursor += 1;
+          slots[index] ??= { current: index === 0 ? {} : initial };
+          return slots[index];
+        },
+      },
+      "react/jsx-runtime": { jsx },
+    },
+    { requestAnimationFrame: () => 0 }
+  );
+  const saves: string[] = [];
+  let props = {
+    content: "initial",
+    currentVersionIndex: 0,
+    isCurrentVersion: true,
+    onSaveContent: (content: string) => saves.push(content),
+    status: "idle",
+    suggestions: [],
+    title: "drawing.svg",
+  };
+  const render = (changes = {}) => {
+    props = { ...props, ...changes };
+    cursor = 0;
+    effects = [];
+    CodeEditor(props);
+    for (const effect of effects) {
+      effect();
+    }
+  };
+  render();
+  const [view] = views;
+  view.dispatch({
+    changes: { from: 0, insert: "A" },
+    selection: { anchor: 1 },
+  });
+  render({ content: saves.at(-1) });
+  assert.equal(views.length, 1, "parent save must preserve the mounted view");
+  assert.equal(view.state.selection.main.anchor, 1);
+  const revisedSaves: string[] = [];
+  render({ onSaveContent: (content: string) => revisedSaves.push(content) });
+  view.dispatch({ changes: { from: 1, insert: "B" } });
+  assert.deepEqual(revisedSaves, ["ABinitial"]);
+  render({ content: "ABinitial", status: "streaming" });
+  assert.equal(view.state.readOnly, true);
+  render({ isCurrentVersion: false, status: "idle" });
+  assert.equal(view.state.readOnly, true);
+  render({ content: "", isCurrentVersion: true });
+  assert.equal(view.state.doc.toString(), "");
+  assert.equal(view.state.readOnly, false);
+  assert.equal(revisedSaves.length, 1, "remote updates do not trigger saves");
+  assert.equal(views.length, 1);
+  for (const slot of slots) {
+    slot?.cleanup?.();
+  }
+  assert.equal(view.destroyed, true);
+});
+
+test("saved-file stream updates protect unsaved edits even when the document id stays the same", () => {
+  for (const pending of [
+    "documentPendingChanges",
+    "resultTablePendingChanges",
+    null,
+  ]) {
+    let artifact = {
+      content: "unsaved draft",
+      documentId: "same",
+      kind: "sheet",
+      status: "idle",
+    };
+    const shown: string[] = [];
+    const { DataStreamHandler } = load(
+      "app/_components/chat/data-stream-handler.tsx",
+      {
+        "./artifact": {
+          artifactDefinitions: [
+            {
+              kind: "sheet",
+              onStreamPart: ({ setArtifact, streamPart }: any) => {
+                if (streamPart.type === "data-sheetDelta") {
+                  setArtifact((value: any) => ({
+                    ...value,
+                    content: streamPart.data,
+                  }));
+                }
+              },
+            },
+          ],
+        },
+        "./artifact-catalog": require("./artifact-catalog.ts"),
+        "./data-stream-provider": {
+          useDataStream: () => ({
+            dataStream: [
+              { data: "same", type: "data-id" },
+              { data: null, type: "data-clear" },
+              { data: "saved new body", type: "data-sheetDelta" },
+              { data: null, type: "data-finish" },
+            ],
+            setDataStream: () => undefined,
+          }),
+        },
+        "./sidebar-history": {},
+        "@/app/_hooks/use-active-chat": {
+          useActiveChat: () => ({ chatId: "chat" }),
+        },
+        "@/app/_hooks/use-artifact": {
+          initialArtifactData: {},
+          useArtifact: () => ({
+            artifact,
+            metadata: pending ? { [pending]: true } : {},
+            setArtifact: (fn: any) => {
+              artifact = fn(artifact);
+            },
+            setMetadata: () => undefined,
+          }),
+        },
+        "@/app/_hooks/use-workspace": {
+          useWorkspace: () => ({ show: (tab: string) => shown.push(tab) }),
+        },
+        "@/server/domain/document/stream-state": {},
+        react: {
+          useEffect: (fn: () => void) => fn(),
+          useRef: (value: unknown) => ({ current: value }),
+        },
+        swr: { useSWRConfig: () => ({ mutate: () => undefined }) },
+        "swr/infinite": {},
+      }
+    );
+    DataStreamHandler();
+    assert.equal(
+      artifact.content,
+      pending ? "unsaved draft" : "saved new body"
+    );
+    assert.deepEqual(shown, pending ? [] : ["document"]);
+    assert.equal(artifact.status, "idle");
+  }
+});
+
 test("generic downloads preserve all four native artifact formats and normalize filenames", () => {
   const { artifactExport } = require("../../_artifacts/export.ts");
   assert.deepEqual(
@@ -77,6 +275,34 @@ test("generic downloads preserve all four native artifact formats and normalize 
       title: "../\\\u0000",
     }).filename.includes("/"),
     false
+  );
+  assert.equal(
+    artifactExport({ content: "a\nb", kind: "sheet", title: "比较表.csv" })
+      .filename,
+    "比较表.csv"
+  );
+  assert.equal(
+    artifactExport({ content: "let x = 1;", kind: "code", title: "script.js" })
+      .filename,
+    "script.js"
+  );
+  assert.deepEqual(
+    artifactExport({
+      content: '<svg xmlns="http://www.w3.org/2000/svg"/>',
+      kind: "code",
+      title: "drawing.svg",
+    }),
+    {
+      content: '<svg xmlns="http://www.w3.org/2000/svg"/>',
+      encoding: "utf8",
+      filename: "drawing.svg",
+      mediaType: "image/svg+xml;charset=utf-8",
+    }
+  );
+  assert.equal(
+    artifactExport({ content: "notes", kind: "text", title: "notes.txt" })
+      .mediaType,
+    "text/plain;charset=utf-8"
   );
 });
 
@@ -571,6 +797,22 @@ test("readonly and historical viewers retain native export without code executio
     .filter(Boolean)
     .map((node: Node) => node.props.action.description);
   assert.deepEqual(Array.from(actions), ["导出产物", "复制代码"]);
+  for (const [title, canRun] of [
+    ["drawing.svg", false],
+    ["script.js", false],
+    ["script.py", true],
+  ] as const) {
+    const view = ArtifactActions({
+      artifact: { content: "source", kind: "code", status: "idle", title },
+      isReadonly: false,
+      layout: "header",
+    });
+    const shown = view.props.children
+      .flat(Number.POSITIVE_INFINITY)
+      .filter(Boolean)
+      .map((node: Node) => node.props.action.id);
+    assert.equal(shown.includes("run-code"), canRun, title);
+  }
 });
 
 test("historical preview cards never rewrite the active document's animation bounds", () => {

@@ -39,7 +39,9 @@ export function DataStreamHandler() {
       if (delta.type === "data-id") {
         streamDocumentId = delta.data;
         blockedArtifact.current =
-          delta.data !== artifact.documentId &&
+          (delta.data !== artifact.documentId ||
+            metadata?.documentPendingChanges === true ||
+            metadata?.resultTablePendingChanges === true) &&
           artifactSwitchReason({
             isContentDirty: metadata?.documentPendingChanges === true,
             resultTablePendingChanges:

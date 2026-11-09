@@ -13,6 +13,7 @@ import {
 } from "ai";
 import { z } from "zod";
 import { runWithModelEnvironment } from "./model-context";
+import { completionStepSettings } from "./prompts";
 
 test("an OpenAI key and custom endpoint select direct access without a gateway key", async () => {
   const implementation = await import(
@@ -214,6 +215,8 @@ test("DeepSeek reasoning survives streaming, tool continuation and stored UI-mes
         },
       ],
       model: getLanguageModel("deepseek-flash"),
+      prepareStep: ({ stepNumber }) =>
+        completionStepSettings(stepNumber, 2, "Complete the calculation."),
       stopWhen: isStepCount(3),
       tools,
     });
@@ -226,6 +229,9 @@ test("DeepSeek reasoning survives streaming, tool continuation and stored UI-mes
     }
     assert.equal(await result.text, "5");
     assert.equal(requests.length, 2);
+    assert.ok(Array.isArray(requests[0].tools));
+    assert.ok(Array.isArray(requests[1].tools));
+    assert.equal(requests[1].tool_choice, "auto");
     assert.deepEqual(
       saved?.parts
         .filter((part) => part.type === "reasoning")
@@ -243,11 +249,13 @@ test("DeepSeek reasoning survives streaming, tool continuation and stored UI-mes
       reasons[0]
     );
     const firstMessages = requests[0].messages as {
+      role: string;
       content: { type: string; image_url?: { url: string } }[];
     }[];
     assert.equal(
-      firstMessages[0].content.find((part) => part.type === "image_url")
-        ?.image_url?.url,
+      firstMessages
+        .find((message) => message.role === "user")
+        ?.content.find((part) => part.type === "image_url")?.image_url?.url,
       image
     );
     assert.ok(saved);

@@ -2,6 +2,19 @@ FROM node:22.23.4-bookworm-slim AS base
 WORKDIR /app
 RUN corepack enable
 
+FROM docker:28.5.1-cli AS docker-cli
+
+# One execution image: trusted internal broker by default; conversations reuse
+# non-root, networkless instances without the broker's socket or token.
+FROM base AS execution
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    bash python3 python3-pandas python3-openpyxl \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=docker-cli /usr/local/bin/docker /usr/local/bin/docker
+COPY server/infrastructure/execution/bash-broker.mjs server/infrastructure/execution/bash-runner.py /opt/chatnest/
+ENV PORT=8080
+CMD ["node", "/opt/chatnest/bash-broker.mjs"]
+
 FROM base AS dependencies
 ENV HUSKY=0
 COPY package.json pnpm-lock.yaml ./
@@ -33,7 +46,6 @@ COPY --from=build /app/server/application/ai/core.md ./server/application/ai/cor
 COPY --from=build /app/server/infrastructure/skills ./server/infrastructure/skills
 COPY --from=build /app/server/infrastructure/mcp/agent.json ./server/infrastructure/mcp/agent.json
 COPY --from=build /app/server/infrastructure/uploads/document-worker.cjs ./server/infrastructure/uploads/document-worker.cjs
-COPY --from=build /app/server/infrastructure/execution/javascript-worker.cjs ./server/infrastructure/execution/javascript-worker.cjs
 COPY --from=build /app/scripts/platform-settlement-worker.mjs /app/scripts/payment-recovery-result.mjs ./scripts/
 COPY --from=build /app/scripts/generated/payment-recovery-schema.mjs ./scripts/generated/payment-recovery-schema.mjs
 COPY --from=build /app/scripts/ci/production-gate.mjs ./scripts/ci/production-gate.mjs

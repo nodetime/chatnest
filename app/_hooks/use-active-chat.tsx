@@ -41,7 +41,10 @@ import {
   type TodoPlan,
   validateAskUserOutput,
 } from "@/server/domain/message/agent-interactions";
-import { hasRunFailure } from "@/server/domain/message/run-failure";
+import {
+  hasRunFailure,
+  isCompleteFinishReason,
+} from "@/server/domain/message/run-failure";
 import {
   buildTaskMessage,
   type TaskDraft,
@@ -344,8 +347,7 @@ export function ActiveChatProvider({
         isAbort ||
         isError ||
         isDisconnect ||
-        !finishReason ||
-        finishReason === "error" ||
+        !isCompleteFinishReason(finishReason) ||
         (finishedMessage && hasRunFailure(finishedMessage));
       const stoppedByUser =
         isAbort && !isError && !isDisconnect && interactionGate.current.paused;

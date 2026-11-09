@@ -79,6 +79,41 @@ test("selection guards derive from actual streaming and unsaved editor state", (
   );
 });
 
+test("Bash and writeFile index only saved artifacts, preserve path updates and reject malformed entries", () => {
+  const { artifactCatalog } = feature(
+    "app/_components/chat/artifact-catalog.ts"
+  );
+  const artifact = {
+    id: uuid("bash"),
+    kind: "sheet",
+    path: "outputs/table.csv",
+    title: "table.csv",
+  };
+  const part = (type: string, artifacts: unknown[]) => ({
+    output: { artifacts },
+    state: "output-available",
+    type,
+  });
+  assert.deepEqual(
+    artifactCatalog(
+      messages([
+        part("tool-bash", [
+          artifact,
+          { ...artifact, id: "bad" },
+          { ...artifact, path: "../private" },
+        ]),
+        part("tool-writeFile", [{ ...artifact, title: "已更新.csv" }]),
+        part("dynamic-tool", [{ ...artifact, id: uuid("other") }]),
+        {
+          ...part("tool-bash", [{ ...artifact, id: uuid("pending") }]),
+          state: "input-available",
+        },
+      ])
+    ),
+    [{ id: artifact.id, kind: "sheet", title: "已更新.csv" }]
+  );
+});
+
 test("title projects native live title then persisted title then real first user text, never model or tool data", () => {
   const { projectChatTitle } = feature("app/_components/chat/chat-title.ts");
   const input = [
