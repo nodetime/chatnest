@@ -1,7 +1,7 @@
 "use client";
 
 import { python } from "@codemirror/lang-python";
-import { EditorState, Transaction } from "@codemirror/state";
+import { Compartment, EditorState, Transaction } from "@codemirror/state";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { EditorView } from "@codemirror/view";
 import { basicSetup } from "codemirror";
@@ -9,6 +9,7 @@ import { memo, useEffect, useRef } from "react";
 import type { Suggestion } from "@/server/domain/suggestion/types";
 
 type EditorProps = {
+  title?: string;
   content: string;
   onSaveContent: (updatedContent: string, debounce: boolean) => void;
   status: "streaming" | "idle";
@@ -18,6 +19,7 @@ type EditorProps = {
 };
 
 function PureCodeEditor({
+  title,
   content,
   onSaveContent,
   status,
@@ -26,30 +28,15 @@ function PureCodeEditor({
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<EditorView | null>(null);
   const userScrolledRef = useRef(false);
+  const configurationRef = useRef(new Compartment());
+  const callbacksRef = useRef({ onSaveContent, status });
 
   useEffect(() => {
-    if (containerRef.current && !editorRef.current) {
-      const startState = EditorState.create({
-        doc: content,
-        extensions: [basicSetup, python(), oneDark],
-      });
-
-      editorRef.current = new EditorView({
-        parent: containerRef.current,
-        state: startState,
-      });
-    }
-
-    return () => {
-      if (editorRef.current) {
-        editorRef.current.destroy();
-        editorRef.current = null;
-      }
-    };
-  }, [content]);
+    callbacksRef.current = { onSaveContent, status };
+  }, [onSaveContent, status]);
 
   useEffect(() => {
-    if (editorRef.current) {
+    if (containerRef.current) {
       const updateListener = EditorView.updateListener.of((update) => {
         if (update.docChanged) {
           const transaction = update.transactions.find(
@@ -58,14 +45,14 @@ function PureCodeEditor({
 
           if (transaction) {
             const newContent = update.state.doc.toString();
-            onSaveContent(newContent, true);
+            callbacksRef.current.onSaveContent(newContent, true);
           }
         }
       });
 
       const scrollListener = EditorView.domEventHandlers({
         scroll() {
-          if (status !== "streaming") {
+          if (callbacksRef.current.status !== "streaming") {
             return;
           }
           const dom = editorRef.current?.scrollDOM;
@@ -78,25 +65,35 @@ function PureCodeEditor({
         },
       });
 
-      const currentSelection = editorRef.current.state.selection;
-
-      const newState = EditorState.create({
-        doc: editorRef.current.state.doc,
+      const state = EditorState.create({
         extensions: [
           basicSetup,
-          EditorState.readOnly.of(!isCurrentVersion || status === "streaming"),
-          EditorView.editable.of(isCurrentVersion && status !== "streaming"),
-          python(),
           oneDark,
+          configurationRef.current.of([]),
           updateListener,
           scrollListener,
         ],
-        selection: currentSelection,
       });
-
-      editorRef.current.setState(newState);
+      editorRef.current = new EditorView({
+        parent: containerRef.current,
+        state,
+      });
     }
-  }, [onSaveContent, status, isCurrentVersion]);
+    return () => {
+      editorRef.current?.destroy();
+      editorRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    editorRef.current?.dispatch({
+      effects: configurationRef.current.reconfigure([
+        EditorState.readOnly.of(!isCurrentVersion || status === "streaming"),
+        EditorView.editable.of(isCurrentVersion && status !== "streaming"),
+        ...(title?.toLowerCase().endsWith(".py") ? [python()] : []),
+      ]),
+    });
+  }, [status, isCurrentVersion, title]);
 
   useEffect(() => {
     if (status !== "streaming") {
@@ -105,12 +102,15 @@ function PureCodeEditor({
   }, [status]);
 
   useEffect(() => {
-    if (editorRef.current && content) {
+    if (editorRef.current) {
       const currentContent = editorRef.current.state.doc.toString();
 
       if (status === "streaming" || currentContent !== content) {
         const transaction = editorRef.current.state.update({
-          annotations: [Transaction.remote.of(true)],
+          annotations: [
+            Transaction.remote.of(true),
+            Transaction.addToHistory.of(false),
+          ],
           changes: {
             from: 0,
             insert: content,
@@ -141,6 +141,13 @@ function PureCodeEditor({
 }
 
 export const CodeEditor = memo(PureCodeEditor, (prevProps, nextProps) => {
+  if (
+    prevProps.title !== nextProps.title ||
+    prevProps.isCurrentVersion !== nextProps.isCurrentVersion ||
+    prevProps.onSaveContent !== nextProps.onSaveContent
+  ) {
+    return false;
+  }
   if (prevProps.status === "streaming" && nextProps.status === "streaming") {
     return false;
   }

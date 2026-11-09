@@ -44,3 +44,35 @@ export function normalizeMcpOutput(
   const sources = collectSourceLinks(headers);
   return sources.length ? { ...result, sources } : output;
 }
+
+/** Only the upstream's singleton omission envelope is an overflow marker. */
+export function isOmittedMcpResult(output: unknown): boolean {
+  if (!output || typeof output !== "object") {
+    return false;
+  }
+  const envelope = output as { structuredContent?: unknown; content?: unknown };
+  let value = envelope.structuredContent;
+  if (
+    value === undefined &&
+    Array.isArray(envelope.content) &&
+    envelope.content.length === 1
+  ) {
+    const [block] = envelope.content;
+    if (block?.type !== "text" || typeof block.text !== "string") {
+      return false;
+    }
+    try {
+      value = JSON.parse(block.text);
+    } catch {
+      return false;
+    }
+  }
+  return (
+    !!value &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    Object.keys(value).length === 1 &&
+    "__largeTextTips__" in value &&
+    typeof value.__largeTextTips__ === "string"
+  );
+}

@@ -26,13 +26,8 @@ import {
   readUserCatalog,
 } from "@/server/application/capability/runtime";
 import { agentInteractionTools } from "@/server/application/chat/tools/agent-interactions";
-import { createDocument } from "@/server/application/chat/tools/create-document";
-import { createResultTable } from "@/server/application/chat/tools/create-result-table";
-import { editDocument } from "@/server/application/chat/tools/edit-document";
-import { executeCodeTool } from "@/server/application/chat/tools/execute-code";
+import { bashTools } from "@/server/application/chat/tools/bash";
 import { readAttachmentTool } from "@/server/application/chat/tools/read-attachment";
-import { requestSuggestions } from "@/server/application/chat/tools/request-suggestions";
-import { updateDocument } from "@/server/application/chat/tools/update-document";
 import { createImageViewer } from "@/server/application/chat/tools/view-image";
 import { SettingsError } from "@/server/application/mcp/security";
 import { prepareAttachmentContext } from "@/server/application/uploads/context";
@@ -77,6 +72,7 @@ import {
 import {
   createRunFailureReporter,
   hasRunFailure,
+  isCompleteFinishReason,
 } from "@/server/domain/message/run-failure";
 import type {
   ChatMessage,
@@ -477,6 +473,13 @@ export async function sendMessage(
 
       let runtime: Awaited<ReturnType<typeof createAgentRuntime>> | undefined;
       try {
+        const workspace = bashTools({
+          chatId: id,
+          dataStream,
+          ledger: evidenceLedger,
+          messages: uiMessages,
+          userId: user.id,
+        });
         runtime = await createAgentRuntime(
           input.signal,
           undefined,
@@ -509,6 +512,7 @@ export async function sendMessage(
             },
             onSource: (source) =>
               dataStream.write({ data: source, type: "data-mcp-source" }),
+            persistSources: workspace.persistSources,
             skills: taskCapabilities.skills,
           }
         );
@@ -524,36 +528,15 @@ export async function sendMessage(
         }
         const tools: ToolSet = {
           ...agentInteractionTools(),
-          executeCode: executeCodeTool(runtime.signal),
+          ...(await workspace.tools(runtime.signal)),
           ...(capabilities?.vision === true
             ? { viewImage: imageViewer.tool }
             : {}),
-          createResultTable: createResultTable({
-            chatId: id,
-            dataStream,
-            ledger: evidenceLedger,
-            session,
-          }),
           readAttachment: readAttachmentTool(
             (assetId) => readAttachmentAsset(assetId, user.id, id),
             attachmentBudget
           ),
           ...runtime.tools,
-          createDocument: createDocument({
-            dataStream,
-            session,
-          }),
-          editDocument: editDocument({ dataStream, session }),
-          requestSuggestions: requestSuggestions({
-            dataStream,
-            modelId: chatModel,
-            session,
-          }),
-          updateDocument: updateDocument({
-            dataStream,
-            modelId: chatModel,
-            session,
-          }),
         };
         const instructions = [
           systemPrompt({ supportsTools }),
@@ -573,9 +556,9 @@ export async function sendMessage(
           activeTools: supportsTools ? Object.keys(tools) : [],
           instructions,
           maxOutputTokens: runtime.config.maxOutputTokens,
-          // A retry re-enters billing middleware and opens another reservation.
-          // Let the existing reconciliation own a charged attempt with unknown outcome.
-          maxRetries: requestModelBilling ? 0 : undefined,
+          // One provider attempt per request, including standalone mode.
+          // Unknown charged outcomes remain with the existing reconciliation path.
+          maxRetries: 0,
           messages: modelMessages,
           model: (() => {
             const baseModel = getLanguageModel(chatModel);
@@ -595,7 +578,13 @@ export async function sendMessage(
               markModelActive();
             }
           },
-          onEnd() {
+          onEnd({ finishReason }) {
+            if (
+              !input.signal.aborted &&
+              !isCompleteFinishReason(finishReason)
+            ) {
+              runFailure.report((part) => dataStream.write(part));
+            }
             stopWaitingStatus();
           },
           onError() {
@@ -702,8 +691,7 @@ export async function sendMessage(
           runFailure.failed ||
           isAborted ||
           input.signal.aborted ||
-          !finishReason ||
-          finishReason === "error" ||
+          !isCompleteFinishReason(finishReason) ||
           !responseMessage.parts.length
         ) {
           return;
@@ -727,8 +715,7 @@ export async function sendMessage(
           runFailure.failed ||
           isAborted ||
           input.signal.aborted ||
-          !finishReason ||
-          finishReason === "error" ||
+          !isCompleteFinishReason(finishReason) ||
           !responseMessage.parts.length
         ) {
           return;

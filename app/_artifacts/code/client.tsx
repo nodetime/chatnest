@@ -1,4 +1,6 @@
-import { useCallback } from "react";
+import Image from "next/image";
+import { Tabs } from "radix-ui";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { CodeEditor } from "@/app/_components/chat/code-editor";
 import {
@@ -69,6 +71,21 @@ type Metadata = {
 
 const codeArtifactContent: Artifact<"code", Metadata>["content"] =
   function CodeArtifactContent({ metadata, setMetadata, ...props }) {
+    const isSvg = props.title.toLowerCase().endsWith(".svg");
+    const [imageUrl, setImageUrl] = useState("");
+    const [previewError, setPreviewError] = useState(false);
+    useEffect(() => {
+      if (!isSvg) {
+        return;
+      }
+      const url = URL.createObjectURL(
+        new Blob([props.content], { type: "image/svg+xml" })
+      );
+      setImageUrl(url);
+      setPreviewError(false);
+      return () => URL.revokeObjectURL(url);
+    }, [isSvg, props.content]);
+    const handlePreviewError = useCallback(() => setPreviewError(true), []);
     const clearConsoleOutputs = useCallback(() => {
       setMetadata((currentMetadata) => ({
         ...currentMetadata,
@@ -76,16 +93,69 @@ const codeArtifactContent: Artifact<"code", Metadata>["content"] =
       }));
     }, [setMetadata]);
 
+    const editor = (
+      <div className="relative min-h-[200px]">
+        <CodeEditor
+          {...props}
+          isCurrentVersion={props.isCurrentVersion && !props.isReadonly}
+          key={props.documentId}
+        />
+      </div>
+    );
+
     return (
       <>
-        <div className="relative min-h-[200px]">
-          <CodeEditor
-            {...props}
-            isCurrentVersion={props.isCurrentVersion && !props.isReadonly}
-          />
-        </div>
+        {isSvg ? (
+          <Tabs.Root className="w-full" defaultValue="preview">
+            <Tabs.List
+              aria-label="SVG 查看方式"
+              className="inline-flex gap-1 rounded-lg bg-muted p-1"
+            >
+              <Tabs.Trigger
+                className="rounded-md px-3 py-1.5 text-sm data-[state=active]:bg-background focus-visible:outline-2 focus-visible:outline-ring"
+                value="preview"
+              >
+                预览
+              </Tabs.Trigger>
+              <Tabs.Trigger
+                className="rounded-md px-3 py-1.5 text-sm data-[state=active]:bg-background focus-visible:outline-2 focus-visible:outline-ring"
+                value="source"
+              >
+                源码
+              </Tabs.Trigger>
+            </Tabs.List>
+            <Tabs.Content className="mt-3" value="preview">
+              {previewError ? (
+                <p className="p-6 text-sm text-muted-foreground" role="status">
+                  预览未加载成功，可切换源码检查文件。
+                </p>
+              ) : (
+                imageUrl && (
+                  <div className="flex min-h-64 items-center justify-center rounded-xl border bg-white p-6">
+                    {/* SVG is loaded as an image; its scripts never run in the application document. */}
+                    <Image
+                      alt={props.title}
+                      className="h-auto w-auto max-h-[65dvh] max-w-full"
+                      height={800}
+                      key={imageUrl}
+                      onError={handlePreviewError}
+                      src={imageUrl}
+                      unoptimized
+                      width={1200}
+                    />
+                  </div>
+                )
+              )}
+            </Tabs.Content>
+            <Tabs.Content className="mt-3" value="source">
+              {editor}
+            </Tabs.Content>
+          </Tabs.Root>
+        ) : (
+          editor
+        )}
 
-        {metadata?.outputs ? (
+        {!isSvg && metadata?.outputs ? (
           <Console
             consoleOutputs={metadata.outputs}
             setConsoleOutputs={clearConsoleOutputs}

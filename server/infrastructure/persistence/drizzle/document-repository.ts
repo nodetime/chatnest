@@ -101,7 +101,15 @@ export const documentRepository: DocumentRepository & {
     });
   },
 
-  async save({ id, title, kind, content, userId }) {
+  async save({
+    id,
+    title,
+    kind,
+    content,
+    userId,
+    expectedVersion,
+    expectedContent,
+  }) {
     try {
       return await db.transaction(async (tx) => {
         await tx.execute(
@@ -120,6 +128,17 @@ export const documentRepository: DocumentRepository & {
         }
         if (docs.some((doc) => doc.userId !== userId)) {
           throw new ChatbotError("forbidden:document");
+        }
+        if (
+          (expectedVersion !== undefined &&
+            (docs[0]?.createdAt.toISOString() ?? null) !== expectedVersion) ||
+          (expectedContent !== undefined &&
+            (docs[0]?.content ?? null) !== expectedContent)
+        ) {
+          throw new ChatbotError(
+            "bad_request:document",
+            "File changed during execution; read the latest saved file before editing again."
+          );
         }
         if (kind === "sheet" && !isValidSheetCsv(content)) {
           throw new ChatbotError(

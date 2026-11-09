@@ -66,7 +66,6 @@ const nextConfig: NextConfig = {
       "./server/application/ai/core.md",
       "./server/infrastructure/mcp/agent.json",
       "./server/infrastructure/skills/**/*",
-      "./server/infrastructure/execution/javascript-worker.cjs",
     ],
     "/api/files/upload": [
       "./server/infrastructure/uploads/document-worker.cjs",
@@ -93,7 +92,6 @@ const nextConfig: NextConfig = {
     "playwright",
     "playwright-core",
     "@modelcontextprotocol/sdk",
-    "quickjs-emscripten",
   ],
 };
 
@@ -116,10 +114,6 @@ export default withBotId(async (phase) => {
     { base: root, fileIOConcurrency: 64, processCwd: root }
   );
   const files = [...fileList].map((path) => `./${path}`);
-  const executionTrace = await nodeFileTrace(
-    ["server/infrastructure/execution/javascript-worker.cjs"],
-    { base: root, fileIOConcurrency: 64, processCwd: root }
-  );
   // PDF.js uses a computed fake-worker import and newer syntax beyond NFT's parser.
   // Preserve its official worker/maps/fonts/assets independently of static analysis.
   const pdfAssets = `./${relative(root, dirname(pdfManifest)).replaceAll("\\", "/")}/**/*`;
@@ -127,10 +121,6 @@ export default withBotId(async (phase) => {
     ...nextConfig,
     outputFileTracingIncludes: {
       ...nextConfig.outputFileTracingIncludes,
-      "/api/chat": [
-        ...(nextConfig.outputFileTracingIncludes?.["/api/chat"] ?? []),
-        ...[...executionTrace.fileList].map((path) => `./${path}`),
-      ],
       "/api/files/upload": [
         ...(nextConfig.outputFileTracingIncludes?.["/api/files/upload"] ?? []),
         ...files,

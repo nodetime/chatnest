@@ -7,6 +7,25 @@ x-logs: &logs
     max-file: "2"
 
 services:
+  execution:
+    image: ${CHATNEST_EXECUTION_IMAGE:?Set immutable execution image}
+    env_file: execution.env
+    environment:
+      EXECUTION_IMAGE: ${CHATNEST_EXECUTION_IMAGE:?Set immutable execution image}
+      EXECUTION_INSTANCE_ID: chatnest-execution-demo
+    networks: [execution]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    read_only: true
+    tmpfs: [/tmp:size=16m]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    cpus: 0.25
+    mem_limit: 128m
+    pids_limit: 64
+    logging: *logs
+    restart: unless-stopped
+
   postgres:
     image: postgres:16-bookworm
     env_file: database.env
@@ -70,6 +89,8 @@ services:
     env_file: app.env
     environment:
       NODE_EXTRA_CA_CERTS: /run/chatnest/porta-ca.crt
+      EXECUTION_SERVICE_URL: http://execution:8080
+    networks: [default, execution]
     ports:
       - "127.0.0.1:3340:3000"
     volumes:
@@ -79,6 +100,8 @@ services:
       postgres:
         condition: service_healthy
       porta-tls:
+        condition: service_started
+      execution:
         condition: service_started
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
@@ -98,3 +121,7 @@ volumes:
   database:
   porta-data:
   uploads:
+
+networks:
+  execution:
+    internal: true

@@ -159,6 +159,11 @@ function PureArtifactActions({
         .filter((action) => !isReadonly || action.id !== "run-code")
         .filter(
           (action) =>
+            action.id !== "run-code" ||
+            artifact.title.toLowerCase().endsWith(".py")
+        )
+        .filter(
+          (action) =>
             layout !== "header" ||
             !["previous-version", "next-version"].includes(action.id ?? "")
         )

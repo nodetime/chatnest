@@ -227,7 +227,12 @@ export const ReasoningContent = memo(
           ref={scrollRef}
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
-          <Streamdown plugins={streamdownPlugins} {...props}>
+          <Streamdown
+            isAnimating={isStreaming}
+            mode={isStreaming ? "streaming" : "static"}
+            plugins={streamdownPlugins}
+            {...props}
+          >
             {children}
           </Streamdown>
         </div>

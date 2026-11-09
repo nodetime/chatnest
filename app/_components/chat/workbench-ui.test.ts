@@ -851,6 +851,31 @@ test("mixed reasoning and tools render in their original SDK order rather than m
     };
     walk(tree);
     assert.deepEqual(order,['reason-a','tool-a','reason-b','tool-b','final-answer']);
+    const states = (message, isLoading = true) => {
+      const current = output.exports.PreviewMessage({message,isLoading,isReadonly:true,addToolApprovalResponse:()=>{}});
+      const result=[];
+      const inspect=node=>{
+        if(Array.isArray(node)){node.forEach(inspect);return;}
+        if(!node||typeof node!=='object')return;
+        if(['reasoning','response'].includes(node.type))result.push(node.props);
+        inspect(node.props?.children);
+      };
+      inspect(current);
+      return result;
+    };
+    const finished = states({id:'finished-reason',role:'assistant',parts:[{type:'reasoning',text:'done',state:'done'},{type:'text',text:'answer',state:'done'}]});
+    assert.equal(finished[0].isLoading,false,'finished reasoning stays finished during later tools');
+    assert.equal(finished[1].mode,'static');
+    assert.equal(finished[1].isAnimating,false);
+    const live = states({id:'live-reason',role:'assistant',parts:[{type:'reasoning',text:'thinking',state:'streaming'},{type:'text',text:'partial',state:'streaming'}]});
+    assert.equal(live[0].isLoading,true);
+    assert.equal(live[1].mode,'streaming');
+    assert.equal(live[1].isAnimating,true);
+    const reopened = states({id:'reopened',role:'assistant',parts:[{type:'reasoning',text:'saved',state:'streaming'},{type:'text',text:'saved answer',state:'streaming'}]},false);
+    assert.equal(reopened[0].isLoading,false,'history cannot restart reasoning from a persisted streaming flag');
+    assert.equal(reopened[1].mode,'static');
+    assert.equal(reopened[1].isAnimating,false);
+
   `);
 });
 

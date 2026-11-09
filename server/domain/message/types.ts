@@ -1,23 +1,14 @@
 import type { InferUITool, UIMessage } from "ai";
 import { z } from "zod";
 // biome-ignore lint/style/noRestrictedImports: 已登记豁免:ChatTools 依赖工具定义的 InferUITool 推导,翻转需重写工具类型声明(裁决见 P5 待办)
-import type { createDocument } from "@/server/application/chat/tools/create-document";
-// biome-ignore lint/style/noRestrictedImports: 已登记豁免:ChatTools 依赖工具定义的 InferUITool 推导,翻转需重写工具类型声明(裁决见 P5 待办)
-import type { createResultTable } from "@/server/application/chat/tools/create-result-table";
-// biome-ignore lint/style/noRestrictedImports: ChatTools follows the registered native tool's inferred schema.
-import type { editDocument } from "@/server/application/chat/tools/edit-document";
-// biome-ignore lint/style/noRestrictedImports: 已登记豁免:ChatTools 依赖工具定义的 InferUITool 推导,翻转需重写工具类型声明(裁决见 P5 待办)
 import type { getWeather } from "@/server/application/chat/tools/get-weather";
-// biome-ignore lint/style/noRestrictedImports: 已登记豁免:ChatTools 依赖工具定义的 InferUITool 推导,翻转需重写工具类型声明(裁决见 P5 待办)
-import type { requestSuggestions } from "@/server/application/chat/tools/request-suggestions";
-// biome-ignore lint/style/noRestrictedImports: 已登记豁免:ChatTools 依赖工具定义的 InferUITool 推导,翻转需重写工具类型声明(裁决见 P5 待办)
-import type { updateDocument } from "@/server/application/chat/tools/update-document";
 import type { Suggestion } from "@/server/domain/suggestion/types";
 import type {
   AskUserInput,
   AskUserOutput,
   TodoPlan,
 } from "./agent-interactions";
+import type { BashOutput } from "./bash";
 import type { ExecuteCodeOutput } from "./code-execution";
 import type { McpSourceMetadata } from "./result-evidence";
 
@@ -33,13 +24,24 @@ export type MessageMetadata = z.infer<typeof messageMetadataSchema>;
 export type ArtifactKind = "text" | "code" | "image" | "sheet";
 
 type weatherTool = InferUITool<typeof getWeather>;
-type createDocumentTool = InferUITool<ReturnType<typeof createDocument>>;
-type updateDocumentTool = InferUITool<ReturnType<typeof updateDocument>>;
-type requestSuggestionsTool = InferUITool<
-  ReturnType<typeof requestSuggestions>
->;
+// Persisted historical tool parts remain readable; these definitions do not register executors.
+type SavedArtifactTool = {
+  input: Record<string, unknown>;
+  output: {
+    id?: string;
+    title?: string;
+    kind?: ArtifactKind;
+    content?: string;
+    error?: string;
+    savedContent?: string;
+    [key: string]: unknown;
+  };
+};
 
 export type ChatTools = {
+  bash: { input: { command: string }; output: BashOutput };
+  readFile: { input: { path: string }; output: { content: string } };
+  writeFile: { input: { path: string; content: string }; output: BashOutput };
   executeCode: { input: { code: string }; output: ExecuteCodeOutput };
   viewImage: {
     input: { sourceToolCallId: string; imagePath: string };
@@ -56,12 +58,12 @@ export type ChatTools = {
   };
   askUser: { input: AskUserInput; output: AskUserOutput };
   updateTodo: { input: TodoPlan; output: TodoPlan };
-  createResultTable: InferUITool<ReturnType<typeof createResultTable>>;
+  createResultTable: SavedArtifactTool;
   getWeather: weatherTool;
-  createDocument: createDocumentTool;
-  editDocument: InferUITool<ReturnType<typeof editDocument>>;
-  updateDocument: updateDocumentTool;
-  requestSuggestions: requestSuggestionsTool;
+  createDocument: SavedArtifactTool;
+  editDocument: SavedArtifactTool;
+  updateDocument: SavedArtifactTool;
+  requestSuggestions: SavedArtifactTool;
 };
 
 export type WaitingStatusData = {

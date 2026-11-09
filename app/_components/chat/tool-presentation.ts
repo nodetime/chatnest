@@ -42,16 +42,19 @@ export function projectToolIdentity(
   const skill = loadedSkill(part);
   const nativeTitles: Record<string, string> = {
     "tool-askUser": "补充信息",
+    "tool-bash": "处理文件与数据",
     "tool-createDocument": "整理产物",
     "tool-createResultTable": "生成表格产物",
     "tool-editDocument": "修改产物",
     "tool-executeCode": "计算与处理数据",
     "tool-loadSkill": "加载技能",
     "tool-readAttachment": "读取文件",
+    "tool-readFile": "读取工作文件",
     "tool-readSkillResource": "读取技能参考",
     "tool-updateDocument": "更新产物",
     "tool-updateTodo": "更新任务进度",
     "tool-viewImage": "查看商品图片",
+    "tool-writeFile": "保存工作文件",
   };
   const match = aliases.find((item) => item.alias === name);
   // Exact conventional operations only; unknown operations keep their real name.

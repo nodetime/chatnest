@@ -20,7 +20,10 @@ import {
   readRuntimeConfig,
   runtimeToolAlias,
 } from "@/server/application/mcp/runtime-config";
-import { normalizeMcpOutput } from "@/server/domain/message/mcp-output";
+import {
+  isOmittedMcpResult,
+  normalizeMcpOutput,
+} from "@/server/domain/message/mcp-output";
 import { createPortaToolError } from "@/server/domain/message/porta-error";
 import {
   type McpSourceMetadata,
@@ -42,6 +45,10 @@ export async function createAgentRuntime(
   evidence: {
     ledger?: ResultEvidenceLedger;
     onSource?: (source: McpSourceMetadata) => void;
+    persistSources?: (
+      files: Record<string, string>,
+      signal: AbortSignal
+    ) => Promise<void>;
     skills?: Skill[];
     authorizeTool?: (server: RuntimeServer) => Promise<void>;
     authorizeSkill?: (skill: Skill) => Promise<void>;
@@ -190,13 +197,13 @@ export async function createAgentRuntime(
                   await evidence.authorizeTool?.(server);
                   runSignal.throwIfAborted();
                   ledger.reserveCurrentCall(options.toolCallId, alias);
+                  const callSignal = AbortSignal.any([
+                    runSignal,
+                    AbortSignal.timeout(config.toolTimeoutMs),
+                    ...(options.abortSignal ? [options.abortSignal] : []),
+                  ]);
                   let output: unknown;
                   try {
-                    const callSignal = AbortSignal.any([
-                      runSignal,
-                      AbortSignal.timeout(config.toolTimeoutMs),
-                      ...(options.abortSignal ? [options.abortSignal] : []),
-                    ]);
                     const execute = () =>
                       abortable(
                         () =>
@@ -235,6 +242,11 @@ export async function createAgentRuntime(
                       `${server.name} 暂时未能返回结果；可能是限流或访问失败，请稍后重试。`
                     );
                   }
+                  if (isOmittedMcpResult(output)) {
+                    throw new Error(
+                      `${server.name}: upstream returned an overflow notice without the requested records. No complete result was received or saved; narrow the query if appropriate.`
+                    );
+                  }
                   const source = ledger.record(
                     {
                       completedAt: new Date().toISOString(),
@@ -245,6 +257,10 @@ export async function createAgentRuntime(
                       toolName: alias,
                     },
                     output
+                  );
+                  await evidence.persistSources?.(
+                    ledger.files(options.toolCallId),
+                    callSignal
                   );
                   evidence.onSource?.(source);
                   return normalizeMcpOutput(server.id, name, output);
@@ -281,7 +297,7 @@ export async function createAgentRuntime(
     return {
       close,
       config,
-      instructions: `${buildSkillsPrompt(skills)}\nAvailable execution tools: ${Object.keys(tools).join(", ")}\nUnavailable services: ${unavailable.join("; ") || "none"}. Never claim to have used an unavailable service.`,
+      instructions: `${buildSkillsPrompt(skills)}\nAvailable MCP and skill tools: ${Object.keys(tools).join(", ")}\nUnavailable services: ${unavailable.join("; ") || "none"}. Never claim to have used an unavailable service.`,
       signal: runSignal,
       tools,
     };

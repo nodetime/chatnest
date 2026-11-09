@@ -332,8 +332,7 @@ export const MessageResponse = memo(
       plugins={streamdownPlugins}
       {...props}
     />
-  ),
-  (prevProps, nextProps) => prevProps.children === nextProps.children
+  )
 );
 
 MessageResponse.displayName = "MessageResponse";

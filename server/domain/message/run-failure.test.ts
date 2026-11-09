@@ -8,6 +8,7 @@ import {
 import {
   createRunFailureReporter,
   hasRunFailure,
+  isCompleteFinishReason,
 } from "@/server/domain/message/run-failure";
 import type { ChatMessage } from "@/server/domain/message/types";
 
@@ -295,5 +296,96 @@ test("SDK runtime timeout after a successful tool step is durable failure; expli
       assert.equal(hasRunFailure(persisted), !userStop);
       assert.ok(JSON.stringify(persisted).includes("original result"));
     })
+  );
+});
+
+test("SDK completion reasons distinguish finished answers and pending tools from truncated output", () => {
+  for (const reason of ["stop", "tool-calls"]) {
+    assert.equal(isCompleteFinishReason(reason), true);
+  }
+  for (const reason of [
+    undefined,
+    "length",
+    "content-filter",
+    "other",
+    "error",
+    "unknown",
+  ]) {
+    assert.equal(isCompleteFinishReason(reason), false);
+  }
+});
+
+test("SDK incomplete text endings persist failure alongside the partial answer without a provider error", async () => {
+  const { streamText, toUIMessageStream } = await import("ai");
+  const { MockLanguageModelV4 } = await import("ai/test");
+  await Promise.all(
+    (["stop", "length", "content-filter", "other"] as const).map(
+      async (reason) => {
+        const failure = createRunFailureReporter();
+        let persisted: ChatMessage | undefined;
+        let errors = 0;
+        const model = new MockLanguageModelV4({
+          doStream: async () => ({
+            stream: new ReadableStream({
+              start(controller) {
+                controller.enqueue({ type: "stream-start", warnings: [] });
+                controller.enqueue({ id: "answer", type: "text-start" });
+                controller.enqueue({
+                  delta: "Actual partial answer",
+                  id: "answer",
+                  type: "text-delta",
+                });
+                controller.enqueue({ id: "answer", type: "text-end" });
+                controller.enqueue({
+                  finishReason: {
+                    raw: reason,
+                    unified: reason,
+                  },
+                  type: "finish",
+                  usage: {
+                    inputTokens: {
+                      cacheRead: 0,
+                      cacheWrite: 0,
+                      noCache: 1,
+                      total: 1,
+                    },
+                    outputTokens: { reasoning: 0, text: 1, total: 1 },
+                  },
+                });
+                controller.close();
+              },
+            }),
+          }),
+        });
+        const stream = createUIMessageStream<ChatMessage>({
+          execute: async ({ writer }) => {
+            const result = streamText({
+              model,
+              onEnd: ({ finishReason }) => {
+                if (!isCompleteFinishReason(finishReason)) {
+                  failure.report((part) => writer.write(part));
+                }
+              },
+              onError: () => {
+                errors += 1;
+              },
+              prompt: "test",
+            });
+            writer.merge(toUIMessageStream({ stream: result.stream }));
+            await result.text;
+          },
+          onEnd: ({ responseMessage }) => {
+            persisted = responseMessage;
+          },
+        });
+        for await (const _ of readUIMessageStream({ stream })) {
+          // Exercise the real SDK lifecycle and persisted UI message.
+        }
+        assert.ok(persisted);
+        assert.equal(errors, 0);
+        assert.equal(hasRunFailure(persisted), reason !== "stop");
+        assert.ok(JSON.stringify(persisted).includes("Actual partial answer"));
+      }
+    )
   );
 });

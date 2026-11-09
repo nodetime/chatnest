@@ -805,7 +805,7 @@ test("completed user markdown renders statically instead of reusing streaming bl
   const source = readFileSync("app/_components/chat/message.tsx", "utf8");
   assert.match(
     source,
-    /<MessageResponse\s+mode=\{isUser\s*\?\s*"static"\s*:\s*"streaming"\}/
+    /mode=\{\s*isAssistant && isLoading && part\.state === "streaming"\s*\? "streaming"\s*: "static"\s*\}/
   );
 });
 test("successful pending edit clears only submitted text and preserves newly typed draft", async () => {

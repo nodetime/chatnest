@@ -5,6 +5,8 @@ import { toolNeedsAttention } from "./tool-activity-state";
 
 type Part = ChatMessage["parts"][number];
 const specialTools = new Set([
+  "bash",
+  "writeFile",
   "getWeather",
   "askUser",
   "createDocument",
@@ -115,6 +117,8 @@ function nativeToolError(part: ToolPart) {
       "tool-editDocument",
       "tool-requestSuggestions",
       "tool-executeCode",
+      "tool-bash",
+      "tool-writeFile",
       "tool-viewImage",
     ].includes(part.type) &&
     part.state === "output-available" &&
@@ -166,6 +170,9 @@ export function artifactEditHasLaterSave(part: ToolPart, following: Part[]) {
 /** 只解释已知工具契约；任意供应商错误不作为保存状态或用户指令。 */
 export function activityFailureMessage(part: ToolPart, kind = "tool") {
   const error = nativeToolError(part);
+  if (part.type === "tool-bash" || part.type === "tool-writeFile") {
+    return "文件处理未完成，请查看执行详情；已保存的文件仍可打开。";
+  }
   if (
     part.type === "tool-editDocument" &&
     error === "old_string not found in document"

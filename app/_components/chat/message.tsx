@@ -174,7 +174,7 @@ const PurePreviewMessage = ({
     if (type === "reasoning") {
       return part.text?.trim().length > 0 ? (
         <MessageReasoning
-          isLoading={isLoading || part.state === "streaming"}
+          isLoading={isLoading && part.state === "streaming"}
           key={key}
           reasoning={part.text}
         />
@@ -210,7 +210,14 @@ const PurePreviewMessage = ({
           data-testid="message-content"
           key={key}
         >
-          <MessageResponse mode={isUser ? "static" : "streaming"}>
+          <MessageResponse
+            isAnimating={isAssistant && isLoading && part.state === "streaming"}
+            mode={
+              isAssistant && isLoading && part.state === "streaming"
+                ? "streaming"
+                : "static"
+            }
+          >
             {sanitizeText(part.text)}
           </MessageResponse>
         </MessageContent>
@@ -232,6 +239,28 @@ const PurePreviewMessage = ({
           key={toolCallId}
           part={part}
         />
+      );
+    }
+
+    if (type === "tool-bash" || type === "tool-writeFile") {
+      return (
+        <div className="flex w-full flex-col gap-2" key={part.toolCallId}>
+          <ToolActivity
+            approve={addToolApprovalResponse}
+            canApprove={canApprove}
+            isReadonly={isReadonly}
+            isRunning={isLoading}
+            part={part}
+          />
+          {part.state === "output-available" &&
+            part.output?.artifacts?.map((file) => (
+              <DocumentPreview
+                isReadonly={isReadonly}
+                key={file.id}
+                result={file}
+              />
+            ))}
+        </div>
       );
     }
 
