@@ -20,7 +20,7 @@ export function WorkbenchSection() {
       className="flex h-dvh min-w-0 flex-1 flex-col bg-background"
       data-testid="workbench-section"
     >
-      <header className="flex h-[52px] shrink-0 items-center gap-3 border-b border-border/70 px-5 sm:px-8">
+      <header className="workbench-header flex h-[52px] shrink-0 items-center gap-3 border-b border-border/70 px-5 sm:px-8">
         <Button
           aria-label="返回对话"
           onClick={() => navigate("chat")}
@@ -31,10 +31,20 @@ export function WorkbenchSection() {
         </Button>
         <h1 className="text-base font-semibold">{title}</h1>
       </header>
-      <main className="min-h-0 flex-1 overflow-y-auto px-5 py-7 sm:px-8">
+      <main className="min-h-0 flex-1 overflow-y-auto px-5 py-8 sm:px-8 sm:py-10">
         <div className="mx-auto w-full max-w-4xl">
           {section === "files" ? (
-            <SavedArtifactCards />
+            <section className="space-y-6">
+              <div>
+                <h2 className="[font-family:var(--workbench-display-font)] text-2xl font-medium leading-snug sm:text-[28px]">
+                  已保存的成果
+                </h2>
+                <p className="mt-2 text-[13px] leading-6 text-muted-foreground">
+                  在这里继续查看对话中生成的表格、文档与代码。
+                </p>
+              </div>
+              <SavedArtifactCards />
+            </section>
           ) : section === "connections" ? (
             <PersonalConnections />
           ) : (

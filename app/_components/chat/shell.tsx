@@ -258,7 +258,8 @@ export function ChatShell() {
           <div
             className={cn(
               "relative flex min-h-0 flex-1 flex-col overflow-hidden",
-              isEmpty && "overflow-y-auto bg-[var(--workbench-canvas)]"
+              isEmpty &&
+                "chat-home-canvas overflow-y-auto bg-[var(--workbench-canvas)]"
             )}
           >
             {!isEmpty && (
@@ -326,7 +327,7 @@ export function ChatShell() {
                 />
               )}
               {!!isEmpty && (
-                <div className="mt-8 border-t border-border/60 pt-6">
+                <div className="mt-8">
                   <WorkspaceHome />
                 </div>
               )}

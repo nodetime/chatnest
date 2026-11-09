@@ -87,14 +87,13 @@ export function PureMessageActions({
   if (isLoading) {
     return null;
   }
-  const visibility =
-    "transition-opacity duration-150 sm:opacity-0 sm:group-hover/message:opacity-100 focus-within:opacity-100";
+  const visibility = "message-actions transition-opacity duration-150";
   if (message.role === "user") {
     return (
       <Actions className={`-mr-0.5 justify-end ${visibility}`}>
         {onEdit ? (
           <Action
-            className="size-7 text-muted-foreground hover:text-foreground"
+            className="size-9 rounded-lg text-muted-foreground hover:text-foreground"
             data-testid="message-edit-button"
             onClick={onEdit}
             tooltip="修改消息"
@@ -103,7 +102,7 @@ export function PureMessageActions({
           </Action>
         ) : null}
         <Action
-          className="size-7 text-muted-foreground hover:text-foreground"
+          className="size-9 rounded-lg text-muted-foreground hover:text-foreground"
           onClick={handleCopy}
           tooltip="复制正文"
         >
@@ -116,7 +115,7 @@ export function PureMessageActions({
     <Actions className={`-ml-0.5 ${visibility}`}>
       {!!onRegenerate && (
         <Action
-          className="text-muted-foreground hover:text-foreground"
+          className="size-9 rounded-lg text-muted-foreground hover:text-foreground"
           onClick={onRegenerate}
           tooltip="重新生成"
         >
@@ -124,14 +123,14 @@ export function PureMessageActions({
         </Action>
       )}
       <Action
-        className="text-muted-foreground hover:text-foreground"
+        className="size-9 rounded-lg text-muted-foreground hover:text-foreground"
         onClick={handleCopy}
         tooltip="复制正文"
       >
         <CopyIcon />
       </Action>
       <Action
-        className="text-muted-foreground hover:text-foreground"
+        className="size-9 rounded-lg text-muted-foreground hover:text-foreground"
         data-testid="message-upvote"
         disabled={savingVote || vote?.isUpvoted}
         onClick={handleUpvote}
@@ -140,7 +139,7 @@ export function PureMessageActions({
         <ThumbUpIcon />
       </Action>
       <Action
-        className="text-muted-foreground hover:text-foreground"
+        className="size-9 rounded-lg text-muted-foreground hover:text-foreground"
         data-testid="message-downvote"
         disabled={savingVote || (vote && !vote.isUpvoted)}
         onClick={handleDownvote}

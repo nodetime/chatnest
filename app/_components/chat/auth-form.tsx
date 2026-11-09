@@ -42,7 +42,7 @@ export function AuthForm({
         </Label>
         <Input
           autoComplete={acceptsDevelopmentAccount ? "username" : "email"}
-          className="h-10 rounded-lg border-border/50 bg-muted/50 text-sm transition-colors focus:border-foreground/20 focus:bg-muted"
+          className="h-11 rounded-xl border-border bg-muted/30 text-sm transition-colors focus:border-ring focus:bg-card"
           defaultValue={defaultEmail}
           id={emailId}
           name="email"
@@ -63,7 +63,7 @@ export function AuthForm({
         </Label>
         <Input
           autoComplete={passwordAutoComplete}
-          className="h-10 rounded-lg border-border/50 bg-muted/50 text-sm transition-colors focus:border-foreground/20 focus:bg-muted"
+          className="h-11 rounded-xl border-border bg-muted/30 text-sm transition-colors focus:border-ring focus:bg-card"
           id={passwordId}
           minLength={6}
           name="password"
