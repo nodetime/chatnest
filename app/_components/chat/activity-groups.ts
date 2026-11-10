@@ -1,5 +1,6 @@
 import type { ChatMessage } from "@/app/_lib/types";
 import { todoPlanSchema } from "@/server/domain/message/agent-interactions";
+import { MCP_RESULT_OMITTED_MESSAGE } from "@/server/domain/message/mcp-output";
 import type { ToolPart } from "../ai-elements/tool";
 import { toolNeedsAttention } from "./tool-activity-state";
 
@@ -170,6 +171,13 @@ export function artifactEditHasLaterSave(part: ToolPart, following: Part[]) {
 /** 只解释已知工具契约；任意供应商错误不作为保存状态或用户指令。 */
 export function activityFailureMessage(part: ToolPart, kind = "tool") {
   const error = nativeToolError(part);
+  if (
+    part.type === "dynamic-tool" &&
+    part.state === "output-error" &&
+    part.errorText === MCP_RESULT_OMITTED_MESSAGE
+  ) {
+    return "上游结果过大，本次未取得完整结果。";
+  }
   if (part.type === "tool-bash" || part.type === "tool-writeFile") {
     return "文件处理未完成，请查看执行详情；已保存的文件仍可打开。";
   }

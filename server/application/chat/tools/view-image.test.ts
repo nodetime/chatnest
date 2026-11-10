@@ -211,6 +211,112 @@ test("candidate pixels reach actual provider wire while history keeps metadata o
   assert.deepEqual(fetched, ["https://example.com/product.jpg"]);
 });
 
+test("parallel candidate images carry their own source labels and pixels to the provider", async () => {
+  const candidates = [
+    { imageUrl: "https://example.com/pink.jpg", itemId: "same", skuId: "pink" },
+    { imageUrl: "https://example.com/blue.jpg", itemId: "same", skuId: "blue" },
+  ];
+  const pixels = await Promise.all(
+    ["#ff0080", "#0080ff"].map((background) =>
+      sharp({ create: { background, channels: 3, height: 2, width: 2 } })
+        .jpeg()
+        .toBuffer()
+    )
+  );
+  const ledger = new ResultEvidenceLedger();
+  ledger.record(source, { structuredContent: candidates });
+  const pending = new Map<string, (data: string) => void>();
+  const viewer = createImageViewer(
+    ledger,
+    new AbortController().signal,
+    (url) =>
+      new Promise((resolve) => {
+        pending.set(url, (data) =>
+          resolve({ data, height: 2, mediaType: "image/jpeg", width: 2 })
+        );
+      })
+  );
+  const { execute } = viewer.tool;
+  assert.ok(execute);
+  const inputs = candidates.map((_, index) => ({
+    imagePath: `/${index}/imageUrl`,
+    sourceToolCallId: source.toolCallId,
+  }));
+  const reads = inputs.map((input, index) =>
+    execute(input, { context: {}, messages: [], toolCallId: `view-${index}` })
+  );
+  pending.get(candidates[1].imageUrl)?.(pixels[1].toString("base64"));
+  pending.get(candidates[0].imageUrl)?.(pixels[0].toString("base64"));
+  const outputs = await Promise.all(reads);
+  const history = [
+    {
+      parts: outputs.map((output, index) => ({
+        input: inputs[index],
+        output,
+        state: "output-available" as const,
+        toolCallId: `view-${index}`,
+        type: "tool-viewImage" as const,
+      })),
+      role: "assistant" as const,
+    },
+  ];
+  const converted = await convertToModelMessages(history, {
+    tools: { viewImage: viewer.tool },
+  });
+  const projected = viewer.projectMessages(converted);
+  assert.deepEqual(viewer.projectMessages(projected), projected);
+  let wire: { messages: { role: string; content: unknown }[] } | undefined;
+  const provider = createOpenAI({
+    apiKey: "OFFLINE_FIXTURE",
+    baseURL: "http://fixture.invalid/v1",
+    fetch: (_url, init) => {
+      wire = JSON.parse(String(init?.body));
+      return Promise.resolve(
+        Response.json({
+          choices: [
+            {
+              finish_reason: "stop",
+              index: 0,
+              message: { content: "ok", role: "assistant" },
+            },
+          ],
+          created: 0,
+          id: "fixture",
+          model: "fixture",
+          object: "chat.completion",
+        })
+      );
+    },
+  });
+  await generateText({
+    messages: projected,
+    model: wrapLanguageModel({
+      middleware: openAIInlineImageMiddleware,
+      model: provider.chat("fixture"),
+    }),
+  });
+  const images = wire?.messages.filter((message) => message.role === "user");
+  assert.equal(images?.length, candidates.length);
+  for (const [index, candidate] of candidates.entries()) {
+    const content: unknown = images?.[index].content;
+    assert.ok(Array.isArray(content));
+    assert.equal(content.length, 2);
+    assert.equal(content[0].type, "text");
+    assert.ok(content[0].text.includes(`view-${index}`));
+    assert.ok(
+      content[0].text.includes(JSON.stringify(inputs[index].imagePath))
+    );
+    assert.ok(content[0].text.includes(JSON.stringify(source.toolCallId)));
+    assert.ok(content[0].text.includes(JSON.stringify(candidate)));
+    assert.deepEqual(content[1], {
+      image_url: {
+        url: `data:image/jpeg;base64,${pixels[index].toString("base64")}`,
+      },
+      type: "image_url",
+    });
+  }
+});
+
 test("failed image reads return neither source context nor a visual success", async () => {
   const ledger = new ResultEvidenceLedger();
   ledger.record(source, {

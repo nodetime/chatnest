@@ -583,7 +583,8 @@ function PureMultimodalInput({
             aria-label="消息输入框"
             className={cn(
               "min-h-[44px] max-h-[200px] text-[14px] leading-6 px-3.5 pt-3 pb-1 placeholder:text-muted-foreground",
-              home && "min-h-[80px] px-5 pt-5 text-[15px]"
+              home &&
+                "min-h-[88px] px-4 pt-4 text-[15px] sm:min-h-[104px] sm:px-5 sm:pt-5"
             )}
             data-testid="multimodal-input"
             onChange={handleInput}
@@ -651,7 +652,7 @@ function PureMultimodalInput({
               aria-label="发送消息"
               className={cn(
                 "h-8 w-8 shrink-0 rounded-full transition-colors duration-150",
-                home && "w-[84px] rounded-lg",
+                home && "h-11 w-[72px] rounded-lg sm:w-[84px]",
                 input.trim() || attachments.length > 0
                   ? "bg-foreground text-background hover:opacity-85 active:scale-95"
                   : "bg-muted text-muted-foreground cursor-not-allowed disabled:opacity-60"

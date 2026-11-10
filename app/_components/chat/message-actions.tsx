@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useSWRConfig } from "swr";
 import { useCopyToClipboard } from "usehooks-ts";
 import type { ChatMessage } from "@/app/_lib/types";
+import { visibleMessageText } from "@/server/domain/message/assistant-text";
 import type { Vote } from "@/server/domain/vote/types";
 import {
   MessageAction as Action,
@@ -30,11 +31,7 @@ export function PureMessageActions({
   const { mutate } = useSWRConfig();
   const [, copyToClipboard] = useCopyToClipboard();
   const [savingVote, setSavingVote] = useState(false);
-  const text = message.parts
-    .filter((part) => part.type === "text")
-    .map((part) => part.text)
-    .join("\n")
-    .trim();
+  const text = visibleMessageText(message).trim();
   const handleCopy = useCallback(async () => {
     if (!text) {
       toast.error("这条消息没有可复制的正文。");
@@ -122,13 +119,15 @@ export function PureMessageActions({
           <RotateCcw className="size-4" />
         </Action>
       )}
-      <Action
-        className="size-9 rounded-lg text-muted-foreground hover:text-foreground"
-        onClick={handleCopy}
-        tooltip="复制正文"
-      >
-        <CopyIcon />
-      </Action>
+      {!!text && (
+        <Action
+          className="size-9 rounded-lg text-muted-foreground hover:text-foreground"
+          onClick={handleCopy}
+          tooltip="复制正文"
+        >
+          <CopyIcon />
+        </Action>
+      )}
       <Action
         className="size-9 rounded-lg text-muted-foreground hover:text-foreground"
         data-testid="message-upvote"

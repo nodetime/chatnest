@@ -1,4 +1,5 @@
 import type { UIMessage } from "ai";
+import { visibleMessageText } from "./assistant-text";
 import { collectSourceLinks, type SourceLink } from "./sources";
 
 export type ConversationSource = SourceLink & { origins: string[] };
@@ -63,10 +64,7 @@ export function conversationMarkdown(messages: UIMessage[]) {
       (message) => message.role === "user" || message.role === "assistant"
     )
     .map((message) => {
-      const text = message.parts
-        .filter((part) => part.type === "text")
-        .map((part) => part.text)
-        .join("\n\n");
+      const text = visibleMessageText(message, "\n\n");
       return text
         ? `## ${message.role === "user" ? "用户" : "助手"}\n\n${text}`
         : "";

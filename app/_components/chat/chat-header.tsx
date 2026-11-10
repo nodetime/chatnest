@@ -24,7 +24,8 @@ export function ChatHeader({
 }) {
   const { toggleSidebar, isMobile } = useSidebar();
   const workspace = useWorkspace();
-  const { chatTitle, startNewChat, messages } = useActiveChat();
+  const { chatTitle, startNewChat, messages, loadError } = useActiveChat();
+  const title = loadError && messages.length === 0 ? "对话" : chatTitle;
   return (
     <header className="workbench-header flex h-[52px] shrink-0 items-center gap-2 border-b border-border/70 bg-background px-4 sm:px-6">
       {!!isMobile && (
@@ -41,9 +42,9 @@ export function ChatHeader({
         <p
           className="truncate text-sm font-medium"
           data-testid="chat-title"
-          title={chatTitle}
+          title={title}
         >
-          {chatTitle}
+          {title}
         </p>
       </div>
       <div className="ml-auto flex items-center gap-1">

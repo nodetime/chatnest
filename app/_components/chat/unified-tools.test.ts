@@ -175,15 +175,29 @@ test("compact collection and record selection explicitly marks omitted original 
   `);
 });
 
-test("nested empty arrays are scoped to their field rather than declaring useful results empty", () => {
+test("only result collections produce empty-result notices, not auxiliary arrays", () => {
   client(`
-    const assert=require('node:assert/strict');const {projectResult}=require('./app/_components/chat/tool-presentation.ts');
-    for(const output of [{text:'Useful result',sources:[]},{answer:'Useful result',items:[]},{content:[{type:'text',text:'Useful result'}],sources:[]}]) {
+    const assert=require('node:assert/strict');const React=require('react');const {renderToStaticMarkup}=require('react-dom/server');
+    const {projectResult,projectToolResult}=require('./app/_components/chat/tool-presentation.ts');const {ToolResultPreview}=require('./app/_components/chat/tool-result-preview.tsx');
+    const render=preview=>renderToStaticMarkup(React.createElement(ToolResultPreview,{preview}));
+    for(const output of [{text:'Useful result',sources:[]},{content:[{type:'text',text:'Useful result'}],sources:[]},{metadata:{warnings:[]}},{metadata:{content:[]}},{metadata:{results:[]}}]) {
+      const before=JSON.stringify(output);const preview=projectResult(output);
+      assert.ok(!render(preview).includes('返回列表为空'));assert.equal(JSON.stringify(output),before);
+    }
+    for(const files of [[],['outputs/existing.csv']]) {
+      const output={status:'completed',exitCode:0,stdout:'10 candidate records',stderr:'',files,artifacts:[]};
+      const before=JSON.stringify(output);const preview=projectToolResult({type:'tool-bash',toolCallId:'bash',state:'output-available',output});
+      assert.ok(!render(preview).includes('返回列表为空'));assert.equal(JSON.stringify(output),before);
+      assert.ok(JSON.stringify(projectResult(output,'parameters')).includes('[]'));
+    }
+    for(const output of [{answer:'Useful result',items:[]},{answer:'Useful result',data:[]}]) {
       const preview=projectResult(output);assert.notEqual(preview.notice,'返回列表为空。');assert.ok(JSON.stringify(preview).includes('Useful result'));
       const empty=preview.blocks.find(block=>block.fields.some(field=>field.text==='返回列表为空。'));
-      assert.ok(empty);assert.ok(empty.label==='sources'||empty.label==='items');
+      assert.ok(empty);assert.ok(empty.label==='items'||empty.label==='data');
     }
-    for(const output of [[],{items:[]},{content:[]}]) assert.equal(projectResult(output).notice,'返回列表为空。');
+    for(const output of [[],{items:[]},{results:[]},{data:[]},{content:[]},{content:[{type:'text',text:'[]'}]}]) assert.equal(projectResult(output).notice,'返回列表为空。');
+    const structured=projectResult({content:[],structuredContent:{items:[]}});
+    assert.match(render(structured),/返回列表为空/);
   `);
 });
 

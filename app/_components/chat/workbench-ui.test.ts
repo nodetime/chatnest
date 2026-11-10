@@ -819,7 +819,9 @@ test("mixed reasoning and tools render in their original SDK order rather than m
     const modules = {
       'react': {useCallback: fn => fn},
       'react/jsx-runtime': {jsx, jsxs:jsx, Fragment:'fragment'},
+      '@/app/_components/chat/artifact-catalog': require('./app/_components/chat/artifact-catalog.ts'),
       '@/app/_lib/utils': {cn:()=>'', sanitizeText: text=>text},
+      '@/server/domain/message/assistant-text': require('./server/domain/message/assistant-text.ts'),
       '@/server/domain/message/run-failure': require('./server/domain/message/run-failure.ts'),
       '@/server/domain/message/agent-interactions': require('./server/domain/message/agent-interactions.ts'),
       '../ai-elements/message': {MessageContent:'text', MessageResponse:'response'},
@@ -1332,7 +1334,7 @@ test("chat refinement uses a soft task canvas, bounded home and aligned title ra
   assert.doesNotMatch(css, /--workbench-canvas: #f0f1f2/);
   assert.match(shell, /max-w-\[800px\]/);
   const home = readFileSync("app/_components/chat/workspace-home.tsx", "utf8");
-  assert.match(home, /data-testid="home-recent-grid"/);
+  assert.match(home, /data-testid="workspace-home-content"/);
   assert.match(home, /useSavedArtifacts/);
   const header = readFileSync("app/_components/chat/chat-header.tsx", "utf8");
   assert.match(header, /h-\[52px\]/);

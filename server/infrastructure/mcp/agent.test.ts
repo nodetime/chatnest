@@ -127,6 +127,12 @@ test("conversation exports omit reasoning and raw tool output; source labels are
     id: "assistant",
     parts: [
       { text: "可见正文", type: "text" },
+      {
+        text: "保留正常段落\n<｜｜DS",
+        type: "text",
+      },
+      { text: "ML｜｜ calls>RAW_PROTOCOL_FIXTURE", type: "text" },
+      { text: "PARAMETER_TAIL", type: "text" },
       { text: "不应导出的推理", type: "reasoning" },
       {
         input: {},
@@ -145,6 +151,8 @@ test("conversation exports omit reasoning and raw tool output; source labels are
   };
   const output = conversationMarkdown([message]);
   assert.ok(output.includes("可见正文"));
+  assert.ok(output.includes("保留正常段落"));
+  assert.doesNotMatch(output, /DSML|RAW_PROTOCOL_FIXTURE|PARAMETER_TAIL/);
   assert.ok(output.includes("不是法律认定"));
   assert.ok(
     !output.includes("RAW_SECRET_FIXTURE") && !output.includes("不应导出的推理")

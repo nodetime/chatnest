@@ -1,5 +1,16 @@
 import { collectSourceLinks } from "./sources";
 
+export const MCP_RESULT_OMITTED_MESSAGE =
+  "上游返回内容超过大小限制，本次未取得完整结果。请减少返回条数或收窄查询；本次没有可转存的完整数据。";
+
+/** Fixed local text only; upstream content must never enter this public error. */
+export class McpResultOmittedError extends Error {
+  constructor() {
+    super(MCP_RESULT_OMITTED_MESSAGE);
+    this.name = "McpResultOmittedError";
+  }
+}
+
 export function normalizeMcpOutput(
   server: string,
   tool: string,

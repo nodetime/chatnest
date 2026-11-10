@@ -469,7 +469,8 @@ test("canonical tool-only messages omit empty answer actions while text, artifac
     const actions=nodes(tree).find(n=>n.type==='actions');assert.ok(actions);actions.props.onRegenerate();assert.equal(regenerateCount,1);
     tree=PreviewMessage({...props,message:{...message,parts:[...message.parts,{type:'text',text:'Answer'}]}});
     assert.equal(nodes(tree).filter(n=>n.type==='actions').length,1,'answer actions preserved');
-    tree=PreviewMessage({...props,message:{...message,parts:[{type:'tool-createDocument',toolCallId:'artifact',state:'output-available',input:{title:'Artifact'},output:{id:'artifact-id',kind:'text',title:'Artifact'}}]}});
+    const saved={id:'00000000-0000-4000-8000-000000000001',kind:'text',title:'Artifact'};
+    tree=PreviewMessage({...props,turnArtifacts:[saved],message:{...message,parts:[{type:'tool-createDocument',toolCallId:'artifact',state:'output-available',input:{title:'Artifact'},output:saved}]}});
     assert.equal(nodes(tree).filter(n=>n.type==='artifact').length,1);assert.equal(nodes(tree).filter(n=>n.type==='actions').length,1,'artifact message actions preserved');
     assert.equal(nodes(PreviewMessage({...props,isReadonly:true,onRegenerate:regenerate})).filter(n=>n.type==='actions').length,0);
   `);
@@ -514,8 +515,11 @@ test("only the active native table handoff omits a temporary Sheet trigger; fall
     const pending=nodes(PreviewMessage(props)).find(n=>n.type===ToolActivity);assert.ok(pending);
     assert.equal(nodes(scheduler.render(ToolActivity,pending.props)).filter(n=>n.type==='call-details').length,0);
     const output={id:'00000000-0000-4000-8000-000000000001',kind:'sheet',title:'Table'};
-    const result=nodes(PreviewMessage({...props,isLoading:false,message:{...props.message,parts:[{...table,state:'output-available',output}]}})).find(n=>n.type==='artifact');
-    assert.ok(result);assert.equal(result.props.result,output,'successful native artifact renderer remains authoritative');
+    const rendered=nodes(PreviewMessage({...props,isLoading:false,turnArtifacts:[output],message:{...props.message,parts:[{...table,state:'output-available',output}]}}));
+    const footer=rendered.find(n=>n.props['data-testid']==='turn-artifacts');
+    const result=nodes(footer).find(n=>n.type==='artifact');
+    assert.ok(result);assert.equal(result.props.result,output,'successful native artifacts appear under the turn');
+    assert.ok(!rendered.some(n=>n.type===ToolActivity),'a saved legacy file is not duplicated in the execution timeline');
   `);
 });
 
