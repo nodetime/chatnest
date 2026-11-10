@@ -26,7 +26,7 @@ const harness = `
   const assert=require('node:assert/strict');const fs=require('node:fs');const vm=require('node:vm');const ts=require('typescript');
   const jsx=(type,props,key)=>({type,props,key});
   const hooks=()=>{const slots=[];let cursor=0,dirty=false;const react={useCallback:fn=>fn,useRef:initial=>{const i=cursor++;return slots[i]??(slots[i]={current:initial});},useState:initial=>{const i=cursor++;if(!(i in slots))slots[i]=typeof initial==='function'?initial():initial;return [slots[i],value=>{slots[i]=typeof value==='function'?value(slots[i]):value;dirty=true;}];}};return {react,render(fn,props){let tree;do{dirty=false;cursor=0;tree=fn(props);}while(dirty);return tree;}};};
-  const load=(file,modules)=>{const output={exports:{}};const code=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText;vm.runInNewContext(code,{exports:output.exports,module:output,URL,require:name=>modules[name]??require(name)});return output.exports;};
+  const load=(file,modules)=>{const output={exports:{}};const code=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText;vm.runInNewContext(code,{exports:output.exports,module:output,URL,process,require:name=>modules[name]??require(name)});return output.exports;};
   const nodes=tree=>{const all=[];const walk=n=>{if(Array.isArray(n)){n.forEach(walk);return;}if(!n||typeof n!=='object')return;all.push(n);walk(n.props?.children);};walk(tree);return all;};
   const base={'react/jsx-runtime':{jsx,jsxs:jsx,Fragment:'fragment'},'@/app/_lib/utils':{cn:(...v)=>v.filter(Boolean).join(' ')},'@/app/_hooks/use-agent-info':{useAgentInfo:()=>({data:{servers:[]}})},'../ai-elements/tool':{Tool:'tool',ToolHeader:'header',ToolContent:'content'},'./tool-call-details':{ToolCallDetails:'details'},'./attachment-read-result':require('./app/_components/chat/attachment-read-result.tsx'),'./activity-groups':require('./app/_components/chat/activity-groups.ts'),'./tool-activity-state':require('./app/_components/chat/tool-activity-state.ts'),'./tool-presentation':require('./app/_components/chat/tool-presentation.ts'),'./tool-result-preview':{ToolResultPreview:'preview'}};
   const part={type:'dynamic-tool',toolName:'fixture__operation',toolCallId:'call',state:'approval-requested',input:{amount:7},approval:{id:'exact-id'}};
@@ -71,6 +71,60 @@ test("failed turns keep canonical previews without a separate continue action or
     assert.equal(nodes(tree).filter(n=>n.type==='recovery').length,0,'No extra recovery panel beneath the assistant');
     tree=Messages({...props,suppressLatestRunFailure:true});previews=nodes(tree).filter(n=>n.type==='message');assert.equal(previews[0].props.hideRunFailure,false);assert.equal(previews[1].props.hideRunFailure,true,'transient error owns only the newest failed turn');
     for(const extra of [{status:'submitted'},{status:'streaming'},{isReadonly:true}]){tree=Messages({...props,...extra});previews=nodes(tree).filter(n=>n.type==='message');assert.ok(previews.every(n=>n.props.canApprove===false));assert.ok(!nodes(tree).some(n=>n.type==='recovery'));}
+  `);
+});
+
+test("history load failure owns the empty main area while new chat and cached history keep their usual surfaces", () => {
+  clientScript(`${harness}
+    const h=hooks();let state;const noop=()=>{};
+    const {ChatShell}=load('app/_components/chat/shell.tsx',{
+      ...base,react:{...h.react,useEffect:noop},'next/navigation':{useSearchParams:()=>new URLSearchParams()},sonner:{},
+      '@/app/_components/ui/alert-dialog':{AlertDialog:'dialog',AlertDialogAction:'action',AlertDialogContent:'dialog-content',AlertDialogDescription:'description',AlertDialogFooter:'footer',AlertDialogHeader:'header',AlertDialogTitle:'title'},
+      '@/app/_hooks/use-active-chat':{useActiveChat:()=>state},'@/app/_hooks/use-artifact':{useArtifact:()=>({setArtifact:noop}),useArtifactSelector:()=>false},
+      '@/app/_hooks/use-workbench-navigation':{useWorkbenchNavigation:()=>({section:'chat',navigate:noop})},'@/app/_hooks/use-workspace':{useWorkspace:()=>({show:noop})},
+      './artifact':{Artifact:'artifact'},'./chat-header':{ChatHeader:'chat-header'},'./conversation-notice':{ConversationNotice:'notice'},'./data-stream-handler':{DataStreamHandler:'stream'},
+      './greeting':{Greeting:'greeting'},'./message-editor':{},'./messages':{Messages:'messages'},'./multimodal-input':{MultimodalInput:'composer'},
+      './task-progress':{TaskProgress:'progress'},'./workbench-section':{WorkbenchSection:'section'},'./workspace':{Workspace:'workspace'},'./workspace-home':{SavedArtifactCards:'saved-artifacts'},
+    });
+    const initial={chatId:'history',messages:[],isLoading:false,isReadonly:false};
+    const render=extra=>{state={...initial,...extra};return nodes(h.render(ChatShell));};
+    const failure={loadError:new Error('history unavailable'),isReadonly:true};
+    const failed=render(failure);
+    const panel=failed.find(n=>n.props['data-testid']==='history-load-failure');
+    assert.ok(panel,'missing history should have its own main-area recovery state');
+    assert.equal(nodes(panel).filter(n=>n.type==='notice').length,1);
+    assert.equal(nodes(panel).find(n=>n.type==='notice').props.standalone,true);
+    assert.ok(!failed.some(n=>['messages','greeting','composer'].includes(n.type)));
+    assert.ok(!failed.some(n=>n.props['data-testid']==='composer-dock'));
+    const cached=render({...failure,messages:[{id:'cached'}]});
+    assert.ok(cached.some(n=>n.type==='messages'));
+    assert.ok(nodes(cached.find(n=>n.props['data-testid']==='composer-dock')).some(n=>n.type==='notice'));
+    const fresh=render({});
+    assert.ok(fresh.some(n=>n.type==='greeting')&&fresh.some(n=>n.type==='composer'));
+    const recent=fresh.find(n=>n.type==='saved-artifacts');
+    assert.equal(recent?.props.recent,true,'only recent files belong below the new-chat composer');
+    assert.ok(fresh.findIndex(n=>n.type==='composer')<fresh.indexOf(recent));
+    assert.ok(!cached.some(n=>n.type==='saved-artifacts')&&!failed.some(n=>n.type==='saved-artifacts'));
+  `);
+});
+
+test("new chat shows up to three real saved files and no placeholder when none are available", () => {
+  clientScript(`${harness}
+    let library;const paths=[];const noop=()=>{};
+    const {SavedArtifactCards}=load('app/_components/chat/workspace-home.tsx',{
+      ...base,swr:{default:path=>{paths.push(path);return library;}},'next/navigation':{useRouter:()=>({push:noop})},sonner:{toast:{}},
+      '@/app/_hooks/use-active-chat':{useActiveChat:()=>({chatId:'chat'})},'@/app/_hooks/use-artifact':{useArtifact:()=>({artifact:{},setArtifact:noop})},
+      '@/app/_hooks/use-workbench-navigation':{useWorkbenchNavigation:()=>({navigate:noop})},'@/app/_hooks/use-workspace':{useWorkspace:()=>({show:noop})},
+      '../ui/button':{Button:'ui-button'},'./artifact-catalog':{},'./artifact-type-label':{artifactTypeLabels:{sheet:'表格'}},'./file-symbol':{FileSymbol:'file-symbol'},
+    });
+    for(library of [{isLoading:true},{data:[]},{error:new Error('offline')}])assert.equal(SavedArtifactCards({recent:true}),null);
+    assert.match(JSON.stringify(SavedArtifactCards({})),/成果暂未加载/,'the full Files view keeps its recovery action');
+    library={data:Array.from({length:4},(_,i)=>({id:String(i),title:'成果 '+i,kind:'sheet'}))};
+    const tree=SavedArtifactCards({recent:true});
+    assert.equal(tree.props['aria-label'],'最近成果');
+    assert.deepEqual(nodes(tree).filter(n=>n.type==='button').map(n=>n.props['aria-label']),['打开成果：成果 0','打开成果：成果 1','打开成果：成果 2']);
+    assert.equal(nodes(SavedArtifactCards({})).filter(n=>n.type==='button').length,4);
+    assert.ok(paths.every(path=>path.endsWith('/api/library')));
   `);
 });
 
@@ -147,6 +201,27 @@ test("transport failures use one compact notice, retain diagnostics and deduplic
   `);
 });
 
+test("private history access failures preserve HTTP status and do not ask users to retry", () => {
+  clientScript(`${harness}
+    (async()=>{
+      let state;
+      const {fetcher}=require('./app/_lib/utils.ts');
+      const {ConversationNotice}=load('app/_components/chat/conversation-notice.tsx',{...base,react:{useCallback:fn=>fn},'@/app/_hooks/use-active-chat':{useActiveChat:()=>state}});
+      for(const [status,code,title] of [[401,'UNAUTHORIZED','登录后可查看这段对话'],[401,null,'登录后可查看这段对话'],[403,'FORBIDDEN','当前账号无权查看这段对话'],[403,null,'当前账号无权查看这段对话'],[503,'TEMPORARILY_UNAVAILABLE','对话加载失败']]){
+        globalThis.fetch=async()=>code?Response.json({code},{status}):status===401?Response.json({}, {status}):new Response('<h1>Proxy denied</h1>',{status});
+        const error=await fetcher('/api/messages').then(()=>null,e=>e);
+        assert.equal(error.statusCode,status);
+        state={messages:[],loadError:error,retryLoad:()=>{},clearError:()=>{}};
+        const tree=ConversationNotice({attachments:[],onRestore:()=>{},standalone:true});
+        const all=nodes(tree);
+        assert.equal(all.find(n=>n.type==='h2').props.children,title);
+        assert.equal(all.some(n=>n.type==='button'&&JSON.stringify(n.props.children).includes('重新加载')),status===503);
+        assert.ok(!all.find(n=>n.type==='details').props.open);
+      }
+    })().then(()=>process.stdout.write('ASYNC_DONE')).catch(e=>{console.error(e);process.exitCode=1;});
+  `);
+});
+
 test("persisted interruption is a compact status, not a recovery instruction or button", () => {
   clientScript(`${harness}
     const {PreviewMessage}=load('app/_components/chat/message.tsx',{...base,react:{useCallback:fn=>fn},'@/app/_lib/utils':{cn:()=>'',sanitizeText:t=>t},'../ai-elements/message':{MessageContent:'text',MessageResponse:'response'},'../ai-elements/shimmer':{Shimmer:'shimmer'},'./activity-group':{ActivityGroup:'activity'},'./data-stream-provider':{useDataStream:()=>({})},'./document':{},'./document-preview':{DocumentPreview:'artifact'},'./message-actions':{MessageActions:'actions'},'./message-reasoning':{MessageReasoning:'reasoning'},'./preview-attachment':{PreviewAttachment:'attachment'},'./tool-activity':{ToolActivity:'tool'},'./ask-user':{AskUser:'ask'},'./weather':{}});
@@ -155,6 +230,74 @@ test("persisted interruption is a compact status, not a recovery instruction or 
     for(const readonly of [false,true]){const tree=PreviewMessage({...props,isReadonly:readonly});const notice=nodes(tree).find(n=>n.props?.['data-testid']==='run-failure');assert.ok(notice);assert.equal(notice.props.children,'响应中断');assert.equal(nodes(notice).filter(n=>n.type==='button').length,0);assert.doesNotMatch(JSON.stringify(tree),/继续处理|原始记录已保留|检查连接/);}
     const suppressed=PreviewMessage({...props,hideRunFailure:true});assert.equal(suppressed.props.hidden,true,'do not leave an empty error bubble');
     const running=PreviewMessage({...props,isLoading:true});assert.equal(nodes(running).filter(n=>n.props?.['data-testid']==='run-failure').length,0,'previous interruption is not shown as a new active failure');
+  `);
+});
+
+test("malformed assistant tool text stays out of live and reopened replies without hiding confirmed files", () => {
+  clientScript(`${harness}
+    const {PreviewMessage}=load('app/_components/chat/message.tsx',{...base,react:{useCallback:fn=>fn},'@/app/_lib/utils':{cn:()=>'',sanitizeText:t=>t},'../ai-elements/message':{MessageContent:'text',MessageResponse:'response'},'../ai-elements/shimmer':{Shimmer:'shimmer'},'./activity-group':{ActivityGroup:'activity'},'./data-stream-provider':{useDataStream:()=>({})},'./document-preview':{DocumentPreview:'artifact'},'./message-actions':{MessageActions:'actions'},'./message-reasoning':{MessageReasoning:'reasoning'},'./preview-attachment':{PreviewAttachment:'attachment'},'./tool-activity':{ToolActivity:'tool'},'./ask-user':{AskUser:'ask'},'./weather':{}});
+    const marker='<｜｜DSML｜｜ calls>';
+    const file={id:'00000000-0000-4000-8000-000000000001',title:'已保存.csv',kind:'sheet',path:'outputs/saved.csv'};
+    const saved={type:'tool-bash',state:'output-available',toolCallId:'file',output:{artifacts:[file]}};
+    const failed={type:'tool-createDocument',state:'output-error',toolCallId:'failed',errorText:'failed'};
+    const render=(parts,isLoading=false,role='assistant',turnArtifacts=[])=>nodes(PreviewMessage({message:{id:'a',role,parts},isLoading,isReadonly:false,turnArtifacts}));
+    for(let i=1;i<=marker.length;i++){
+      const tree=render([{type:'text',state:'streaming',text:'正常正文\\n'+marker.slice(0,i)}],true);
+      assert.equal(tree.find(n=>n.type==='response').props.children,'正常正文');
+      assert.ok(!tree.some(n=>n.props['data-testid']==='malformed-reply'));
+    }
+    const raw='正常正文\\n'+marker+'<｜｜DSML｜｜ invoke name="createDocument">RAW_PAYLOAD';
+    const parts=[failed,saved,{type:'text',text:raw},{type:'data-run-status',data:{state:'failed'}}];
+    const tree=render(parts,false,'assistant',[file]);
+    assert.deepEqual(tree.filter(n=>n.type==='response').map(n=>n.props.children),['正常正文']);
+    assert.deepEqual(tree.filter(n=>n.type==='artifact').map(n=>n.props.result.id),[file.id]);
+    const footer=tree.find(n=>n.props['data-testid']==='turn-artifacts');
+    assert.ok(footer);
+    assert.equal(nodes(footer).filter(n=>n.type==='artifact').length,1);
+    assert.ok(tree.indexOf(footer)>tree.findIndex(n=>n.type==='response'));
+    assert.equal(tree.filter(n=>n.props['data-testid']==='malformed-reply').length,1);
+    assert.ok(!tree.some(n=>n.props['data-testid']==='run-failure'));
+    const details=tree.find(n=>n.type==='details');assert.ok(details&&!details.props.open);
+    assert.equal(parts[2].text,raw);
+    const reasoning=render([{type:'reasoning',text:'核对字段\\n'+marker+'INTERNAL'},{type:'text',text:'已核对'}]);
+    assert.equal(reasoning.find(n=>n.type==='reasoning').props.reasoning,'核对字段');
+    assert.ok(!reasoning.some(n=>n.props['data-testid']==='malformed-reply'));
+    assert.equal(render([{type:'text',text:raw}],false,'user').find(n=>n.type==='response').props.children,raw);
+    const cut=render([{type:'text',text:'正常正文\\n<||DSML'}]);
+    assert.equal(cut.find(n=>n.type==='response').props.children,'正常正文');
+    assert.ok(cut.some(n=>n.props['data-testid']==='malformed-reply'));
+    const fragmented=[{type:'text',state:'done',text:'正常正文\\n<||DS'},{type:'text',state:'streaming',text:'ML|| calls>RAW_PAYLOAD'},{type:'text',text:'PARAMETER_TAIL'}];
+    assert.deepEqual(render(fragmented.slice(0,1),true).filter(n=>n.type==='response').map(n=>n.props.children),['正常正文']);
+    for(const live of [true,false]){
+      const split=render(fragmented,live);
+      assert.deepEqual(split.filter(n=>n.type==='response').map(n=>n.props.children),['正常正文']);
+      assert.equal(split.some(n=>n.props['data-testid']==='malformed-reply'),!live);
+    }
+    const recovered=render([...fragmented,{type:'step-start'},{type:'text',text:'后续正常回复'}]);
+    assert.deepEqual(recovered.filter(n=>n.type==='response').map(n=>n.props.children),['正常正文','后续正常回复']);
+    assert.ok(!recovered.some(n=>n.props['data-testid']==='malformed-reply'));
+    assert.equal(render([{type:'text',text:'DSML 名词，1 < 2，正常。'}]).find(n=>n.type==='response').props.children,'DSML 名词，1 < 2，正常。');
+  `);
+});
+
+test("confirmed artifacts are deduplicated under the final assistant message of each user turn", () => {
+  clientScript(`${harness}
+    const {Messages}=load('app/_components/chat/messages.tsx',{...base,'@/app/_components/ai-elements/conversation':{Conversation:'conversation',ConversationContent:'content',ConversationScrollButton:'scroll'},'@/server/domain/message/message-turn':{prepareRegeneration:()=>false},'./data-stream-provider':{useDataStream:()=>({})},'./message':{PreviewMessage:'message',ThinkingMessage:'thinking'}});
+    const file={id:'00000000-0000-4000-8000-000000000001',title:'结果.csv',kind:'sheet',path:'outputs/first.csv'};
+    const savedPart=(id,title)=>({type:'tool-bash',toolCallId:id,state:'output-available',output:{artifacts:[{...file,title}]}});
+    const messages=[
+      {id:'u1',role:'user',parts:[]},
+      {id:'a1',role:'assistant',parts:[savedPart('first','旧标题.csv')]},
+      {id:'a2',role:'assistant',parts:[savedPart('update','新标题.csv'),{type:'text',text:'完成'}]},
+      {id:'u2',role:'user',parts:[]},
+      {id:'a3',role:'assistant',parts:[{type:'tool-createDocument',toolCallId:'failed',state:'output-error',errorText:'not saved'},{type:'text',text:'未完成'}]},
+      {id:'u3',role:'user',parts:[]},
+      {id:'a4',role:'assistant',parts:[{type:'tool-requestSuggestions',toolCallId:'existing-document',state:'output-available',output:{...file,title:'本轮引用.csv'}}]},
+    ];
+    const previews=nodes(Messages({messages,status:'ready',isReadonly:true})).filter(n=>n.type==='message');
+    assert.deepEqual(previews.map(n=>n.key),messages.map(m=>m.id));
+    const files=Object.fromEntries(previews.map(n=>[n.key,Array.from(n.props.turnArtifacts??[],a=>a.title)]));
+    assert.deepEqual(files,{u1:[],a1:[],a2:['新标题.csv'],u2:[],a3:[],u3:[],a4:['本轮引用.csv']});
   `);
 });
 

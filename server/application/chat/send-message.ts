@@ -578,10 +578,10 @@ export async function sendMessage(
               markModelActive();
             }
           },
-          onEnd({ finishReason }) {
+          onEnd({ finishReason, text }) {
             if (
               !input.signal.aborted &&
-              !isCompleteFinishReason(finishReason)
+              !isCompleteFinishReason(finishReason, text)
             ) {
               runFailure.report((part) => dataStream.write(part));
             }

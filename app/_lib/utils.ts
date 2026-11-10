@@ -19,8 +19,12 @@ export const fetcher = async (url: string) => {
   const response = await fetch(url);
 
   if (!response.ok) {
-    const { code, cause } = await response.json();
-    throw new ChatbotError(code as ErrorCode, cause);
+    const payload = await response.json().catch(() => null);
+    const code = typeof payload?.code === 'string' ? payload.code : 'offline:api';
+    const cause = typeof payload?.cause === 'string' ? payload.cause : undefined;
+    const error = new ChatbotError(code as ErrorCode, cause);
+    error.statusCode = response.status;
+    throw error;
   }
 
   return response.json();

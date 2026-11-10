@@ -70,7 +70,7 @@ export function ComposerMenu({
             aria-label="添加附件和工具"
             className={
               home
-                ? "h-8 gap-2 rounded-lg px-2 text-xs text-muted-foreground"
+                ? "h-11 gap-2 rounded-lg px-2.5 text-xs text-foreground hover:bg-secondary"
                 : "size-8 rounded-lg text-muted-foreground hover:bg-secondary"
             }
             data-testid="composer-menu"
@@ -78,7 +78,7 @@ export function ComposerMenu({
             variant="ghost"
           >
             <Paperclip className="size-4" />
-            {!!home && <span>添加材料</span>}
+            {!!home && <span>添加附件</span>}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent

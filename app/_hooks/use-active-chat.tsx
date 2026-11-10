@@ -51,6 +51,7 @@ import {
 } from "@/server/domain/message/task-draft";
 import { DEFAULT_CHAT_MODEL } from "@/server/domain/model/models";
 import type { Vote } from "@/server/domain/vote/types";
+import { ChatbotError } from "@/server/shared/errors";
 
 type ActiveChatContextValue = {
   chatId: string;
@@ -280,6 +281,11 @@ export function ActiveChatProvider({
     visibility: VisibilityType;
   }>(isNewChat ? null : messagesKey, fetcher, {
     revalidateOnFocus: false,
+    shouldRetryOnError: (failure) =>
+      !(
+        failure instanceof ChatbotError &&
+        [401, 403].includes(failure.statusCode)
+      ),
   });
 
   const expectedHistory = pendingHistory.current.get(chatId);

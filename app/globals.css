@@ -611,14 +611,6 @@ textarea:focus-visible {
     var(--workbench-canvas);
 }
 
-.chat-workbench .workspace-home-panel {
-  box-shadow: var(--shadow-card);
-}
-
-.chat-workbench .workspace-home-grid {
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
-}
-
 .chat-workbench .workbench-header {
   background: var(--card);
 }

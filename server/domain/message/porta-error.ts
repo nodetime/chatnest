@@ -1,4 +1,6 @@
-// Only this locally created error is eligible for public stream error text.
+import { McpResultOmittedError } from "./mcp-output";
+
+// Only these locally created errors are eligible for public stream error text.
 // Other errors keep the AI SDK's default redaction, including network exceptions.
 class PortaToolError extends Error {
   constructor(body: string) {
@@ -95,5 +97,8 @@ export function createPortaToolError(
 }
 
 export function agentStreamErrorText(error: unknown) {
-  return error instanceof PortaToolError ? error.message : "An error occurred.";
+  return error instanceof PortaToolError ||
+    error instanceof McpResultOmittedError
+    ? error.message
+    : "An error occurred.";
 }

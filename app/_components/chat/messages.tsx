@@ -4,12 +4,15 @@ import {
   ConversationContent,
   ConversationScrollButton,
 } from "@/app/_components/ai-elements/conversation";
+import {
+  type ArtifactEntry,
+  artifactCatalog,
+} from "@/app/_components/chat/artifact-catalog";
 import type { ChatMessage } from "@/app/_lib/types";
 import { prepareRegeneration } from "@/server/domain/message/message-turn";
 import type { Vote } from "@/server/domain/vote/types";
 import type { AnswerAskUser } from "./ask-user";
 import { useDataStream } from "./data-stream-provider";
-import { Greeting } from "./greeting";
 import { PreviewMessage, ThinkingMessage } from "./message";
 
 type MessagesProps = {
@@ -25,7 +28,6 @@ type MessagesProps = {
   regenerate: UseChatHelpers<ChatMessage>["regenerate"];
   isReadonly: boolean;
   isArtifactVisible: boolean;
-  isLoading?: boolean;
   selectedModelId: string;
   onEditMessage?: (message: ChatMessage) => void;
   onRegenerateAnswer?: () => void;
@@ -44,7 +46,6 @@ function PureMessages({
   regenerate,
   isReadonly,
   isArtifactVisible: _isArtifactVisible,
-  isLoading,
   selectedModelId: _selectedModelId,
   onEditMessage,
   onRegenerateAnswer,
@@ -55,7 +56,11 @@ function PureMessages({
   // before streaming begins. Keep this scoped to the latest message.
   const isActive = status === "submitted" || status === "streaming";
 
-  const renderMessage = (message: ChatMessage, index: number) => (
+  const renderMessage = (
+    message: ChatMessage,
+    index: number,
+    turnArtifacts?: ArtifactEntry[]
+  ) => (
     <PreviewMessage
       addToolApprovalResponse={addToolApprovalResponse}
       answerAskUser={answerAskUser}
@@ -80,24 +85,32 @@ function PureMessages({
       reviseAskUser={reviseAskUser}
       setMessages={setMessages}
       showSender={index === 0 || messages[index - 1]?.role !== "assistant"}
+      turnArtifacts={turnArtifacts}
       vote={
         votes ? votes.find((vote) => vote.messageId === message.id) : undefined
       }
     />
   );
+  let turnStart = 0;
+  const renderedMessages = messages.map((message, index) => {
+    if (message.role === "user") {
+      turnStart = index;
+    }
+    const next = messages[index + 1];
+    const turnArtifacts =
+      message.role === "assistant" && (!next || next.role === "user")
+        ? artifactCatalog(messages.slice(turnStart, index + 1))
+        : undefined;
+    return renderMessage(message, index, turnArtifacts);
+  });
 
   return (
     <div className="relative min-h-0 flex-1 bg-background">
-      {messages.length === 0 && !isLoading && (
-        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
-          <Greeting />
-        </div>
-      )}
       <Conversation className="absolute inset-0 min-h-0" key={chatId}>
         <ConversationContent className="mx-auto min-h-full w-full min-w-0 max-w-[800px] gap-5 px-4 py-6 sm:px-6 md:gap-6">
           {/* A canonical message always owns its tool subtree. Appending answer
               text must not reparent an open details dialog or its focus target. */}
-          {messages.map(renderMessage)}
+          {renderedMessages}
           {status === "submitted" && messages.at(-1)?.role !== "assistant" && (
             <ThinkingMessage />
           )}

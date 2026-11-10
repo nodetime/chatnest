@@ -337,7 +337,12 @@ export function projectResult(
     });
     return true;
   };
-  const visit = (item: unknown, label = "", depth = 0): void => {
+  const visit = (
+    item: unknown,
+    label = "",
+    depth = 0,
+    isResultRoot = false
+  ): void => {
     if (remaining <= 0 || visited >= 64 || preview.blocks.length >= 16) {
       preview.truncated = true;
       return;
@@ -355,7 +360,9 @@ export function projectResult(
     seen.add(item);
     if (Array.isArray(item)) {
       if (!item.length) {
-        if (mode === "result") {
+        // An empty auxiliary field (files, tags, warnings, etc.) does not
+        // describe the outcome. Only a returned result collection does.
+        if (mode === "result" && isResultRoot) {
           emptyLists += 1;
           add(label || "列表", [{ label: "", text: "返回列表为空。" }], true);
         } else {
@@ -390,7 +397,7 @@ export function projectResult(
           }
         }
         preview.notice = "结构化结果预览；完整返回内容见调用详情。";
-        visit(object.structuredContent, "", depth + 1);
+        visit(object.structuredContent, "", depth + 1, isResultRoot);
         return;
       }
       const collectionKey = ["items", "results", "data"].find((key) =>
@@ -416,7 +423,7 @@ export function projectResult(
           preview.truncated = true;
           break;
         }
-        visit(object[collectionKey], collectionKey, depth + 1);
+        visit(object[collectionKey], collectionKey, depth + 1, isResultRoot);
         return;
       }
       if (addRecord(object)) {
@@ -495,7 +502,12 @@ export function projectResult(
           );
         });
       if (!mcpContent || !Array.isArray(child)) {
-        visit(child, label ? `${label} · ${key}` : key, depth + 1);
+        visit(
+          child,
+          label ? `${label} · ${key}` : key,
+          depth + 1,
+          isResultRoot && key === "content"
+        );
         continue;
       }
       if (child.length === 0) {
@@ -520,7 +532,7 @@ export function projectResult(
             /* Plain text. */
           }
         }
-        visit(text, "", depth + 1);
+        visit(text, "", depth + 1, isResultRoot);
       }
       if (child.length > 6) {
         preview.truncated = true;
@@ -533,7 +545,7 @@ export function projectResult(
         ? "调用参数未记录，请查看调用详情。"
         : "工具没有返回内容。";
   } else {
-    visit(value);
+    visit(value, "", 0, true);
   }
   if (
     emptyLists > 0 &&

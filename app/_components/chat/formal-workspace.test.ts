@@ -31,9 +31,9 @@ test("sidebar preferences do not collapse automatically when an artifact opens",
   );
 });
 
-test("home reads actual history and artifact library without sample supplier records", () => {
+test("recent files use the actual artifact library without a second history request", () => {
   const home = source("workspace-home");
-  assert.match(home, /api\/history/);
+  assert.doesNotMatch(home, /api\/history|最近对话/);
   assert.match(home, /api\/library/);
   assert.doesNotMatch(home, /咖啡杯|山野日用|补查生活|已完成.*条/);
 });

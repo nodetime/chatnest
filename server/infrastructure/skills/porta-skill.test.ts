@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readdir } from "node:fs/promises";
 import { test } from "node:test";
 import matter from "gray-matter";
 import {
@@ -15,6 +16,7 @@ test("应用只提供按需相似商品技能；旧技能不保留别名或工�
     ["similar-products"]
   );
   assert.equal(skills[0].displayName, "相似检索与比较");
+  assert.deepEqual(await readdir(skills[0].directory), ["SKILL.md"]);
   const body = await readSkillFile(skills[0], "SKILL.md");
   assert.ok(!buildSkillsPrompt(skills).includes(matter(body).content.trim()));
   const active = new Map<string, string>();

@@ -35,7 +35,7 @@ import { MultimodalInput } from "./multimodal-input";
 import { TaskProgress } from "./task-progress";
 import { WorkbenchSection } from "./workbench-section";
 import { Workspace } from "./workspace";
-import { WorkspaceHome } from "./workspace-home";
+import { SavedArtifactCards } from "./workspace-home";
 
 export function ChatShell() {
   const {
@@ -99,6 +99,7 @@ export function ChatShell() {
     [chatId]
   );
   const isEmpty = messages.length === 0 && !isLoading && !loadError;
+  const isHistoryUnavailable = messages.length === 0 && Boolean(loadError);
   const isArtifactVisible = useArtifactSelector((state) => state.isVisible);
   const { setArtifact } = useArtifact();
 
@@ -238,6 +239,14 @@ export function ChatShell() {
     setMessages,
   ]);
 
+  const notice = (
+    <ConversationNotice
+      attachments={attachments}
+      onRestore={handleRestore}
+      standalone={isHistoryUnavailable}
+    />
+  );
+
   return (
     <>
       {section !== "chat" && <WorkbenchSection />}
@@ -262,13 +271,21 @@ export function ChatShell() {
                 "chat-home-canvas overflow-y-auto bg-[var(--workbench-canvas)]"
             )}
           >
-            {!isEmpty && (
+            {isHistoryUnavailable ? (
+              <div
+                className="min-h-0 flex-1 overflow-y-auto px-6"
+                data-testid="history-load-failure"
+              >
+                <div className="grid min-h-full place-items-center py-6">
+                  <div className="w-full max-w-sm">{notice}</div>
+                </div>
+              </div>
+            ) : isEmpty ? null : (
               <Messages
                 addToolApprovalResponse={addToolApprovalResponse}
                 answerAskUser={answerAskUser}
                 chatId={chatId}
                 isArtifactVisible={isArtifactVisible}
-                isLoading={isLoading}
                 isReadonly={isReadonly}
                 messages={messages}
                 onEditMessage={handleEditMessage}
@@ -282,56 +299,51 @@ export function ChatShell() {
                 votes={votes}
               />
             )}
-            <div
-              className={cn(
-                "mx-auto flex w-full min-w-0 shrink-0 flex-col",
-                isEmpty
-                  ? "max-w-[800px] px-4 pb-10 pt-10 sm:px-6 sm:pt-[clamp(3rem,9vh,6rem)]"
-                  : "max-w-[800px] px-4 pt-2 pb-4 sm:px-6"
-              )}
-              data-testid="composer-dock"
-            >
-              {!!isEmpty && <Greeting />}
-              {!isEmpty && (
-                <TaskProgress
-                  isRunning={isTaskProgressRunning}
-                  key={chatId}
-                  plan={taskProgress}
-                />
-              )}
-              <ConversationNotice
-                attachments={attachments}
-                onRestore={handleRestore}
-              />
-              {!isReadonly && (
-                <MultimodalInput
-                  attachments={attachments}
-                  chatId={chatId}
-                  editingMessage={editingMessage}
-                  home={isEmpty}
-                  input={input}
-                  isLoading={isLoading}
-                  messages={messages}
-                  onCancelEdit={handleCancelEdit}
-                  onModelChange={setCurrentModelId}
-                  selectedModelId={currentModelId}
-                  selectedVisibilityType={visibilityType}
-                  sendMessage={
-                    editingMessage ? handleSendEditedMessage : sendMessage
-                  }
-                  setAttachments={setAttachments}
-                  setInput={setInput}
-                  setMessages={setMessages}
-                  status={status}
-                  stop={stop}
-                />
-              )}
-              {!!isEmpty && (
-                <div className="mt-8">
-                  <WorkspaceHome />
-                </div>
-              )}
-            </div>
+            {!isHistoryUnavailable && (
+              <div
+                className={cn(
+                  "mx-auto flex w-full min-w-0 shrink-0 flex-col",
+                  isEmpty
+                    ? "max-w-[800px] px-4 pt-10 pb-8 sm:px-6 md:pt-[clamp(3rem,13dvh,8rem)]"
+                    : "max-w-[800px] px-4 pt-2 pb-4 sm:px-6"
+                )}
+                data-testid="composer-dock"
+              >
+                {!!isEmpty && <Greeting />}
+                {!isEmpty && (
+                  <TaskProgress
+                    isRunning={isTaskProgressRunning}
+                    key={chatId}
+                    plan={taskProgress}
+                  />
+                )}
+                {notice}
+                {!isReadonly && (
+                  <MultimodalInput
+                    attachments={attachments}
+                    chatId={chatId}
+                    editingMessage={editingMessage}
+                    home={isEmpty}
+                    input={input}
+                    isLoading={isLoading}
+                    messages={messages}
+                    onCancelEdit={handleCancelEdit}
+                    onModelChange={setCurrentModelId}
+                    selectedModelId={currentModelId}
+                    selectedVisibilityType={visibilityType}
+                    sendMessage={
+                      editingMessage ? handleSendEditedMessage : sendMessage
+                    }
+                    setAttachments={setAttachments}
+                    setInput={setInput}
+                    setMessages={setMessages}
+                    status={status}
+                    stop={stop}
+                  />
+                )}
+                {!!isEmpty && <SavedArtifactCards recent />}
+              </div>
+            )}
           </div>
         </div>
         <Workspace>

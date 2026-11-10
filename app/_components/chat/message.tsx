@@ -1,9 +1,14 @@
 "use client";
 import type { UseChatHelpers } from "@ai-sdk/react";
+import {
+  type ArtifactEntry,
+  savedLegacyArtifact,
+} from "@/app/_components/chat/artifact-catalog";
 import type { ChatMessage } from "@/app/_lib/types";
 import { cn, sanitizeText } from "@/app/_lib/utils";
 import type { AskUserPart } from "@/server/domain/message/agent-interactions";
 import { hasPendingInteraction } from "@/server/domain/message/agent-interactions";
+import { projectAssistantParts } from "@/server/domain/message/assistant-text";
 import { hasRunFailure } from "@/server/domain/message/run-failure";
 import type { Vote } from "@/server/domain/vote/types";
 import { MessageContent, MessageResponse } from "../ai-elements/message";
@@ -61,6 +66,7 @@ const PurePreviewMessage = ({
   hideActivities = false,
   hideRunFailure = false,
   showSender: _showSender = true,
+  turnArtifacts = [],
 }: {
   addToolApprovalResponse: UseChatHelpers<ChatMessage>["addToolApprovalResponse"];
   answerAskUser?: AnswerAskUser;
@@ -79,6 +85,7 @@ const PurePreviewMessage = ({
   hideActivities?: boolean;
   hideRunFailure?: boolean;
   showSender?: boolean;
+  turnArtifacts?: ArtifactEntry[];
 }) => {
   const attachmentsFromMessage = message.parts.filter(
     (part) => part.type === "file"
@@ -89,24 +96,35 @@ const PurePreviewMessage = ({
   const isUser = message.role === "user";
   const isAssistant = message.role === "assistant";
 
-  const groupedParts = groupActivityParts(message.parts);
-  const hasAnyContent = groupedParts.some((group) => {
-    if (group.kind === "activity") {
-      return true;
-    }
-    const { part } = group;
-    return (
-      (part.type === "text" && part.text?.trim().length > 0) ||
-      (part.type === "reasoning" && part.text?.trim().length > 0) ||
-      part.type.startsWith("tool-") ||
-      part.type === "dynamic-tool" ||
-      part.type === "source-url" ||
-      part.type === "file"
-    );
-  });
+  const projection = isAssistant
+    ? projectAssistantParts(message.parts, isLoading)
+    : null;
+  const visibleParts = projection?.parts ?? message.parts;
+  const incompleteReply = isLoading ? null : projection?.omittedReply;
+  const protocolPreview = incompleteReply
+    ? `${incompleteReply.slice(0, 4000)}${incompleteReply.length > 4000 ? "\n…" : ""}`
+    : "";
+  const groupedParts = groupActivityParts(visibleParts);
+  const hasAnyContent =
+    Boolean(incompleteReply) ||
+    turnArtifacts.length > 0 ||
+    groupedParts.some((group) => {
+      if (group.kind === "activity") {
+        return true;
+      }
+      const { part } = group;
+      return (
+        (part.type === "text" && part.text?.trim().length > 0) ||
+        (part.type === "reasoning" && part.text?.trim().length > 0) ||
+        part.type.startsWith("tool-") ||
+        part.type === "dynamic-tool" ||
+        part.type === "source-url" ||
+        part.type === "file"
+      );
+    });
   const failedRun = !hideRunFailure && hasRunFailure(message);
   const isThinking = isAssistant && isLoading && !hasAnyContent && !failedRun;
-  const lastPart = message.parts.findLast(
+  const lastPart = visibleParts.findLast(
     (part) =>
       part.type === "step-start" ||
       ((part.type === "text" || part.type === "reasoning") &&
@@ -186,6 +204,7 @@ const PurePreviewMessage = ({
       isAssistant &&
       !isLoading &&
       !hideRunFailure &&
+      !incompleteReply &&
       part.data?.state === "failed"
     ) {
       return (
@@ -242,70 +261,15 @@ const PurePreviewMessage = ({
       );
     }
 
-    if (type === "tool-bash" || type === "tool-writeFile") {
-      return (
-        <div className="flex w-full flex-col gap-2" key={part.toolCallId}>
-          <ToolActivity
-            approve={addToolApprovalResponse}
-            canApprove={canApprove}
-            isReadonly={isReadonly}
-            isRunning={isLoading}
-            part={part}
-          />
-          {part.state === "output-available" &&
-            part.output?.artifacts?.map((file) => (
-              <DocumentPreview
-                isReadonly={isReadonly}
-                key={file.id}
-                result={file}
-              />
-            ))}
-        </div>
-      );
-    }
-
-    if (type === "tool-createResultTable") {
-      if (!part.output || "error" in part.output) {
-        return (
-          <ToolActivity
-            approve={addToolApprovalResponse}
-            canApprove={canApprove}
-            isReadonly={isReadonly}
-            isRunning={isLoading}
-            key={part.toolCallId}
-            part={part}
-          />
-        );
-      }
-      return (
-        <DocumentPreview
-          isReadonly={isReadonly}
-          key={part.toolCallId}
-          result={part.output}
-        />
-      );
-    }
-
     if (
       type === "tool-createDocument" ||
       type === "tool-updateDocument" ||
       type === "tool-editDocument" ||
+      type === "tool-createResultTable" ||
       type === "tool-requestSuggestions"
     ) {
-      if (
-        part.state === "output-available" &&
-        part.output &&
-        !("error" in part.output) &&
-        "id" in part.output &&
-        part.output.id
-      ) {
-        return (
-          <DocumentPreview
-            isReadonly={isReadonly}
-            key={part.toolCallId}
-            result={part.output}
-          />
-        );
+      if (savedLegacyArtifact(part)) {
+        return null;
       }
       return (
         <ToolActivity
@@ -407,7 +371,40 @@ const PurePreviewMessage = ({
     <>
       {attachments}
       {parts}
+      {!!incompleteReply && (
+        <div
+          className="text-[13px] leading-5 text-muted-foreground"
+          data-testid="malformed-reply"
+          role="status"
+        >
+          <p>回复未完整生成。</p>
+          <details className="mt-1 text-xs">
+            <summary className="w-fit cursor-pointer">技术详情</summary>
+            <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap break-words font-mono">
+              {protocolPreview}
+            </pre>
+          </details>
+        </div>
+      )}
       {!!isBetweenSteps && <WaitingText message="正在继续处理…" />}
+      {turnArtifacts.length > 0 && (
+        <section
+          aria-label="本轮文件"
+          className="mt-2 flex w-full flex-col gap-2"
+          data-testid="turn-artifacts"
+        >
+          <h3 className="text-xs font-medium text-muted-foreground">
+            本轮文件
+          </h3>
+          {turnArtifacts.map((file) => (
+            <DocumentPreview
+              isReadonly={isReadonly}
+              key={file.id}
+              result={file}
+            />
+          ))}
+        </section>
+      )}
       {actions}
     </>
   );

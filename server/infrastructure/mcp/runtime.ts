@@ -22,6 +22,7 @@ import {
 } from "@/server/application/mcp/runtime-config";
 import {
   isOmittedMcpResult,
+  McpResultOmittedError,
   normalizeMcpOutput,
 } from "@/server/domain/message/mcp-output";
 import { createPortaToolError } from "@/server/domain/message/porta-error";
@@ -243,9 +244,7 @@ export async function createAgentRuntime(
                     );
                   }
                   if (isOmittedMcpResult(output)) {
-                    throw new Error(
-                      `${server.name}: upstream returned an overflow notice without the requested records. No complete result was received or saved; narrow the query if appropriate.`
-                    );
+                    throw new McpResultOmittedError();
                   }
                   const source = ledger.record(
                     {

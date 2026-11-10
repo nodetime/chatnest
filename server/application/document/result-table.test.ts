@@ -422,7 +422,7 @@ test("installed SDK projects current and persisted MCP results without replacing
           { context: {}, messages: [], toolCallId: "omitted-call" }
         )
       ),
-      /overflow notice/
+      /上游返回内容超过大小限制.*减少返回条数/
     );
     assert.equal(events.length, 1);
     assert.equal(persisted.size, 1);

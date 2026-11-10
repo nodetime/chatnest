@@ -1,4 +1,5 @@
 import type { ChatMessage } from "@/server/domain/message/types";
+import { projectAssistantText } from "./assistant-text";
 
 type FailurePart = {
   type: "data-run-status";
@@ -37,6 +38,9 @@ export function hasRunFailure(message: ChatMessage) {
 }
 
 /** Native SDK finish reasons: a stopped answer or a deliberate tool handoff is complete. */
-export function isCompleteFinishReason(reason: string | undefined) {
-  return reason === "stop" || reason === "tool-calls";
+export function isCompleteFinishReason(reason: string | undefined, text = "") {
+  return (
+    reason === "tool-calls" ||
+    (reason === "stop" && !projectAssistantText(text).omitted)
+  );
 }

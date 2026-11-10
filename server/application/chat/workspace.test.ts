@@ -75,6 +75,17 @@ function setup(
   };
 }
 
+test("valid CSV preserves blank cells, numeric zero and quoted commas through save and publication", async () => {
+  const context = setup();
+  const content = '名称,价格,备注\n台灯,,待核对\n水壶,0,"圆形,蓝色"\n';
+  context.setResult(completed({ "outputs/table.csv": content }));
+  const output = await context.workspace.run("python3 script.py");
+  assert.equal(output.status, "completed");
+  assert.equal(output.artifacts.length, 1);
+  assert.equal(context.writes[0].content, content);
+  assert.equal(context.events[0].content, content);
+});
+
 test("Bash receives original root-array JSON, saves complete CSV once and publishes only persisted content", async () => {
   const context = setup();
   context.inspect((input) =>

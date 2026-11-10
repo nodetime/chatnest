@@ -8,6 +8,7 @@ const nativeTools = new Set([
   "tool-updateDocument",
   "tool-editDocument",
   "tool-createResultTable",
+  "tool-requestSuggestions",
 ]);
 const documentId =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -16,6 +17,34 @@ const record = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 const nonempty = (value: unknown): value is string =>
   typeof value === "string" && value.trim().length > 0;
+
+export function savedLegacyArtifact(part: unknown): ArtifactEntry | null {
+  if (
+    !record(part) ||
+    typeof part.type !== "string" ||
+    !nativeTools.has(part.type) ||
+    part.state !== "output-available"
+  ) {
+    return null;
+  }
+  const { output } = part;
+  if (
+    !record(output) ||
+    "error" in output ||
+    !nonempty(output.id) ||
+    !documentId.test(output.id) ||
+    !nonempty(output.title) ||
+    typeof output.kind !== "string" ||
+    !kinds.has(output.kind)
+  ) {
+    return null;
+  }
+  return {
+    id: output.id,
+    kind: output.kind as ArtifactKind,
+    title: output.title,
+  };
+}
 
 /** Presentation-only index. Dynamic MCP tools never assert document membership. */
 export function artifactCatalog(
@@ -43,31 +72,10 @@ export function artifactCatalog(
         }
         continue;
       }
-      if (
-        !record(part) ||
-        typeof part.type !== "string" ||
-        !nativeTools.has(part.type) ||
-        part.state !== "output-available"
-      ) {
-        continue;
+      const entry = savedLegacyArtifact(part);
+      if (entry) {
+        entries.set(entry.id, entry);
       }
-      const { output } = part;
-      if (
-        !record(output) ||
-        "error" in output ||
-        !nonempty(output.id) ||
-        !documentId.test(output.id) ||
-        !nonempty(output.title) ||
-        typeof output.kind !== "string" ||
-        !kinds.has(output.kind)
-      ) {
-        continue;
-      }
-      entries.set(output.id, {
-        id: output.id,
-        kind: output.kind as ArtifactKind,
-        title: output.title,
-      });
     }
   }
   return [...entries.values()];

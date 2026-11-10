@@ -60,6 +60,28 @@ test("failure summaries distinguish confirmed no-write conflicts from unknown ou
   }
 });
 
+test("upstream omission has a useful summary while other provider errors remain private", () => {
+  const part = tool("omitted", "output-error", {
+    errorText:
+      "上游返回内容超过大小限制，本次未取得完整结果。请减少返回条数或收窄查询；本次没有可转存的完整数据。",
+  });
+  const before = JSON.stringify(part);
+  assert.equal(
+    activityFailureMessage(part),
+    "上游结果过大，本次未取得完整结果。"
+  );
+  assert.equal(activitySummary([part]).state, "output-error");
+  assert.equal(JSON.stringify(part), before);
+  assert.doesNotMatch(
+    activityFailureMessage(
+      tool("other", "output-error", {
+        errorText: "private provider trace 内容超过阈值",
+      })
+    ),
+    /private|内容超过阈值/
+  );
+});
+
 test("consecutive tool-only messages group without changing messages, parts or identities", () => {
   const a = message("a", [{ type: "step-start" }, tool("a")]);
   const b = message("b", [tool("b")]);

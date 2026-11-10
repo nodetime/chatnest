@@ -207,111 +207,155 @@ test("Porta error 4008 and BridgeError retain JSON bodies without headers, leake
   });
 });
 
-test("real AI SDK stream exposes only branded Porta error text as tool-output-error, never tool success", async () => {
-  const implementation = await import(
-    "@/server/domain/message/porta-error"
-  ).catch(() => null);
-  assert.ok(
-    implementation,
-    "Porta-specific safe stream error formatter is required"
-  );
-  assert.equal(
-    implementation.agentStreamErrorText(
-      new Error(`untrusted error ${serviceToken}`)
+for (const fixture of [
+  {
+    expected: /4008.*Permission denied|Permission denied.*4008/s,
+    name: "Porta business error",
+    output: result(
+      { error: "Permission denied", error_code: "4008", item: null },
+      true
     ),
-    "An error occurred."
-  );
-  // P2:流编排迁 application/chat/send-message.ts
-  const chatUseCase = await readFile(
-    "server/application/chat/send-message.ts",
-    "utf8"
-  );
-  assert.match(chatUseCase, /onError: agentStreamErrorText/);
-  await withErrorRuntime(async (runtime, setOutput, count) => {
-    setOutput(
-      result(
-        { error: "Permission denied", error_code: "4008", item: null },
-        true
-      )
-    );
-    const chunks: LanguageModelV4StreamPart[] = [
-      { type: "stream-start", warnings: [] },
+  },
+  {
+    expected: /上游返回内容超过大小限制.*减少返回条数/s,
+    name: "structured upstream omission",
+    output: result({ __largeTextTips__: "内容超过阈值." }, false),
+  },
+  {
+    expected: /invalid_page_size.*pageSize.*20/s,
+    name: "Porta page size validation error",
+    output: result(
       {
-        input: '{"q":"fixture"}',
-        toolCallId: "error-fixture",
-        toolName,
-        type: "tool-call",
-      },
-      {
-        finishReason: { raw: "tool_calls", unified: "tool-calls" },
-        type: "finish",
-        usage: {
-          inputTokens: { cacheRead: 0, cacheWrite: 0, noCache: 1, total: 1 },
-          outputTokens: { reasoning: 0, text: 1, total: 1 },
+        porta_error: {
+          code: "invalid_page_size",
+          message:
+            "pageSize 必须为1–20的整数；省略时默认10。请减少返回条数后调整查询。",
         },
       },
-    ];
-    const model = new MockLanguageModelV4({
-      doStream: {
-        stream: new ReadableStream({
-          start(controller) {
-            for (const chunk of chunks) {
-              controller.enqueue(chunk);
-            }
-            controller.close();
+      true
+    ),
+  },
+  {
+    expected: /上游返回内容超过大小限制.*减少返回条数/s,
+    name: "text upstream omission",
+    output: {
+      content: [
+        { text: '{"__largeTextTips__":"内容超过阈值."}', type: "text" },
+      ],
+      isError: false,
+    },
+  },
+]) {
+  test(`real AI SDK stream and replay preserve safe ${fixture.name} without success or retries`, async () => {
+    const implementation = await import(
+      "@/server/domain/message/porta-error"
+    ).catch(() => null);
+    assert.ok(
+      implementation,
+      "Porta-specific safe stream error formatter is required"
+    );
+    assert.equal(
+      implementation.agentStreamErrorText(
+        new Error(`untrusted error ${serviceToken}`)
+      ),
+      "An error occurred."
+    );
+    const forged = new Error(`untrusted error ${serviceToken}`);
+    forged.name = "McpResultOmittedError";
+    assert.equal(
+      implementation.agentStreamErrorText(forged),
+      "An error occurred."
+    );
+    // P2:流编排迁 application/chat/send-message.ts
+    const chatUseCase = await readFile(
+      "server/application/chat/send-message.ts",
+      "utf8"
+    );
+    assert.match(chatUseCase, /onError: agentStreamErrorText/);
+    await withErrorRuntime(async (runtime, setOutput, count) => {
+      setOutput(fixture.output);
+      const chunks: LanguageModelV4StreamPart[] = [
+        { type: "stream-start", warnings: [] },
+        {
+          input: '{"q":"fixture"}',
+          toolCallId: "error-fixture",
+          toolName,
+          type: "tool-call",
+        },
+        {
+          finishReason: { raw: "tool_calls", unified: "tool-calls" },
+          type: "finish",
+          usage: {
+            inputTokens: { cacheRead: 0, cacheWrite: 0, noCache: 1, total: 1 },
+            outputTokens: { reasoning: 0, text: 1, total: 1 },
           },
-        }),
-      },
-    });
-    // Confirmation policy is asserted separately; this fixture models an approved call.
-    const modelResult = streamText({
-      model,
-      prompt: "Fixture-only tool error",
-      tools: {
-        [toolName]: { ...runtime.tools[toolName], needsApproval: false },
-      },
-    });
-    const events: UIMessageChunk[] = [];
-    await toUIMessageStream({
-      onError: implementation.agentStreamErrorText,
-      stream: modelResult.stream,
-    }).pipeTo(
-      new WritableStream({
-        write(event) {
-          events.push(event);
         },
-      })
-    );
-    const failed = events.find((event) => event.type === "tool-output-error");
-    assert.ok(failed && failed.type === "tool-output-error");
-    assert.match(failed.errorText, /4008/);
-    assert.match(failed.errorText, /Permission denied/);
-    assert.ok(!JSON.stringify(events).includes(serviceToken));
-    assert.ok(!events.some((event) => event.type === "tool-output-available"));
-    assert.equal(count(), 1);
-    let message: UIMessage | undefined;
-    const replay = new ReadableStream({
-      start(controller) {
-        for (const event of events) {
-          controller.enqueue(event);
-        }
-        controller.close();
-      },
+      ];
+      const model = new MockLanguageModelV4({
+        doStream: {
+          stream: new ReadableStream({
+            start(controller) {
+              for (const chunk of chunks) {
+                controller.enqueue(chunk);
+              }
+              controller.close();
+            },
+          }),
+        },
+      });
+      // Confirmation policy is asserted separately; this fixture models an approved call.
+      const modelResult = streamText({
+        model,
+        prompt: "Fixture-only tool error",
+        tools: {
+          [toolName]: { ...runtime.tools[toolName], needsApproval: false },
+        },
+      });
+      const events: UIMessageChunk[] = [];
+      await toUIMessageStream({
+        onError: implementation.agentStreamErrorText,
+        stream: modelResult.stream,
+      }).pipeTo(
+        new WritableStream({
+          write(event) {
+            events.push(event);
+          },
+        })
+      );
+      const failed = events.find((event) => event.type === "tool-output-error");
+      assert.ok(failed && failed.type === "tool-output-error");
+      assert.match(failed.errorText, fixture.expected);
+      const response = await modelResult.response;
+      assert.match(JSON.stringify(response.messages), fixture.expected);
+      assert.ok(!JSON.stringify(events).includes(serviceToken));
+      assert.ok(
+        !events.some((event) => event.type === "tool-output-available")
+      );
+      assert.equal(count(), 1);
+      let message: UIMessage | undefined;
+      const replay = new ReadableStream({
+        start(controller) {
+          for (const event of events) {
+            controller.enqueue(event);
+          }
+          controller.close();
+        },
+      });
+      for await (const current of readUIMessageStream({
+        stream: replay,
+        terminateOnError: true,
+      })) {
+        message = current;
+      }
+      const toolPart = message?.parts.find(
+        (part) => part.type === "dynamic-tool"
+      );
+      assert.ok(toolPart?.type === "dynamic-tool");
+      assert.equal(toolPart.state, "output-error");
+      assert.match(toolPart.errorText ?? "", fixture.expected);
     });
-    for await (const current of readUIMessageStream({
-      stream: replay,
-      terminateOnError: true,
-    })) {
-      message = current;
-    }
-    const toolPart = message?.parts.find(
-      (part) => part.type === "dynamic-tool"
-    );
-    assert.ok(toolPart?.type === "dynamic-tool");
-    assert.equal(toolPart.state, "output-error");
-    assert.match(toolPart.errorText ?? "", /4008/);
   });
-});
+}
 
 test("Porta header fallback redacts dynamic JSON keys and fails explicitly on redaction collisions", async () => {
   await withErrorRuntime(async (runtime, setOutput) => {
