@@ -133,3 +133,6 @@ server/application/chat/tools/view-image.test.ts
 server/application/chat/tools/create-document.test.ts
 
 .claude/skills/copy-skills/scripts/copy-skills.test.mjs
+
+server/infrastructure/persistence/drizzle/seed.test.ts
+server/infrastructure/uploads/local-store.windows.test.ts

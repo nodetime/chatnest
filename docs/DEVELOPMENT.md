@@ -16,6 +16,8 @@ ChatNest 基于 `vercel/chatbot`，沿用 Next.js、Vercel AI SDK、认证、流
 
 外部服务的配置状态不代表调用成功。readiness 只检查应用数据库就绪；模型、MCP 和业务输出以对应实际会话为准。
 
+模型和 MCP 托管设置共用 `MCP_SETTINGS_ENCRYPTION_KEY`；启用加密设置时需同时配置非空的 `MCP_ALLOWED_ORIGINS` 精确信任来源，例如 `https://mcp.exa.ai`。仅设置密钥但来源为空会使配置校验失败，并可能在模型调用前中止聊天。实际来源按启用的服务逐一配置，不使用通配符。
+
 ## 本地开发
 
 优先按 [README](../README.md#本地运行) 操作。ChatNest 自带的开发入口为：
@@ -28,11 +30,15 @@ pnpm dev:down
 
 `dev:up` 处理 ChatNest 依赖体检、开发数据库、迁移、开发账号和应用进程，不自动启动同级 Porta。Porta 在其仓库按自己的开发命令启动，ChatNest 通过 `PORTA_MCP_URL` 和 `PORTA_SERVICE_TOKEN` 连接；配置方法见 [Porta 接入说明](integrations/porta.md)。开发地址约定为 ChatNest `http://127.0.0.1:3003`、Porta `http://127.0.0.1:3334`，不是进程实时状态。
 
-开发账号 `admin / 123456` 仅由显式启用的 development 初始化创建，可通过 `DEV_ADMIN_USERNAME`、`DEV_ADMIN_PASSWORD` 配置。服务器演示使用该环境单独设置的账户，不自动创建开发账户。
+数据库迁移完成后，显式执行 `pnpm db:seed` 初始化管理员种子。此入口适用于任意 `NODE_ENV`，只使用配置的 `POSTGRES_URL`，不限制数据库地址；`dev:up` 仍通过兼容脚本调用同一实现。应用启动或处理请求时不隐式灌库。
+
+种子默认账号为 `admin@chatnest.local / 123456`，沿用 `DEV_ADMIN_USERNAME`、`DEV_ADMIN_PASSWORD` 配置用户名与密码；这些变量也是生产/测试环境的显式种子配置。重复执行复用同一账号，密码不变时保留会话修订，配置密码变更时同步密码并使旧会话失效。脚本将账号 UUID 并入 `.env.local` 的 `PLATFORM_ADMIN_USER_IDS`，保留已有白名单；运行中的应用需要重新加载配置，部署环境若由平台注入变量，应同步该 UUID。development 可用配置的用户名登录；其他环境继续使用完整邮箱登录。该白名单不授予 connected 平台管理员权限。
 
 ChatNest 私密配置放在忽略的 `.env.local` 中；Porta 使用其根目录私密环境文件。保留同一个 `AUTH_SECRET`，避免开发重启导致已有会话失效。迁移只使用显式的 `MIGRATION_POSTGRES_URL`，运行进程使用 `POSTGRES_URL`；操作已有数据库前确认目标。停止开发环境保留数据，不将清库作为普通重启步骤。
 
 附件沿用当前私有存储配置，演示使用私有本地目录或卷；模型是否支持图片需按实际能力配置。附件类型、数量和大小以当前上传校验与环境配置为准，不额外要求旧版 Blob 凭据。
+
+本地默认附件目录为 `.data/private-uploads`，生产环境需配置绝对路径 `UPLOAD_STORAGE_DIR`。管理员在 `/admin/storage` 测试实际写入、读取和删除后开启附件；`configured=true` 只表示路径与配额配置有效，不代表上传开关已开启。Windows 需预先将专用目录的 NTFS ACL 限制为当前运行用户与 SYSTEM，并让新文件继承这些权限；驱动通过系统 PowerShell 读取真实 ACL，不使用 Windows 的 POSIX 权限位作判断。Linux 等平台继续检查运行用户归属和私有权限位。驱动不会自动修改已有目录权限，恢复卷应先由运维确认权限。
 
 ## Agent 分层
 

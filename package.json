@@ -17,6 +17,7 @@
     "prepare": "husky",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "npx tsx server/infrastructure/persistence/drizzle/migrate.ts",
+    "db:seed": "tsx scripts/dev-seed.ts",
     "db:studio": "drizzle-kit studio",
     "db:push": "drizzle-kit push",
     "db:pull": "drizzle-kit pull",

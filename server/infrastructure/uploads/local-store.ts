@@ -1,7 +1,9 @@
+import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { constants, type Stats } from "node:fs";
 import { lstat, mkdir, open, realpath, unlink } from "node:fs/promises";
-import { isAbsolute, join, parse, resolve } from "node:path";
+import { isAbsolute, join, parse, resolve, sep } from "node:path";
+import { promisify } from "node:util";
 import { MAX_DOCUMENT_BYTES } from "@/server/domain/attachment/document-types";
 import { UUID_PATTERN } from "@/server/domain/attachment/refs";
 import {
@@ -39,9 +41,47 @@ export function quotaLimits(env: Env = process.env) {
     user: quota("UPLOAD_USER_QUOTA_BYTES", 100 * 1024 ** 2),
   };
 }
-function hasPrivateOwner(info: Stats) {
-  const uid = process.getuid?.();
-  return (info.mode & 0o077) === 0 && (uid === undefined || uid === info.uid);
+const runFile = promisify(execFile);
+const ACL_CHECK_TIMEOUT_MS = 10_000;
+// NTFS 权限不能通过 stat.mode 判断；仅信任运行用户和系统服务 SID，读取失败直接拒绝。
+const WINDOWS_PRIVATE_ACL_SCRIPT = `
+$ErrorActionPreference = 'Stop'
+$acl = Get-Acl -LiteralPath $env:CHATNEST_UPLOAD_ACL_PATH
+$current = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+$private = $acl.GetOwner([System.Security.Principal.SecurityIdentifier]).Value -eq $current
+$ownerAllowed = $false
+foreach ($rule in $acl.GetAccessRules($true, $true, [System.Security.Principal.SecurityIdentifier])) {
+  if ($rule.AccessControlType -ne [System.Security.AccessControl.AccessControlType]::Allow) { continue }
+  $sid = $rule.IdentityReference.Value
+  if ($sid -eq $current) { $ownerAllowed = $true }
+  if ($sid -ne $current -and $sid -ne 'S-1-5-18') { $private = $false }
+}
+if ($private -and $ownerAllowed) { 'private' } else { 'public' }
+`;
+
+async function hasPrivateOwner(info: Stats, filename: string) {
+  if (process.platform !== "win32") {
+    const uid = process.getuid?.();
+    return (info.mode & 0o077) === 0 && (uid === undefined || uid === info.uid);
+  }
+  const powershell = join(
+    process.env.SystemRoot ?? "C:\\Windows",
+    "System32",
+    "WindowsPowerShell",
+    "v1.0",
+    "powershell.exe"
+  );
+  const { stdout } = await runFile(
+    powershell,
+    ["-NoProfile", "-NonInteractive", "-Command", WINDOWS_PRIVATE_ACL_SCRIPT],
+    {
+      env: { ...process.env, CHATNEST_UPLOAD_ACL_PATH: filename },
+      maxBuffer: 4096,
+      timeout: ACL_CHECK_TIMEOUT_MS,
+      windowsHide: true,
+    }
+  );
+  return stdout.trim() === "private";
 }
 
 export class LocalUploadStore {
@@ -55,7 +95,7 @@ export class LocalUploadStore {
     let cursor = parse(absolute).root;
     for (const segment of absolute
       .slice(cursor.length)
-      .split("/")
+      .split(sep)
       .filter(Boolean)) {
       cursor = join(cursor, segment);
       try {
@@ -74,7 +114,7 @@ export class LocalUploadStore {
       throw new Error("noncanonical storage directory");
     }
     const info = await lstat(absolute);
-    if (!info.isDirectory() || !hasPrivateOwner(info)) {
+    if (!info.isDirectory() || !(await hasPrivateOwner(info, absolute))) {
       throw new Error("storage directory is not private");
     }
     return absolute;
@@ -109,13 +149,18 @@ export class LocalUploadStore {
     ) {
       throw new Error("invalid size");
     }
+    const filename = await this.path(id);
     const file = await open(
-      await this.path(id),
+      filename,
       constants.O_RDONLY | constants.O_NOFOLLOW
     );
     try {
       const info = await file.stat();
-      if (!info.isFile() || !hasPrivateOwner(info) || info.size !== expected) {
+      if (
+        !info.isFile() ||
+        info.size !== expected ||
+        !(await hasPrivateOwner(info, filename))
+      ) {
         throw new Error("file metadata mismatch");
       }
       const bytes = Buffer.alloc(expected);
@@ -136,13 +181,18 @@ export class LocalUploadStore {
     ) {
       throw new Error("invalid size");
     }
+    const filename = await this.path(id);
     const file = await open(
-      await this.path(id),
+      filename,
       constants.O_RDONLY | constants.O_NOFOLLOW
     );
     try {
       const info = await file.stat();
-      if (!info.isFile() || !hasPrivateOwner(info) || info.size !== expected) {
+      if (
+        !info.isFile() ||
+        info.size !== expected ||
+        !(await hasPrivateOwner(info, filename))
+      ) {
         throw new Error("file metadata mismatch");
       }
       const hash = createHash("sha256");

@@ -59,7 +59,7 @@ flowchart LR
 
 ## ChatNest 私有上传恢复
 
-原 Admin 存储页、C 端上传/下载与附件关联继续共用 `server/application/uploads/service.ts` 和 `server/infrastructure/uploads/local-store.ts`。现有本地驱动拒绝非运行用户归属及组／其他用户可访问的卷根或文件；坏卷在解析和预留前失败，不自动 chmod，也没有新增对象存储适配。配对恢复验收见现有发布清单。
+原 Admin 存储页、C 端上传/下载与附件关联继续共用 `server/application/uploads/service.ts` 和 `server/infrastructure/uploads/local-store.ts`。现有本地驱动拒绝非运行用户归属及其他普通用户可访问的卷根或文件；Linux 等平台检查 POSIX owner/mode，Windows 通过系统 PowerShell 读取 NTFS ACL，仅允许当前运行用户及 SYSTEM 的 Allow 规则，读取失败直接拒绝。Windows 权限往返及公开目录／文件拒绝回归位于 `server/infrastructure/uploads/local-store.windows.test.ts`。坏卷在解析和预留前失败，不自动 chmod 或修改 ACL，也没有新增对象存储适配。配对恢复验收见现有发布清单。
 
 仅 `POST /api/files/upload` 的路径避开 Next proxy 的请求体克隆，由原 route 自己完成认证、同源检查、trace 回显及并发准入；`server/shared/uploads/validation.ts` 在文件表单读取时启用 30 秒无数据超时，不改变其他读体调用。
 
@@ -90,7 +90,7 @@ server/
 
 ## 关键子系统(现路径)
 
-**持久化**:`server/infrastructure/persistence/drizzle/` —— schema.ts(中文注释纪律)、migrations/、migrate.ts(`pnpm db:migrate`)、client.ts(共享连接,不加 server-only:白名单 tsx 测试直连此链)、仓储覆盖 chat/message/user/vote/document/suggestion/model-settings/mcp-settings/billing。billing 新增 external identity、execution operation/receipt、settlement outbox，单次 attempt CAS 与账务命令恢复不重放供应商调用；execution operation 还保存 sessionGroupId、stepIndex、modelId，用于模型/工具会话账务明细。保留不变量:advisory lock 版本化文档写入、结果表保护拒绝、chat 级联删除+资产清理、replace* 事务并发基线。`pnpm build` 先跑迁移再构建(禁止本地执行)。
+**持久化**:`server/infrastructure/persistence/drizzle/` —— schema.ts(中文注释纪律)、migrations/、migrate.ts(`pnpm db:migrate`)、seed.ts(`pnpm db:seed`，显式初始化管理员，任意 NODE_ENV 下使用配置的 POSTGRES_URL，事务锁/密码同步/管理员白名单登记唯一实现)、client.ts(共享连接,不加 server-only:白名单 tsx 测试直连此链)、仓储覆盖 chat/message/user/vote/document/suggestion/model-settings/mcp-settings/billing。billing 新增 external identity、execution operation/receipt、settlement outbox，单次 attempt CAS 与账务命令恢复不重放供应商调用；execution operation 还保存 sessionGroupId、stepIndex、modelId，用于模型/工具会话账务明细。保留不变量:advisory lock 版本化文档写入、结果表保护拒绝、chat 级联删除+资产清理、replace* 事务并发基线。`pnpm build` 先跑迁移再构建(禁止本地执行)。
 
 **模型网关**:`server/application/ai/` —— model-connection/model-service/model-context/providers/prompts + model-settings/{runtime,handler,service,network,probe}(加密 ModelSettings 行/AAD/CAS,DNS 钉扎 HTTPS 探测,可选部署侧 MODEL_DNS_OVERRIDES 精确域名公网 pin(仍保留 TLS/地址校验,dns-pins.test.ts 回归);目录 schema 在 domain/model/settings-schema.ts,仓储在 drizzle)。模型目录(chatModels/isDemo/titleModel)在 `domain/model/models.ts`。
 
@@ -140,8 +140,8 @@ server/
 
 ## 开发基座
 
-- 一键闭环 `pnpm dev:up`(脚本 `.claude/skills/dev-env/scripts/dev-env-loop.mjs`:体检/装指引 -> .env.local -> compose PG(127.0.0.1:55432,命名卷) -> 迁移 -> `scripts/dev-seed.ts` 开发账号初始化 -> 启动);收尾 `pnpm dev:down`。
-- 本地开发默认登录 `admin / 123456`，账号保存在 `admin@chatnest.local`，用户名和密码由 `DEV_ADMIN_USERNAME` / `DEV_ADMIN_PASSWORD` 配置；`server/shared/login-identity.ts` 仅在 development 将 `admin` 解析为该邮箱；仍由既有 Credentials + bcrypt 校验。注册/生产保持邮箱登录；不授予 connected 平台管理员权限。初始化仅操作固定本地开发库与此专用账号，不触碰其他用户。
+- 一键闭环 `pnpm dev:up`(脚本 `.claude/skills/dev-env/scripts/dev-env-loop.mjs`:体检/装指引 -> .env.local -> compose PG(127.0.0.1:55432,命名卷) -> 迁移 -> `scripts/dev-seed.ts` 显式管理员种子 -> 启动);收尾 `pnpm dev:down`。兼容脚本只负责 dotenv 加载、调用 Drizzle `seed.ts` 与脱敏汇报；独立入口为 `pnpm db:seed`，应用启动/请求不隐式灌库。
+- 初始管理员默认 `admin@chatnest.local / 123456`，由 `DEV_ADMIN_USERNAME` / `DEV_ADMIN_PASSWORD` 配置，显式种子适用于任意 `NODE_ENV` 与配置的 PostgreSQL 连接。按专用邮箱加锁创建或同步密码，重复执行保持幂等；密码变更递增会话修订，将 UUID 合并登记到 `.env.local` 的 `PLATFORM_ADMIN_USER_IDS`。`server/shared/login-identity.ts` 的 `getSeedAccount` 不限制环境；`getDevelopmentAccount` 仅在 development 提供用户名映射，其他环境保持完整邮箱登录；仍用既有 Credentials + bcrypt 校验，不授予 connected 平台管理员权限。
 - 进程工具 `scripts/governance/dev-env.mjs` 仅三能:nics / 绑 0.0.0.0:3003 启动 / 优雅杀;入口 `pnpm dev:nics|start|stop`。
 - 项目技能双向复制 `copy-skills` 同时存放于 `.claude/skills/copy-skills` 与 `.agents/skills/copy-skills`，使用真实目录副本；运行技能内 `scripts/copy-skills.mjs --from claude|codex` 默认比对，`--apply` 复制，`--overwrite` 才覆盖差异，目标独有内容保留。复制器测试仅从 `.claude` 路径显式加入离线白名单；`dev-env` 同样提供两端实际副本。
 
