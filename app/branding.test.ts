@@ -77,21 +77,26 @@ test("数知探AI conversation Markdown preserves message text and returned sour
   );
 });
 
-test("selected Figma Radar asset is original, local and reused across brand surfaces", () => {
-  const asset = readFileSync("public/brand/radar.svg");
-  assert.equal(
-    createHash("sha256").update(asset).digest("hex"),
-    "ec08796300b7912fd79f38a7d9cac3cc68f06671d4f0b71ffc36694f9282524f"
+test("should_reuse_transparent_radar_when_rendering_brand_surfaces", () => {
+  const svg = readFileSync("public/brand/radar.svg", "utf8").replaceAll(
+    "\r\n",
+    "\n"
   );
-  const svg = asset.toString("utf8");
-  assert.match(svg, /width="160" height="160" viewBox="0 0 160 160"/);
+  assert.equal(
+    createHash("sha256").update(svg).digest("hex"),
+    "60ce21009dedea70183ace84d7677ab490614d9cd7754dff3d7c2a82f4ec3276"
+  );
+  assert.match(svg, /width="256" height="256" viewBox="0 0 256 256"/);
   assert.doesNotMatch(
     svg,
     /<(?:script|foreignObject)\b|(?:href|src)="https?:|onload=/i
   );
   const admin = readFileSync("app/_components/admin/admin-shell.tsx", "utf8");
   assert.match(admin, /group-data-\[collapsible=icon\]:p-0\.5!/);
-  assert.deepEqual(readFileSync("app/icon.svg"), asset);
+  assert.equal(
+    readFileSync("app/icon.svg", "utf8").replaceAll("\r\n", "\n"),
+    svg
+  );
   const ico = readFileSync("app/favicon.ico");
   assert.equal(ico.readUInt16LE(0), 0);
   assert.equal(ico.readUInt16LE(2), 1);

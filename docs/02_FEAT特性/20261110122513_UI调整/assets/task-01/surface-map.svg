@@ -1,0 +1,227 @@
+<svg
+  aria-labelledby="title description"
+  height="830"
+  role="img"
+  viewBox="0 0 1200 830"
+  width="1200"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <title id="title">品牌入口位置线框图</title>
+  <desc id="description">十个位置编号对应任务文档中的路由与组件清单。</desc>
+  <style>
+  text {
+    font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+  }
+  </style>
+  <rect data-graph-role="background" fill="#ffffff" height="830" width="1200" />
+  <text fill="#111827" font-size="22" font-weight="600" x="40" y="44">
+    UI-01 页面位置清单
+  </text>
+  <text fill="#6b7280" font-size="14" font-weight="400" x="40" y="74">
+    位置线框示意：只标品牌入口，不表达完整页面样式；编号对应文档的逐项清单。
+  </text>
+  <text fill="#111827" font-size="17" font-weight="600" x="40" y="122">
+    首页
+  </text>
+  <g data-graph-role="decoration">
+    <rect
+      fill="#ffffff"
+      height="240"
+      rx="8"
+      stroke="#d1d5db"
+      width="320"
+      x="40"
+      y="138"
+    />
+    <rect fill="#f9fafb" height="48" rx="7" width="318" x="41" y="139" />
+    <text fill="#2563eb" font-size="15" font-weight="600" x="56" y="168">
+      Logo [P01]
+    </text>
+    <rect fill="#e5e7eb" height="10" rx="4" width="210" x="64" y="224" />
+    <rect fill="#e5e7eb" height="10" rx="4" width="256" x="64" y="250" />
+    <rect fill="#e5e7eb" height="10" rx="4" width="174" x="64" y="276" />
+    <path d="M40 330 H360" stroke="#e5e7eb" />
+    <text fill="#2563eb" font-size="15" font-weight="600" x="56" y="359">
+      Logo [P02]
+    </text>
+  </g>
+  <text fill="#6b7280" font-size="13" font-weight="400" x="40" y="402">
+    页头 / 页脚，桌面与移动同源
+  </text>
+  <text fill="#111827" font-size="17" font-weight="600" x="440" y="122">
+    工作台
+  </text>
+  <g data-graph-role="decoration">
+    <rect
+      fill="#ffffff"
+      height="240"
+      rx="8"
+      stroke="#d1d5db"
+      width="320"
+      x="440"
+      y="138"
+    />
+    <rect fill="#f9fafb" height="238" rx="7" width="152" x="441" y="139" />
+    <text fill="#2563eb" font-size="15" font-weight="600" x="452" y="169">
+      Logo
+    </text>
+    <text fill="#2563eb" font-size="13" font-weight="400" x="452" y="193">
+      [P03 / P04]
+    </text>
+    <rect fill="#d1d5db" height="9" rx="4" width="112" x="456" y="224" />
+    <rect fill="#d1d5db" height="9" rx="4" width="112" x="456" y="252" />
+    <rect fill="#d1d5db" height="9" rx="4" width="112" x="456" y="280" />
+    <text fill="#6b7280" font-size="14" font-weight="400" x="617" y="212">
+      内容区
+    </text>
+    <rect
+      fill="#ffffff"
+      height="112"
+      rx="7"
+      stroke="#d1d5db"
+      width="94"
+      x="637"
+      y="244"
+    />
+    <text fill="#6b7280" font-size="12" font-weight="400" x="647" y="272">
+      移动抽屉
+    </text>
+    <text fill="#2563eb" font-size="12" font-weight="400" x="647" y="298">
+      同一 Logo
+    </text>
+  </g>
+  <text fill="#6b7280" font-size="13" font-weight="400" x="440" y="402">
+    对话页、旧个人入口及移动抽屉
+  </text>
+  <text fill="#111827" font-size="17" font-weight="600" x="840" y="122">
+    登录 / 注册
+  </text>
+  <g data-graph-role="decoration">
+    <rect
+      fill="#ffffff"
+      height="240"
+      rx="8"
+      stroke="#d1d5db"
+      width="320"
+      x="840"
+      y="138"
+    />
+    <rect fill="#f9fafb" height="48" rx="7" width="318" x="841" y="139" />
+    <text fill="#2563eb" font-size="15" font-weight="600" x="856" y="168">
+      Logo [P05]
+    </text>
+    <rect fill="#e5e7eb" height="10" rx="4" width="210" x="864" y="224" />
+    <rect fill="#e5e7eb" height="10" rx="4" width="256" x="864" y="250" />
+    <rect fill="#e5e7eb" height="10" rx="4" width="174" x="864" y="276" />
+  </g>
+  <text fill="#6b7280" font-size="13" font-weight="400" x="840" y="402">
+    共用认证布局
+  </text>
+  <text fill="#111827" font-size="17" font-weight="600" x="40" y="462">
+    个人账户
+  </text>
+  <g data-graph-role="decoration">
+    <rect
+      fill="#ffffff"
+      height="240"
+      rx="8"
+      stroke="#d1d5db"
+      width="320"
+      x="40"
+      y="478"
+    />
+    <rect fill="#f9fafb" height="48" rx="7" width="318" x="41" y="479" />
+    <text fill="#2563eb" font-size="15" font-weight="600" x="56" y="508">
+      Logo [P06]
+    </text>
+    <rect fill="#e5e7eb" height="10" rx="4" width="210" x="64" y="564" />
+    <rect fill="#e5e7eb" height="10" rx="4" width="256" x="64" y="590" />
+    <rect fill="#e5e7eb" height="10" rx="4" width="174" x="64" y="616" />
+  </g>
+  <text fill="#6b7280" font-size="13" font-weight="400" x="40" y="742">
+    顶栏；账户加载态同源
+  </text>
+  <text fill="#111827" font-size="17" font-weight="600" x="440" y="462">
+    管理后台
+  </text>
+  <g data-graph-role="decoration">
+    <rect
+      fill="#ffffff"
+      height="240"
+      rx="8"
+      stroke="#d1d5db"
+      width="320"
+      x="440"
+      y="478"
+    />
+    <rect fill="#f9fafb" height="238" rx="7" width="152" x="441" y="479" />
+    <text fill="#2563eb" font-size="15" font-weight="600" x="452" y="509">
+      Logo
+    </text>
+    <text fill="#2563eb" font-size="13" font-weight="400" x="452" y="533">
+      [P07]
+    </text>
+    <rect fill="#d1d5db" height="9" rx="4" width="112" x="456" y="564" />
+    <rect fill="#d1d5db" height="9" rx="4" width="112" x="456" y="592" />
+    <rect fill="#d1d5db" height="9" rx="4" width="112" x="456" y="620" />
+    <text fill="#6b7280" font-size="14" font-weight="400" x="617" y="552">
+      内容区
+    </text>
+    <rect
+      fill="#ffffff"
+      height="112"
+      rx="7"
+      stroke="#d1d5db"
+      width="94"
+      x="637"
+      y="584"
+    />
+    <text fill="#6b7280" font-size="12" font-weight="400" x="647" y="612">
+      移动抽屉
+    </text>
+    <text fill="#2563eb" font-size="12" font-weight="400" x="647" y="638">
+      同一 Logo
+    </text>
+  </g>
+  <text fill="#6b7280" font-size="13" font-weight="400" x="440" y="742">
+    侧栏与移动抽屉同源
+  </text>
+  <text fill="#111827" font-size="17" font-weight="600" x="840" y="462">
+    系统与外部入口
+  </text>
+  <g data-graph-role="decoration">
+    <rect
+      fill="#ffffff"
+      height="240"
+      rx="8"
+      stroke="#d1d5db"
+      width="320"
+      x="840"
+      y="478"
+    />
+    <text fill="#2563eb" font-size="15" font-weight="600" x="860" y="508">
+      P08 浏览器标签
+    </text>
+    <text fill="#6b7280" font-size="13" font-weight="400" x="860" y="532">
+      icon.svg / favicon.ico
+    </text>
+    <text fill="#2563eb" font-size="15" font-weight="600" x="860" y="573">
+      P09 Apple 主屏幕
+    </text>
+    <text fill="#6b7280" font-size="13" font-weight="400" x="860" y="597">
+      apple-icon.png
+    </text>
+    <text fill="#2563eb" font-size="15" font-weight="600" x="860" y="638">
+      P10 外部分享
+    </text>
+    <text fill="#6b7280" font-size="13" font-weight="400" x="860" y="662">
+      旧模板品牌，另定任务
+    </text>
+  </g>
+  <text fill="#6b7280" font-size="13" font-weight="400" x="840" y="742">
+    P10 分享图记为待定旁支
+  </text>
+  <text fill="#6b7280" font-size="14" font-weight="400" x="40" y="808">
+    图例：蓝色文字是需要逐项复核的品牌位置；功能图标、用户头像与供应商标志不在本轮替换范围。
+  </text>
+</svg>
