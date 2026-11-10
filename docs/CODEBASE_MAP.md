@@ -53,6 +53,10 @@ flowchart LR
 - 账户用例与仓储在 server/application/account 和 server/infrastructure/persistence/drizzle/account-repository.ts；结算 worker 入口为 scripts/platform-settlement-worker.mjs。账户删除通知独立投递。
 - 0018 删除 0017 的告警投递表，并撤除旧 webhook、内部 API 和 /admin/alerts；结算告警只输出结构化进程日志。
 
+## 消息时间
+
+`app/_components/chat/message-time.tsx` 在用户和 AI 的现有消息操作栏显示 `yyyy-MM-dd HH:mm`，按浏览器本地时区格式化 `metadata.createdAt`，避免服务端时区造成水合差异。历史时间沿用数据库转换；`use-active-chat.tsx` 为新发消息补齐发送时间，`send-message.ts` 将 AI 创建时间写入流元数据并用于持久化，审批续接保留原消息时间。桌面悬浮／键盘聚焦和触屏可见性沿用既有 `message-actions` 规则；缺失或非法时间不显示，不用当前时间伪造历史。
+
 ## 会话停止
 
 停止由输入区触发，`use-active-chat.tsx` 中止当前流并拦住自动续跑。消息区保留已有回复和原审批卡，不再渲染额外的续跑横栏，也不代发用户消息；用户可以手动发送下一条消息。
