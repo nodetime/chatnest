@@ -205,7 +205,15 @@ test("workspace chrome has one aligned top row and exposes existing action label
   for (const source of [header, chat]) {
     assert.match(source, /h-\[52px\]/);
   }
-  assert.match(sidebar, /flex h-9 items-center justify-between/);
+  assert.match(sidebar, /className="relative h-10 min-w-0"/);
+  assert.match(
+    sidebar,
+    /<BrandHomeLink[\s\S]*?className="workbench-sidebar-brand absolute top-0 left-1 h-10"/
+  );
+  assert.match(
+    sidebar,
+    /className="workbench-sidebar-toggle absolute top-0 right-0 flex size-10/
+  );
   const actions = readFileSync(
     "app/_components/chat/artifact-actions.tsx",
     "utf8"
