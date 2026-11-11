@@ -53,6 +53,14 @@ flowchart LR
 - 账户用例与仓储在 server/application/account 和 server/infrastructure/persistence/drizzle/account-repository.ts；结算 worker 入口为 scripts/platform-settlement-worker.mjs。账户删除通知独立投递。
 - 0018 删除 0017 的告警投递表，并撤除旧 webhook、内部 API 和 /admin/alerts；结算告警只输出结构化进程日志。
 
+## 首页固定导航
+
+`app/_components/landing/landing-navigation.tsx` 封装公共导航、登录入口和移动菜单，由 `landing-page.tsx` 传入基础路径与登录状态。`landing.css` 使用 `position: fixed` 固定导航，CSS 根滚动时间轴在首屏透明与下滑半透明毛玻璃之间过渡；未支持滚动时间轴或减少动画时保留固定的半透明底色，不注册 JavaScript 滚动监听。统一导航高度、顶部间距和锚点偏移，避免内容及锚点标题被遮挡；移动菜单沿用 Sheet。首页主标题下的旧说明文案已按用户要求移除。
+
+## 首页客户评价
+
+`app/_components/landing/customer-testimonials.tsx` 封装 `CustomerTestimonials` 与内部 `CustomerReviewCard`，由 `landing-page.tsx` 挂在产品演示和常见问题之间。六条虚构评价仅用于本地营销展示，沿用“某某律师”等占位身份；按用户要求不显示“示例”后缀。样式归入 `landing.css`，以 CSS 线性动画每组 40 秒连续流动；鼠标进入卡片带时暂停，移出后从原位置继续，当前卡片显示浅蓝背景与呼吸边框。`ResizeObserver` 按实际组宽和视口补齐副本并在卸载时断开。展示副本仅通过 `aria-hidden` 避免读屏重复，保留每张卡片的悬停效果；减少动画偏好下隐藏副本并停用呼吸动画，保留原生横向阅读。不依赖接口、数据库或轮播库，也不初始化 Agent。
+
 ## 消息时间
 
 `app/_components/chat/message-time.tsx` 在用户和 AI 的现有消息操作栏显示 `yyyy-MM-dd HH:mm`，按浏览器本地时区格式化 `metadata.createdAt`，避免服务端时区造成水合差异。历史时间沿用数据库转换；`use-active-chat.tsx` 为新发消息补齐发送时间，`send-message.ts` 将 AI 创建时间写入流元数据并用于持久化，审批续接保留原消息时间。桌面悬浮／键盘聚焦和触屏可见性沿用既有 `message-actions` 规则；缺失或非法时间不显示，不用当前时间伪造历史。
@@ -156,7 +164,7 @@ server/
 - `/api/personal/{mcp,skills,scope}` 仅正式账号管理本人能力；写操作检查同源并有界读体。skills 只接受有界单文件 SKILL.md，预览/导入/编辑/启停/删除/内置副本不执行脚本、安装依赖或授予连接权限。个人引用资源包与 Git 仓库导入尚未实现。
 - `readUserCatalog` 按当前用户装配平台与个人目录；`createTaskCapabilityService` 在 MCP 建连前验证并持久化 `capabilitySelection`。首次默认可用目录，省略沿用当前选择，显式空集不退回全部；审批只用服务端范围、assistant 的 data-capability-scope 修订标记，不能借客户端选择扩权。
 - 个人工具别名绑定授权修订；MCP 和技能执行前复核当前配置及范围代次。纯 MCP 审批也复用 chat 行锁 merge/CAS，重复提交不再次进入执行。历史用过且当前仍授权选中的技能在本轮模型投影中恢复最新正文；本轮首次成功加载后立即更新同一请求内的指令Map，每个模型步骤复用，并仅投影去除已激活原生加载结果中的重复正文；禁用技能和旧资源仅保留元数据，避免旧指令注入；存储证据不改。公开对话不透出个人技能原始正文。
-- `app/_components/chat/{personal-connections,personal-skills,task-capabilities}.tsx` 复用 McpEditor、Dialog、Button 和现有组件；侧栏与设置共用个人管理视图。`use-personal-capabilities` 与 Agent 摘要缓存均绑定登录用户，选择由 `use-active-chat` 仅在新用户轮次提交，审批续跑不重传选择。
+- `app/_components/chat/{personal-connections,personal-skills,task-capabilities}.tsx` 复用 McpEditor、Dialog、Button 和现有组件；侧栏与设置共用个人管理视图。2026-11-12 暂缓开放用户新增：添加 MCP（含空态）、导入 Skill 和两处创建个人副本入口置灰，调用 `app/_lib/capability-availability.ts` 统一提示“产品能力还未开放”，不打开创建表单或文件选择器；平台内置查看、启停及管理员配置保留。该限制作用于用户界面入口，既有管理 API 与运行时保持原样。`use-personal-capabilities` 与 Agent 摘要缓存均绑定登录用户，选择由 `use-active-chat` 仅在新用户轮次提交，审批续跑不重传选择。
 - Ask 复用 Apache-2.0 AI Elements Question（本地仅添加 asField，避免多问题嵌套 form）；题目仍来自 askUser 工具输入，长问题区域滚动，输入框不移动。未知 MCP 原生操作名保留在审批内容/详情，不把原始参数堆在时间线。
 - 普通预览与模型/MCP验收隔离；`NEXT_DIST_DIR` 可指定独立开发输出目录。`tests/visual/personal_capabilities.py` 仅接受 33379 本地夹具验收，正常预览不启动脚本模型。现有本地 browser 工具仍保留其独立审批，不属于 MCP/skills 选择集合。
 
@@ -197,7 +205,7 @@ server/
 
 ## 品牌图标（2026-10-28）
 
-- `app/_components/brand-mark.tsx` 复用 Next Image 展示用户选定的 Figma 第一套「探索雷达」；侧栏、账户页与后台共用，产品显示名统一为「数知探AI」，保留原导航行为，装饰图像不重复朗读链接名称。
+- `app/_components/brand-mark.tsx` 复用 Next Image 展示用户选定的 Figma 第一套「探索雷达」；侧栏、账户页与后台共用，产品显示名统一为「数知探AI」，装饰图像不重复朗读链接名称。`app/_components/brand-home-link.tsx` 将图标、文字与首页链接封装为独立 `BrandHomeLink`，由工作台侧栏复用；品牌与开合按钮分别定位，开合中不挤压品牌。桌面菜单行固定 40px、图标列固定 40px，文字保持单行并淡入淡出，历史列表以固定展开宽度裁切，保留 208px/64px 的侧栏宽度与减少动画偏好。
 - `public/brand/radar.svg` 为用户于 2026-11-10 选定的 256×256 透明雷达纯矢量版，复用原始 Figma 路径，移除底板及右下角副标记，保留蓝青色；来源／哈希见同目录 README。`app/icon.svg` 同源，favicon 与 Apple 图标等比派生。公共资源尊重 NEXT_PUBLIC_BASE_PATH，不请求 Figma 临时地址，不改 Agent／Porta／模型配置。任务文档、位置图与参考素材集中于 `docs/02_FEAT特性/20261110122513_UI调整/`。
 - 品牌回归追加至既有 `app/branding.test.ts`，继续使用原显式白名单；验证源图一致性、三个入口复用、访问命名与 basePath。
 
@@ -213,15 +221,15 @@ server/
 
 ## Lessie 工作空间呈现（2026-10-28）
 
-- `globals.css` 的工作台语义变量统一白画布、浅中性侧栏、石墨正文和克制的选择态；展开侧栏 208px、折叠 72px，聊天/管理顶栏 52px。没有更换样式框架、字体加载或 Agent 实现。
-- `shell/greeting/workspace-home` 把任务入口约束为 840px，最近对话与真实成果为并列轻列表；`SavedArtifactCards.compact` 只是同一份属主 API 数据的呈现模式，不伪造推荐或订阅能力。
+- `globals.css` 的工作台语义变量统一白画布、浅中性侧栏、石墨正文和克制的选择态；展开侧栏 208px、折叠 64px，聊天/管理顶栏 52px。收起态按钮 40px、图标 18px，隐藏文字并统一居中、默认透明及悬停背景；尺寸和前景色由 `AppSidebar` 的收起态工具类限定。入口显示“新建对话”“产物”，内部导航键仍为 `files`。
+- `shell/greeting/workspace-home` 将空对话主区域约束为 800px 内容边界：首屏展示居中产品主标题、原输入框及三条只填草稿的任务示例，底部入口在当前主区域滚动；首屏与最近产物第二屏共用完整主区域宽度及视口最小高度（桌面 `100dvh`、手机扣除 52px 顶栏），空产物也保留整屏以确保下滑入口将第二屏顶部滚到主区域顶部；真实最近产物最多三条，“查看全部”复用 `navigate("files")` 身份保护。`SavedArtifactCards.compact` 使用轻列表及紧凑加载/空态，沿用属主数据和 `useOpenSavedArtifact` 保护；`sidebar-history` 通过内部 `HistoryGroup` 统一时钟图标、展开/收起及加载、空记录和未登录状态，保留原分组、分页、搜索和删除。
 - `workspace-header` 将原有通用标题/关闭/视图切换保留在 52px 主行，把产物 controls 放进独立可横向滚动的 toolbar；`artifact-picker` 明确可收缩边界。编辑器挂载、未保存保护与回调作用域不变。
 - `agent-library` 复用现有 Dialog，桌面侧向分类、移动横向分类，内容独立滚动；连接与技能复用相同个人组件，改为轻列表。Ask/Todo/工具行仅调整表面，不改工具定义、审批和续跑。
 - `tests/visual/lessie_workspace.py` 为显式 opt-in 的本地样式/键盘检查，只接受隔离端口33379；`formal_workspace.py` 补充长标题纯DOM边界探针和输入底部稳定断言。脚本不进入生产装配，测试模型/数据不冒充真实服务验收。
 
 ## 独立C端首页（2026-10-28）
 
-- 聊天新会话页由 `greeting.tsx`、`shell.tsx`、`workspace-home.tsx` 统一内容宽度和左边界，最近对话与成果纵向排列。失败草稿提示由 `conversation-notice.tsx` 比较末次用户文本与 Shell 传入附件，已恢复时明确提示且不重复展示恢复按钮。
+- 聊天新会话页由 `greeting.tsx`、`shell.tsx`、`workspace-home.tsx` 统一内容宽度：标题“AI 侵权线索引擎 Agent”、真实 `MultimodalInput` 与任务示例组成首屏，最近产物保留在首屏下方的独立区域；最近对话集中在侧栏的带时钟图标折叠区。空态转消息态保持输入框组件位置及附件所有权，空态专用内容随消息出现而移除；首屏滚动与明暗配色使用现有工作台变量，减少动画偏好关闭平滑滚动。失败草稿提示由 `conversation-notice.tsx` 比较末次用户文本与 Shell 传入附件，已恢复时明确提示且不重复展示恢复按钮。
 - 普通 sheet 的 `editDocument` 只接受完整当前CSV与完整目标CSV，拒绝局部表头/单元格写入造成中间错位版本；替换按字面值处理。该工具与create/update共用消息类型、产物索引、打开入口及原生业务错误分类，错误结果不显示为成功产物。相似商品Skill提供“事实依据 / 是否核实”两列的业务口径；表格编辑器保持普通CSV渲染，不新增核实状态存储系统，核心Prompt不承载商品规则。
 
 - `app/_components/landing/`：HomeEntry按路径/个人section分流，LandingPage为独立全宽首页；LandingPreview的示例只在此页面展示，不进入聊天/证据/库；局部landing.css不改变后台或工作台主题。

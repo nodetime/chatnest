@@ -21,11 +21,23 @@ test("admin metadata overrides the root title with 数知探AI · 管理后台",
   );
 });
 
-test("home button keeps its new-chat action with visible and accessible 数知探AI branding", () => {
+test("should_return_home_when_rendering_the_shared_brand_entry", () => {
   const sidebar = readFileSync("app/_components/chat/app-sidebar.tsx", "utf8");
+  assert.match(sidebar, /<BrandHomeLink\b/);
+  const html = execFileSync(
+    process.execPath,
+    [
+      "--import",
+      "tsx",
+      "-e",
+      "const React=require('react');const {renderToStaticMarkup}=require('react-dom/server');const {BrandHomeLink}=require('./app/_components/brand-home-link.tsx');process.stdout.write(renderToStaticMarkup(React.createElement(BrandHomeLink)));",
+    ],
+    { encoding: "utf8" }
+  );
+  assert.match(html, /<a\b[^>]*aria-label="数知探AI 首页"[^>]*href="\/"/);
   assert.match(
-    sidebar,
-    /<button\s+aria-label="数知探AI 首页"[^>]*onClick=\{handleNew\}[^>]*>[\s\S]*?<span>数知探AI<\/span>[\s\S]*?<\/button>/
+    html,
+    /<a\b[^>]*>[\s\S]*?<img\b[\s\S]*?<span>数知探AI<\/span><\/a>/
   );
 });
 
@@ -103,7 +115,7 @@ test("should_reuse_transparent_radar_when_rendering_brand_surfaces", () => {
   assert.equal(ico.readUInt16LE(4), 3);
   assert.ok(readFileSync("app/apple-icon.png").length > 0);
   for (const path of [
-    "app/_components/chat/app-sidebar.tsx",
+    "app/_components/brand-home-link.tsx",
     "app/(auth)/layout.tsx",
     "app/_components/admin/admin-shell.tsx",
   ]) {
@@ -151,7 +163,7 @@ test("visible product copy is 数知探AI while repository and internal identifi
     "app/(auth)/layout.tsx",
     "app/(auth)/login/page.tsx",
     "app/(auth)/register/page.tsx",
-    "app/_components/chat/app-sidebar.tsx",
+    "app/_components/brand-home-link.tsx",
     "app/_components/admin/admin-shell.tsx",
     "app/_components/chat/multimodal-input.tsx",
     "app/_components/chat/personal-skills.tsx",

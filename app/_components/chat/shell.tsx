@@ -1,6 +1,7 @@
 // biome-ignore-all lint/performance/noJsxPropsBind: React Compiler memoizes the consumer service notice action.
 "use client";
 
+import { ArrowDown } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -28,7 +29,7 @@ import { Artifact } from "./artifact";
 import { ChatHeader } from "./chat-header";
 import { ConversationNotice } from "./conversation-notice";
 import { DataStreamHandler } from "./data-stream-handler";
-import { Greeting } from "./greeting";
+import { Greeting, TaskExamples } from "./greeting";
 import { submitEditedMessage } from "./message-editor";
 import { Messages } from "./messages";
 import { MultimodalInput } from "./multimodal-input";
@@ -99,6 +100,25 @@ export function ChatShell() {
     [chatId]
   );
   const isEmpty = messages.length === 0 && !isLoading && !loadError;
+  const composerRef = useRef<HTMLDivElement>(null);
+  const homeScrollRef = useRef<HTMLDivElement>(null);
+  const recentArtifactsRef = useRef<HTMLDivElement>(null);
+  const handleSelectTaskExample = useCallback(
+    (prompt: string) => {
+      setInput(prompt);
+      composerRef.current
+        ?.querySelector<HTMLTextAreaElement>("textarea")
+        ?.focus({ preventScroll: true });
+    },
+    [setInput]
+  );
+  const handleScrollToArtifacts = useCallback(() => {
+    if (homeScrollRef.current && recentArtifactsRef.current) {
+      homeScrollRef.current.scrollTo({
+        top: recentArtifactsRef.current.offsetTop,
+      });
+    }
+  }, []);
   const isArtifactVisible = useArtifactSelector((state) => state.isVisible);
   const { setArtifact } = useArtifact();
 
@@ -148,7 +168,7 @@ export function ChatShell() {
       })
       .catch(() => {
         if (!cancelled) {
-          toast.error("这份成果暂时未能打开，请从文件列表重试。");
+          toast.error("这份产物暂时未能打开，请从产物列表重试。");
         }
       });
     return () => {
@@ -261,6 +281,7 @@ export function ChatShell() {
               isEmpty &&
                 "chat-home-canvas overflow-y-auto bg-[var(--workbench-canvas)]"
             )}
+            ref={homeScrollRef}
           >
             {!isEmpty && (
               <Messages
@@ -283,55 +304,82 @@ export function ChatShell() {
               />
             )}
             <div
-              className={cn(
-                "mx-auto flex w-full min-w-0 shrink-0 flex-col",
+              className={
                 isEmpty
-                  ? "max-w-[800px] px-4 pb-10 pt-10 sm:px-6 sm:pt-[clamp(3rem,9vh,6rem)]"
-                  : "max-w-[800px] px-4 pt-2 pb-4 sm:px-6"
-              )}
-              data-testid="composer-dock"
+                  ? "chat-home-start-screen flex min-w-0 shrink-0 flex-col"
+                  : "contents"
+              }
             >
-              {!!isEmpty && <Greeting />}
-              {!isEmpty && (
-                <TaskProgress
-                  isRunning={isTaskProgressRunning}
-                  key={chatId}
-                  plan={taskProgress}
-                />
-              )}
-              <ConversationNotice
-                attachments={attachments}
-                onRestore={handleRestore}
-              />
-              {!isReadonly && (
-                <MultimodalInput
+              <div
+                className={cn(
+                  "mx-auto flex w-full min-w-0 shrink-0 flex-col max-w-[800px] px-4 sm:px-6",
+                  isEmpty ? "my-auto" : "pt-2 pb-4"
+                )}
+                data-testid="composer-dock"
+                ref={composerRef}
+              >
+                {!!isEmpty && <Greeting />}
+                {!isEmpty && (
+                  <TaskProgress
+                    isRunning={isTaskProgressRunning}
+                    key={chatId}
+                    plan={taskProgress}
+                  />
+                )}
+                <ConversationNotice
                   attachments={attachments}
-                  chatId={chatId}
-                  editingMessage={editingMessage}
-                  home={isEmpty}
-                  input={input}
-                  isLoading={isLoading}
-                  messages={messages}
-                  onCancelEdit={handleCancelEdit}
-                  onModelChange={setCurrentModelId}
-                  selectedModelId={currentModelId}
-                  selectedVisibilityType={visibilityType}
-                  sendMessage={
-                    editingMessage ? handleSendEditedMessage : sendMessage
-                  }
-                  setAttachments={setAttachments}
-                  setInput={setInput}
-                  setMessages={setMessages}
-                  status={status}
-                  stop={stop}
+                  onRestore={handleRestore}
                 />
-              )}
+                {!isReadonly && (
+                  <MultimodalInput
+                    attachments={attachments}
+                    chatId={chatId}
+                    editingMessage={editingMessage}
+                    home={isEmpty}
+                    input={input}
+                    isLoading={isLoading}
+                    messages={messages}
+                    onCancelEdit={handleCancelEdit}
+                    onModelChange={setCurrentModelId}
+                    selectedModelId={currentModelId}
+                    selectedVisibilityType={visibilityType}
+                    sendMessage={
+                      editingMessage ? handleSendEditedMessage : sendMessage
+                    }
+                    setAttachments={setAttachments}
+                    setInput={setInput}
+                    setMessages={setMessages}
+                    status={status}
+                    stop={stop}
+                  />
+                )}
+                {isEmpty && !isReadonly && (
+                  <TaskExamples onSelect={handleSelectTaskExample} />
+                )}
+              </div>
               {!!isEmpty && (
-                <div className="mt-8">
-                  <WorkspaceHome />
+                <div className="flex shrink-0 justify-center px-4 pt-8">
+                  <button
+                    aria-label="向下查看最近产物"
+                    className="inline-flex items-center gap-2.5 rounded-lg border border-border bg-card px-3.5 py-2 text-xs text-muted-foreground transition-colors hover:border-ring/30 hover:text-foreground"
+                    onClick={handleScrollToArtifacts}
+                    type="button"
+                  >
+                    向下查看最近产物
+                    <ArrowDown aria-hidden="true" className="size-3.5" />
+                  </button>
                 </div>
               )}
             </div>
+            {!!isEmpty && (
+              <div
+                className="chat-home-recent-screen min-w-0 shrink-0 border-t border-border py-8 sm:pt-12 sm:pb-20"
+                data-testid="home-recent-artifacts"
+                ref={recentArtifactsRef}
+              >
+                <WorkspaceHome />
+              </div>
+            )}
           </div>
         </div>
         <Workspace>

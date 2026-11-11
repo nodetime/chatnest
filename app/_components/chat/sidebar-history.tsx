@@ -2,9 +2,10 @@
 
 import { isToday, isYesterday, subMonths, subWeeks } from "date-fns";
 import { motion } from "framer-motion";
+import { ChevronRight, Clock3 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import type { User } from "next-auth";
-import { type MouseEvent, useCallback, useState } from "react";
+import { type MouseEvent, type ReactNode, useCallback, useState } from "react";
 import { toast } from "sonner";
 import { useSWRConfig } from "swr";
 import useSWRInfinite from "swr/infinite";
@@ -19,9 +20,13 @@ import {
   AlertDialogTitle,
 } from "@/app/_components/ui/alert-dialog";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/app/_components/ui/collapsible";
+import {
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarMenu,
   useSidebar,
 } from "@/app/_components/ui/sidebar";
@@ -97,6 +102,24 @@ export function getChatHistoryPaginationKey(
   }
 
   return `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/history?ending_before=${firstChatFromPage.id}&limit=${PAGE_SIZE}`;
+}
+
+function HistoryGroup({ children }: { children: ReactNode }) {
+  return (
+    <Collapsible asChild defaultOpen>
+      <SidebarGroup className="group-data-[collapsible=icon]:hidden">
+        <CollapsibleTrigger className="group/history flex h-9 w-full items-center gap-2 rounded-lg px-2 text-left text-[13px] font-medium text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground">
+          <Clock3 aria-hidden="true" className="size-4 shrink-0" />
+          <span className="flex-1">最近对话</span>
+          <ChevronRight
+            aria-hidden="true"
+            className="size-3.5 shrink-0 group-data-[state=open]/history:rotate-90"
+          />
+        </CollapsibleTrigger>
+        <CollapsibleContent>{children}</CollapsibleContent>
+      </SidebarGroup>
+    </Collapsible>
+  );
 }
 
 export function SidebarHistory({
@@ -191,22 +214,19 @@ export function SidebarHistory({
 
   if (!user) {
     return (
-      <SidebarGroup className="group-data-[collapsible=icon]:hidden">
+      <HistoryGroup>
         <SidebarGroupContent>
           <div className="flex w-full flex-row items-center justify-center gap-2 px-2 text-[13px] text-sidebar-foreground/60">
             登录后保存并继续你的对话。
           </div>
         </SidebarGroupContent>
-      </SidebarGroup>
+      </HistoryGroup>
     );
   }
 
   if (isLoading) {
     return (
-      <SidebarGroup className="group-data-[collapsible=icon]:hidden">
-        <SidebarGroupLabel className="text-[10px] font-semibold uppercase tracking-[0.12em] text-sidebar-foreground/70">
-          最近对话
-        </SidebarGroupLabel>
+      <HistoryGroup>
         <SidebarGroupContent>
           <div className="flex flex-col gap-0.5 px-1">
             {[44, 32, 28, 64, 52].map((item) => (
@@ -226,31 +246,25 @@ export function SidebarHistory({
             ))}
           </div>
         </SidebarGroupContent>
-      </SidebarGroup>
+      </HistoryGroup>
     );
   }
 
   if (hasEmptyChatHistory) {
     return (
-      <SidebarGroup className="group-data-[collapsible=icon]:hidden">
-        <SidebarGroupLabel className="text-[10px] font-semibold uppercase tracking-[0.12em] text-sidebar-foreground/70">
-          最近对话
-        </SidebarGroupLabel>
+      <HistoryGroup>
         <SidebarGroupContent>
           <div className="flex w-full flex-row items-center justify-center gap-2 px-2 text-[13px] text-sidebar-foreground/60">
             开始聊天后，对话会保存在这里。
           </div>
         </SidebarGroupContent>
-      </SidebarGroup>
+      </HistoryGroup>
     );
   }
 
   return (
     <>
-      <SidebarGroup className="group-data-[collapsible=icon]:hidden">
-        <SidebarGroupLabel className="text-[10px] font-semibold uppercase tracking-[0.12em] text-sidebar-foreground/70">
-          最近对话
-        </SidebarGroupLabel>
+      <HistoryGroup>
         <SidebarGroupContent>
           <SidebarMenu>
             {paginatedChatHistories
@@ -374,7 +388,7 @@ export function SidebarHistory({
             </div>
           )}
         </SidebarGroupContent>
-      </SidebarGroup>
+      </HistoryGroup>
 
       <AlertDialog onOpenChange={setShowDeleteDialog} open={showDeleteDialog}>
         <AlertDialogContent>

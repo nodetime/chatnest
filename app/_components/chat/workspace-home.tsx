@@ -1,12 +1,6 @@
 // biome-ignore-all lint/performance/noJsxPropsBind: React Compiler memoizes per-entry workspace handlers.
 "use client";
-import {
-  ArrowUpRight,
-  Clock3,
-  FileText,
-  FolderOpen,
-  MessageSquare,
-} from "lucide-react";
+import { ArrowUpRight, ChevronRight, FileText } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import useSWR from "swr";
@@ -21,7 +15,6 @@ import { Button } from "../ui/button";
 import { artifactSwitchReason } from "./artifact-catalog";
 import { artifactTypeLabels } from "./artifact-type-label";
 import { FileSymbol } from "./file-symbol";
-import type { ChatHistory } from "./sidebar-history";
 
 export function useSavedArtifacts() {
   return useSWR<LibraryEntry[]>(
@@ -59,6 +52,30 @@ export function useOpenSavedArtifact() {
   };
 }
 
+export function WorkspaceHome() {
+  const { navigate } = useWorkbenchNavigation();
+  return (
+    <section
+      aria-label="最近产物"
+      className="mx-auto w-full max-w-[800px] min-w-0 space-y-3 px-4 sm:px-6"
+      data-testid="workspace-home-content"
+    >
+      <div className="flex items-center justify-between gap-4">
+        <h2 className="text-lg font-medium">最近产物</h2>
+        <button
+          className="inline-flex shrink-0 items-center gap-1 py-1.5 pl-2 text-xs text-muted-foreground transition-colors hover:text-ring"
+          onClick={() => navigate("files")}
+          type="button"
+        >
+          查看全部
+          <ChevronRight aria-hidden="true" className="size-3.5" />
+        </button>
+      </div>
+      <SavedArtifactCards compact limit={3} />
+    </section>
+  );
+}
+
 export function SavedArtifactCards({
   limit,
   compact = false,
@@ -71,10 +88,10 @@ export function SavedArtifactCards({
   if (isLoading) {
     return (
       <div
-        aria-label="正在加载成果"
+        aria-label="正在加载产物"
         className={
           compact
-            ? "h-60 animate-pulse rounded-xl bg-muted/50"
+            ? "h-24 animate-pulse rounded-lg bg-muted/50"
             : "h-32 animate-pulse rounded-2xl bg-muted/50"
         }
         role="status"
@@ -84,7 +101,7 @@ export function SavedArtifactCards({
   if (error) {
     return (
       <p className="text-sm text-muted-foreground" role="alert">
-        成果暂未加载。
+        产物暂未加载。
         <Button onClick={() => mutate()} size="sm" variant="ghost">
           重试
         </Button>
@@ -93,29 +110,37 @@ export function SavedArtifactCards({
   }
   if (!data?.length) {
     return (
-      <div className="flex min-h-60 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border px-5 py-6 text-center text-[13px] text-muted-foreground">
-        <span className="flex size-10 items-center justify-center rounded-xl bg-secondary">
-          <FileText aria-hidden="true" className="size-5" />
-        </span>
-        <p className="text-foreground">还没有保存的成果</p>
-        <p className="max-w-60 text-xs leading-6">
-          对话中生成并保存的内容，会出现在这里。
-        </p>
+      <div
+        className={
+          compact
+            ? "flex items-center gap-3 border-y border-border px-2 py-6 text-[13px] text-muted-foreground"
+            : "flex min-h-60 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border px-5 py-6 text-center text-[13px] text-muted-foreground"
+        }
+      >
+        <FileText aria-hidden="true" className="size-5 shrink-0" />
+        <p>还没有保存的产物</p>
+        {!compact && (
+          <p className="max-w-60 text-xs leading-6">
+            对话中生成并保存的内容，会出现在这里。
+          </p>
+        )}
       </div>
     );
   }
   return (
     <div
       className={
-        compact ? "divide-y divide-border/70" : "grid gap-3 sm:grid-cols-2"
+        compact
+          ? "divide-y divide-border/70 border-y border-border/70"
+          : "grid gap-3 sm:grid-cols-2"
       }
     >
       {data.slice(0, limit).map((entry) => (
         <button
-          aria-label={`打开成果：${entry.title}`}
+          aria-label={`打开产物：${entry.title}`}
           className={
             compact
-              ? "group/artifact flex min-h-20 w-full min-w-0 items-center gap-3 rounded-lg px-2 py-2.5 text-left transition-colors hover:bg-secondary/60"
+              ? "group/artifact flex min-h-20 w-full min-w-0 items-center gap-3 px-1 py-5 text-left transition-colors hover:bg-[var(--workbench-selection)]"
               : "group/artifact flex min-h-28 min-w-0 items-center gap-4 rounded-2xl border border-border/80 bg-card p-5 text-left shadow-[var(--shadow-card)] transition-[border-color,box-shadow] hover:border-ring/40 hover:shadow-[var(--shadow-float)]"
           }
           key={entry.id}
@@ -123,7 +148,13 @@ export function SavedArtifactCards({
           title={entry.title}
           type="button"
         >
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-secondary text-ring">
+          <span
+            className={
+              compact
+                ? "flex h-10 w-9 shrink-0 items-center justify-center text-ring"
+                : "flex size-9 shrink-0 items-center justify-center rounded-xl bg-secondary text-ring"
+            }
+          >
             <FileSymbol className="text-ring" kind={entry.kind} />
           </span>
           <span className="min-w-0 flex-1">
@@ -140,89 +171,6 @@ export function SavedArtifactCards({
           />
         </button>
       ))}
-    </div>
-  );
-}
-
-export function WorkspaceHome() {
-  const { data, error, isLoading, mutate } = useSWR<ChatHistory>(
-    `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/history?limit=6`,
-    fetcher,
-    { revalidateOnFocus: false }
-  );
-  const router = useRouter();
-  return (
-    <div
-      className="workspace-home-grid grid gap-4"
-      data-testid="workspace-home-content"
-    >
-      <section
-        aria-label="最近对话"
-        className="workspace-home-panel min-w-0 space-y-3 rounded-2xl border border-border bg-card/80 p-4"
-        data-testid="home-recent-grid"
-      >
-        <h2 className="flex items-center gap-2 px-2 text-[13px] font-medium text-muted-foreground">
-          <Clock3 aria-hidden="true" className="size-3.5" />
-          最近对话
-        </h2>
-        {error ? (
-          <Button onClick={() => mutate()} size="sm" variant="ghost">
-            重新加载最近对话
-          </Button>
-        ) : isLoading ? (
-          <div
-            aria-label="正在加载最近对话"
-            className="h-60 animate-pulse rounded-xl bg-muted/50"
-            role="status"
-          />
-        ) : data?.chats.length ? (
-          <div className="divide-y divide-border/70">
-            {data.chats.slice(0, 3).map((chat) => (
-              <button
-                className="flex min-h-20 w-full min-w-0 items-center gap-2 rounded-lg px-2 py-2.5 text-left transition-colors hover:bg-secondary/60"
-                key={chat.id}
-                onClick={() => router.push(`/chat/${chat.id}`)}
-                title={chat.title}
-                type="button"
-              >
-                <MessageSquare
-                  aria-hidden="true"
-                  className="size-4 shrink-0 text-muted-foreground/70"
-                />
-                <span className="min-w-0 flex-1 line-clamp-2 break-words text-[13px] font-medium leading-5">
-                  {chat.title}
-                </span>
-                <time className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
-                  {new Date(chat.createdAt).toLocaleDateString("zh-CN", {
-                    day: "numeric",
-                    month: "numeric",
-                  })}
-                </time>
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div className="flex min-h-60 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border px-5 py-6 text-center text-[13px] text-muted-foreground">
-            <span className="flex size-10 items-center justify-center rounded-xl bg-secondary">
-              <MessageSquare aria-hidden="true" className="size-5" />
-            </span>
-            <p className="text-foreground">从第一段对话开始</p>
-            <p className="max-w-60 text-xs leading-6">
-              描述你的目标，之后可以随时回来继续。
-            </p>
-          </div>
-        )}
-      </section>
-      <section
-        aria-label="最近成果"
-        className="workspace-home-panel min-w-0 space-y-3 rounded-2xl border border-border bg-card/80 p-4"
-      >
-        <h2 className="flex items-center gap-2 px-2 text-[13px] font-medium text-muted-foreground">
-          <FolderOpen aria-hidden="true" className="size-3.5" />
-          最近成果
-        </h2>
-        <SavedArtifactCards compact limit={3} />
-      </section>
     </div>
   );
 }

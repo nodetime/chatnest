@@ -7,6 +7,7 @@ import {
   personalMcpEndpoint,
   usePersonalCapabilities,
 } from "@/app/_hooks/use-personal-capabilities";
+import { notifyCapabilityUnavailable } from "@/app/_lib/capability-availability";
 import type { ServerProjection } from "@/server/domain/mcp/types";
 import {
   AlertDialog,
@@ -105,8 +106,9 @@ function PersonalConnectionsContent() {
           </p>
         </div>
         <Button
-          disabled={!regular || !mcp.data?.configured || busy}
-          onClick={() => setEditing("new")}
+          aria-disabled="true"
+          className="cursor-not-allowed opacity-50"
+          onClick={notifyCapabilityUnavailable}
           size="sm"
         >
           <Plus className="size-3.5" />
@@ -128,7 +130,7 @@ function PersonalConnectionsContent() {
       )}
       {regular && mcp.data && !mcp.data.configured && (
         <p className="rounded-xl border p-4 text-sm text-muted-foreground">
-          个人连接暂未开放，请联系管理员开启。平台工具仍可按授权使用。
+          添加个人连接暂未开放，平台工具仍可按授权使用。
         </p>
       )}
       <div className="divide-y divide-border/70 border-y border-border/70">
@@ -181,8 +183,9 @@ function PersonalConnectionsContent() {
       </div>
       {regular && mcp.data?.configured && !mcp.data.servers.length && (
         <button
-          className="flex w-full items-center gap-3 rounded-xl border border-border/80 bg-card p-5 text-left transition-colors hover:bg-muted/50"
-          onClick={() => setEditing("new")}
+          aria-disabled="true"
+          className="flex w-full cursor-not-allowed items-center gap-3 rounded-xl border border-border/80 bg-card p-5 text-left opacity-50"
+          onClick={notifyCapabilityUnavailable}
           type="button"
         >
           <Link2 className="size-5 text-muted-foreground" />

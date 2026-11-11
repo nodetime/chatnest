@@ -1,0 +1,480 @@
+<title>数知探对话原型</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* 保留工作台侧栏，首屏集中开始任务，第二屏承接最近产物。 */
+:root {
+  color-scheme: light;
+  --bg: #fafafb;
+  --surface: #ffffff;
+  --sidebar: #f6f6f9;
+  --fg: #25242a;
+  --muted: #6d6975;
+  --accent: #6561ba;
+  --line: color-mix(in srgb, var(--fg) 10%, transparent);
+  --selection: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  --font-display: "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-body: "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-utility: "SFMono-Regular", Consolas, monospace;
+  --sidebar-width: 208px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #202224;
+    --surface: #292b2f;
+    --sidebar: #1d1f22;
+    --fg: #ebebef;
+    --muted: #aaa6b3;
+    --accent: #b6b0ed;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #202224;
+  --surface: #292b2f;
+  --sidebar: #1d1f22;
+  --fg: #ebebef;
+  --muted: #aaa6b3;
+  --accent: #b6b0ed;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 14px; -webkit-font-smoothing: antialiased; overflow: hidden; }
+button, input, textarea { font: inherit; }
+button { cursor: pointer; color: inherit; }
+button, input, textarea { -webkit-tap-highlight-color: transparent; }
+button { border: 0; background: transparent; }
+button:disabled { cursor: default; }
+button:focus-visible, input:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+[hidden] { display: none !important; }
+.icon { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+.app { height: 100dvh; display: grid; grid-template-columns: var(--sidebar-width) minmax(0, 1fr); }
+.sidebar { min-height: 0; padding: 12px; display: flex; flex-direction: column; gap: 18px; background: var(--sidebar); border-right: 1px solid var(--line); }
+.sidebar-top { display: flex; align-items: center; justify-content: space-between; min-height: 28px; padding-inline: 4px; }
+.brand { display: flex; align-items: center; gap: 9px; white-space: nowrap; font-size: 14px; font-weight: 650; }
+.brand svg { width: 27px; height: 27px; flex-shrink: 0; }
+.icon-button { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; color: var(--muted); }
+.icon-button:hover { color: var(--fg); background: var(--selection); }
+.sidebar-actions { display: flex; flex-direction: column; gap: 4px; }
+.nav-button { min-width: 0; width: 100%; height: 38px; padding-inline: 12px; border-radius: 8px; display: flex; align-items: center; gap: 10px; text-align: left; font-size: 13px; white-space: nowrap; }
+.nav-button:hover { background: var(--selection); }
+.nav-button.active { background: var(--selection); }
+.nav-button.new-chat { justify-content: center; margin-bottom: 8px; color: var(--surface); background: var(--fg); }
+.nav-button.new-chat:hover { opacity: .9; }
+.sidebar-history { min-height: 0; flex: 1; overflow-y: auto; }
+.search { position: relative; display: flex; align-items: center; gap: 10px; padding: 8px 10px; color: var(--muted); }
+.search input { min-width: 0; width: 100%; padding: 2px 0; border: 0; outline: 0; background: transparent; color: var(--fg); font-size: 12px; }
+.search input::placeholder { color: var(--muted); }
+.search kbd { font-family: var(--font-utility); font-size: 10px; opacity: .7; white-space: nowrap; }
+.history-details { padding-top: 14px; }
+.history-details summary { display: flex; align-items: center; gap: 9px; list-style: none; min-height: 36px; padding-inline: 10px; border-radius: 8px; cursor: pointer; font-size: 12px; color: var(--muted); }
+.history-details summary::-webkit-details-marker { display: none; }
+.history-details summary:hover { background: var(--selection); color: var(--fg); }
+.history-details summary .chevron { margin-left: auto; width: 14px; height: 14px; }
+.history-details[open] .chevron { transform: rotate(90deg); }
+.history-list { display: flex; flex-direction: column; gap: 2px; padding-top: 8px; }
+.history-item { padding: 10px 11px; border-radius: 7px; text-align: left; font-size: 12px; line-height: 1.5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-item:hover { background: var(--selection); }
+.account { display: flex; align-items: center; gap: 10px; min-height: 40px; padding-inline: 10px; color: var(--muted); font-size: 12px; }
+.app.collapsed { --sidebar-width: 64px; }
+.collapsed .sidebar-top { padding: 0; justify-content: center; }
+.collapsed .brand, .collapsed .nav-label, .collapsed .sidebar-history, .collapsed .account span { display: none; }
+.collapsed .sidebar-actions { align-items: center; }
+.collapsed .nav-button, .collapsed .sidebar-top .icon-button, .collapsed .account { padding: 0; width: 40px; height: 40px; justify-content: center; }
+.collapsed .nav-button, .collapsed .nav-button.active, .collapsed .nav-button.new-chat { background: transparent; color: var(--fg); opacity: 1; }
+.collapsed .nav-button:hover { background: var(--selection); }
+.collapsed .account { margin-top: auto; }
+.main { min-width: 0; min-height: 0; overflow-y: auto; scroll-behavior: smooth; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+.topbar { height: 48px; padding-inline: 28px; display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.prototype-label { color: var(--muted); font-size: 11px; letter-spacing: .03em; }
+.mobile-toggle, .mobile-brand { display: none; }
+.start-screen { min-height: calc(100dvh - 48px); padding-block: 56px 110px; padding-left: max(32px, env(safe-area-inset-left, 0px)); padding-right: max(32px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; align-items: center; position: relative; }
+.start-content { width: min(800px, 100%); margin-block: auto; }
+h1 { margin: 0 0 28px; text-align: center; font-family: var(--font-display); font-size: clamp(26px, 2.6vw, 34px); line-height: 1.4; font-weight: 550; letter-spacing: -.035em; text-wrap: balance; }
+h1 .agent-word { font-weight: 400; }
+.composer { width: 100%; padding: 0; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); box-shadow: 0 3px 12px color-mix(in srgb, var(--fg) 3%, transparent); }
+.composer:focus-within { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
+.composer textarea { display: block; width: 100%; min-height: 110px; max-height: 220px; resize: vertical; padding: 20px 22px 12px; border: 0; border-radius: 14px; outline: none; background: transparent; color: var(--fg); line-height: 1.7; font-size: 15px; }
+.composer textarea::placeholder { color: color-mix(in srgb, var(--muted) 75%, var(--surface)); }
+.composer textarea:focus-visible { outline: none; }
+.composer-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px 12px; }
+.composer-tools, .composer-send { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.tool-button { display: inline-flex; align-items: center; gap: 6px; padding: 7px 8px; color: var(--muted); font-size: 12px; border-radius: 7px; white-space: nowrap; }
+.tool-button:hover { background: var(--selection); color: var(--fg); }
+.tool-button .icon { width: 16px; height: 16px; }
+.model-name { color: var(--muted); font-size: 11px; white-space: nowrap; }
+.send-button { min-height: 34px; display: flex; align-items: center; justify-content: center; gap: 8px; padding-inline: 16px; border-radius: 8px; background: var(--fg); color: var(--surface); font-size: 12px; }
+.send-button:disabled { color: var(--muted); background: color-mix(in srgb, var(--fg) 5%, var(--surface)); opacity: .65; }
+.send-button .icon { width: 14px; height: 14px; }
+.attachments { padding: 0 20px; display: flex; gap: 6px; flex-wrap: wrap; }
+.file-chip { display: flex; align-items: center; gap: 6px; max-width: 100%; padding: 5px 7px; margin-bottom: 7px; border: 1px solid var(--line); border-radius: 6px; font-size: 11px; }
+.file-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-chip button { padding: 0 3px; color: var(--muted); }
+.examples { display: flex; flex-direction: column; gap: 1px; padding-top: 22px; }
+.example { width: 100%; display: grid; grid-template-columns: 55px minmax(0, 1fr) 16px; gap: 14px; align-items: start; padding: 11px 8px; border-radius: 8px; text-align: left; line-height: 1.6; font-size: 13px; }
+.example:hover { background: var(--selection); }
+.example-label { color: var(--muted); font-size: 12px; }
+.example .icon { width: 14px; height: 14px; margin-top: 3px; color: var(--muted); opacity: 0; }
+.example:hover .icon, .example:focus-visible .icon { opacity: 1; }
+.scroll-cue { position: absolute; bottom: 25px; display: flex; align-items: center; gap: 10px; padding: 9px 14px; border: 1px solid var(--line); border-radius: 8px; font-size: 12px; color: var(--muted); background: var(--surface); }
+.scroll-cue:hover { border-color: color-mix(in srgb, var(--accent) 30%, var(--line)); color: var(--fg); }
+.scroll-cue .icon { width: 15px; height: 15px; }
+.recent-section { min-height: 460px; border-top: 1px solid var(--line); padding-block: 48px 80px; padding-left: max(32px, env(safe-area-inset-left, 0px)); padding-right: max(32px, env(safe-area-inset-right, 0px)); scroll-margin-top: 24px; }
+.recent-inner { width: min(800px, 100%); margin-inline: auto; }
+.section-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-bottom: 8px; }
+.section-heading h2 { margin: 0; font-size: 18px; font-weight: 550; }
+.text-button { display: inline-flex; align-items: center; gap: 5px; padding: 6px 0 6px 8px; color: var(--muted); font-size: 12px; white-space: nowrap; }
+.text-button:hover { color: var(--accent); }
+.text-button .icon { width: 14px; height: 14px; }
+.data-note { margin: 0 0 20px; font-size: 11px; color: var(--muted); }
+.artifact-list { border-top: 1px solid var(--line); }
+.artifact-row { width: 100%; padding: 20px 4px; display: flex; align-items: center; gap: 14px; border-bottom: 1px solid var(--line); text-align: left; }
+.artifact-row:hover { background: var(--selection); }
+.artifact-symbol { display: flex; align-items: center; justify-content: center; width: 38px; height: 40px; color: var(--accent); flex-shrink: 0; }
+.artifact-symbol .icon { width: 23px; height: 23px; stroke-width: 1.4; }
+.artifact-info { min-width: 0; flex: 1; }
+.artifact-title { display: block; font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+.artifact-meta { display: block; padding-top: 5px; font-size: 11px; color: var(--muted); }
+.artifact-row > .icon { width: 16px; height: 16px; color: var(--muted); }
+.tools-panel { position: absolute; z-index: 5; width: 230px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); box-shadow: 0 3px 8px color-mix(in srgb, var(--fg) 8%, transparent); font-size: 12px; }
+.tools-panel strong { display: block; margin-bottom: 12px; font-weight: 550; }
+.tools-panel p { margin: 8px 0; color: var(--muted); }
+.tools-wrap { position: relative; }
+.conversation { min-height: calc(100dvh - 48px); display: flex; flex-direction: column; }
+.conversation-heading { padding: 18px 24px; border-bottom: 1px solid var(--line); font-size: 13px; }
+.messages { width: min(800px, calc(100% - 48px)); margin-inline: auto; flex: 1; padding-block: 40px; display: flex; flex-direction: column; align-items: stretch; gap: 24px; }
+.user-message { align-self: flex-end; max-width: 85%; padding: 12px 16px; border-radius: 10px; background: var(--selection); line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; }
+.assistant-message { line-height: 1.9; color: var(--muted); }
+.assistant-message small { display: block; padding-bottom: 5px; color: var(--accent); font-size: 11px; }
+.conversation-footer { width: min(800px, calc(100% - 48px)); margin-inline: auto; padding-block: 12px 28px; }
+.conversation-footer textarea { min-height: 80px; }
+dialog { width: min(760px, calc(100% - 32px)); max-height: 85dvh; padding: 0; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--fg); box-shadow: 0 4px 16px color-mix(in srgb, var(--fg) 12%, transparent); }
+dialog::backdrop { background: color-mix(in srgb, var(--fg) 30%, transparent); }
+.dialog-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px; border-bottom: 1px solid var(--line); }
+.dialog-header h2 { margin: 0; font-size: 15px; font-weight: 550; line-height: 1.6; }
+.dialog-body { padding: 28px; line-height: 1.9; }
+.dialog-body p { color: var(--muted); }
+.dialog-body .data-note { color: var(--accent); }
+.dialog-body h3 { font-size: 15px; font-weight: 550; margin-top: 24px; }
+.preview-table-wrap { overflow-x: auto; }
+.preview-table { width: 100%; border-collapse: collapse; font-size: 12px; text-align: left; }
+.preview-table th, .preview-table td { border-bottom: 1px solid var(--line); padding: 12px 10px; min-width: 100px; }
+.preview-table th { color: var(--muted); font-weight: 500; }
+.toast { position: fixed; z-index: 50; bottom: max(24px, env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%); padding: 12px 18px; max-width: calc(100% - 32px); border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--fg); box-shadow: 0 2px 8px color-mix(in srgb, var(--fg) 8%, transparent); font-size: 12px; line-height: 1.6; }
+.scrim { display: none; }
+@media (min-width: 1800px) { .start-screen { padding-top: 90px; padding-bottom: 150px; } }
+@media (max-width: 767px) {
+  .app, .app.collapsed { grid-template-columns: minmax(0, 1fr); }
+  .sidebar { display: none; }
+  .app.mobile-open .sidebar { display: flex; position: fixed; z-index: 30; inset: auto 0 0; width: 100%; height: min(680px, 82dvh); border-top: 1px solid var(--line); border-right: 0; border-radius: 12px 12px 0 0; padding: 20px max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+  .app.mobile-open .scrim { display: block; position: fixed; inset: 0; z-index: 25; background: color-mix(in srgb, var(--fg) 28%, transparent); }
+  .mobile-toggle, .mobile-brand { display: inline-flex; }
+  .topbar { height: 52px; padding-inline: 16px; justify-content: flex-start; }
+  .mobile-brand { font-size: 12px; font-weight: 550; }
+  .prototype-label { margin-left: auto; }
+  .start-screen { min-height: calc(100dvh - 52px); padding-block: 44px 106px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  h1 { font-size: 25px; line-height: 1.6; margin-bottom: 24px; letter-spacing: -.04em; }
+  .composer textarea { padding: 16px; min-height: 130px; font-size: 14px; }
+  .composer-toolbar { gap: 6px; padding: 8px 8px 10px; }
+  .composer-tools, .composer-send { gap: 3px; }
+  .tool-button { padding: 6px; font-size: 11px; }
+  .model-name { display: none; }
+  .send-button { min-height: 34px; padding-inline: 12px; }
+  .example { grid-template-columns: 45px minmax(0, 1fr); padding: 10px 2px; gap: 10px; font-size: 12px; }
+  .example .icon { display: none; }
+  .example-label { font-size: 11px; }
+  .recent-section { min-height: 450px; padding-block: 32px 60px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .artifact-row { gap: 8px; }
+  .artifact-title { font-size: 13px; }
+  .dialog-body { padding: 20px; }
+  .conversation { min-height: calc(100dvh - 52px); }
+  .messages, .conversation-footer { width: calc(100% - 32px); }
+}
+@media (prefers-reduced-motion: reduce) { .main { scroll-behavior: auto; } }
+</style>
+
+<svg width="0" height="0" aria-hidden="true" style="position:absolute;overflow:hidden">
+  <symbol id="i-panel" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M9 3v18"></path></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h4l3 3h7a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-2 2M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l2-2"></path></symbol>
+  <symbol id="i-skill" viewBox="0 0 24 24"><path d="m12 3 2.6 6.4L21 12l-6.4 2.6L12 21l-2.6-6.4L3 12l6.4-2.6zM20 2v4M18 4h4"></path></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="7.5"></circle><path d="m16 16 5 5"></path></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l4 2"></path></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"></path></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 4v16m-6-6 6 6 6-6"></path></symbol>
+  <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 20V4m-6 6 6-6 6 6"></path></symbol>
+  <symbol id="i-diagonal" viewBox="0 0 24 24"><path d="M7 17 17 7M7 7h10v10"></path></symbol>
+  <symbol id="i-clip" viewBox="0 0 24 24"><path d="m8 12 7-7a4 4 0 0 1 6 6L10 22a6 6 0 0 1-8-8L13 3a2 2 0 0 1 3 3L5 17"></path></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 6h4m4 0h8M4 18h8m4 0h4M8 3v6m8 6v6"></path></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="9" r="3"></circle><path d="M5.8 18a7 7 0 0 1 12.4 0"></path></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h6"></path></symbol>
+  <symbol id="i-table" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M3 9h18M3 15h18M9 9v12M15 9v12"></path></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"></path></symbol>
+</svg>
+
+<div class="app" id="app">
+  <button class="scrim" id="sidebar-scrim" aria-label="关闭侧栏" type="button"></button>
+  <aside class="sidebar" aria-label="工作台导航">
+    <div class="sidebar-top">
+      <div class="brand">
+        <svg viewBox="0 0 256 256" fill="none" aria-hidden="true"><g transform="translate(-48 -16) scale(2)"><path d="M133 72C133 96.8528 112.853 117 88 117C63.1472 117 43 96.8528 43 72C43 47.1472 63.1472 27 88 27C112.853 27 133 47.1472 133 72Z" stroke-width="8" stroke="#DDE7FF"></path><path d="M88 27C97.1139 27.012 106.009 29.7912 113.509 34.9696C121.009 40.148 126.76 47.4817 130 56" stroke-width="8" stroke-linecap="round" stroke="url(#brand-scan)"></path><path d="M88 72L120 43" stroke-width="7" stroke-linecap="round" stroke="#1F52DB"></path><circle cx="88" cy="72" r="12" fill="#1F52DB"></circle><circle cx="125" cy="32" r="10" fill="#16C3D8"></circle><path d="M125 24V40M117 32H133" stroke-width="3" stroke-linecap="round" stroke="white"></path></g><defs><linearGradient id="brand-scan" x1="88" y1="56" x2="115.119" y2="16.7248" gradientUnits="userSpaceOnUse"><stop stop-color="#1F52DB"></stop><stop offset="1" stop-color="#16C3D8"></stop></linearGradient></defs></svg>
+        <span>数知探AI</span>
+      </div>
+      <button class="icon-button" id="sidebar-toggle" type="button" aria-label="收起侧栏" aria-expanded="true"><svg class="icon" aria-hidden="true"><use href="#i-panel"></use></svg></button>
+    </div>
+    <nav class="sidebar-actions" aria-label="主要导航">
+      <button class="nav-button new-chat" id="new-chat" type="button" aria-label="新建对话" title="新建对话"><svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg><span class="nav-label">新建对话</span></button>
+      <button class="nav-button active" id="nav-chat" type="button" aria-label="对话" title="对话"><svg class="icon" aria-hidden="true"><use href="#i-chat"></use></svg><span class="nav-label">对话</span></button>
+      <button class="nav-button" id="nav-artifacts" type="button" aria-label="产物" title="产物"><svg class="icon" aria-hidden="true"><use href="#i-folder"></use></svg><span class="nav-label">产物</span></button>
+      <button class="nav-button" data-unavailable="连接" type="button" aria-label="连接" title="连接"><svg class="icon" aria-hidden="true"><use href="#i-link"></use></svg><span class="nav-label">连接</span></button>
+      <button class="nav-button" data-unavailable="技能" type="button" aria-label="技能" title="技能"><svg class="icon" aria-hidden="true"><use href="#i-skill"></use></svg><span class="nav-label">技能</span></button>
+    </nav>
+    <div class="sidebar-history">
+      <label class="search" for="history-search"><svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg><input id="history-search" placeholder="搜索对话" autocomplete="off"><kbd>Ctrl K</kbd></label>
+      <details class="history-details" open>
+        <summary><svg class="icon" aria-hidden="true"><use href="#i-clock"></use></svg><span>最近对话</span><svg class="icon chevron" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
+        <div class="history-list" id="history-list">
+          <button class="history-item" type="button">产品外观相似性比较</button>
+          <button class="history-item" type="button">商标图样材料整理</button>
+          <button class="history-item" type="button">检索线索与来源汇总</button>
+        </div>
+      </details>
+    </div>
+    <div class="account"><svg class="icon" aria-hidden="true"><use href="#i-user"></use></svg><span>原型预览</span></div>
+  </aside>
+
+  <main class="main" id="main">
+    <header class="topbar"><button class="icon-button mobile-toggle" id="mobile-toggle" type="button" aria-label="打开侧栏"><svg class="icon" aria-hidden="true"><use href="#i-panel"></use></svg></button><span class="mobile-brand">数知探AI</span><span class="prototype-label">交互原型</span></header>
+    <section class="start-screen" id="start-screen" aria-label="开始任务">
+      <div class="start-content">
+        <h1>AI 侵权线索引擎 <span class="agent-word">Agent</span></h1>
+        <div id="home-composer-slot">
+          <form class="composer" id="composer">
+            <label hidden for="task-input">任务描述</label>
+            <textarea id="task-input" aria-label="任务描述" placeholder="描述任务，或添加图片、文件…" maxlength="6000"></textarea>
+            <div class="attachments" id="attachments" hidden></div>
+            <div class="composer-toolbar">
+              <div class="composer-tools">
+                <button class="tool-button" id="attach-button" type="button"><svg class="icon" aria-hidden="true"><use href="#i-clip"></use></svg><span>添加材料</span></button>
+                <input id="file-input" type="file" multiple hidden>
+                <div class="tools-wrap"><button class="tool-button" id="tools-button" type="button" aria-expanded="false" aria-controls="tools-panel"><svg class="icon" aria-hidden="true"><use href="#i-sliders"></use></svg><span>本次使用</span></button><div class="tools-panel" id="tools-panel" hidden><strong>本次任务能力</strong><p>相似检索与比较</p><p>当前对话提供的材料</p><p>原型仅展示界面，不执行任务。</p></div></div>
+              </div>
+              <div class="composer-send"><span class="model-name">DeepSeek Flash</span><button class="send-button" id="send-button" type="submit" disabled><span id="send-label">开始</span><svg class="icon" aria-hidden="true"><use href="#i-up"></use></svg></button></div>
+            </div>
+          </form>
+        </div>
+        <div class="examples" aria-label="任务示例">
+          <button class="example" type="button" data-prompt="根据这张产品图片查找相似商品，整理来源链接，并标出需要进一步核对的线索。"><span class="example-label">找线索</span><span>根据产品图片，查找相似商品与来源</span><svg class="icon" aria-hidden="true"><use href="#i-diagonal"></use></svg></button>
+          <button class="example" type="button" data-prompt="比较这两份材料，逐项整理相同点、关键差异和需要补充的依据。"><span class="example-label">做比较</span><span>比较两份材料的相同点与关键差异</span><svg class="icon" aria-hidden="true"><use href="#i-diagonal"></use></svg></button>
+          <button class="example" type="button" data-prompt="将这些材料整理成线索清单与对比表，保留来源和待核对项。"><span class="example-label">整理产物</span><span>将材料整理成线索清单与对比表</span><svg class="icon" aria-hidden="true"><use href="#i-diagonal"></use></svg></button>
+        </div>
+      </div>
+      <button class="scroll-cue" id="scroll-cue" type="button"><span>向下查看最近产物</span><svg class="icon" aria-hidden="true"><use href="#i-down"></use></svg></button>
+    </section>
+
+    <section class="recent-section" id="recent-artifacts" aria-labelledby="recent-title">
+      <div class="recent-inner">
+        <div class="section-heading"><h2 id="recent-title">最近产物</h2><button class="text-button" id="show-all" type="button" aria-expanded="false" aria-controls="extra-artifacts"><span>查看全部</span><svg class="icon" aria-hidden="true"><use href="#i-chevron"></use></svg></button></div>
+        <p class="data-note">以下为原型演示内容</p>
+        <div class="artifact-list">
+          <button class="artifact-row" type="button" data-artifact="产品外观相似性对比表"><span class="artifact-symbol"><svg class="icon" aria-hidden="true"><use href="#i-table"></use></svg></span><span class="artifact-info"><span class="artifact-title">产品外观相似性对比表</span><span class="artifact-meta">表格 · 特征比较、差异与待核对项</span></span><svg class="icon" aria-hidden="true"><use href="#i-diagonal"></use></svg></button>
+          <button class="artifact-row" type="button" data-artifact="产品图片检索线索清单"><span class="artifact-symbol"><svg class="icon" aria-hidden="true"><use href="#i-table"></use></svg></span><span class="artifact-info"><span class="artifact-title">产品图片检索线索清单</span><span class="artifact-meta">表格 · 来源链接与线索整理</span></span><svg class="icon" aria-hidden="true"><use href="#i-diagonal"></use></svg></button>
+          <button class="artifact-row" type="button" data-artifact="商标图样材料整理"><span class="artifact-symbol"><svg class="icon" aria-hidden="true"><use href="#i-file"></use></svg></span><span class="artifact-info"><span class="artifact-title">商标图样材料整理</span><span class="artifact-meta">文档 · 材料摘要与后续核对事项</span></span><svg class="icon" aria-hidden="true"><use href="#i-diagonal"></use></svg></button>
+          <div id="extra-artifacts" hidden>
+            <button class="artifact-row" type="button" data-artifact="商品页面信息汇总"><span class="artifact-symbol"><svg class="icon" aria-hidden="true"><use href="#i-table"></use></svg></span><span class="artifact-info"><span class="artifact-title">商品页面信息汇总</span><span class="artifact-meta">表格 · 原型演示内容</span></span><svg class="icon" aria-hidden="true"><use href="#i-diagonal"></use></svg></button>
+            <button class="artifact-row" type="button" data-artifact="材料差异核对记录"><span class="artifact-symbol"><svg class="icon" aria-hidden="true"><use href="#i-file"></use></svg></span><span class="artifact-info"><span class="artifact-title">材料差异核对记录</span><span class="artifact-meta">文档 · 原型演示内容</span></span><svg class="icon" aria-hidden="true"><use href="#i-diagonal"></use></svg></button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="conversation" id="conversation" aria-label="对话布局预览" hidden>
+      <div class="conversation-heading">对话布局预览</div>
+      <div class="messages" id="messages" aria-live="polite"></div>
+      <div class="conversation-footer" id="conversation-composer-slot"></div>
+    </section>
+  </main>
+</div>
+
+<dialog id="artifact-dialog" aria-labelledby="artifact-dialog-title">
+  <div class="dialog-header"><h2 id="artifact-dialog-title">产物预览</h2><button class="icon-button" id="close-artifact" type="button" aria-label="关闭产物预览"><svg class="icon" aria-hidden="true"><use href="#i-close"></use></svg></button></div>
+  <div class="dialog-body"><p class="data-note">原型演示内容</p><h3>材料对比记录</h3><p>按特征整理比较依据，保留差异与待核对项。</p><div class="preview-table-wrap"><table class="preview-table"><thead><tr><th>比较项</th><th>材料 A</th><th>材料 B</th></tr></thead><tbody><tr><td>整体轮廓</td><td>弧面外壳</td><td>弧面外壳</td></tr><tr><td>局部特征</td><td>侧面开口</td><td>顶部开口</td></tr><tr><td>后续核对</td><td>补充完整视图</td><td>核对原始来源</td></tr></tbody></table></div></div>
+</dialog>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(() => {
+  'use strict';
+  const byId = (id) => document.getElementById(id);
+  const app = byId('app');
+  const main = byId('main');
+  const input = byId('task-input');
+  const composer = byId('composer');
+  const start = byId('start-screen');
+  const recent = byId('recent-artifacts');
+  const conversation = byId('conversation');
+  const send = byId('send-button');
+  const attachments = byId('attachments');
+  const filesInput = byId('file-input');
+  const mobile = window.matchMedia('(max-width: 767px)');
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  let selectedFiles = [];
+  let toastTimer;
+
+  const notify = (text) => {
+    const toast = byId('toast');
+    clearTimeout(toastTimer);
+    toast.textContent = text;
+    toast.hidden = false;
+    toastTimer = setTimeout(() => { toast.hidden = true; }, 3200);
+  };
+  const closeMobile = () => app.classList.remove('mobile-open');
+  const syncSend = () => { send.disabled = !input.value.trim() && selectedFiles.length === 0; };
+  const syncFiles = () => {
+    attachments.replaceChildren();
+    selectedFiles.forEach((file, index) => {
+      const chip = document.createElement('div');
+      chip.className = 'file-chip';
+      const name = document.createElement('span');
+      name.textContent = file.name;
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.textContent = '移除';
+      remove.setAttribute('aria-label', `移除材料：${file.name}`);
+      remove.addEventListener('click', () => { selectedFiles.splice(index, 1); syncFiles(); });
+      chip.append(name, remove);
+      attachments.append(chip);
+    });
+    attachments.hidden = selectedFiles.length === 0;
+    syncSend();
+  };
+  const returnHome = (clearDraft = false) => {
+    conversation.hidden = true;
+    start.hidden = false;
+    recent.hidden = false;
+    byId('home-composer-slot').append(composer);
+    byId('send-label').textContent = '开始';
+    input.placeholder = '描述任务，或添加图片、文件…';
+    if (clearDraft) { input.value = ''; selectedFiles = []; filesInput.value = ''; syncFiles(); }
+    closeMobile();
+    main.scrollTop = 0;
+    syncSend();
+  };
+  const scrollToArtifacts = () => {
+    if (!conversation.hidden) returnHome();
+    closeMobile();
+    requestAnimationFrame(() => recent.scrollIntoView({ behavior: reducedMotion.matches ? 'instant' : 'smooth', block: 'start' }));
+  };
+  byId('sidebar-toggle').addEventListener('click', () => {
+    if (mobile.matches) { closeMobile(); return; }
+    const collapsed = app.classList.toggle('collapsed');
+    byId('sidebar-toggle').setAttribute('aria-expanded', String(!collapsed));
+    byId('sidebar-toggle').setAttribute('aria-label', collapsed ? '展开侧栏' : '收起侧栏');
+  });
+  byId('mobile-toggle').addEventListener('click', () => { app.classList.remove('collapsed'); app.classList.add('mobile-open'); });
+  byId('sidebar-scrim').addEventListener('click', closeMobile);
+  mobile.addEventListener('change', () => { closeMobile(); if (mobile.matches) app.classList.remove('collapsed'); });
+  byId('new-chat').addEventListener('click', () => returnHome(true));
+  byId('nav-chat').addEventListener('click', () => returnHome());
+  byId('nav-artifacts').addEventListener('click', scrollToArtifacts);
+  byId('scroll-cue').addEventListener('click', scrollToArtifacts);
+  document.querySelectorAll('[data-unavailable]').forEach((button) => {
+    button.addEventListener('click', () => notify('本原型先展示对话首页，其他页面沿用现有设计。'));
+  });
+  document.querySelectorAll('[data-prompt]').forEach((button) => {
+    button.addEventListener('click', () => {
+      input.value = button.dataset.prompt;
+      syncSend();
+      input.focus({ preventScroll: true });
+    });
+  });
+  document.querySelectorAll('.history-item').forEach((button) => {
+    button.addEventListener('click', () => {
+      returnHome();
+      input.value = `继续处理：${button.textContent}`;
+      syncSend();
+      input.focus({ preventScroll: true });
+    });
+  });
+  byId('history-search').addEventListener('input', (event) => {
+    const query = event.target.value.trim().toLowerCase();
+    document.querySelectorAll('.history-item').forEach((button) => { button.hidden = !button.textContent.toLowerCase().includes(query); });
+  });
+  input.addEventListener('input', syncSend);
+  input.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
+      event.preventDefault();
+      if (!send.disabled) composer.requestSubmit();
+    }
+  });
+  byId('attach-button').addEventListener('click', () => filesInput.click());
+  filesInput.addEventListener('change', () => {
+    selectedFiles = [...selectedFiles, ...Array.from(filesInput.files)].slice(0, 8);
+    filesInput.value = '';
+    syncFiles();
+  });
+  byId('tools-button').addEventListener('click', () => {
+    const panel = byId('tools-panel');
+    panel.hidden = !panel.hidden;
+    byId('tools-button').setAttribute('aria-expanded', String(!panel.hidden));
+  });
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('.tools-wrap')) {
+      byId('tools-panel').hidden = true;
+      byId('tools-button').setAttribute('aria-expanded', 'false');
+    }
+  });
+  composer.addEventListener('submit', (event) => {
+    event.preventDefault();
+    if (send.disabled) return;
+    const text = input.value.trim() || '查看我提供的材料。';
+    const messages = byId('messages');
+    if (conversation.hidden) messages.replaceChildren();
+    const user = document.createElement('div');
+    user.className = 'user-message';
+    user.textContent = text + (selectedFiles.length ? `\n材料：${selectedFiles.map((file) => file.name).join('、')}` : '');
+    const assistant = document.createElement('div');
+    assistant.className = 'assistant-message';
+    const label = document.createElement('small');
+    label.textContent = '原型演示';
+    const reply = document.createElement('div');
+    reply.textContent = '开始对话后，标题、任务示例和最近产物区域收起。这里展示消息与回复，输入框移到下方。当前仅预览布局，不执行任务。';
+    assistant.append(label, reply);
+    messages.append(user, assistant);
+    start.hidden = true;
+    recent.hidden = true;
+    conversation.hidden = false;
+    byId('conversation-composer-slot').append(composer);
+    byId('send-label').textContent = '发送';
+    input.placeholder = '继续描述你的任务…';
+    input.value = '';
+    selectedFiles = [];
+    syncFiles();
+    main.scrollTop = main.scrollHeight;
+  });
+  byId('show-all').addEventListener('click', () => {
+    const extra = byId('extra-artifacts');
+    extra.hidden = !extra.hidden;
+    byId('show-all').setAttribute('aria-expanded', String(!extra.hidden));
+    byId('show-all').querySelector('span').textContent = extra.hidden ? '查看全部' : '收起列表';
+  });
+  document.querySelectorAll('[data-artifact]').forEach((button) => {
+    button.addEventListener('click', () => {
+      byId('artifact-dialog-title').textContent = button.dataset.artifact;
+      byId('artifact-dialog').showModal();
+    });
+  });
+  byId('close-artifact').addEventListener('click', () => byId('artifact-dialog').close());
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeMobile();
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+      event.preventDefault();
+      if (mobile.matches) app.classList.add('mobile-open');
+      app.classList.remove('collapsed');
+      byId('history-search').focus();
+    }
+  });
+})();
+</script>

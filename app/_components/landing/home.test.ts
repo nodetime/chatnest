@@ -188,6 +188,47 @@ test("actual landing renders an independent branded homepage without Agent chrom
   );
 });
 
+test("should_expose_reviews_once_when_homepage_repeats_testimonial_cards", () => {
+  const html = execFileSync(
+    process.execPath,
+    [
+      "--import",
+      "tsx",
+      "-e",
+      `
+      require.extensions['.css']=()=>{};
+      const React=require('react');
+      const {renderToStaticMarkup}=require('react-dom/server');
+      const {SessionContext}=require('next-auth/react');
+      global.fetch=()=>{throw Error('Reviews must not fetch external data')};
+      const {LandingPage}=require('./app/_components/landing/landing-page.tsx');
+      process.stdout.write(renderToStaticMarkup(React.createElement(SessionContext.Provider,{value:{data:null,status:'unauthenticated'}},React.createElement(LandingPage))));
+      `,
+    ],
+    {
+      encoding: "utf8",
+      env: { HOME: process.env.HOME, NODE_ENV: "test", PATH: process.env.PATH },
+    }
+  );
+  const section = html.match(
+    /<section\b[^>]*\bid="testimonials"[^>]*>([\s\S]*?)<\/section>/
+  )?.[1];
+  assert.ok(section, "homepage must expose its customer review section");
+  assert.equal((section.match(/role="list"/g) ?? []).length, 1);
+  const groups =
+    section.match(/<ul\b[^>]*class="landing-testimonials__group[^>]*>/g) ?? [];
+  assert.ok(groups.length > 1, "continuous flow must include repeated groups");
+  assert.equal(
+    groups.filter((group) => !group.includes('aria-hidden="true"')).length,
+    1
+  );
+  const quotes = section.match(/<blockquote\b/g) ?? [];
+  assert.equal(quotes.length / groups.length, 6);
+  assert.doesNotMatch(section, /<button\b/);
+  assert.ok(html.indexOf('id="product"') < html.indexOf('id="testimonials"'));
+  assert.ok(html.indexOf('id="testimonials"') < html.indexOf('id="faq"'));
+});
+
 test("consumer preview is a compact result, not a file-type explanation matrix", () => {
   const preview = readFileSync(
     "app/_components/landing/landing-preview.tsx",

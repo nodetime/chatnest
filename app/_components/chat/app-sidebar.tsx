@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import type { User } from "next-auth";
 import { useCallback } from "react";
-import { BrandMark } from "@/app/_components/brand-mark";
+import { BrandHomeLink } from "@/app/_components/brand-home-link";
 import {
   Sidebar,
   SidebarContent,
@@ -52,21 +52,19 @@ export function AppSidebar({
     setOpenMobile(false);
   };
   return (
-    <Sidebar className="border-r border-sidebar-border/60" collapsible="icon">
+    <Sidebar
+      className="border-r border-sidebar-border/60 group-data-[collapsible=icon]:[&_[data-sidebar=menu-button]]:size-10! group-data-[collapsible=icon]:[&_[data-sidebar=menu-button]]:p-0! group-data-[collapsible=icon]:[&_[data-sidebar=menu-button]]:text-sidebar-foreground!"
+      collapsible="icon"
+    >
       <SidebarHeader className="gap-3 px-3 py-2 group-data-[collapsible=icon]:px-3">
-        <div className="flex h-9 items-center justify-between gap-2 px-1 group-data-[collapsible=icon]:justify-center">
-          <button
-            aria-label="数知探AI 首页"
-            className="flex min-w-0 items-center gap-2 text-sm font-semibold group-data-[collapsible=icon]:hidden"
-            onClick={handleNew}
-            type="button"
-          >
-            <BrandMark />
-            <span>数知探AI</span>
-          </button>
+        <div className="relative h-10 min-w-0">
+          <BrandHomeLink
+            className="workbench-sidebar-brand absolute top-0 left-1 h-10"
+            onClick={() => setOpenMobile(false)}
+          />
           <button
             aria-label="切换侧栏"
-            className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
+            className="workbench-sidebar-toggle absolute top-0 right-0 flex size-10 items-center justify-center rounded-lg bg-sidebar text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground group-data-[collapsible=icon]:text-sidebar-foreground"
             onClick={toggleSidebar}
             type="button"
           >
@@ -76,13 +74,13 @@ export function AppSidebar({
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
-              aria-label="新对话"
+              aria-label="新建对话"
               className="h-9 justify-center rounded-lg bg-primary text-primary-foreground! hover:bg-primary/90 hover:text-primary-foreground!"
               onClick={handleNew}
-              tooltip="新对话"
+              tooltip="新建对话"
             >
               <Plus className="size-[18px]" />
-              <span>新对话</span>
+              <span>新建对话</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           {showOrganizations ? (
@@ -108,14 +106,14 @@ export function AppSidebar({
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton
-              aria-label="文件"
+              aria-label="产物"
               className="h-9 rounded-lg text-[13px]"
               isActive={section === "files"}
               onClick={() => open("files")}
-              tooltip="文件"
+              tooltip="产物"
             >
               <Folder />
-              <span>文件</span>
+              <span>产物</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
@@ -143,7 +141,7 @@ export function AppSidebar({
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-        <div className="group-data-[collapsible=icon]:hidden">
+        <div className="workbench-sidebar-history">
           <ChatSearch />
           <SidebarHistory user={user} />
         </div>

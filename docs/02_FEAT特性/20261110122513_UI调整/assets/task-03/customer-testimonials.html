@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="claude:viewport-fit-sides" content="cover">
+  <title>客户评价轮播原型</title>
+  <style>
+    /* 参照 Lessie 实站：居中标题、全宽连续流动卡片；不设置轮播控制栏。 */
+    :root {
+      color-scheme: light;
+      --bg: #fafafa;
+      --surface: #ffffff;
+      --fg: #19191a;
+      --muted: #888b8f;
+      --line: #e9e9ec;
+      --accent: #5b5bd6;
+      --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      --font-caption: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      --card-width: 238px;
+      --gap: 24px;
+      --offset: 96px;
+      --duration: 20s;
+      padding-block: env(safe-area-inset-top, 0px) env(safe-area-inset-bottom, 0px);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        color-scheme: dark;
+        --bg: #18181c;
+        --surface: #202026;
+        --fg: #efeff4;
+        --muted: #aaaab8;
+        --line: #35353f;
+        --accent: #aaa5ff;
+      }
+    }
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #18181c;
+      --surface: #202026;
+      --fg: #efeff4;
+      --muted: #aaaab8;
+      --line: #35353f;
+      --accent: #aaa5ff;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font-body); -webkit-font-smoothing: antialiased; }
+    .testimonials { padding-block: 96px; }
+    .section-title {
+      margin: 0 0 32px;
+      padding-left: max(16px, env(safe-area-inset-left, 0px));
+      padding-right: max(16px, env(safe-area-inset-right, 0px));
+      font-size: 32px;
+      font-weight: 500;
+      line-height: 40px;
+      text-align: center;
+      text-wrap: balance;
+    }
+    .marquee-window { width: 100%; overflow: hidden; padding-block: 1px; }
+    .marquee-belt { display: flex; align-items: stretch; gap: var(--gap); width: max-content; animation: flow-left var(--duration) linear infinite; will-change: transform; }
+    .review-group { display: flex; align-items: stretch; gap: var(--gap); flex-shrink: 0; }
+    .review-card {
+      display: flex;
+      flex: 0 0 var(--card-width);
+      flex-direction: column;
+      gap: 16px;
+      width: var(--card-width);
+      min-width: 0;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: var(--surface);
+      transition: background-color 150ms, border-color 150ms;
+    }
+    .review-card:hover { background: color-mix(in srgb, var(--accent) 7%, var(--surface)); border-color: color-mix(in srgb, var(--accent) 6%, var(--line)); }
+    .card-top { display: flex; flex-direction: column; gap: 4px; }
+    .quote-mark { display: block; width: 24px; height: 24px; fill: currentColor; color: color-mix(in srgb, var(--fg) 35%, var(--surface)); }
+    blockquote { display: -webkit-box; height: 132px; margin: 0; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 6; font-size: 14px; line-height: 22px; color: var(--muted); overflow-wrap: anywhere; }
+    .divider { height: 0; border-top: 1px dashed var(--line); }
+    .review-person { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .avatar { display: grid; flex: 0 0 40px; width: 40px; height: 40px; place-items: center; border: 1px solid var(--line); border-radius: 50%; background: color-mix(in srgb, var(--accent) 6%, var(--surface)); font-size: 17px; color: var(--accent); }
+    .person-label { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+    .person-name { margin: 0; font-size: 14px; font-weight: 400; line-height: 17px; }
+    .person-role { margin: 0; font-family: var(--font-caption); font-size: 11px; line-height: 16px; color: var(--muted); }
+    @keyframes flow-left {
+      from { transform: translate3d(calc(0px - var(--offset)), 0, 0); }
+      to { transform: translate3d(calc(0px - var(--cycle, 1572px) - var(--offset)), 0, 0); }
+    }
+    @media (max-width: 600px) {
+      :root { --gap: 16px; --offset: 72px; }
+      .testimonials { padding-block: 64px; }
+      .section-title { margin-bottom: 28px; font-size: 26px; line-height: 36px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .marquee-window { overflow-x: auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+      .marquee-belt { animation: none; transform: none; will-change: auto; }
+      .review-card { transition: none; }
+      .review-copy { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="testimonials" aria-labelledby="reviews-heading">
+      <h1 class="section-title" id="reviews-heading">我们的客户怎么说</h1>
+      <div class="marquee-window">
+        <div class="marquee-belt" id="marquee-belt">
+          <div class="review-group" id="reviews" role="list" aria-label="客户评价"></div>
+        </div>
+      </div>
+      <noscript>请启用 JavaScript 查看客户评价原型。</noscript>
+    </section>
+  </main>
+  <script>
+    (() => {
+      "use strict";
+      const reviews = [
+        { name: "某某律师", role: "知识产权律师", avatar: "律", text: "前期最花时间的是从大量商品里找相似线索。现在可以先整理出候选商品、来源链接和对比信息，我们再集中做专业核验，案件准备更有条理。" },
+        { name: "某某主任", role: "某知识产权律所", avatar: "所", text: "团队接到材料后，往往需要多人反复检索和整理。把初步线索按统一结构汇总后，讨论案件时更容易对齐信息，也方便分配后续核查工作。" },
+        { name: "某科技公司", role: "法务部", avatar: "法", text: "我们更关心每条线索从哪里来、为什么值得关注。相似点、差异和原始链接放在一起，内部沟通和后续复核都方便了很多。" },
+        { name: "某品牌公司", role: "知识产权部", avatar: "知", text: "面对多个平台上的疑似侵权商品，先把分散的图片、店铺和链接整理起来，再逐项判断是否跟进，日常线索排查有了清晰的工作入口。" },
+        { name: "某某律师", role: "诉讼业务团队", avatar: "诉", text: "图片、网页和客户提供的文件经常混在一起。先按问题梳理材料、保留出处，后面写分析意见和补充证据时，就不必反复翻找。" },
+        { name: "某制造企业", role: "法务负责人", avatar: "企", text: "业务同事提供的信息通常比较零散。现在可以围绕同一个目标汇总资料，再把需要律师核实的问题列出来，交接时更容易说清楚。" }
+      ];
+      const group = document.getElementById("reviews");
+      reviews.forEach((review) => {
+        const card = document.createElement("article");
+        card.className = "review-card";
+        card.setAttribute("role", "listitem");
+        card.innerHTML = '<div class="card-top"><svg class="quote-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5H7C3.5 5 2 8 2 12v6h8v-8H6c.2-2 1.4-3 4-3V5Zm12 0h-3c-3.5 0-5 3-5 7v6h8v-8h-4c.2-2 1.4-3 4-3V5Z"/></svg><blockquote></blockquote></div><div class="divider" aria-hidden="true"></div><footer class="review-person"><span class="avatar" aria-hidden="true"></span><div class="person-label"><p class="person-name"></p><p class="person-role"></p></div></footer>';
+        card.querySelector("blockquote").textContent = review.text;
+        card.querySelector(".avatar").textContent = review.avatar;
+        card.querySelector(".person-name").textContent = review.name;
+        card.querySelector(".person-role").textContent = review.role;
+        group.append(card);
+      });
+      const belt = document.getElementById("marquee-belt");
+      const viewport = document.querySelector(".marquee-window");
+      function coverViewport() {
+        const gap = Number.parseFloat(getComputedStyle(belt).gap);
+        const cycle = group.getBoundingClientRect().width + gap;
+        belt.style.setProperty("--cycle", `${cycle}px`);
+        // 保留足够副本覆盖宽屏及循环末尾，动画始终只移动一组的距离。
+        const requiredGroups = Math.ceil(viewport.clientWidth / cycle) + 2;
+        while (belt.children.length < requiredGroups) {
+          const copy = group.cloneNode(true);
+          copy.removeAttribute("id");
+          copy.removeAttribute("role");
+          copy.removeAttribute("aria-label");
+          copy.classList.add("review-copy");
+          copy.setAttribute("aria-hidden", "true");
+          copy.inert = true;
+          belt.append(copy);
+        }
+      }
+      coverViewport();
+      new ResizeObserver(coverViewport).observe(viewport);
+    })();
+  </script>
+</body>
+</html>

@@ -5,7 +5,6 @@ import {
   BookOpen,
   CornerDownLeft,
   Files,
-  Menu,
   Search,
   Sparkles,
 } from "lucide-react";
@@ -20,25 +19,12 @@ import {
 } from "react";
 import { BrandMark } from "@/app/_components/brand-mark";
 import { Button } from "@/app/_components/ui/button";
-import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/app/_components/ui/sheet";
-import { authPageHref } from "@/app/_lib/auth-navigation";
+import { CustomerTestimonials } from "./customer-testimonials";
 import { createLandingDraft, LANDING_DRAFT_KEY } from "./landing-draft";
+import { LandingNavigation } from "./landing-navigation";
 import { LandingPreview } from "./landing-preview";
 import "./landing.css";
 
-const links = [
-  { href: "#product", label: "产品" },
-  { href: "#scenarios", label: "使用场景" },
-  { href: "#faq", label: "常见问题" },
-];
 const examples = [
   {
     description: "从一张图片出发，比较相似点与差异。",
@@ -105,82 +91,18 @@ export function LandingPage() {
       <div aria-hidden="true" className="landing-atmosphere">
         <div />
       </div>
-      <header className="landing-nav">
-        <a
-          aria-label="数知探AI 首页"
-          className="landing-brand"
-          href={`${base}/`}
-        >
-          <BrandMark />
-          <span>数知探AI</span>
-        </a>
-        <nav aria-label="主导航" className="landing-nav__links">
-          {links.map((link) => (
-            <a href={link.href} key={link.href}>
-              {link.label}
-            </a>
-          ))}
-        </nav>
-        <div className="landing-nav__actions">
-          {session?.user?.type !== "regular" && (
-            <a
-              className="landing-login"
-              href={`${base}${authPageHref("/login", "/chat")}`}
-            >
-              登录
-            </a>
-          )}
-          <Button asChild className="landing-pill landing-pill--small">
-            <a href={workspace}>
-              {session?.user?.type === "regular" ? "进入工作台" : "开始使用"}
-            </a>
-          </Button>
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button
-                aria-label="打开导航菜单"
-                className="landing-menu-trigger"
-                size="icon"
-                variant="ghost"
-              >
-                <Menu />
-              </Button>
-            </SheetTrigger>
-            <SheetContent className="landing-menu" side="right">
-              <SheetHeader>
-                <SheetTitle>数知探AI</SheetTitle>
-                <SheetDescription>探索资料，形成答案。</SheetDescription>
-              </SheetHeader>
-              <nav aria-label="移动导航">
-                {links.map((link) => (
-                  <SheetClose asChild key={link.href}>
-                    <a href={link.href}>
-                      {link.label}
-                      <ArrowUpRight aria-hidden="true" size={16} />
-                    </a>
-                  </SheetClose>
-                ))}
-              </nav>
-              <SheetClose asChild>
-                <a className="landing-menu__workspace" href={workspace}>
-                  进入工作台
-                </a>
-              </SheetClose>
-            </SheetContent>
-          </Sheet>
-        </div>
-      </header>
+      <LandingNavigation
+        basePath={base}
+        signedIn={session?.user?.type === "regular"}
+      />
       <section aria-labelledby="landing-heading" className="landing-hero">
         <p className="landing-hero__eyebrow">
           <Sparkles aria-hidden="true" size={14} />
-          你的 AI 资料助手
+          AI侵权线索引擎Agent
         </p>
         <h1 id="landing-heading">
           让<span>线索</span>，成为答案
         </h1>
-        <p className="landing-hero__description">
-          查找相似，比较差异。把图片、文件与问题，整理成清晰的结果。
-        </p>
         <Button asChild className="landing-pill landing-hero__start">
           <a href={workspace}>
             进入工作台
@@ -251,6 +173,7 @@ export function LandingPage() {
         </div>
       </section>
       <LandingPreview />
+      <CustomerTestimonials />
       <section
         aria-labelledby="landing-faq-heading"
         className="landing-section landing-faq"

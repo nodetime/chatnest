@@ -583,7 +583,8 @@ function PureMultimodalInput({
             aria-label="消息输入框"
             className={cn(
               "min-h-[44px] max-h-[200px] text-[14px] leading-6 px-3.5 pt-3 pb-1 placeholder:text-muted-foreground",
-              home && "min-h-[80px] px-5 pt-5 text-[15px]"
+              home &&
+                "min-h-[130px] px-4 pt-4 text-[14px] md:min-h-[110px] md:px-5 md:pt-5 md:text-[15px]"
             )}
             data-testid="multimodal-input"
             onChange={handleInput}

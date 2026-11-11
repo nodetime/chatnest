@@ -68,7 +68,7 @@ export function ChatHeader({
         </Tooltip>
         {messages.length > 0 && <ChatMenu key={chatId} />}
         <Button
-          aria-label="新对话"
+          aria-label="新建对话"
           className="md:hidden"
           onClick={startNewChat}
           size="icon"
