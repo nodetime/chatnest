@@ -83,8 +83,8 @@ test("history load failure owns the empty main area while new chat and cached hi
       '@/app/_hooks/use-active-chat':{useActiveChat:()=>state},'@/app/_hooks/use-artifact':{useArtifact:()=>({setArtifact:noop}),useArtifactSelector:()=>false},
       '@/app/_hooks/use-workbench-navigation':{useWorkbenchNavigation:()=>({section:'chat',navigate:noop})},'@/app/_hooks/use-workspace':{useWorkspace:()=>({show:noop})},
       './artifact':{Artifact:'artifact'},'./chat-header':{ChatHeader:'chat-header'},'./conversation-notice':{ConversationNotice:'notice'},'./data-stream-handler':{DataStreamHandler:'stream'},
-      './greeting':{Greeting:'greeting'},'./message-editor':{},'./messages':{Messages:'messages'},'./multimodal-input':{MultimodalInput:'composer'},
-      './task-progress':{TaskProgress:'progress'},'./workbench-section':{WorkbenchSection:'section'},'./workspace':{Workspace:'workspace'},'./workspace-home':{SavedArtifactCards:'saved-artifacts'},
+      './greeting':{Greeting:'greeting',TaskExamples:'task-examples'},'./message-editor':{},'./messages':{Messages:'messages'},'./multimodal-input':{MultimodalInput:'composer'},
+      './task-progress':{TaskProgress:'progress'},'./workbench-section':{WorkbenchSection:'section'},'./workspace':{Workspace:'workspace'},'./workspace-home':{WorkspaceHome:'saved-artifacts'},
     });
     const initial={chatId:'history',messages:[],isLoading:false,isReadonly:false};
     const render=extra=>{state={...initial,...extra};return nodes(h.render(ChatShell));};
@@ -101,14 +101,15 @@ test("history load failure owns the empty main area while new chat and cached hi
     assert.ok(nodes(cached.find(n=>n.props['data-testid']==='composer-dock')).some(n=>n.type==='notice'));
     const fresh=render({});
     assert.ok(fresh.some(n=>n.type==='greeting')&&fresh.some(n=>n.type==='composer'));
-    const recent=fresh.find(n=>n.type==='saved-artifacts');
-    assert.equal(recent?.props.recent,true,'only recent files belong below the new-chat composer');
+    const recent=fresh.find(n=>n.props['data-testid']==='home-recent-artifacts');
+    assert.ok(recent,'recent files keep their own second screen below the new-chat composer');
+    assert.equal(nodes(recent).filter(n=>n.type==='saved-artifacts').length,1);
     assert.ok(fresh.findIndex(n=>n.type==='composer')<fresh.indexOf(recent));
     assert.ok(!cached.some(n=>n.type==='saved-artifacts')&&!failed.some(n=>n.type==='saved-artifacts'));
   `);
 });
 
-test("new chat shows up to three real saved files and no placeholder when none are available", () => {
+test("should_show_real_files_and_empty_state_when_rendering_recent_artifact_screen", () => {
   clientScript(`${harness}
     let library;const paths=[];const noop=()=>{};
     const {SavedArtifactCards}=load('app/_components/chat/workspace-home.tsx',{
@@ -117,12 +118,19 @@ test("new chat shows up to three real saved files and no placeholder when none a
       '@/app/_hooks/use-workbench-navigation':{useWorkbenchNavigation:()=>({navigate:noop})},'@/app/_hooks/use-workspace':{useWorkspace:()=>({show:noop})},
       '../ui/button':{Button:'ui-button'},'./artifact-catalog':{},'./artifact-type-label':{artifactTypeLabels:{sheet:'表格'}},'./file-symbol':{FileSymbol:'file-symbol'},
     });
-    for(library of [{isLoading:true},{data:[]},{error:new Error('offline')}])assert.equal(SavedArtifactCards({recent:true}),null);
-    assert.match(JSON.stringify(SavedArtifactCards({})),/成果暂未加载/,'the full Files view keeps its recovery action');
-    library={data:Array.from({length:4},(_,i)=>({id:String(i),title:'成果 '+i,kind:'sheet'}))};
-    const tree=SavedArtifactCards({recent:true});
-    assert.equal(tree.props['aria-label'],'最近成果');
-    assert.deepEqual(nodes(tree).filter(n=>n.type==='button').map(n=>n.props['aria-label']),['打开成果：成果 0','打开成果：成果 1','打开成果：成果 2']);
+    const recent={compact:true,limit:3};
+    library={isLoading:true};
+    assert.equal(SavedArtifactCards(recent).props.role,'status');
+    library={data:[]};
+    const empty=SavedArtifactCards(recent);
+    assert.match(JSON.stringify(empty),/还没有保存的产物/);
+    assert.equal(nodes(empty).filter(n=>n.type==='button').length,0,'empty state never fabricates saved files');
+    library={error:new Error('offline')};
+    assert.match(JSON.stringify(SavedArtifactCards(recent)),/产物暂未加载/);
+    assert.match(JSON.stringify(SavedArtifactCards({})),/产物暂未加载/,'the full Files view keeps its recovery action');
+    library={data:Array.from({length:4},(_,i)=>({id:String(i),title:'产物 '+i,kind:'sheet'}))};
+    const tree=SavedArtifactCards(recent);
+    assert.deepEqual(nodes(tree).filter(n=>n.type==='button').map(n=>n.props['aria-label']),['打开产物：产物 0','打开产物：产物 1','打开产物：产物 2']);
     assert.equal(nodes(SavedArtifactCards({})).filter(n=>n.type==='button').length,4);
     assert.ok(paths.every(path=>path.endsWith('/api/library')));
   `);

@@ -152,7 +152,7 @@ with sync_playwright() as p:
   with urlopen('http://127.0.0.1:4018/health') as response: health=json.load(response)
   check('actual advertised personal skill loader was called',any(r['chosen']=='loadSkill' for r in health['requests']))
   check('only selected private MCP alias reached model',all(not any(t.startswith('formal__') for t in r['tools']) for r in health['requests'] if any('personal' in t for t in r['tools'])))
-  page.reload(wait_until='networkidle');go(page,'文件');expect(page.get_by_role('button',name='打开成果：FORMAL 本地证据结果表',exact=True)).to_be_visible(timeout=20000);page.get_by_role('button',name='打开成果：FORMAL 本地证据结果表',exact=True).click()
+  page.reload(wait_until='networkidle');go(page,'文件');expect(page.get_by_role('button',name='打开产物：FORMAL 本地证据结果表',exact=True)).to_be_visible(timeout=20000);page.get_by_role('button',name='打开产物：FORMAL 本地证据结果表',exact=True).click()
   expect(page.get_by_text('FORMAL 本地证据结果表',exact=True).first).to_be_visible(timeout=20000);geometry(page,'personal-agent-artifact-reopen')
   check('saved artifact reopened after reload')
   go(page,'连接');page.get_by_role('button',name='我的测试资料服务的操作',exact=True).click();page.get_by_role('menuitem',name='停用连接',exact=True).click()

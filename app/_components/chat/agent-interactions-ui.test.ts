@@ -215,6 +215,7 @@ test("Provider导航和卸载中止捕获的旧SDK请求，旧交互句柄既不
       delayRevalidation=false;
       chats.set(key,cached);
       const pendingA=a.sendMessage({role:'user',parts:[{type:'text',text:'A'}]});await tick();assert.equal(requests[0].id,'A');
+      assert.ok(Number.isFinite(Date.parse(oldA.messages[0].metadata?.createdAt)), 'new user messages carry their actual send time before the response finishes');
       const b=render('/chat/B');await tick();assert.equal(requests[0].aborted,true,'navigation must abort the captured old A stream');await pendingA;
       assert.equal(chats.get(key),undefined,'leaving clears the old snapshot and pending GET before sidebar reopening');
       chats.set(key,cached);

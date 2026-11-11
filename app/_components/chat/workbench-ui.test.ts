@@ -949,16 +949,18 @@ test("chat-local palette defines gentle light and dark semantic surfaces without
   assert.match(shell, /chat-workbench-shell flex h-dvh w-full min-w-0/);
 });
 
-test("generic empty conversation has a readable invitation and one softly elevated composer", () => {
+test("should_show_product_heading_without_welcome_copy_when_rendering_empty_conversation", () => {
   const html = clientScript(`
     const React = require('react');
     const { renderToStaticMarkup } = require('react-dom/server');
     const { Greeting } = require('./app/_components/chat/greeting.tsx');
     process.stdout.write(renderToStaticMarkup(React.createElement(Greeting)));
   `);
-  assert.match(html, /<h1/);
-  assert.match(html, /今天想完成什么/);
-  assert.match(html, /text-\[28px\]/);
+  assert.match(html, /<h1[^>]*>AI 侵权线索引擎 <span[^>]*>Agent<\/span><\/h1>/);
+  assert.doesNotMatch(
+    html,
+    /你的 AI 工作台|今天想完成什么|从一个问题、一张图片或一份文件开始/
+  );
   const composer = readFileSync(
     "app/_components/chat/multimodal-input.tsx",
     "utf8"
@@ -966,10 +968,10 @@ test("generic empty conversation has a readable invitation and one softly elevat
   assert.match(composer, /shadow-\[var\(--shadow-composer\)\]/);
   assert.doesNotMatch(composer, /focus-within:border-foreground\/25/);
   const sidebar = readFileSync("app/_components/chat/app-sidebar.tsx", "utf8");
-  assert.match(sidebar, /flex h-9/);
+  assert.match(sidebar, /relative h-10/);
   for (const entry of [
-    "新对话",
-    "文件",
+    "新建对话",
+    "产物",
     "连接",
     "技能",
     "ChatSearch",
@@ -1335,6 +1337,8 @@ test("chat refinement uses a soft task canvas, bounded home and aligned title ra
   assert.match(shell, /max-w-\[800px\]/);
   const home = readFileSync("app/_components/chat/workspace-home.tsx", "utf8");
   assert.match(home, /data-testid="workspace-home-content"/);
+  assert.match(shell, /WorkspaceHome/);
+  assert.doesNotMatch(home, /data-testid="home-recent-grid"/);
   assert.match(home, /useSavedArtifacts/);
   const header = readFileSync("app/_components/chat/chat-header.tsx", "utf8");
   assert.match(header, /h-\[52px\]/);

@@ -98,16 +98,17 @@ export function SidebarUserNav({ user }: { user: User | undefined }) {
                   data-testid="user-nav-button"
                   tooltip="个人账户"
                 >
-                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--workbench-selection)] text-xs font-medium text-foreground">
+                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--workbench-selection)] text-xs font-medium text-foreground group-data-[collapsible=icon]:hidden">
                     {(user?.email?.[0] ?? "C").toUpperCase()}
                   </span>
+                  <CircleUserRound className="hidden group-data-[collapsible=icon]:block" />
                   <span
                     className="truncate text-[13px]"
                     data-testid="user-email"
                   >
                     {user?.email}
                   </span>
-                  <ChevronUp className="ml-auto size-3.5 text-sidebar-foreground/50" />
+                  <ChevronUp className="ml-auto size-3.5 text-sidebar-foreground/50 group-data-[collapsible=icon]:hidden" />
                 </SidebarMenuButton>
               )}
             </DropdownMenuTrigger>

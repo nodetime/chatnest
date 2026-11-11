@@ -21,11 +21,23 @@ test("admin metadata overrides the root title with 数知探AI · 管理后台",
   );
 });
 
-test("home button keeps its new-chat action with visible and accessible 数知探AI branding", () => {
+test("should_return_home_when_rendering_the_shared_brand_entry", () => {
   const sidebar = readFileSync("app/_components/chat/app-sidebar.tsx", "utf8");
+  assert.match(sidebar, /<BrandHomeLink\b/);
+  const html = execFileSync(
+    process.execPath,
+    [
+      "--import",
+      "tsx",
+      "-e",
+      "const React=require('react');const {renderToStaticMarkup}=require('react-dom/server');const {BrandHomeLink}=require('./app/_components/brand-home-link.tsx');process.stdout.write(renderToStaticMarkup(React.createElement(BrandHomeLink)));",
+    ],
+    { encoding: "utf8" }
+  );
+  assert.match(html, /<a\b[^>]*aria-label="数知探AI 首页"[^>]*href="\/"/);
   assert.match(
-    sidebar,
-    /<button\s+aria-label="数知探AI 首页"[^>]*onClick=\{handleNew\}[^>]*>[\s\S]*?<span>数知探AI<\/span>[\s\S]*?<\/button>/
+    html,
+    /<a\b[^>]*>[\s\S]*?<img\b[\s\S]*?<span>数知探AI<\/span><\/a>/
   );
 });
 
@@ -77,28 +89,33 @@ test("数知探AI conversation Markdown preserves message text and returned sour
   );
 });
 
-test("selected Figma Radar asset is original, local and reused across brand surfaces", () => {
-  const asset = readFileSync("public/brand/radar.svg");
-  assert.equal(
-    createHash("sha256").update(asset).digest("hex"),
-    "ec08796300b7912fd79f38a7d9cac3cc68f06671d4f0b71ffc36694f9282524f"
+test("should_reuse_transparent_radar_when_rendering_brand_surfaces", () => {
+  const svg = readFileSync("public/brand/radar.svg", "utf8").replaceAll(
+    "\r\n",
+    "\n"
   );
-  const svg = asset.toString("utf8");
-  assert.match(svg, /width="160" height="160" viewBox="0 0 160 160"/);
+  assert.equal(
+    createHash("sha256").update(svg).digest("hex"),
+    "60ce21009dedea70183ace84d7677ab490614d9cd7754dff3d7c2a82f4ec3276"
+  );
+  assert.match(svg, /width="256" height="256" viewBox="0 0 256 256"/);
   assert.doesNotMatch(
     svg,
     /<(?:script|foreignObject)\b|(?:href|src)="https?:|onload=/i
   );
   const admin = readFileSync("app/_components/admin/admin-shell.tsx", "utf8");
   assert.match(admin, /group-data-\[collapsible=icon\]:p-0\.5!/);
-  assert.deepEqual(readFileSync("app/icon.svg"), asset);
+  assert.equal(
+    readFileSync("app/icon.svg", "utf8").replaceAll("\r\n", "\n"),
+    svg
+  );
   const ico = readFileSync("app/favicon.ico");
   assert.equal(ico.readUInt16LE(0), 0);
   assert.equal(ico.readUInt16LE(2), 1);
   assert.equal(ico.readUInt16LE(4), 3);
   assert.ok(readFileSync("app/apple-icon.png").length > 0);
   for (const path of [
-    "app/_components/chat/app-sidebar.tsx",
+    "app/_components/brand-home-link.tsx",
     "app/(auth)/layout.tsx",
     "app/_components/admin/admin-shell.tsx",
   ]) {
@@ -146,7 +163,7 @@ test("visible product copy is 数知探AI while repository and internal identifi
     "app/(auth)/layout.tsx",
     "app/(auth)/login/page.tsx",
     "app/(auth)/register/page.tsx",
-    "app/_components/chat/app-sidebar.tsx",
+    "app/_components/brand-home-link.tsx",
     "app/_components/admin/admin-shell.tsx",
     "app/_components/chat/multimodal-input.tsx",
     "app/_components/chat/personal-skills.tsx",

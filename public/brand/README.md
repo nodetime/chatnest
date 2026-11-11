@@ -1,13 +1,17 @@
 # 品牌图标来源
 
 | 项目 | 值 |
-|---|---|
-| 用户选定方案 | 01 探索雷达（Logo Radar） |
-| 原始文件 | [数知探AI Logo 方案](https://www.figma.com/design/MLptHau7p11OMvS2mENdbL/?node-id=2-7) |
-| 导出节点 | `2:7` · Logo Radar Icon |
-| 源文件 | `radar.svg`，Figma 浏览器原生 SVG 导出，160×160；未重绘、改色或裁切 |
-| SHA-256 | `ec08796300b7912fd79f38a7d9cac3cc68f06671d4f0b71ffc36694f9282524f` |
-| 页面用途 | 侧栏、登录／注册、平台后台的统一 BrandMark；产品显示名为「数知探AI」，仓库名仍为 ChatNest |
-| 系统图标 | `app/icon.svg` 与源文件逐字节一致；favicon 16／32／48 像素与 Apple 180 像素图标由同一 SVG 等比生成 |
+| --- | --- |
+| 用户选定方案 | 01 探索雷达（Logo Radar），以 2026-11-10 用户提供的独立雷达图为准 |
+| 原型 | [数知探AI Logo 方案](https://www.figma.com/design/MLptHau7p11OMvS2mENdbL/?node-id=2-7) |
+| 原始导出节点 | `2:7` · Logo Radar Icon |
+| 原始导出指纹 | `ec08796300b7912fd79f38a7d9cac3cc68f06671d4f0b71ffc36694f9282524f` |
+| 正式资源 | `public/brand/radar.svg`，256×256，透明背景的纯矢量路径，无内嵌位图 |
+| 当前 SHA-256 | `60ce21009dedea70183ace84d7677ab490614d9cd7754dff3d7c2a82f4ec3276`，按 LF 换行计算 |
+| 图形处理 | 复用原始雷达矢量路径；移除白色底板及用户贴图中没有的右下角副标记，调整画布与等比位置以匹配用户提供的图形 |
+| 保留颜色 | 蓝色 `#1F52DB`、青色 `#16C3D8`、浅色圆环 `#DDE7FF` 和十字白色 |
+| 页面用途 | 首页头尾、工作台侧栏、登录／注册、账户区、后台共用 `BrandMark`；页面继续引用 `/brand/radar.svg` |
+| 系统图标 | `app/icon.svg` 与正式 SVG 相同；favicon 的 16／32／48px 与 Apple 的 180px 图标由同一 SVG 等比生成 |
+| 任务记录 | [UI 调整任务 01](../../docs/02_FEAT特性/20261110122513_UI调整/01_Logo透明背景.md) |
 
-源 SVG 的宽高、viewBox、颜色与构图保持不变。组件仅控制等比显示尺寸；不引用临时 Figma URL。Figma MCP 当前未取得编辑权限，本次通过已有浏览器查看和原生导出获取素材，没有修改设计文件或权限。
+正式页面使用 SVG；FEAT 目录中的原图和 PNG 仅供来源核对与效果比较。产品文字由所在页面提供，不绘入图标。组件保留既有等比尺寸、可访问名称和部署前缀，不引用临时 Figma 地址，不修改设计文件或权限。

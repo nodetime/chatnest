@@ -1,6 +1,6 @@
 // biome-ignore-all lint/performance/noJsxPropsBind: React Compiler memoizes per-entry workspace handlers.
 "use client";
-import { ArrowUpRight, FileText } from "lucide-react";
+import { ArrowUpRight, ChevronRight, FileText } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import useSWR from "swr";
@@ -52,25 +52,56 @@ export function useOpenSavedArtifact() {
   };
 }
 
-export function SavedArtifactCards({ recent = false }: { recent?: boolean }) {
+export function WorkspaceHome() {
+  const { navigate } = useWorkbenchNavigation();
+  return (
+    <section
+      aria-label="最近产物"
+      className="mx-auto w-full max-w-[800px] min-w-0 space-y-3 px-4 sm:px-6"
+      data-testid="workspace-home-content"
+    >
+      <div className="flex items-center justify-between gap-4">
+        <h2 className="text-lg font-medium">最近产物</h2>
+        <button
+          className="inline-flex shrink-0 items-center gap-1 py-1.5 pl-2 text-xs text-muted-foreground transition-colors hover:text-ring"
+          onClick={() => navigate("files")}
+          type="button"
+        >
+          查看全部
+          <ChevronRight aria-hidden="true" className="size-3.5" />
+        </button>
+      </div>
+      <SavedArtifactCards compact limit={3} />
+    </section>
+  );
+}
+
+export function SavedArtifactCards({
+  limit,
+  compact = false,
+}: {
+  limit?: number;
+  compact?: boolean;
+}) {
   const { data, error, isLoading, mutate } = useSavedArtifacts();
   const open = useOpenSavedArtifact();
-  if (recent && !data?.length) {
-    return null;
-  }
-  if (!recent && isLoading) {
+  if (isLoading) {
     return (
       <div
-        aria-label="正在加载成果"
-        className="h-32 animate-pulse rounded-2xl bg-muted/50"
+        aria-label="正在加载产物"
+        className={
+          compact
+            ? "h-24 animate-pulse rounded-lg bg-muted/50"
+            : "h-32 animate-pulse rounded-2xl bg-muted/50"
+        }
         role="status"
       />
     );
   }
-  if (!recent && error) {
+  if (error) {
     return (
       <p className="text-sm text-muted-foreground" role="alert">
-        成果暂未加载。
+        产物暂未加载。
         <Button onClick={() => mutate()} size="sm" variant="ghost">
           重试
         </Button>
@@ -79,74 +110,67 @@ export function SavedArtifactCards({ recent = false }: { recent?: boolean }) {
   }
   if (!data?.length) {
     return (
-      <div className="flex min-h-60 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border px-5 py-6 text-center text-[13px] text-muted-foreground">
-        <span className="flex size-10 items-center justify-center rounded-xl bg-secondary">
-          <FileText aria-hidden="true" className="size-5" />
-        </span>
-        <p className="text-foreground">还没有保存的成果</p>
-        <p className="max-w-60 text-xs leading-6">
-          对话中生成并保存的内容，会出现在这里。
-        </p>
+      <div
+        className={
+          compact
+            ? "flex items-center gap-3 border-y border-border px-2 py-6 text-[13px] text-muted-foreground"
+            : "flex min-h-60 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border px-5 py-6 text-center text-[13px] text-muted-foreground"
+        }
+      >
+        <FileText aria-hidden="true" className="size-5 shrink-0" />
+        <p>还没有保存的产物</p>
+        {!compact && (
+          <p className="max-w-60 text-xs leading-6">
+            对话中生成并保存的内容，会出现在这里。
+          </p>
+        )}
       </div>
     );
   }
-  const entries = (recent ? data.slice(0, 3) : data).map((entry) => (
-    <button
-      aria-label={`打开成果：${entry.title}`}
+  return (
+    <div
       className={
-        recent
-          ? "group/artifact flex min-h-11 w-full min-w-0 items-center gap-2.5 rounded-md py-2 text-left transition-colors hover:bg-secondary/60"
-          : "group/artifact flex min-h-28 min-w-0 items-center gap-4 rounded-2xl border border-border/80 bg-card p-5 text-left shadow-[var(--shadow-card)] transition-[border-color,box-shadow] hover:border-ring/40 hover:shadow-[var(--shadow-float)]"
+        compact
+          ? "divide-y divide-border/70 border-y border-border/70"
+          : "grid gap-3 sm:grid-cols-2"
       }
-      key={entry.id}
-      onClick={() => open(entry)}
-      title={entry.title}
-      type="button"
     >
-      <span
-        className={
-          recent
-            ? "flex size-7 shrink-0 items-center justify-center rounded-md bg-secondary"
-            : "flex size-9 shrink-0 items-center justify-center rounded-xl bg-secondary text-ring"
-        }
-      >
-        <FileSymbol className="text-ring" kind={entry.kind} />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span
+      {data.slice(0, limit).map((entry) => (
+        <button
+          aria-label={`打开产物：${entry.title}`}
           className={
-            recent
-              ? "block truncate text-sm"
-              : "line-clamp-2 break-words text-[13px] font-medium leading-5"
+            compact
+              ? "group/artifact flex min-h-20 w-full min-w-0 items-center gap-3 px-1 py-5 text-left transition-colors hover:bg-[var(--workbench-selection)]"
+              : "group/artifact flex min-h-28 min-w-0 items-center gap-4 rounded-2xl border border-border/80 bg-card p-5 text-left shadow-[var(--shadow-card)] transition-[border-color,box-shadow] hover:border-ring/40 hover:shadow-[var(--shadow-float)]"
           }
+          key={entry.id}
+          onClick={() => open(entry)}
+          title={entry.title}
+          type="button"
         >
-          {entry.title}
-        </span>
-        {!recent && (
-          <span className="mt-1.5 block text-[11px] text-muted-foreground">
-            {artifactTypeLabels[entry.kind]}
+          <span
+            className={
+              compact
+                ? "flex h-10 w-9 shrink-0 items-center justify-center text-ring"
+                : "flex size-9 shrink-0 items-center justify-center rounded-xl bg-secondary text-ring"
+            }
+          >
+            <FileSymbol className="text-ring" kind={entry.kind} />
           </span>
-        )}
-      </span>
-      <ArrowUpRight
-        aria-hidden="true"
-        className="size-3.5 shrink-0 text-muted-foreground/60 transition-colors group-hover/artifact:text-ring"
-      />
-    </button>
-  ));
-  if (recent) {
-    return (
-      <section
-        aria-label="最近成果"
-        className="mt-7 border-t border-border pt-4 sm:mt-9"
-        data-testid="workspace-home-content"
-      >
-        <h2 className="mb-1.5 text-[13px] font-medium text-muted-foreground">
-          最近成果
-        </h2>
-        <div className="divide-y divide-border/70">{entries}</div>
-      </section>
-    );
-  }
-  return <div className="grid gap-3 sm:grid-cols-2">{entries}</div>;
+          <span className="min-w-0 flex-1">
+            <span className="line-clamp-2 break-words text-[13px] font-medium leading-5">
+              {entry.title}
+            </span>
+            <span className="mt-1.5 block text-[11px] text-muted-foreground">
+              {artifactTypeLabels[entry.kind]}
+            </span>
+          </span>
+          <ArrowUpRight
+            aria-hidden="true"
+            className="size-3.5 shrink-0 text-muted-foreground/60 transition-colors group-hover/artifact:text-ring"
+          />
+        </button>
+      ))}
+    </div>
+  );
 }

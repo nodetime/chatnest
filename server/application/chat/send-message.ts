@@ -388,6 +388,7 @@ export async function sendMessage(
     })(),
     userId: user.id,
   });
+  const responseCreatedAt = new Date();
   const stream = createUIMessageStream<ChatMessage>({
     execute: async ({ writer: dataStream }) => {
       dataStream.write({
@@ -652,6 +653,10 @@ export async function sendMessage(
 
         dataStream.merge(
           toUIMessageStream({
+            messageMetadata: ({ part }) =>
+              part.type === "start" && !isToolApprovalFlow
+                ? { createdAt: responseCreatedAt.toISOString() }
+                : undefined,
             onError: agentStreamErrorText,
             sendReasoning: isReasoningModel,
             sendSources: true,
@@ -700,7 +705,7 @@ export async function sendMessage(
           answer: {
             attachments: [],
             chatId: id,
-            createdAt: new Date(),
+            createdAt: responseCreatedAt,
             id: responseMessage.id,
             parts: responseMessage.parts,
             role: "assistant",
@@ -724,7 +729,7 @@ export async function sendMessage(
           answer: {
             attachments: [],
             chatId: id,
-            createdAt: new Date(),
+            createdAt: responseCreatedAt,
             id: responseMessage.id,
             parts: responseMessage.parts,
             role: "assistant",
@@ -745,7 +750,9 @@ export async function sendMessage(
           finishedMessages.map((currentMessage) => ({
             attachments: [],
             chatId: id,
-            createdAt: new Date(),
+            createdAt: currentMessage.metadata?.createdAt
+              ? new Date(currentMessage.metadata.createdAt)
+              : responseCreatedAt,
             id: currentMessage.id,
             parts: currentMessage.parts,
             role: currentMessage.role,

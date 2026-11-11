@@ -584,7 +584,7 @@ function PureMultimodalInput({
             className={cn(
               "min-h-[44px] max-h-[200px] text-[14px] leading-6 px-3.5 pt-3 pb-1 placeholder:text-muted-foreground",
               home &&
-                "min-h-[88px] px-4 pt-4 text-[15px] sm:min-h-[104px] sm:px-5 sm:pt-5"
+                "min-h-[130px] px-4 pt-4 text-[14px] md:min-h-[110px] md:px-5 md:pt-5 md:text-[15px]"
             )}
             data-testid="multimodal-input"
             onChange={handleInput}

@@ -17,6 +17,7 @@
     "prepare": "husky",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "npx tsx server/infrastructure/persistence/drizzle/migrate.ts",
+    "db:seed": "tsx scripts/dev-seed.ts",
     "db:studio": "drizzle-kit studio",
     "db:push": "drizzle-kit push",
     "db:pull": "drizzle-kit pull",
@@ -151,7 +152,7 @@
     "yaml": "2.9.0"
   },
   "lint-staged": {
-    "*": "corepack pnpm run fix --"
+    "!(docs)/**": "corepack pnpm run fix --"
   },
   "packageManager": "pnpm@10.32.1",
   "engines": {

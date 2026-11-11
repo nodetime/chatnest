@@ -65,13 +65,25 @@ flowchart LR
 - 账户用例与仓储在 server/application/account 和 server/infrastructure/persistence/drizzle/account-repository.ts；结算 worker 入口为 scripts/platform-settlement-worker.mjs。账户删除通知独立投递。
 - 0018 删除 0017 的告警投递表，并撤除旧 webhook、内部 API 和 /admin/alerts；结算告警只输出结构化进程日志。
 
+## 首页固定导航
+
+`app/_components/landing/landing-navigation.tsx` 封装公共导航、登录入口和移动菜单，由 `landing-page.tsx` 传入基础路径与登录状态。`landing.css` 使用 `position: fixed` 固定导航，CSS 根滚动时间轴在首屏透明与下滑半透明毛玻璃之间过渡；未支持滚动时间轴或减少动画时保留固定的半透明底色，不注册 JavaScript 滚动监听。统一导航高度、顶部间距和锚点偏移，避免内容及锚点标题被遮挡；移动菜单沿用 Sheet。首页主标题下的旧说明文案已按用户要求移除。
+
+## 首页客户评价
+
+`app/_components/landing/customer-testimonials.tsx` 封装 `CustomerTestimonials` 与内部 `CustomerReviewCard`，由 `landing-page.tsx` 挂在产品演示和常见问题之间。六条虚构评价仅用于本地营销展示，沿用“某某律师”等占位身份；按用户要求不显示“示例”后缀。样式归入 `landing.css`，以 CSS 线性动画每组 40 秒连续流动；鼠标进入卡片带时暂停，移出后从原位置继续，当前卡片显示浅蓝背景与呼吸边框。`ResizeObserver` 按实际组宽和视口补齐副本并在卸载时断开。展示副本仅通过 `aria-hidden` 避免读屏重复，保留每张卡片的悬停效果；减少动画偏好下隐藏副本并停用呼吸动画，保留原生横向阅读。不依赖接口、数据库或轮播库，也不初始化 Agent。
+
+## 消息时间
+
+`app/_components/chat/message-time.tsx` 在用户和 AI 的现有消息操作栏显示 `yyyy-MM-dd HH:mm`，按浏览器本地时区格式化 `metadata.createdAt`，避免服务端时区造成水合差异。历史时间沿用数据库转换；`use-active-chat.tsx` 为新发消息补齐发送时间，`send-message.ts` 将 AI 创建时间写入流元数据并用于持久化，审批续接保留原消息时间。桌面悬浮／键盘聚焦和触屏可见性沿用既有 `message-actions` 规则；缺失或非法时间不显示，不用当前时间伪造历史。
+
 ## 会话停止
 
 停止由输入区触发，`use-active-chat.tsx` 中止当前流并拦住自动续跑。消息区保留已有回复和原审批卡，不再渲染额外的续跑横栏，也不代发用户消息；用户可以手动发送下一条消息。
 
 ## ChatNest 私有上传恢复
 
-原 Admin 存储页、C 端上传/下载与附件关联继续共用 `server/application/uploads/service.ts` 和 `server/infrastructure/uploads/local-store.ts`。现有本地驱动拒绝非运行用户归属及组／其他用户可访问的卷根或文件；坏卷在解析和预留前失败，不自动 chmod，也没有新增对象存储适配。配对恢复验收见现有发布清单。
+原 Admin 存储页、C 端上传/下载与附件关联继续共用 `server/application/uploads/service.ts` 和 `server/infrastructure/uploads/local-store.ts`。现有本地驱动拒绝非运行用户归属及其他普通用户可访问的卷根或文件；Linux 等平台检查 POSIX owner/mode，Windows 通过系统 PowerShell 读取 NTFS ACL，仅允许当前运行用户及 SYSTEM 的 Allow 规则，读取失败直接拒绝。Windows 权限往返及公开目录／文件拒绝回归位于 `server/infrastructure/uploads/local-store.windows.test.ts`。坏卷在解析和预留前失败，不自动 chmod 或修改 ACL，也没有新增对象存储适配。配对恢复验收见现有发布清单。
 
 仅 `POST /api/files/upload` 的路径避开 Next proxy 的请求体克隆，由原 route 自己完成认证、同源检查、trace 回显及并发准入；`server/shared/uploads/validation.ts` 在文件表单读取时启用 30 秒无数据超时，不改变其他读体调用。
 
@@ -102,7 +114,7 @@ server/
 
 ## 关键子系统(现路径)
 
-**持久化**:`server/infrastructure/persistence/drizzle/` —— schema.ts(中文注释纪律)、migrations/、migrate.ts(`pnpm db:migrate`)、client.ts(共享连接,不加 server-only:白名单 tsx 测试直连此链)、仓储覆盖 chat/message/user/vote/document/suggestion/model-settings/mcp-settings/billing。billing 新增 external identity、execution operation/receipt、settlement outbox，单次 attempt CAS 与账务命令恢复不重放供应商调用；execution operation 还保存 sessionGroupId、stepIndex、modelId，用于模型/工具会话账务明细。保留不变量:advisory lock 版本化文档写入、结果表保护拒绝、chat 级联删除+资产清理、replace* 事务并发基线。`pnpm build` 先跑迁移再构建(禁止本地执行)。
+**持久化**:`server/infrastructure/persistence/drizzle/` —— schema.ts(中文注释纪律)、migrations/、migrate.ts(`pnpm db:migrate`)、seed.ts(`pnpm db:seed`，显式初始化管理员，任意 NODE_ENV 下使用配置的 POSTGRES_URL，事务锁/密码同步/管理员白名单登记唯一实现)、client.ts(共享连接,不加 server-only:白名单 tsx 测试直连此链)、仓储覆盖 chat/message/user/vote/document/suggestion/model-settings/mcp-settings/billing。billing 新增 external identity、execution operation/receipt、settlement outbox，单次 attempt CAS 与账务命令恢复不重放供应商调用；execution operation 还保存 sessionGroupId、stepIndex、modelId，用于模型/工具会话账务明细。保留不变量:advisory lock 版本化文档写入、结果表保护拒绝、chat 级联删除+资产清理、replace* 事务并发基线。`pnpm build` 先跑迁移再构建(禁止本地执行)。
 
 **模型网关**:`server/application/ai/` —— model-connection/model-service/model-context/providers/prompts + model-settings/{runtime,handler,service,network,probe}(加密 ModelSettings 行/AAD/CAS,DNS 钉扎 HTTPS 探测,可选部署侧 MODEL_DNS_OVERRIDES 精确域名公网 pin(仍保留 TLS/地址校验,dns-pins.test.ts 回归);目录 schema 在 domain/model/settings-schema.ts,仓储在 drizzle)。模型目录(chatModels/isDemo/titleModel)在 `domain/model/models.ts`。
 
@@ -152,8 +164,8 @@ server/
 
 ## 开发基座
 
-- 一键闭环 `pnpm dev:up`(脚本 `.claude/skills/dev-env/scripts/dev-env-loop.mjs`:体检/装指引 -> .env.local -> compose PG(127.0.0.1:55432,命名卷) -> 迁移 -> `scripts/dev-seed.ts` 开发账号初始化 -> 启动);收尾 `pnpm dev:down`。
-- 本地开发默认登录 `admin / 123456`，账号保存在 `admin@chatnest.local`，用户名和密码由 `DEV_ADMIN_USERNAME` / `DEV_ADMIN_PASSWORD` 配置；`server/shared/login-identity.ts` 仅在 development 将 `admin` 解析为该邮箱；仍由既有 Credentials + bcrypt 校验。注册/生产保持邮箱登录；不授予 connected 平台管理员权限。初始化仅操作固定本地开发库与此专用账号，不触碰其他用户。
+- 一键闭环 `pnpm dev:up`(脚本 `.claude/skills/dev-env/scripts/dev-env-loop.mjs`:体检/装指引 -> .env.local -> compose PG(127.0.0.1:55432,命名卷) -> 迁移 -> `scripts/dev-seed.ts` 显式管理员种子 -> 启动);收尾 `pnpm dev:down`。兼容脚本只负责 dotenv 加载、调用 Drizzle `seed.ts` 与脱敏汇报；独立入口为 `pnpm db:seed`，应用启动/请求不隐式灌库。
+- 初始管理员默认 `admin@chatnest.local / 123456`，由 `DEV_ADMIN_USERNAME` / `DEV_ADMIN_PASSWORD` 配置，显式种子适用于任意 `NODE_ENV` 与配置的 PostgreSQL 连接。按专用邮箱加锁创建或同步密码，重复执行保持幂等；密码变更递增会话修订，将 UUID 合并登记到 `.env.local` 的 `PLATFORM_ADMIN_USER_IDS`。`server/shared/login-identity.ts` 的 `getSeedAccount` 不限制环境；`getDevelopmentAccount` 仅在 development 提供用户名映射，其他环境保持完整邮箱登录；仍用既有 Credentials + bcrypt 校验，不授予 connected 平台管理员权限。
 - 进程工具 `scripts/governance/dev-env.mjs` 仅三能:nics / 绑 0.0.0.0:3003 启动 / 优雅杀;入口 `pnpm dev:nics|start|stop`。
 - 项目技能双向复制 `copy-skills` 同时存放于 `.claude/skills/copy-skills` 与 `.agents/skills/copy-skills`，使用真实目录副本；运行技能内 `scripts/copy-skills.mjs --from claude|codex` 默认比对，`--apply` 复制，`--overwrite` 才覆盖差异，目标独有内容保留。复制器测试仅从 `.claude` 路径显式加入离线白名单；`dev-env` 同样提供两端实际副本。
 
@@ -164,7 +176,7 @@ server/
 - `/api/personal/{mcp,skills,scope}` 仅正式账号管理本人能力；写操作检查同源并有界读体。skills 只接受有界单文件 SKILL.md，预览/导入/编辑/启停/删除/内置副本不执行脚本、安装依赖或授予连接权限。个人引用资源包与 Git 仓库导入尚未实现。
 - `readUserCatalog` 按当前用户装配平台与个人目录；`createTaskCapabilityService` 在 MCP 建连前验证并持久化 `capabilitySelection`。首次默认可用目录，省略沿用当前选择，显式空集不退回全部；审批只用服务端范围、assistant 的 data-capability-scope 修订标记，不能借客户端选择扩权。
 - 个人工具别名绑定授权修订；MCP 和技能执行前复核当前配置及范围代次。纯 MCP 审批也复用 chat 行锁 merge/CAS，重复提交不再次进入执行。历史用过且当前仍授权选中的技能在本轮模型投影中恢复最新正文；本轮首次成功加载后立即更新同一请求内的指令Map，每个模型步骤复用，并仅投影去除已激活原生加载结果中的重复正文；禁用技能和旧资源仅保留元数据，避免旧指令注入；存储证据不改。公开对话不透出个人技能原始正文。
-- `app/_components/chat/{personal-connections,personal-skills,task-capabilities}.tsx` 复用 McpEditor、Dialog、Button 和现有组件；侧栏与设置共用个人管理视图。`use-personal-capabilities` 与 Agent 摘要缓存均绑定登录用户，选择由 `use-active-chat` 仅在新用户轮次提交，审批续跑不重传选择。
+- `app/_components/chat/{personal-connections,personal-skills,task-capabilities}.tsx` 复用 McpEditor、Dialog、Button 和现有组件；侧栏与设置共用个人管理视图。2026-11-12 暂缓开放用户新增：添加 MCP（含空态）、导入 Skill 和两处创建个人副本入口置灰，调用 `app/_lib/capability-availability.ts` 统一提示“产品能力还未开放”，不打开创建表单或文件选择器；平台内置查看、启停及管理员配置保留。该限制作用于用户界面入口，既有管理 API 与运行时保持原样。`use-personal-capabilities` 与 Agent 摘要缓存均绑定登录用户，选择由 `use-active-chat` 仅在新用户轮次提交，审批续跑不重传选择。
 - Ask 复用 Apache-2.0 AI Elements Question（本地仅添加 asField，避免多问题嵌套 form）；题目仍来自 askUser 工具输入，长问题区域滚动，输入框不移动。未知 MCP 原生操作名保留在审批内容/详情，不把原始参数堆在时间线。
 - 普通预览与模型/MCP验收隔离；`NEXT_DIST_DIR` 可指定独立开发输出目录。`tests/visual/personal_capabilities.py` 仅接受 33379 本地夹具验收，正常预览不启动脚本模型。现有本地 browser 工具仍保留其独立审批，不属于 MCP/skills 选择集合。
 
@@ -205,8 +217,8 @@ server/
 
 ## 品牌图标（2026-10-28）
 
-- `app/_components/brand-mark.tsx` 复用 Next Image 展示用户选定的 Figma 第一套「探索雷达」；侧栏、账户页与后台共用，产品显示名统一为「数知探AI」，保留原导航行为，装饰图像不重复朗读链接名称。
-- `public/brand/radar.svg` 为原始 160×160 导出，来源／哈希见同目录 README；`app/icon.svg` 同源，favicon 与 Apple 图标等比派生。公共资源尊重 NEXT_PUBLIC_BASE_PATH，不请求 Figma 临时地址，不改 Agent／Porta／模型配置。
+- `app/_components/brand-mark.tsx` 复用 Next Image 展示用户选定的 Figma 第一套「探索雷达」；侧栏、账户页与后台共用，产品显示名统一为「数知探AI」，装饰图像不重复朗读链接名称。`app/_components/brand-home-link.tsx` 将图标、文字与首页链接封装为独立 `BrandHomeLink`，由工作台侧栏复用；品牌与开合按钮分别定位，开合中不挤压品牌。桌面菜单行固定 40px、图标列固定 40px，文字保持单行并淡入淡出，历史列表以固定展开宽度裁切，保留 208px/64px 的侧栏宽度与减少动画偏好。
+- `public/brand/radar.svg` 为用户于 2026-11-10 选定的 256×256 透明雷达纯矢量版，复用原始 Figma 路径，移除底板及右下角副标记，保留蓝青色；来源／哈希见同目录 README。`app/icon.svg` 同源，favicon 与 Apple 图标等比派生。公共资源尊重 NEXT_PUBLIC_BASE_PATH，不请求 Figma 临时地址，不改 Agent／Porta／模型配置。任务文档、位置图与参考素材集中于 `docs/02_FEAT特性/20261110122513_UI调整/`。
 - 品牌回归追加至既有 `app/branding.test.ts`，继续使用原显式白名单；验证源图一致性、三个入口复用、访问命名与 basePath。
 
 - 品牌静态资源在 `proxy.ts` 精确放行 `/brand/radar.svg`、`/icon.svg`、`/apple-icon.png`，避免公开账户页创建访客会话；任意其他资源／私有 API 权限不变。Biome 仅对两份原始 SVG 关闭格式化／属性重排，仍保留其余检查。
@@ -221,15 +233,15 @@ server/
 
 ## Lessie 工作空间呈现（2026-10-28）
 
-- `globals.css` 的工作台语义变量统一白画布、浅中性侧栏、石墨正文和克制的选择态；展开侧栏 208px、折叠 72px，聊天/管理顶栏 52px。没有更换样式框架、字体加载或 Agent 实现。
-- `shell/greeting` 在同一内容列呈现标题、主输入框和附件入口；最近对话只在侧栏，首页不再额外请求历史。
+- `globals.css` 的工作台语义变量统一白画布、浅中性侧栏、石墨正文和克制的选择态；展开侧栏 208px、折叠 64px，聊天/管理顶栏 52px。收起态按钮 40px、图标 18px，隐藏文字并统一居中、默认透明及悬停背景；尺寸和前景色由 `AppSidebar` 的收起态工具类限定。入口显示“新建对话”“产物”，内部导航键仍为 `files`。
+- `shell/greeting/workspace-home` 将空对话主区域约束为 800px 内容边界：首屏展示居中产品主标题、原输入框及三条只填草稿的任务示例，底部入口在当前主区域滚动；首屏与最近产物第二屏共用完整主区域宽度及视口最小高度（桌面 `100dvh`、手机扣除 52px 顶栏），空产物也保留整屏以确保下滑入口将第二屏顶部滚到主区域顶部；真实最近产物最多三条，“查看全部”复用 `navigate("files")` 身份保护。`SavedArtifactCards.compact` 使用轻列表及紧凑加载/空态，沿用属主数据和 `useOpenSavedArtifact` 保护；`sidebar-history` 通过内部 `HistoryGroup` 统一时钟图标、展开/收起及加载、空记录和未登录状态，保留原分组、分页、搜索和删除。
 - `workspace-header` 将原有通用标题/关闭/视图切换保留在 52px 主行，把产物 controls 放进独立可横向滚动的 toolbar；`artifact-picker` 明确可收缩边界。编辑器挂载、未保存保护与回调作用域不变。
 - `agent-library` 复用现有 Dialog，桌面侧向分类、移动横向分类，内容独立滚动；连接与技能复用相同个人组件，改为轻列表。Ask/Todo/工具行仅调整表面，不改工具定义、审批和续跑。
 - `tests/visual/lessie_workspace.py` 为显式 opt-in 的本地样式/键盘检查，只接受隔离端口33379；`formal_workspace.py` 补充长标题纯DOM边界探针和输入底部稳定断言。脚本不进入生产装配，测试模型/数据不冒充真实服务验收。
 
 ## 独立C端首页（2026-10-28）
 
-- 聊天新会话页仅在有已保存成果时，使用 `workspace-home.tsx` 的 `SavedArtifactCards` 在输入框下显示最多三条；和「文件」页复用属主数据及打开逻辑。失败草稿提示由 `conversation-notice.tsx` 比较末次用户文本与 Shell 传入附件，已恢复时明确提示且不重复展示恢复按钮。
+- 聊天新会话页由 `greeting.tsx`、`shell.tsx`、`workspace-home.tsx` 统一内容宽度：标题“AI 侵权线索引擎 Agent”、真实 `MultimodalInput` 与任务示例组成首屏，最近产物保留在首屏下方的独立区域；最近对话集中在侧栏的带时钟图标折叠区。空态转消息态保持输入框组件位置及附件所有权，空态专用内容随消息出现而移除；首屏滚动与明暗配色使用现有工作台变量，减少动画偏好关闭平滑滚动。失败草稿提示由 `conversation-notice.tsx` 比较末次用户文本与 Shell 传入附件，已恢复时明确提示且不重复展示恢复按钮。
 - `ChatShell` 统一区分新对话与历史加载失败：没有可展示的历史时，主区显示重新加载及折叠详情，不显示欢迎语或输入框；已有历史则保留消息，恢复提示留在下方。历史请求 401/403 提示登录或访问权限，不提示重复加载；临时失败仍可重试。
 - 普通 sheet 由基础文件工具保存完整 CSV，统一校验列数与引号，拒绝错位文件；保存结果复用产物索引与打开入口。下载保留文件扩展名，避免重复 `.csv` 或把 JavaScript 等源码导出为 `.py`。SVG 沿同一源码产物保存、续改及原格式导出；右栏提供图片上下文的预览与源码切换，不把 SVG 标记插入应用 DOM，Python 运行入口只对 `.py` 展示。相似商品Skill提供“事实依据 / 是否核实”两列的业务口径；表格编辑器保持普通CSV渲染，不新增核实状态存储系统，核心Prompt不承载商品规则。
 

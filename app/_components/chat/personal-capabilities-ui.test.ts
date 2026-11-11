@@ -20,12 +20,12 @@ test("Personal connector management reuses the native MCP editor with a private 
   assert.match(source, /只读|平台提供/);
   assert.match(source, /删除连接/);
 });
-test("Personal skills provide a preview before import and explicit enable, edit, copy and delete", () => {
+test("Personal skills retain preview and existing skill management while creation is unavailable", () => {
   const source = readFileSync(
     new URL("./personal-skills.tsx", import.meta.url),
     "utf8"
   );
-  for (const text of ["preview", "save", "toggle", "copy", "delete", "read"]) {
+  for (const text of ["preview", "save", "toggle", "delete", "read"]) {
     assert.ok(source.includes(`"${text}"`), text);
   }
   assert.match(source, /64_000/);

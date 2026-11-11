@@ -12,7 +12,7 @@ export function WorkbenchSection() {
   const title = {
     chat: "对话",
     connections: "连接",
-    files: "文件",
+    files: "产物",
     skills: "技能",
   }[section];
   return (
@@ -37,7 +37,7 @@ export function WorkbenchSection() {
             <section className="space-y-6">
               <div>
                 <h2 className="[font-family:var(--workbench-display-font)] text-2xl font-medium leading-snug sm:text-[28px]">
-                  已保存的成果
+                  已保存的产物
                 </h2>
                 <p className="mt-2 text-[13px] leading-6 text-muted-foreground">
                   在这里继续查看对话中生成的表格、文档与代码。

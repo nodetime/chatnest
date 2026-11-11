@@ -578,7 +578,19 @@ export function ActiveChatProvider({
       }
       gate.paused = false;
       gate.revision += 1;
-      await sdkSendMessage(message, options);
+      await sdkSendMessage(
+        message
+          ? {
+              ...message,
+              metadata: {
+                ...message.metadata,
+                createdAt:
+                  message.metadata?.createdAt ?? new Date().toISOString(),
+              },
+            }
+          : message,
+        options
+      );
     },
     [activeInstance, chatId, sdkSendMessage]
   );

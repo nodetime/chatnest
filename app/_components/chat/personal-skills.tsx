@@ -6,6 +6,7 @@ import {
   requestSkill,
   usePersonalCapabilities,
 } from "@/app/_hooks/use-personal-capabilities";
+import { notifyCapabilityUnavailable } from "@/app/_lib/capability-availability";
 import type {
   SkillAction,
   SkillProjection,
@@ -150,18 +151,9 @@ function PersonalSkillsContent() {
           </p>
         </div>
         <Button
-          disabled={!regular || busy || !skills.data?.configured}
-          onClick={() => {
-            setEditor({
-              enabled: true,
-              id: `skill-${crypto.randomUUID().slice(0, 8)}`,
-              markdown: "",
-              original: "",
-              source: "new",
-            });
-            setPreview(null);
-            setError("");
-          }}
+          aria-disabled="true"
+          className="cursor-not-allowed opacity-50"
+          onClick={notifyCapabilityUnavailable}
           size="sm"
         >
           <Plus className="size-3.5" />
@@ -183,7 +175,7 @@ function PersonalSkillsContent() {
       )}
       {regular && !!skills.data && !skills.data.configured && (
         <p className="rounded-xl border p-4 text-sm text-muted-foreground">
-          个人技能管理暂未开放，请联系管理员。内置技能仍可使用。
+          个人技能导入暂未开放，内置技能仍可使用。
         </p>
       )}
       <fieldset aria-label="技能筛选" className="flex gap-1 border-b pb-3">
@@ -254,14 +246,9 @@ function PersonalSkillsContent() {
                   </DropdownMenuItem>
                   {skill.source === "builtin" ? (
                     <DropdownMenuItem
-                      onSelect={() =>
-                        perform({
-                          action: "copy",
-                          id: skill.id,
-                          newId: `copy-${crypto.randomUUID().slice(0, 8)}`,
-                          revision: skills.data?.revision ?? 0,
-                        })
-                      }
+                      aria-disabled="true"
+                      className="cursor-not-allowed opacity-50"
+                      onSelect={notifyCapabilityUnavailable}
                     >
                       创建个人副本
                     </DropdownMenuItem>
@@ -324,7 +311,7 @@ function PersonalSkillsContent() {
             </DialogTitle>
             <DialogDescription>
               {editor?.source === "builtin"
-                ? "内置方法只读，可创建个人副本后修改。"
+                ? "平台内置方法只读，创建个人副本暂未开放。"
                 : "导入前查看指令。技能不会执行脚本，也不会获得连接权限。"}
             </DialogDescription>
           </DialogHeader>
@@ -373,8 +360,9 @@ function PersonalSkillsContent() {
                 />
                 <div className="flex flex-wrap gap-2">
                   <Button
-                    disabled={busy}
-                    onClick={() => fileInput.current?.click()}
+                    aria-disabled="true"
+                    className="cursor-not-allowed opacity-50"
+                    onClick={notifyCapabilityUnavailable}
                     size="sm"
                     variant="outline"
                   >
@@ -446,19 +434,9 @@ function PersonalSkillsContent() {
             </Button>
             {editor?.source === "builtin" ? (
               <Button
-                disabled={busy}
-                onClick={() =>
-                  editor &&
-                  perform(
-                    {
-                      action: "copy",
-                      id: editor.id,
-                      newId: `copy-${crypto.randomUUID().slice(0, 8)}`,
-                      revision: skills.data?.revision ?? 0,
-                    },
-                    () => setEditor(null)
-                  )
-                }
+                aria-disabled="true"
+                className="cursor-not-allowed opacity-50"
+                onClick={notifyCapabilityUnavailable}
               >
                 创建个人副本
               </Button>

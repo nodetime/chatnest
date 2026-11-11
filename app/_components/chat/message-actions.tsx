@@ -12,6 +12,7 @@ import {
   MessageActions as Actions,
 } from "../ai-elements/message";
 import { CopyIcon, PencilEditIcon, ThumbDownIcon, ThumbUpIcon } from "./icons";
+import { MessageTime } from "./message-time";
 
 export function PureMessageActions({
   chatId,
@@ -87,7 +88,8 @@ export function PureMessageActions({
   const visibility = "message-actions transition-opacity duration-150";
   if (message.role === "user") {
     return (
-      <Actions className={`-mr-0.5 justify-end ${visibility}`}>
+      <Actions className={`-mr-0.5 flex-wrap justify-end ${visibility}`}>
+        <MessageTime createdAt={message.metadata?.createdAt} />
         {onEdit ? (
           <Action
             className="size-9 rounded-lg text-muted-foreground hover:text-foreground"
@@ -109,7 +111,8 @@ export function PureMessageActions({
     );
   }
   return (
-    <Actions className={`-ml-0.5 ${visibility}`}>
+    <Actions className={`-ml-0.5 flex-wrap ${visibility}`}>
+      <MessageTime createdAt={message.metadata?.createdAt} />
       {!!onRegenerate && (
         <Action
           className="size-9 rounded-lg text-muted-foreground hover:text-foreground"

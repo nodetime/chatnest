@@ -136,3 +136,7 @@ server/application/chat/tools/view-image.test.ts
 server/application/chat/workspace.test.ts
 
 server/infrastructure/persistence/drizzle/document-repository.test.ts
+
+server/infrastructure/persistence/drizzle/seed.test.ts
+server/infrastructure/uploads/local-store.windows.test.ts
+app/_components/chat/message-time.test.ts
