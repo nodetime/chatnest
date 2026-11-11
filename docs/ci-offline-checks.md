@@ -2,12 +2,12 @@
 
 面向 `main`/`master` 的 PR，以及推送到这两个分支的提交，会运行以下检查：
 
-- **Lint / build**：沿用覆盖整个仓库的 Ultracite 检查，不只检查差异文件。
+- **Lint / build**：按统一 Biome 配置对代码和配置执行全量 Ultracite 检查，不只检查差异文件。按用户要求排除整个 `docs/`，文档中的 HTML 原型不参与格式化、辅助整理和 lint；提交钩子同样排除该目录。
 - **Offline checks / tests**：按 `scripts/ci/offline-tests.txt` 中经过审查、逐项列出的回归清单串行执行，包含运行时交互行为。测试使用假模型、模拟的外部依赖边界和本机回环 HTTP 夹具；这不是浏览器 E2E 任务。
 - **Offline checks / typecheck**：执行 TypeScript 类型检查，不生成文件，也不使用增量缓存。
 - **Offline checks / build**：直接执行 `pnpm exec next build --webpack`，与独立验证过的生产构建方式一致。项目的 `pnpm build` 还会执行数据库迁移，因此这里明确不使用它。
 
-所有任务固定使用 Node **24.20.0**、pnpm **10.32.1** 和 Ubuntu **24.04**，并按锁文件安装依赖。安全辅助脚本有独立的 Node 契约测试。在引入交互改动之前的基线上，全量 lint 已通过；本次改动没有放宽 lint 规则或缩小文件覆盖范围。
+所有任务固定使用 Node **24.20.0**、pnpm **10.32.1** 和 Ubuntu **24.04**，并按锁文件安装依赖。安全辅助脚本有独立的 Node 契约测试。代码继续沿用现有 lint 规则和分层约束；2026-11-12 起，`docs/` 按用户要求从统一检查范围排除。
 
 ## 隔离边界
 

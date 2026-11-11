@@ -13,6 +13,7 @@
     "includes": [
       "**/*",
       "!.ccode",
+      "!docs",
       "!server/infrastructure/persistence/drizzle/migrations/meta",
       "!app/_components/ai-elements",
       "!app/_components/elements",
