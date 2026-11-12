@@ -19,7 +19,7 @@ import {
 // 平台层(P2 后):traceId、auth、zod 解析、botId、geo/网络上下文提取、错误映射、Response 组装。
 // 业务编排(模型/工具/流/持久化)在 server/application/chat/send-message.ts。
 
-export const maxDuration = 300;
+export const maxDuration = 900;
 
 export async function POST(request: Request) {
   // proxy.ts 注入的 x-trace-id 进入 ALS,本请求内 logger 自动携带

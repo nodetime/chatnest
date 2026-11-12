@@ -1,7 +1,6 @@
 import {
   convertToModelMessages,
   createUIMessageStream,
-  isStepCount,
   streamText,
   type ToolSet,
   toUIMessageStream,
@@ -90,6 +89,7 @@ import {
   isTestEnvironment,
 } from "@/server/shared/runtime";
 import { metadataOnlyTelemetry } from "@/server/shared/telemetry";
+import { executionStepLimit } from "./execution-policy";
 import { generateTitleFromUserMessage } from "./generate-title";
 import type { wrapModelWithBilling } from "./model-billing";
 
@@ -551,7 +551,6 @@ export async function sendMessage(
           .filter(Boolean)
           .join("\n\n");
         const { maxSteps } = runtime.config;
-        const reachedStepLimit = isStepCount(maxSteps);
         const result = streamText({
           abortSignal: runtime.signal,
           activeTools: supportsTools ? Object.keys(tools) : [],
@@ -632,13 +631,11 @@ export async function sendMessage(
               openai: { reasoningEffort: modelConfig.reasoningEffort },
             }),
           },
-          stopWhen: async (context) => {
-            const reached = await reachedStepLimit(context);
-            if (reached && !input.signal.aborted) {
+          stopWhen: executionStepLimit(maxSteps, () => {
+            if (!input.signal.aborted) {
               runFailure.report((part) => dataStream.write(part));
             }
-            return reached;
-          },
+          }),
           telemetry: {
             ...metadataOnlyTelemetry,
             functionId: "stream-text",

@@ -15,9 +15,14 @@ import {
   projectLoadedSkillResultsForModel,
   projectSkillContextForModel,
 } from "@/server/domain/capability/projection";
+import {
+  createRunFailureReporter,
+  hasRunFailure,
+} from "@/server/domain/message/run-failure";
 import type { ChatMessage } from "@/server/domain/message/types";
 import { createAgentRuntime } from "@/server/infrastructure/mcp/runtime";
 import { completionStepSettings, systemPrompt } from "../ai/prompts";
+import { executionStepLimit } from "./execution-policy";
 import { agentInteractionTools } from "./tools/agent-interactions";
 
 const modelUsage = {
@@ -205,10 +210,140 @@ test("真实 SDK 在既有步数内提示保存产物与交接，保留供应商
   assert.equal(result.text, "对比表已保存，另有一项待补充。");
 });
 
-for (const mode of ["answer", "ask", "loop"] as const) {
+test("默认原生工具循环超过12轮，保存文件后仍可正常交接", async () => {
+  const { agentConfigSchema } = await import(
+    "@/server/infrastructure/mcp/config"
+  );
+  const { maxSteps } = agentConfigSchema.parse({});
+  let calls = 0;
+  let executions = 0;
+  let failures = 0;
+  const saved: string[] = [];
+  const result = await generateText({
+    maxRetries: 0,
+    model: new MockLanguageModelV4({
+      doGenerate: () => {
+        calls += 1;
+        return Promise.resolve({
+          content:
+            calls === 15
+              ? [{ text: "表格已保存。", type: "text" as const }]
+              : [
+                  {
+                    input: "{}",
+                    toolCallId: `call-${calls}`,
+                    toolName: calls === 14 ? "writeFile" : "readFile",
+                    type: "tool-call" as const,
+                  },
+                ],
+          finishReason: {
+            raw: calls === 15 ? "stop" : "tool_calls",
+            unified: calls === 15 ? ("stop" as const) : ("tool-calls" as const),
+          },
+          usage: modelUsage,
+          warnings: [],
+        });
+      },
+    }),
+    prepareStep: ({ stepNumber }) => {
+      const settings = completionStepSettings(stepNumber, maxSteps, "TASK");
+      assert.deepEqual(settings, {}, "no artificial final-step instruction");
+      return settings;
+    },
+    prompt: "读取来源，保存表格后交接",
+    stopWhen: executionStepLimit(maxSteps, () => {
+      failures += 1;
+    }),
+    timeout: { totalMs: 1000 },
+    tools: Object.fromEntries(
+      ["readFile", "writeFile"].map((name) => [
+        name,
+        tool({
+          execute: () => {
+            executions += 1;
+            if (name === "writeFile") {
+              saved.push("result.csv");
+            }
+            return { status: "completed" };
+          },
+          inputSchema: z.object({}),
+        }),
+      ])
+    ),
+  });
+  assert.equal(result.text, "表格已保存。");
+  assert.equal(calls, 15);
+  assert.equal(executions, 14);
+  assert.deepEqual(saved, ["result.csv"]);
+  assert.equal(failures, 0);
+});
+
+test("发布配置不恢复12轮截断，聊天路由允许默认总时长", async () => {
+  const { agentConfigSchema } = await import(
+    "@/server/infrastructure/mcp/config"
+  );
+  const config = agentConfigSchema.parse(
+    JSON.parse(
+      readFileSync(
+        new URL("../../infrastructure/mcp/agent.json", import.meta.url),
+        "utf8"
+      )
+    )
+  );
+  assert.equal(config.maxSteps, null);
+  assert.equal(config.timeoutMs, 900_000);
+  assert.match(
+    readFileSync("app/(chat)/api/chat/route.ts", "utf8"),
+    /export const maxDuration = 900;/
+  );
+  assert.match(
+    readFileSync("server/application/chat/send-message.ts", "utf8"),
+    /maxRetries: 0/
+  );
+});
+
+for (const mode of ["cancel", "timeout"] as const) {
+  test(`无默认轮数上限时仍响应 ${mode}，不重试模型请求`, async () => {
+    const controller = new AbortController();
+    let calls = 0;
+    let aborted = false;
+    const result = generateText({
+      abortSignal: controller.signal,
+      maxRetries: 0,
+      model: new MockLanguageModelV4({
+        doGenerate: ({ abortSignal }) => {
+          calls += 1;
+          return new Promise((_resolve, reject) => {
+            const abort = () => {
+              aborted = true;
+              reject(abortSignal?.reason);
+            };
+            if (abortSignal?.aborted) {
+              abort();
+            } else {
+              abortSignal?.addEventListener("abort", abort, { once: true });
+            }
+            if (mode === "cancel") {
+              queueMicrotask(() => controller.abort());
+            }
+          });
+        },
+      }),
+      prompt: "test",
+      stopWhen: executionStepLimit(null, () => {
+        assert.fail("not a step cutoff");
+      }),
+      timeout: { totalMs: 25 },
+    });
+    await assert.rejects(result);
+    assert.equal(calls, 1);
+    assert.equal(aborted, true);
+  });
+}
+
+for (const mode of ["answer", "ask", "loop", "tool-stop"] as const) {
   test(`真实 SDK 步数边界：${mode}`, async () => {
     let failure = 0;
-    const reachedLimit = isStepCount(2);
     const definitions = agentInteractionTools();
     const result = await generateText({
       model: new MockLanguageModelV4({
@@ -238,28 +373,26 @@ for (const mode of ["answer", "ask", "loop"] as const) {
                   },
                 ],
           finishReason: {
-            raw: mode === "answer" ? "stop" : "tool_calls",
-            unified: mode === "answer" ? "stop" : "tool-calls",
+            raw: ["answer", "tool-stop"].includes(mode) ? "stop" : "tool_calls",
+            unified: ["answer", "tool-stop"].includes(mode)
+              ? "stop"
+              : "tool-calls",
           },
           usage: modelUsage,
           warnings: [],
         },
       }),
       prompt: "完成任务",
-      stopWhen: async (context) => {
-        const reached = await reachedLimit(context);
-        if (reached) {
-          failure += 1;
-        }
-        return reached;
-      },
+      stopWhen: executionStepLimit(1, () => {
+        failure += 1;
+      }),
       tools: {
         askUser: tool(definitions.askUser),
         search: tool({ execute: () => "found", inputSchema: z.object({}) }),
       },
     });
-    assert.equal(failure, mode === "loop" ? 1 : 0, mode);
-    assert.equal(result.steps.length, mode === "loop" ? 2 : 1, mode);
+    assert.equal(failure, ["loop", "tool-stop"].includes(mode) ? 1 : 0, mode);
+    assert.equal(result.steps.length, 1, mode);
   });
 }
 
@@ -374,4 +507,98 @@ test("服务端在模型调用前事务保存 Ask，部分回答/重复提交不
   assert.match(repository, /async updateContinuationParts/);
   assert.match(repository, /applyAskUserResponses/);
   assert.match(repository, /\.for\("update"\)/);
+});
+
+test("无轮数截断的真实SDK流在第14步保存后正常回复，不落失败标记或重放工具", async () => {
+  const { streamText, toUIMessageStream, jsonSchema } = await import("ai");
+  const reporter = createRunFailureReporter();
+  let calls = 0;
+  let saves = 0;
+  let persisted: ChatMessage | undefined;
+  const model = new MockLanguageModelV4({
+    doStream: () => {
+      calls += 1;
+      const final = calls === 15;
+      return Promise.resolve({
+        stream: new ReadableStream({
+          start(controller) {
+            controller.enqueue({ type: "stream-start", warnings: [] });
+            if (final) {
+              controller.enqueue({ id: "answer", type: "text-start" });
+              controller.enqueue({
+                delta: "表格已保存。",
+                id: "answer",
+                type: "text-delta",
+              });
+              controller.enqueue({ id: "answer", type: "text-end" });
+            } else {
+              controller.enqueue({
+                input: "{}",
+                toolCallId: `call-${calls}`,
+                toolName: calls === 14 ? "writeFile" : "readFile",
+                type: "tool-call",
+              });
+            }
+            controller.enqueue({
+              finishReason: final
+                ? { raw: "stop", unified: "stop" }
+                : { raw: "tool_calls", unified: "tool-calls" },
+              type: "finish",
+              usage: {
+                inputTokens: {
+                  cacheRead: 0,
+                  cacheWrite: 0,
+                  noCache: 1,
+                  total: 1,
+                },
+                outputTokens: { reasoning: 0, text: 1, total: 1 },
+              },
+            });
+            controller.close();
+          },
+        }),
+      });
+    },
+  });
+  const stream = createUIMessageStream<ChatMessage>({
+    execute: async ({ writer }) => {
+      const result = streamText({
+        maxRetries: 0,
+        model,
+        prompt: "保存后交接",
+        stopWhen: executionStepLimit(null, () => {
+          reporter.report((part) => writer.write(part));
+        }),
+        timeout: { totalMs: 1000 },
+        tools: {
+          readFile: {
+            execute: () => "source",
+            inputSchema: jsonSchema({ properties: {}, type: "object" }),
+          },
+          writeFile: {
+            execute: () => {
+              saves += 1;
+              return { saved: "outputs/result.csv" };
+            },
+            inputSchema: jsonSchema({ properties: {}, type: "object" }),
+          },
+        },
+      });
+      writer.merge(toUIMessageStream({ stream: result.stream }));
+      await result.text;
+    },
+    onEnd: ({ responseMessage }) => {
+      persisted = responseMessage;
+    },
+  });
+  for await (const _ of readUIMessageStream({ stream })) {
+    /* consume SDK lifecycle */
+  }
+  assert.equal(calls, 15);
+  assert.equal(saves, 1);
+  assert.ok(persisted);
+  assert.equal(hasRunFailure(persisted), false);
+  assert.equal(reporter.failed, false);
+  assert.match(JSON.stringify(persisted), /outputs\/result.csv/);
+  assert.match(JSON.stringify(persisted), /表格已保存/);
 });

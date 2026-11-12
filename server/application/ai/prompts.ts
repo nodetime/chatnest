@@ -20,10 +20,10 @@ export const systemPrompt = ({ supportsTools }: { supportsTools: boolean }) =>
 // Preserve the existing turn boundary while leaving room to save and hand off.
 export function completionStepSettings(
   stepNumber: number,
-  maxSteps: number,
+  maxSteps: number | null,
   instructions: string
 ) {
-  if (stepNumber < maxSteps - 2) {
+  if (maxSteps === null || stepNumber < maxSteps - 2) {
     return {};
   }
   return {

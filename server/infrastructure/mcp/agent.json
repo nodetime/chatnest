@@ -1,6 +1,6 @@
 {
-  "maxSteps": 12,
-  "timeoutMs": 240000,
+  "maxSteps": null,
+  "timeoutMs": 900000,
   "toolTimeoutMs": 30000,
   "maxOutputTokens": 8000,
   "servers": [
