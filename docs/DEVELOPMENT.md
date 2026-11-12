@@ -16,6 +16,8 @@ ChatNest 基于 `vercel/chatbot`，沿用 Next.js、Vercel AI SDK、认证、流
 
 外部服务的配置状态不代表调用成功。readiness 只检查应用数据库就绪；模型、MCP 和业务输出以对应实际会话为准。
 
+Agent 沿用 `server/infrastructure/mcp/agent.json`（或部署指定的 `AGENT_CONFIG_PATH`）作为执行配置来源：`maxSteps=null` 默认不按轮数截停，模型正常结束、Ask 交接、用户取消或真实错误结束本次请求；如部署显式设置正整数则启用对应轮数边界。`timeoutMs` 默认900000（15分钟），单次工具期限 `toolTimeoutMs` 默认30000；托管模型连接的单次 HTTP 请求仍有独立120秒期限，不将它表述为可连续思考15分钟。聊天路由时长声明与默认全轮期限一致。模型 `maxRetries=0`，不因放开轮数而自动重试或重放历史工具。
+
 模型和 MCP 托管设置共用 `MCP_SETTINGS_ENCRYPTION_KEY`；启用加密设置时需同时配置非空的 `MCP_ALLOWED_ORIGINS` 精确信任来源，例如 `https://mcp.exa.ai`。仅设置密钥但来源为空会使配置校验失败，并可能在模型调用前中止聊天。实际来源按启用的服务逐一配置，不使用通配符。
 
 ## 本地开发

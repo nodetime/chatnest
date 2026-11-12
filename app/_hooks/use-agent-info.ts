@@ -28,7 +28,7 @@ export type AgentInfo = {
   modelConfigured: boolean;
   modelProvider?: "openai" | "gateway";
   uploadsConfigured: boolean;
-  limits: { maxSteps: number; timeoutMs: number };
+  limits: { maxSteps: number | null; timeoutMs: number };
 };
 
 async function readInfo(url: string): Promise<AgentInfo> {

@@ -233,8 +233,23 @@ test("skill resource access rejects traversal, absolute paths and escaping symli
   }
 });
 
-test("config enforces bounded execution and explicit tool approval allowlists", () => {
-  assert.equal(agentConfigSchema.safeParse({ maxSteps: 999 }).success, false);
+test("config defaults to no step cutoff and retains explicit execution controls", () => {
+  const config = agentConfigSchema.parse({});
+  assert.equal(config.maxSteps, null);
+  assert.equal(config.timeoutMs, 900_000);
+  assert.equal(agentConfigSchema.parse({ maxSteps: null }).maxSteps, null);
+  assert.equal(agentConfigSchema.parse({ maxSteps: 999 }).maxSteps, 999);
+  for (const maxSteps of [0, -1, 1.5, "12", Number.POSITIVE_INFINITY]) {
+    assert.equal(agentConfigSchema.safeParse({ maxSteps }).success, false);
+  }
+  assert.equal(
+    agentConfigSchema.parse({ timeoutMs: 1_800_000 }).timeoutMs,
+    1_800_000
+  );
+  assert.equal(
+    agentConfigSchema.safeParse({ timeoutMs: 2_147_483_648 }).success,
+    false
+  );
   assert.equal(
     agentConfigSchema.safeParse({
       servers: [{ id: "s", name: "s", url: "http://example.com/mcp" }],

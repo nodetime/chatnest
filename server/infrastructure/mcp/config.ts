@@ -35,7 +35,7 @@ function isMcpEndpoint(
 export const agentConfigSchema = z
   .object({
     maxOutputTokens: z.number().int().min(256).max(16_000).default(8000),
-    maxSteps: z.number().int().min(1).max(30).default(12),
+    maxSteps: z.number().int().min(1).nullable().default(null),
     servers: z
       .array(
         z.object({
@@ -64,7 +64,8 @@ export const agentConfigSchema = z
       )
       .max(8)
       .default([]),
-    timeoutMs: z.number().int().min(1000).max(240_000).default(240_000),
+    // Node 定时器上限，避免溢出后意外变成极短超时。
+    timeoutMs: z.number().int().min(1000).max(2_147_483_647).default(900_000),
     toolTimeoutMs: z.number().int().min(1000).max(60_000).default(30_000),
   })
   .superRefine((config, ctx) => {
